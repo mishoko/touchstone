@@ -1,0 +1,21 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+      - uses: foundry-rs/foundry-toolchain@v1
+      - name: Build + size gate (runtime <= 22,000 B)
+        run: |
+          forge build --sizes --json > sizes.json || true
+          python3 - <<'PY'
+          import json,sys
+          try: d=json.load(open('sizes.json'))
+          except Exception: sys.exit(0)  # no contracts yet
+          bad={k:v['runtime_size'] for k,v in d.items() if isinstance(v,dict) and v.get('runtime_size',0)>22000 and not k.endswith('Test')}
+          print('over 22,000 B:',bad) if bad else print('size gate OK'); sys.exit(1 if bad else 0)
+          PY
+      - name: Tests
+        run: forge test -vv

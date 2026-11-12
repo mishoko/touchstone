@@ -1,0 +1,27 @@
+# Internal working material (design, plan, process, handoffs, agent configs) — kept in the local internal repo, never published
+/internal/
+/CLAUDE.md
+/AGENTS.md
+/.claude/
+/docs/HANDOFF.md
+/output/
+
+# Build artefacts
+out/
+cache/
+broadcast/
+.forge-snapshots/MUTATION_IN_PROGRESS
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Data and tooling
+eval/data/**/*.csv
+eval/data/**/*.csv.gz
+__pycache__/
+*.pyc
+node_modules/
+frontend/.next/
+.DS_Store

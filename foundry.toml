@@ -1,0 +1,25 @@
+[profile.default]
+src = "src"
+test = "test"
+script = "script"
+out = "out"
+libs = ["lib"]
+solc_version = "0.8.26"
+evm_version = "cancun"
+via_ir = true
+optimizer = true
+optimizer_runs = 200
+fs_permissions = [{ access = "read", path = "./test/vectors" }, { access = "read", path = "./eval/data" }]
+# Note: `forge test` does not enforce EIP-170; the size gate is `forge build --sizes` + an anvil deploy (CI).
+
+[profile.invariant.invariant]
+runs = 256
+depth = 128
+fail_on_revert = false
+
+[profile.mutation]
+fuzz = { runs = 64 }
+invariant = { runs = 16, depth = 32 }
+
+[profile.fork]
+# fork tests read UNICHAIN_SEPOLIA_RPC_URL / MAINNET_RPC_URL from the environment

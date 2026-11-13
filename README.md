@@ -17,9 +17,9 @@ manager gets paid, and leaving it out of range past a published cure window forf
 
 At every curator action, the pool prices what that action cost the vault, at the worse of spot and the 10-minute TWAP
 of a deep Uniswap v3 pool for the same pair fixed at deployment, and charges 100% of it to the curator's deferred pay and
-bond; an action they cannot cover, or one taken more than a published band from that reference, reverts. A curator that
-leaves the vault outside the reference price past a published cure window forfeits its unvested pay; three breaches
-remove it, and depositors can always exit in kind. Market moves, positioning and token mix are not covered, skill is not
+bond; an action they cannot cover, or one taken more than a published band from that reference, reverts. The curator's
+pay never vests while the vault is outside the reference price; observed absence past a published cure window forfeits
+its unvested pay, three breaches remove it, and depositors can always exit in kind. Market moves, positioning and token mix are not covered, skill is not
 rewarded, and the reference TWAP is assumed not to be moved. The measured cost of moving it will be published with the
 security results.
 

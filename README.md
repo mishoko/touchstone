@@ -9,7 +9,8 @@ lost to front-running or to a friendly counterparty) come out of depositors' mon
 Touchstone reverses that: the pool itself measures what each manager action cost depositors and charges 100% of it to
 the manager's held-back pay and a bond they post; an action they cannot cover is refused. The manager earns a base fee
 only while the vault's capital is deployed inside its agreed price range, so keeping the vault in range is how the
-manager gets paid, and leaving it out of range past a published cure window forfeits the held-back pay.
+manager gets paid; pay never vests while the vault is out of range, and an observed absence past a published cure window
+forfeits the held-back pay.
 
 **Your curator pays for its own trades.**
 

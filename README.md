@@ -15,10 +15,16 @@ manager gets paid, and leaving it out of range past a published cure window forf
 
 ## What is and is not covered
 
-At every curator action, the pool prices what that action cost the vault, at the worse of spot and its own
-block-start median, and charges 100% of it to the curator's deferred pay and bond; an action they cannot cover reverts.
-Market moves, positioning and token mix are not covered, skill is not rewarded, and the valuation assumes the pool's
-median is not moved. The measured cost of moving it will be published with the security results.
+At every curator action, the pool prices what that action cost the vault, at the worse of spot and the 10-minute TWAP
+of a deep Uniswap v3 pool for the same pair fixed at deployment, and charges 100% of it to the curator's deferred pay and
+bond; an action they cannot cover, or one taken more than a published band from that reference, reverts. A curator that
+leaves the vault outside the reference price past a published cure window forfeits its unvested pay; three breaches
+remove it, and depositors can always exit in kind. Market moves, positioning and token mix are not covered, skill is not
+rewarded, and the reference TWAP is assumed not to be moved. The measured cost of moving it will be published with the
+security results.
+
+There is no keeper, operator, admin or off-chain feed. The one external input is the reference pool's TWAP, because a
+new hook pool whose vault is out of range has no reliable price of its own.
 
 > Status: under active development. Results, run commands, the claims → tests table and limitations will be listed here.
 

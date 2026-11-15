@@ -233,7 +233,11 @@ def props_saturation():
     b3 = R.Bank()
     b3.forfeitPool = b3.forfeitTotal = 10
     b3.dripBlocks = 0
-    check(R.fee_bank_apply(b3, "Drip", dict(now=5))[0] == 10, "dripBlocks 0 burns all without dividing by zero")
+    try:
+        burned0 = R.fee_bank_apply(b3, "Drip", dict(now=5))[0]
+    except Exception as ex:  # a targeted unit check: any exception here is the failure being tested
+        burned0 = repr(ex)
+    check(burned0 == 10, "dripBlocks 0 burns all without dividing by zero", burned0)
     m, br, ex = R.ladder_next(R.EXITED, R.U32, R.EV_BREACH, 5)
     check(br == R.U32 and m == R.EXITED and not ex, "breach counter saturates")
     h = R.Hook(R.TEST, R.RefSource(lambda ts: T0))
@@ -355,7 +359,7 @@ def scenario_base_and_vesting():
     tau0 = w.v.tauV0
     navref = w.v.nav(sqrt_at(T0))
     w.keepalive_run(100)
-    o = w.v.hook.obs(w.block)
+    o = w.v.hook.obs(w.block, 0)
     expected = R.mul_div(R.mul_div(w.t.m_perBlock, w.v.NAV0, R.WAD), w.v.delta0 * (o["tauV"] - tau0), R.WAD)
     check(o["tauV"] - tau0 == 100, "τ_v counts every observed in-range block", o["tauV"] - tau0)
     w.poke()
@@ -1697,7 +1701,7 @@ def rules_r5():
           (10 ** 16 * 12 // 31536000, 10 ** 16 // 31536000, 10 ** 16 * 12 // 31536000), "m_perBlock per tier")
     # Obs index fields
     w = World()
-    o = w.v.hook.obs(w.block + 7)
+    o = w.v.hook.obs(w.block + 7, 0)
     check(o["gridIndex"] == (w.block + 7) // t.GRID and o["epoch"] == (w.block + 7) // t.EPOCH, "Obs grid and epoch")
     # frozen records over a span with two boundaries, τ_v and τ_b credited; and the last-8 cap over a long span
     h = R.Hook(t, R.RefSource(lambda ts: T0))
@@ -1741,7 +1745,7 @@ def rules_r5():
     v.bank.cohorts[0] = [0, 10 ** 18]
     v.bank.placedByCurator = True
     w.ref.fail = lambda end: True
-    o = hk.obs(w.block)
+    o = hk.obs(w.block, 0)
     v._checkpoint(o, w.block, w.ts())
     check(v.bank.vestedUnclaimed == 0 and v.bank.maturedPending == 10 ** 18, "a failed live read closes the gate")
     w.ref.fail = set()
@@ -1777,10 +1781,15 @@ def rules_r5():
     exp_fv = R.mul_div(R.mul_div(t.m_perBlock, v.NAV0, R.WAD), v.delta0 * (o["tauVAtLastPending"] - v.tauV0), R.WAD) + v.baseOwed
     exp_base = R.mul_div(R.mul_div(t.m_perBlock, v.NAV0, R.WAD), v.delta0 * (o["tauV"] - o["tauVAtLastPending"]), R.WAD)
     v._collect_first()
+    S0m = v.S
+    navm = v.nav(sqrt_at(o["refTick"]))
     v._checkpoint(o, w.block, w.ts())
+    check(v.S - S0m == exp_base * S0m // (navm - exp_base), "after a breach the mint covers only the base after b_last",
+          (v.S - S0m, exp_base))
     check(o["pendingBreaches"] == 1 and v.rec(e)["forfeitValue"] - fv0 == exp_fv and exp_fv > 0,
           "record forfeitValue = the unminted base up to b_last", (v.rec(e)["forfeitValue"] - fv0, exp_fv))
     check(v.rec(e)["base"] - b0 == exp_base, "record base = the base after b_last", (v.rec(e)["base"] - b0, exp_base))
+    check(v.baseOwed == 0, "a priced breach checkpoint leaves no baseOwed", v.baseOwed)
     # empty holdings: δ = 0 (no division by zero)
     try:
         d = R.delta_of(R.Holdings(), sqrt_at(T0))
@@ -1877,13 +1886,202 @@ def rules_r6():
     w.step(1)
     check(w.block == ex_b + 480 and w.release() > 0, "release at exit + releaseDelay pays")
     # the pool double refuses an over-removal, as v4 does
+    import probe_rt
     pool = R.Pool(sqrt_at(T0), 500)
-    pool.modify("x", T0 - 10, T0 + 10, 100)
+    pool.modify("x", T0 - 100, T0 + 100, 10 ** 20)
+    pool.swap(False, 10 ** 18, sqrt_at(T0 + 50))
+    pool.swap(True, 10 ** 18, sqrt_at(T0 - 50))
+    before = probe_rt.canon(pool)
     try:
-        pool.modify("x", T0 - 10, T0 + 10, -101)
+        pool.modify("x", T0 - 100, T0 + 100, -(10 ** 20 + 1))
         check(False, "over-removal reverts")
     except R.MathRevert:
-        check(pool.pos[("x", T0 - 10, T0 + 10)][0] == 100, "over-removal reverts with state unchanged")
+        check(probe_rt.canon(pool) == before, "over-removal reverts with the whole pool state unchanged")
+
+
+def rules_r7():
+    """Checks added after fix review r7: repeated stale spans, cooldown boundary, tier tables, one skipped epoch."""
+    t = R.TEST
+    # touches every block through an unreadable-reference silence credit only up to refCachedAt + 2·GRID
+    for out_of_range in (False, True):
+        st = {"ref": T0}
+        w = World(ref_fn=lambda ts: st["ref"])
+        w.place(T0 - 1000, T0 + 1000)
+        w.deposit(10 ** 26)
+        w.keepalive_run(360)
+        w.poke()
+        h = w.v.hook
+        if out_of_range:
+            st["ref"] = T0 + 1500
+            w.step(t.GRID - w.block % t.GRID)
+            w.touch()  # cache the out-of-range anchor
+        tv0, ob0, seq0, last0, cached = h.tauV, h.outBlocks, h.breachSeq, h.lastSnap, h.refCachedAt
+        w.ref.fail = lambda end: True
+        frozen_tv = []
+        for _ in range(150):
+            w.step(1)
+            w.touch()
+        stale_at = cached + 2 * t.GRID
+        exp = stale_at - last0
+        if out_of_range:
+            check(h.outBlocks - ob0 == exp and h.breachSeq == seq0 and h.tauV == tv0,
+                  "repeated stale spans credit outBlocks only up to the freshness point", (h.outBlocks - ob0, exp))
+        else:
+            check(h.tauV - tv0 == exp and h.outBlocks == ob0, "repeated stale spans credit τ_v only up to freshness",
+                  (h.tauV - tv0, exp))
+            tvB = [v[1] for k, v in sorted(h.frozen.items()) if k * t.GRID > stale_at]
+            check(tvB and all(x == tv0 + exp for x in tvB), "τ_v(B) flat after the staleness point", tvB[:3])
+        w.ref.fail = set()
+    # COOLDOWN boundary: a second action at lastAction + COOLDOWN − 1 reverts, at + COOLDOWN passes
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.step(t.COOLDOWN - 1)
+    try:
+        w.place(T0 - 1010, T0 + 990)
+        check(False, "an action at COOLDOWN − 1 must revert")
+    except R.Revert as ex:
+        check(ex.err == "Cooldown", "COOLDOWN − 1 reverts", ex.err)
+    w.step(1)
+    w.place(T0 - 1010, T0 + 990)
+    # per-chain tables (spec §6), pinned as literals
+    for tr, row in ((R.TEST, (12, 20, 240, 120, 200, 5, 600, 20, 120)), (R.DEMO, (1, 300, 300, 3600, 1800, 30, 300, 300, 3600)),
+                    (R.MAINNET, (12, 300, 3600, 50400, 7200, 30, 600, 300, 50400))):
+        got = (tr.BLOCKTIME, tr.GRID, tr.GRID_SEC, tr.EPOCH, tr.CURE_BLOCKS, tr.COOLDOWN, tr.REF_WINDOW, tr.EDGE_DELAY,
+               tr.FORFEIT_DRIP_BLOCKS)
+        check(got == row, f"{tr.NAME} per-chain parameters", got)
+        check((tr.FEE, tr.SPACING, tr.FEE_TICKS, tr.W_TICKS, tr.BAND_SWAP, tr.REF_BAND, tr.DELTA_MIN, tr.MAX_SWAP_ACTION,
+               tr.MAX_SWAP_EPOCH, tr.MAX_SWAPS, tr.RESET_RUN, tr.BOND_RATIO, tr.L_W_TARGET) ==
+              (500, 10, 5, 2000, 5, 60, 5 * 10 ** 17, 2 * 10 ** 16, 5 * 10 ** 16, 20, 2, 5 * 10 ** 14, 1000),
+              f"{tr.NAME} shared parameters")
+    # one skipped epoch flags exactly the skipped record stale
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    e0 = w.v.epoch
+    w.step((e0 + 2) * t.EPOCH + 3 - w.block)
+    w.poke()
+    check("stale" in w.v.rec(e0 + 1)["flags"] and w.v.epoch == e0 + 2, "one skipped epoch is flagged stale")
+
+
+def rules_r7b():
+    """Clause checks from the generated literal class."""
+    t = R.TEST
+    # module constants and tables, pinned
+    check((R.U32, R.U40, R.U64, R.U128) == (2 ** 32 - 1, 2 ** 40 - 1, 2 ** 64 - 1, 2 ** 128 - 1), "integer bounds")
+    check(R.PLACEMENT_ERR == {1: "Fence", 2: "Width", 3: "Alignment", 4: "NotContained", 5: "NotContained"},
+          "placement error mapping")
+    check(all(not R.ladder_allowed(m, R.E["Seed"]) for m in range(3)), "Ladder.allowed(·, Seed) is false")
+    check(all(tr.BOND_MIN == 0 for tr in (R.TEST, R.DEMO, R.MAINNET)), "BOND_MIN in the model's tiers (proposal pending)")
+    # a placement that does not contain the reference reverts NotContained (code 5) at the vault
+    w = World()
+    w.v.pool.push_to(sqrt_at(T0 + 40))
+    w.step(1)
+    try:
+        w.place(T0 + 10, T0 + 2010)
+        check(False, "a range without the reference must revert")
+    except R.Revert as ex:
+        check(ex.err == "NotContained", "reference not contained reverts NotContained", ex.err)
+    # a one-wei loss is charged one wei
+    h0, h1 = R.Holdings(10 ** 12, 10 ** 21), R.Holdings(10 ** 12, 10 ** 21 - 1)
+    check(R.measure(h0, h1, sqrt_at(T0), sqrt_at(T0), 10 ** 24, 10 ** 24, 0)[0] == 1, "a one-wei loss is charged")
+    # seed state: δ0 = 0; fresh records start at zero; GapCleared kinds (0 registration, 1 reset)
+    w = World()
+    check(w.v.delta0 == 0, "seed δ0 = 0")
+    r = w.v.rec(10 ** 6)
+    check((r["base"], r["charge"], r["minted"], r["bankBurned"], r["bondBurned"], r["forfeited"], r["forfeitValue"],
+           r["tauV"], r["flags"]) == (0, 0, 0, 0, 0, 0, 0, 0, set()), "a fresh record starts at zero")
+    w.place(T0 - 1000, T0 + 1000)
+    check(("GapCleared", 0) in w.v.hook.events, "registration emits GapCleared(0)")
+    h = R.Hook(t, R.RefSource(lambda ts: T0))
+    h.armed, h.vaultLo, h.vaultHi, h.emptyRange = True, T0 - 1000, T0 + 1000, False
+    h.refTick, h.refGrid, h.refCachedAt, h.lastSnap, h.ring, h.resetStreak = T0, 100, 2000, 2000, [(2000, T0)], 1
+    h.snapshot(2020, 2020 * t.BLOCKTIME, sqrt_at(T0), T0)
+    check(("GapCleared", 1) in h.events, "a reset emits GapCleared(1)")
+    # the pool position always equals the vault's L (collect-first is a zero-liquidity modify)
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    for _ in range(4):
+        w.keepalive_run(7)
+        w.poke()
+    check(w.v.pool.pos[("vault", w.v.h.lo, w.v.h.hi)][0] == w.v.h.L, "pool position L == vault L after prologues")
+    # an ineligible (unplaced) vault's checkpoints add nothing to the record base
+    w = World()
+    w.keepalive_run(40)
+    e = w.block // t.EPOCH
+    b0 = w.v.rec(e)["base"]
+    w.poke()
+    check(w.v.rec(e)["base"] == b0, "no record base while ineligible")
+
+
+def rules_r7c():
+    """Clause checks from the literal class (second pass)."""
+    t = R.TEST
+    # the ring keeps the 32 newest snapshots
+    h = R.Hook(t, R.RefSource(lambda ts: T0))
+    for i in range(45):
+        h.snapshot(1000 + i, 12 * (1000 + i), sqrt_at(T0), T0)
+    check([b for b, _ in h.ring] == list(range(1000 + 45 - 32, 1000 + 45)), "the ring keeps the 32 newest snapshots")
+    # the checkpoint is skipped before seed (S == 0) and returns no live read
+    w = World()
+    v = w.v
+    S, h0 = v.S, v.h.d()
+    v.S = 0
+    v.hook.pendingBreaches, v.hook.lastPendingBlock, v.hook.tauVAtLastPending = 1, w.block, v.hook.tauV
+    b0 = v.bank.d()
+    r = v._checkpoint(v.hook.obs(w.block, 0), w.block, w.ts())
+    check(r == (False, 0) and v.h.d() == h0 and v.bank.d() == b0, "S == 0: the checkpoint is skipped", r)
+    v.S = S
+    v.hook.pendingBreaches = 0
+    # deposit and withdraw on an unplaced vault return exactly the idle slices
+    w = World()
+    S, i0, i1 = w.v.S, w.v.h.idle0, w.v.h.idle1
+    sh = 10 ** 23 + 1
+    paid = w.deposit(sh)
+    check(paid == (R.ceil_div(i0 * sh, S), R.ceil_div(i1 * sh, S)), "unplaced deposit returns the idle slices", paid)
+    S, i0, i1 = w.v.S, w.v.h.idle0, w.v.h.idle1
+    got = w.withdraw(sh)
+    check(got == (i0 * sh // S, i1 * sh // S), "unplaced withdraw returns the idle slices", got)
+
+
+def rules_r7d():
+    """One-unit boundaries from the literal class."""
+    t = R.TEST
+    # a single matured share (in maturedPending or in a cohort) is vestable and vests
+    for where in ("pending", "cohort"):
+        w = World()
+        w.place(T0 - 1000, T0 + 1000)
+        w.keepalive_run(30)
+        b = w.v.bank
+        if where == "pending":
+            b.maturedPending = 1
+        else:
+            b.cohorts[0] = [0, 1]
+        vu = b.vestedUnclaimed
+        w.step(1)
+        w.poke()
+        check(b.vestedUnclaimed == vu + 1, f"a single matured share vests ({where})", b.vestedUnclaimed - vu)
+    # a one-wei mint amount is minted (not dropped)
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.keepalive_run(30)
+    w.step(1)
+    w.poke()
+    w.v.baseOwed = 1
+    v = w.v
+    o = v.hook.snapshot(w.block, w.ts(), v.pool.s, v.pool.tick)  # same block: no new τ_v
+    S0 = v.S
+    v._checkpoint(o, w.block, w.ts())
+    check(v.baseOwed == 0 and v.S > S0, "a one-wei amount is minted", (v.baseOwed, v.S - S0))
+    # deposits and withdrawals that move exactly one unit of liquidity
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    L0 = w.v.h.L
+    w.deposit(1)
+    check(w.v.h.L == L0 + 1, "a deposit moving one unit of L adds it", w.v.h.L - L0)
+    sh = w.v.S // w.v.h.L + 1
+    L1 = w.v.h.L
+    w.withdraw(sh)
+    check(w.v.h.L == L1 - L1 * sh // (w.v.S + sh) and L1 * sh // (w.v.S + sh) == 1, "a withdrawal moving one unit of L removes it",
+          (L1 - w.v.h.L,))
 
 
 def headroom_exact(rng):
@@ -1914,7 +2112,7 @@ def main():
     for fn in (props_ledger, props_mint, props_bank, props_drip, headroom_exact, props_placement):
         _run(fn, rng)
     for fn in (rules_med9, props_saturation, props_ladder, props_units, rules_pay, rules_gate_leg, rules_clock, rules_actions,
-               rules_r2, rules_r3, rules_r4, rules_r4b, rules_r5, rules_r6, scenario_base_and_vesting, scenario_live_leg, scenario_no_read_when_not_vestable,
+               rules_r2, rules_r3, rules_r4, rules_r4b, rules_r5, rules_r6, rules_r7, rules_r7b, rules_r7c, rules_r7d, scenario_base_and_vesting, scenario_live_leg, scenario_no_read_when_not_vestable,
                scenario_breach_and_removal, scenario_reset_and_registration, scenario_gap, scenario_actions,
                scenario_deltamin, scenario_insolvent, scenario_epilogue):
         _run(fn)

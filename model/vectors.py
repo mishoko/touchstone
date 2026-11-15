@@ -104,7 +104,7 @@ def math_cases():
         add("FullMath.mulDivRoundingUp", dict(a=a, b=b, denominator=d), guard("result", mul_div_up, a, b, d))
     for s in [sqrt_at(T0), sqrt_at(-T0), (1 << 128) - 1, 1 << 128, MAX_SQRT_PRICE - 1, MIN_SQRT_PRICE]:
         for x in [0, 1, 10 ** 12, 10 ** 30]:
-            add("LiquidityValue.q", dict(x=x, sqrtPriceX96=s), {"value": R.q(x, s)})
+            add("LiquidityValue.q", dict(x=x, sqrtPriceX96=s), guard("value", R.q, x, s))
     L = 3 * 10 ** 17
     for s in [sqrt_at(T0 - 1000) - 1, sqrt_at(T0 - 1000), sqrt_at(T0), sqrt_at(T0 + 1000) - 1, sqrt_at(T0 + 1000)]:
         x, y = R.position_amounts(L, T0 - 1000, T0 + 1000, s)
@@ -168,7 +168,12 @@ def ledger_cases():
                              "out": dict(charge=c, pStar=p, navAfterPStar=n, burn=b, ok=ok)}))
 
     def addv(tag, h, s):
-        nav, pv = R.value(h, s)
+        try:
+            nav, pv = R.value(h, s)
+        except MathRevert as ex:
+            cases.append(dict(id=f"ledger-{len(cases):03d}-{tag}", fn="ExecLedger.value",
+                              **{"in": dict(h=h.d(), sqrtP=s), "out": {"revert": UPSTREAM_ERR.get(str(ex).split(":")[0], str(ex))}}))
+            return
         cases.append(dict(id=f"ledger-{len(cases):03d}-{tag}", fn="ExecLedger.value",
                           **{"in": dict(h=h.d(), sqrtP=s), "out": dict(nav=nav, posValue=pv)}))
 
@@ -267,6 +272,8 @@ def ledger_cases():
     burn_g = R.measure(g0, g1, pool.s, sqrt_at(T0), S, 0, 0)[3]
     add("gate-passes-on-unvested", g0, g1, pool.s, sqrt_at(T0), unv_=burn_g - burn_g // 3, bond_=burn_g // 3,
         note="bond < burn <= unvested + bond", expect=("ref", True, True))
+    add("one-wei-loss", R.Holdings(10 ** 12, 10 ** 21), R.Holdings(10 ** 12, 10 ** 21 - 1), sqrt_at(T0), sqrt_at(T0),
+        note="a 1-wei loss is charged 1 wei", expect=("spot", False, True))
     # 11. gain at both prices: the 0 floor
     g = h0.copy()
     g.idle1 += 10 ** 15
@@ -434,6 +441,8 @@ def bank_cases():
         note="7 (5k), 6 (4k), 5 (1k)")
     add("charge-into-pending-and-bond", st(cohorts=[(7, k)], maturedPending=2 * k, bondShares=10 * k), "Charge",
         dict(burn=5 * k), note="cohort, then maturedPending, then bond")
+    add("charge-one-into-second-cohort", st(cohorts=[(7, 3 * k), (6, 5 * k)], bondShares=k), "Charge", dict(burn=3 * k + 1),
+        note="the youngest cohort, then exactly 1 share from the next cohort")
     add("charge-exact-total", st(cohorts=[(7, k)], maturedPending=k, bondShares=k), "Charge", dict(burn=3 * k))
     add("charge-insolvent", st(cohorts=[(7, k)], maturedPending=k, bondShares=k), "Charge", dict(burn=3 * k + 1))
     add("charge-zero", st(cohorts=[(7, k)], bondShares=k), "Charge", dict(burn=0))
@@ -443,6 +452,11 @@ def bank_cases():
         add(f"drip-{now}", st(**pool), "Drip", dict(now=now))
     add("drip-partly-burned", st(forfeitPool=9 * k, forfeitTotal=12 * k, forfeitStart=1000), "Drip", dict(now=1060),
         note="target 6k burned so far; 3k already burned; burn 3k")
+    add("drip-last-share", st(forfeitPool=1, forfeitTotal=12 * k, forfeitStart=1000), "Drip", dict(now=1130))
+    add("drip-one-share", st(forfeitPool=1, forfeitTotal=1, forfeitStart=1000), "Drip", dict(now=1130))
+    add("breach-one-share", st(cohorts=[(8, 1)]), "Breach", dict(count=1, now=1100))
+    add("accrue-overwrite-one-share", st(cohorts=[(2, 1)]), "Accrue", dict(epoch=7, shares=5, gateOpen=True))
+    add("vest-one-share", st(cohorts=[(3, 1)]), "VestTime", dict(nowEpoch=9, gateOpen=True))
     add("drip-zero-length", st(forfeitPool=5 * k, forfeitTotal=5 * k, forfeitStart=1000, dripBlocks=0), "Drip",
         dict(now=1000), note="dripBlocks 0 burns all, never divides by zero")
     add("drip-before-start", st(**pool), "Drip", dict(now=900))

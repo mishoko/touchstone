@@ -63,13 +63,16 @@ def sat(x, cap):
 
 
 # ================================================================ tiers
+class TierInvalid(Exception):
+    """A tier violates the configuration checks of the deploy script (EPOCH % GRID, GRID·blocktime, RESET_RUN, CURE)."""
+
+
 class Tier:
     def __init__(self, **kw):
         self.__dict__.update(kw)
-        assert self.EPOCH % self.GRID == 0
-        assert self.GRID * self.BLOCKTIME == self.GRID_SEC
-        assert self.RESET_RUN >= 2
-        assert self.CURE_BLOCKS >= self.EDGE_DELAY + 2 * self.GRID + self.REF_WINDOW // self.BLOCKTIME + self.GRID
+        if not (self.EPOCH % self.GRID == 0 and self.GRID * self.BLOCKTIME == self.GRID_SEC and self.RESET_RUN >= 2 and
+                self.CURE_BLOCKS >= self.EDGE_DELAY + 2 * self.GRID + self.REF_WINDOW // self.BLOCKTIME + self.GRID):
+            raise TierInvalid(self.__dict__.get("NAME"))
 
 
 def _m_per_block(blocktime, m_year_wad=10 ** 16):
@@ -481,7 +484,7 @@ class Hook:
     def fresh(self, now):
         return now < self.refCachedAt + 2 * self.t.GRID
 
-    def obs(self, now, tick_spot=0):
+    def obs(self, now, tick_spot):
         return dict(med9=self.med9, tickSpot=tick_spot, refTick=self.refTick, refCachedAt=self.refCachedAt,
                     refFresh=self.fresh(now), resetStreak=self.resetStreak, gapSinceVerify=self.gapSinceVerify,
                     emptyRange=self.emptyRange, tauV=self.tauV, tauB=self.tauB, outBlocks=self.outBlocks,
@@ -684,11 +687,11 @@ class Pool:
         pk = (key, lo, hi)
         if dL == 0 and pk not in self.pos:
             raise MathRevert("CannotUpdateEmptyPosition")  # v4: a zero-delta modify reverts on an empty position
+        if self.pos.get(pk, [0])[0] + dL < 0:
+            raise MathRevert("SafeCastOverflow")  # v4: removing more liquidity than the position holds reverts
         f0, f1 = self.collect(key, lo, hi)
         if dL == 0:
             return 0, 0, f0, f1
-        if self.pos.get(pk, [0])[0] + dL < 0:
-            raise MathRevert("SafeCastOverflow")  # v4: removing more liquidity than the position holds reverts
         p = self.pos.setdefault(pk, [0] + self._fg_inside(lo, hi))
         self._update_tick(lo, dL, False)
         self._update_tick(hi, dL, True)
@@ -1020,7 +1023,7 @@ class Vault:
 
     NO_PRESWAP = {"active": False, "zeroForOne": False, "amountIn": 0}
 
-    def set_positions(self, lo, hi, pre=NO_PRESWAP, now=0, ts=0):
+    def set_positions(self, lo, hi, pre, now, ts):
         """setPositions(lo, hi, PreSwap): prologue, guards, remove, optional pre-swap, add, charge, register. Returns (charge, pStar, burn, deltaAfter)."""
         def f():
             o, tick_spot, s_spot, ref = self._action_common("SetPositions", now, ts)
@@ -1053,7 +1056,7 @@ class Vault:
             return charge, p_star, burn, d_after
         return self.call(f)
 
-    def rebalance_swap(self, zfo, amount_in, now=0, ts=0):
+    def rebalance_swap(self, zfo, amount_in, now, ts):
         def f():
             o, tick_spot, s_spot, ref = self._action_common("RebalanceSwap", now, ts)
             s_ref = get_sqrt_price_at_tick(ref)

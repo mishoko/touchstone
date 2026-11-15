@@ -43,6 +43,7 @@ RULES = {
     "relational": "every comparison in the model at its exact boundary (generated < <-> <=, > <-> >=)",
     "deletion": "every single-line state assignment and state-changing call in the model (generated statement deletion)",
     "operand": "every operand of every arithmetic and boolean operator, and each arm of every conditional expression",
+    "literal": "every integer literal ±1 in the model's functions and module-level constants (incl. min/max arguments)",
 }
 
 # (rule, name, old, new): `old` must occur exactly once in reference.py
@@ -248,7 +249,7 @@ def _abs(blines, lineno, col):
     return sum(len(l) for l in blines[:lineno - 1]) + col
 
 
-def _sites(src):
+def _sites(src, with_tree=False):
     """ast nodes inside the model's functions (constructors, the revert harness, test doubles and the tier
     configuration excluded), with byte spans."""
     import ast
@@ -269,7 +270,7 @@ def _sites(src):
             ids.add(id(n))
             nodes.append((n, selfful, _abs(lines, n.lineno, n.col_offset), _abs(lines, n.end_lineno, n.end_col_offset)))
     nodes.sort(key=lambda x: (x[2], -x[3]))
-    return bsrc, nodes
+    return (bsrc, nodes, tree) if with_tree else (bsrc, nodes)
 
 
 def _keyed(seen, key):
@@ -366,6 +367,51 @@ def operand_mutants(src):
     return out
 
 
+def literal_mutants(src):
+    """Generated literal mutants: every integer literal in the model's functions and in module-level constant
+    assignments, replaced by its value ±1 (test doubles excluded)."""
+    import ast
+    bsrc, nodes, tree = _sites(src, with_tree=True)
+    lines = bsrc.splitlines(keepends=True)
+    module_consts = []
+    for top in tree.body:
+        if isinstance(top, ast.Assign) and all(isinstance(t, ast.Name) and t.id.isupper() or isinstance(t, ast.Name)
+                                               for t in top.targets):
+            if any(isinstance(t, ast.Name) and t.id in ("ENTRY", "E", "OPS") for t in top.targets):
+                continue
+            for n in ast.walk(top):
+                if hasattr(n, "lineno"):
+                    module_consts.append((n, False, _abs(lines, n.lineno, n.col_offset), _abs(lines, n.end_lineno, n.end_col_offset)))
+    parent = {}
+    for p_ in ast.walk(tree):
+        for c in ast.iter_child_nodes(p_):
+            parent[id(c)] = p_
+    stop = (ast.Call, ast.Lambda, ast.ListComp, ast.GeneratorExp, ast.SetComp, ast.DictComp)
+    out, seen = [], {}
+    for n, _, a, b in sorted(nodes + module_consts, key=lambda x: (x[2], -x[3])):
+        if not (isinstance(n, ast.Constant) and type(n.value) is int):
+            continue
+        if isinstance(parent.get(id(n)), ast.Subscript) and parent[id(n)].slice is n:
+            continue  # a struct-field index (c[1], rd[0]): field selection, not a value
+        # the probe site: the largest enclosing expression below any call or comprehension boundary
+        top = n
+        while isinstance(parent.get(id(top)), ast.expr) and not isinstance(parent[id(top)], stop):
+            top = parent[id(top)]
+        pt = parent.get(id(top))
+        as_bool = isinstance(pt, (ast.If, ast.While, ast.BoolOp)) or (isinstance(pt, ast.IfExp) and pt.test is top)
+        A, B = _abs(lines, top.lineno, top.col_offset), _abs(lines, top.end_lineno, top.end_col_offset)
+        orig = bsrc[a:b].decode()
+        ctx = bsrc[max(0, bsrc.rfind(b"\n", 0, a) + 1):bsrc.find(b"\n", b)].decode().strip()[:80]
+        for d in (1, -1):
+            text = f"({n.value + d})"
+            key = _keyed(seen, f"lit:{orig}{'+' if d > 0 else '-'}1: {ctx}")
+            top_orig = bsrc[A:B].decode()
+            top_mut = (bsrc[A:a] + text.encode() + bsrc[b:B]).decode()
+            out.append(("literal", key, (bsrc[:a] + text.encode() + bsrc[b:]).decode(),
+                        ("op", A, B, top_orig, "(" + top_mut + ")", as_bool)))
+    return out
+
+
 def instrument(src, meta, key):
     """The clean model with a reachability probe at one site (see probe_rt.py)."""
     bsrc = src.encode()
@@ -425,7 +471,7 @@ def fuzz_trace_of(directory):
 # Each reason states why the two operators agree on every reachable input.
 # Equivalence claims. EQUIVALENT: the distinguishing condition occurs (probe hits > 0) and the outputs still match.
 # UNREACHABLE: the site runs but its distinguishing condition never occurs (probe hits == 0). Both require the
-# mutant to reproduce the clean randomized trace; probes run the self-check and the fuzz battery.
+# mutant to reproduce the clean randomized trace; probes run the self-check, the fuzz battery and vector generation.
 EQUIVALENT = {
     'rel:<-><=: x < 0': 'x = 0 returns 0 on both branches',
     'rel:>->>=: x > cap': 'x = cap returns cap on both branches',
@@ -452,6 +498,54 @@ EQUIVALENT = {
     'del: self._gate("Retire")': 'the gate reverts only in EXITED, where Op.Retire (Ladder.next) reverts BadMode with the same state',
     'del: self._gate("ReleaseBond")': 'the gate reverts only outside EXITED, where Op.Release reverts BadMode with the same state',
     'op:then: now - b.forfeitStart if now > b.forfeitStart else 0': 'now < forfeitStart gives a negative target, and the burn saturates at 0, as with el = 0',
+    'lit:0+1: if L == 0:': 'with L = 0 the general branches give zero amounts too (every amount is linear in L)',
+    'lit:0-1: if L == 0:': 'with L = 0 the general branches give zero amounts too (every amount is linear in L)',
+    'lit:0-1: if charge == 0:': "a zero charge with NAV'(p*) > 0 burns ceilDiv(0, NAV') = 0; NAV' = 0 with a zero charge needs empty holdings before and after",
+    'lit:0+1: if L == 0: #2': 'with L = 0 the general branches give zero amounts too (every amount is linear in L)',
+    'lit:0-1: if L == 0: #2': 'with L = 0 the general branches give zero amounts too (every amount is linear in L)',
+    'lit:1+1: "Deposit": (1, 1, 0), "Withdraw": (1, 1, 1), "SetPositions": (1, 1, 0), "Rebalan': 'the entry-point table is read through bool(); 2 is truthy like 1',
+    'lit:1+1: "Deposit": (1, 1, 0), "Withdraw": (1, 1, 1), "SetPositions": (1, 1, 0), "Rebalan #2': 'the entry-point table is read through bool(); 2 is truthy like 1',
+    'lit:1+1: "Deposit": (1, 1, 0), "Withdraw": (1, 1, 1), "SetPositions": (1, 1, 0), "Rebalan #3': 'the entry-point table is read through bool(); 2 is truthy like 1',
+    'lit:1+1: "Deposit": (1, 1, 0), "Withdraw": (1, 1, 1), "SetPositions": (1, 1, 0), "Rebalan #4': 'the entry-point table is read through bool(); 2 is truthy like 1',
+    'lit:1+1: "Deposit": (1, 1, 0), "Withdraw": (1, 1, 1), "SetPositions": (1, 1, 0), "Rebalan #5': 'the entry-point table is read through bool(); 2 is truthy like 1',
+    'lit:1+1: "Deposit": (1, 1, 0), "Withdraw": (1, 1, 1), "SetPositions": (1, 1, 0), "Rebalan #6': 'the entry-point table is read through bool(); 2 is truthy like 1',
+    'lit:1+1: "Deposit": (1, 1, 0), "Withdraw": (1, 1, 1), "SetPositions": (1, 1, 0), "Rebalan #7': 'the entry-point table is read through bool(); 2 is truthy like 1',
+    'lit:1+1: "Deposit": (1, 1, 0), "Withdraw": (1, 1, 1), "SetPositions": (1, 1, 0), "Rebalan #8': 'the entry-point table is read through bool(); 2 is truthy like 1',
+    'lit:1+1: "Deposit": (1, 1, 0), "Withdraw": (1, 1, 1), "SetPositions": (1, 1, 0), "Rebalan #9': 'the entry-point table is read through bool(); 2 is truthy like 1',
+    'lit:1+1: "Claim": (1, 1, 1), "TopUpBond": (1, 1, 0), "Retire": (1, 1, 0), "ReleaseBond": ': 'the entry-point table is read through bool(); 2 is truthy like 1',
+    'lit:1+1: "Claim": (1, 1, 1), "TopUpBond": (1, 1, 0), "Retire": (1, 1, 0), "ReleaseBond":  #2': 'the entry-point table is read through bool(); 2 is truthy like 1',
+    'lit:1+1: "Claim": (1, 1, 1), "TopUpBond": (1, 1, 0), "Retire": (1, 1, 0), "ReleaseBond":  #3': 'the entry-point table is read through bool(); 2 is truthy like 1',
+    'lit:1+1: "Claim": (1, 1, 1), "TopUpBond": (1, 1, 0), "Retire": (1, 1, 0), "ReleaseBond":  #4': 'the entry-point table is read through bool(); 2 is truthy like 1',
+    'lit:1+1: "Claim": (1, 1, 1), "TopUpBond": (1, 1, 0), "Retire": (1, 1, 0), "ReleaseBond":  #5': 'the entry-point table is read through bool(); 2 is truthy like 1',
+    'lit:1+1: "Claim": (1, 1, 1), "TopUpBond": (1, 1, 0), "Retire": (1, 1, 0), "ReleaseBond":  #6': 'the entry-point table is read through bool(); 2 is truthy like 1',
+    'lit:1+1: "Claim": (1, 1, 1), "TopUpBond": (1, 1, 0), "Retire": (1, 1, 0), "ReleaseBond":  #7': 'the entry-point table is read through bool(); 2 is truthy like 1',
+    'lit:1+1: "Claim": (1, 1, 1), "TopUpBond": (1, 1, 0), "Retire": (1, 1, 0), "ReleaseBond":  #8': 'the entry-point table is read through bool(); 2 is truthy like 1',
+    'lit:1+1: "Poke": (1, 1, 1), "ProcessBreach": (1, 1, 1), "Seed": (0, 0, 0),': 'the entry-point table is read through bool(); 2 is truthy like 1',
+    'lit:1+1: "Poke": (1, 1, 1), "ProcessBreach": (1, 1, 1), "Seed": (0, 0, 0), #2': 'the entry-point table is read through bool(); 2 is truthy like 1',
+    'lit:1+1: "Poke": (1, 1, 1), "ProcessBreach": (1, 1, 1), "Seed": (0, 0, 0), #3': 'the entry-point table is read through bool(); 2 is truthy like 1',
+    'lit:1+1: "Poke": (1, 1, 1), "ProcessBreach": (1, 1, 1), "Seed": (0, 0, 0), #4': 'the entry-point table is read through bool(); 2 is truthy like 1',
+    'lit:1+1: "Poke": (1, 1, 1), "ProcessBreach": (1, 1, 1), "Seed": (0, 0, 0), #5': 'the entry-point table is read through bool(); 2 is truthy like 1',
+    'lit:1+1: "Poke": (1, 1, 1), "ProcessBreach": (1, 1, 1), "Seed": (0, 0, 0), #6': 'the entry-point table is read through bool(); 2 is truthy like 1',
+    'lit:0-1: if T == 0 or b.forfeitPool == 0: #2': 'an empty pool with T > 0 burns sat(so_far - T) = 0 on both paths; a pool of -1 never occurs',
+    'lit:0-1: el = now - b.forfeitStart if now > b.forfeitStart else 0': 'now <= forfeitStart: el = -1 gives a negative target, and the burn saturates at 0 as with el = 0',
+    'lit:0-1: if slot[1] > 0 and slot[0] != e:': 'an empty foreign slot: the overwrite moves 0 shares and rewrites the epoch, as the fall-through does',
+    'lit:0-1: if c[1] > 0 and ne >= c[0] + 1 + V:': 'an empty matured cohort: vesting or moving 0 shares changes nothing',
+    'lit:0-1: if need == 0:': 'with need = 0 the loop continues and takes min(0, ·) = 0 from every later bucket',
+    'lit:0+1: mode, br, _ = ladder_next(b.mode, b.breaches, EV_PLACE, 0)': 'the count argument is ignored for Place and Retire',
+    'lit:0-1: mode, br, _ = ladder_next(b.mode, b.breaches, EV_PLACE, 0)': 'the count argument is ignored for Place and Retire',
+    'lit:0+1: mode, br, exited = ladder_next(b.mode, b.breaches, EV_RETIRE, 0)  # reverts BadM': 'the count argument is ignored for Place and Retire',
+    'lit:0-1: mode, br, exited = ladder_next(b.mode, b.breaches, EV_RETIRE, 0)  # reverts BadM': 'the count argument is ignored for Place and Retire',
+    'lit:0+1: n = 0': 'at most one CURE_BLOCKS crossing per call (a span credits <= 2·GRID < CURE_BLOCKS), so the latch cap and stride never act',
+    'lit:0-1: n = 0': 'at most one CURE_BLOCKS crossing per call (a span credits <= 2·GRID < CURE_BLOCKS), so the latch cap and stride never act',
+    'lit:1+1: j += 1': 'at most one CURE_BLOCKS crossing per call (a span credits <= 2·GRID < CURE_BLOCKS), so the latch cap and stride never act',
+    'lit:1+1: n += 1': 'at most one CURE_BLOCKS crossing per call (a span credits <= 2·GRID < CURE_BLOCKS), so the latch cap and stride never act',
+    'lit:1-1: n += 1': 'at most one CURE_BLOCKS crossing per call (a span credits <= 2·GRID < CURE_BLOCKS), so the latch cap and stride never act',
+    'lit:1+1: for B in range(bmin, bmax + 1, G):': 'boundaries advance in steps of GRID >= 2, so bmax + 1 and bmax + 2 bound the same set',
+    'lit:2+1: cr = max(0, min(min(B, self.refCachedAt + 2 * G) - last, trunc))': 'past the staleness point the min with trunc caps the credit at the same value',
+    'lit:0-1: if self.NAV0 == 0 or dtau <= 0: #2': 'dtau = 0 gives base 0 on both paths',
+    'lit:0+1: live_read, live_tick = False, 0': 'live_tick is read only when live_read is true',
+    'lit:0-1: live_read, live_tick = False, 0': 'live_tick is read only when live_read is true',
+    'lit:0-1: self.h.L = 0': 'the holdings are replaced by the sized `after` holdings before L is read again',
 }
 UNREACHABLE = {
     'rel:>->>=: sa > sb': 'every caller passes sa < sb (W_TICKS > 0)',
@@ -484,6 +578,24 @@ UNREACHABLE = {
     'op:drop1: now == self.lastSnap and self.ring': 'the ring is non-empty whenever now == lastSnap (every snapshot inserts)',
     'rel:>->>=: dL > 0': 'deposit: L > 0 implies dL = ceilDiv(L·s, S) >= 1, so dL = 0 with L > 0 never occurs',
     'op:drop0: self.NAV0 == 0 or dtau <= 0': 'NAV0 > 0 after seed (DEAD shares hold value)',
+    'lit:0+1: return 0 if x < 0 else (cap if x > cap else x) #2': 'sat(x) for x in {-1, 0, 1}: both forms return the same value',
+    'lit:0-1: return 0 if x < 0 else (cap if x > cap else x) #2': 'sat(x) for x in {-1, 0, 1}: both forms return the same value',
+    'lit:0-1: charge = loss if loss > 0 else 0': 'loss = 0 gives a charge of 0 either way',
+    'lit:0-1: if T == 0 or b.forfeitPool == 0:': 'T = -1 never occurs; T = 0 implies an empty pool, caught by the other leg',
+    'lit:3+1: while j * C <= new and n < 3:': 'at most one CURE_BLOCKS crossing per call (a span credits <= 2·GRID < CURE_BLOCKS), so the latch cap and stride never act',
+    'lit:3-1: while j * C <= new and n < 3:': 'at most one CURE_BLOCKS crossing per call (a span credits <= 2·GRID < CURE_BLOCKS), so the latch cap and stride never act',
+    'lit:0+1: if self.h.L > 0:': 'a position of exactly one liquidity unit never occurs (L is sized from real inventory with a headroom)',
+    'lit:0+1: if self.NAV0 == 0 or dtau <= 0:': 'NAV0 in {-1, 1} never occurs (NAV0 is the vault NAV at the reference after seed)',
+    'lit:0-1: if self.NAV0 == 0 or dtau <= 0:': 'NAV0 in {-1, 1} never occurs (NAV0 is the vault NAV at the reference after seed)',
+    'lit:0+1: if S_before > 0:': 'S in {-1, 0, 1} never occurs for a flow (S >= S_SEED after seed)',
+    'lit:0-1: if S_before > 0:': 'S in {-1, 0, 1} never occurs for a flow (S >= S_SEED after seed)',
+    'lit:0+1: if self.h.L > 0 and dL > 0:': 'L > 0 implies dL = ceilDiv(L·s, S) >= 1 and L = 0 implies dL = 0, so the edge values never change the outcome',
+    'lit:0-1: if self.h.L > 0 and dL > 0:': 'L > 0 implies dL = ceilDiv(L·s, S) >= 1 and L = 0 implies dL = 0, so the edge values never change the outcome',
+    'lit:0-1: if self.h.L > 0 and dL > 0: #2': 'L > 0 implies dL = ceilDiv(L·s, S) >= 1 and L = 0 implies dL = 0, so the edge values never change the outcome',
+    'lit:0+1: self.epochSwapFrac += mul_div_up(fill_val, WAD, nav_ref) if nav_ref else 0': 'NAV at the reference is > 0 after seed, so the else arm never runs',
+    'lit:0-1: self.epochSwapFrac += mul_div_up(fill_val, WAD, nav_ref) if nav_ref else 0': 'NAV at the reference is > 0 after seed, so the else arm never runs',
+    'lit:0+1: if self.h.L > 0: #2': 'a position of exactly one liquidity unit never occurs (L is sized from real inventory with a headroom)',
+    'lit:0+1: if L > 0:  # settle what the pool takes for L at its current price (equal to the': 'an L = 1 placement has δ_after ≈ 0 and reverts DeltaMin, rolling the skipped add back',
 }
 
 # Every clause of the curated mutation list -> killed mutants, or a recorded reason.
@@ -604,7 +716,7 @@ CLAUSES = [
 
 
 def mutate(src, m):
-    if m[0] in ("relational", "deletion", "operand"):
+    if m[0] in ("relational", "deletion", "operand", "literal"):
         return m[2], None
     rule, name, old, new = m[:4]
     replace_all = len(m) > 4 and m[4] == "all"
@@ -633,6 +745,8 @@ def run_one(src, m):
                 kv = dict(x.split("=") for x in line.split()[1:])
                 named, crashes = int(kv["named_failures"]), int(kv["crashes"])
         if "SUMMARY" not in out:
+            if "TierInvalid" in r.stderr:
+                return name, "killed", "tier validation (deploy-script configuration check)"
             crashes = 1
         if named:
             return name, "killed", f"self-check: {named} named failures"
@@ -663,7 +777,7 @@ def main():
     if base.returncode != 0:
         print("the clean self-check fails; fix it before measuring mutants:\n" + base.stdout[-800:])
         return 2
-    allm = MUTANTS + relational_mutants(src) + deletion_mutants(src) + operand_mutants(src)
+    allm = MUTANTS + relational_mutants(src) + deletion_mutants(src) + operand_mutants(src) + literal_mutants(src)
     clean = fuzz_trace_of(HERE)
     names = [m[1] for m in allm]
     assert len(names) == len(set(names)), "duplicate mutant names"
@@ -707,7 +821,7 @@ def main():
     n_eq = sum(1 for _, st in status.values() if st == "equivalent")
     n_kill = sum(1 for _, st in status.values() if st == "killed")
     print(f"\n{n_kill} killed, {n_eq} equivalent (with reasons), {len(bad)} failing, of {len(allm)} "
-          f"({len(MUTANTS)} named + {len(allm) - len(MUTANTS)} generated relational and deletion); rules without a killed mutant: {uncovered or 'none'}; "
+          f"({len(MUTANTS)} named + {len(allm) - len(MUTANTS)} generated: relational, deletion, operand, literal); rules without a killed mutant: {uncovered or 'none'}; "
           f"curated clauses: {len(CLAUSES)} ({n_map} mapped to mutants, {len(CLAUSES) - n_map} with a recorded reason); "
           f"clause problems: {clause_bad or 'none'}")
     return 1 if bad or uncovered or clause_bad else 0

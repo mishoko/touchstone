@@ -29,7 +29,7 @@ from v4math import (  # noqa: E402
     get_liquidity_for_amounts, compute_swap_step_exact_in,
 )
 
-SPEC_VERSION = "2.16"
+SPEC_VERSION = "2.17"
 WAD = 10 ** 18
 U32 = (1 << 32) - 1
 U40 = (1 << 40) - 1
@@ -687,11 +687,12 @@ class Pool:
         f0, f1 = self.collect(key, lo, hi)
         if dL == 0:
             return 0, 0, f0, f1
+        if self.pos.get(pk, [0])[0] + dL < 0:
+            raise MathRevert("SafeCastOverflow")  # v4: removing more liquidity than the position holds reverts
         p = self.pos.setdefault(pk, [0] + self._fg_inside(lo, hi))
         self._update_tick(lo, dL, False)
         self._update_tick(hi, dL, True)
         p[0] += dL
-        assert p[0] >= 0
         if p[0] == 0:
             del self.pos[pk]
         else:

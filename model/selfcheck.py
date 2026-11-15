@@ -1602,7 +1602,7 @@ def rules_r4():
     a0, a1, _, _ = clone.modify("vault", w.v.h.lo, w.v.h.hi, -(L * sh // S))
     try:
         got = w.withdraw(sh)
-    except Exception as ex:
+    except (R.Revert, R.MathRevert) as ex:
         got = repr(ex)
     check(got == (i0 * sh // S - a0, i1 * sh // S - a1), "withdraw returns idle slice + liquidity leg", (got, a0, a1))
 
@@ -1812,7 +1812,7 @@ def rules_r5():
     try:
         w.withdraw(10 ** 20)
         check(v.baseOwed == navp or w.v.baseOwed == navp, "NAV' == amount defers the whole amount", w.v.baseOwed)
-    except Exception as ex:
+    except (R.Revert, R.MathRevert) as ex:
         check(False, "NAV' == amount defers the whole amount", repr(ex))
 
 
@@ -1839,6 +1839,51 @@ def rules_med9():
     h.tauV = 9
     h.snapshot(1043, 10 ** 12, sqrt_at(T0), T0)
     check(h.frozen.get(51) == (T0, 9, 0) and h.frozen.get(52) == (T0, 9, 0), "frozen τ_v(B) uncredited out of range", h.frozen)
+
+
+def rules_r6():
+    """Checks added after fix review r6: frozen boundaries at low lastSnap, the first-action cooldown convention,
+    pinned constants, the release delay boundary."""
+    t = R.TEST
+    for last, now, want in ((25, 50, {2: 15}), (5, 30, {1: 15}), (0, 40, {1: 20, 2: 40}), (41, 99, {3: 19, 4: 39})):
+        h = R.Hook(t, R.RefSource(lambda ts: T0))
+        h.armed, h.vaultLo, h.vaultHi, h.emptyRange = True, T0 - 1000, T0 + 1000, False
+        h.refTick, h.refGrid, h.refCachedAt, h.lastSnap, h.ring, h.med9 = T0, 10 ** 9, last, last, [(last, T0)], T0
+        h.snapshot(now, 10 ** 12, sqrt_at(T0), T0)
+        check({k: v[1] for k, v in h.frozen.items()} == want, "frozen boundaries exact at low lastSnap", (last, now, h.frozen))
+    # the first curator action is never blocked by COOLDOWN (no previous action), even before block COOLDOWN
+    w = World(start_block=3, phase=10 ** 6)
+    try:
+        w.place(T0 - 1000, T0 + 1000)
+        check(w.v.lastAction == 3, "the first action is not subject to COOLDOWN")
+    except R.Revert as ex:
+        check(False, "the first action is not subject to COOLDOWN", ex.err)
+    # constants (spec §3.2, §6), pinned as literals
+    check((R.S_SEED, R.DEAD, R.N_SNAP, R.K_MED, R.V, R.TEST.MAX_SWAPS, R.TEST.DELTA_MIN, R.TEST.BOND_RATIO) ==
+          (10 ** 24, 10 ** 15, 32, 9, 4, 20, 5 * 10 ** 17, 5 * 10 ** 14), "pinned constants")
+    w = World()
+    check(w.v.S == 10 ** 24 and w.v.bank.bondShares == 10 ** 24 - 10 ** 15 and w.v.bank.releaseDelay == 480 and
+          w.v.bank.dripBlocks == 120, "seed: S_SEED, DEAD, releaseDelay = V·EPOCH, dripBlocks = EPOCH at TEST")
+    # release one block before the delay reverts; at the delay it pays
+    w.keepalive_run(t.COOLDOWN)
+    w.v.retire(w.block, w.ts())
+    ex_b = w.v.bank.exitBlock
+    w.keepalive_run(479)
+    try:
+        w.release()
+        check(False, "release at exit + 479 must revert")
+    except R.Revert as ex:
+        check(ex.err == "BondLocked", "release at exit + releaseDelay − 1 reverts", ex.err)
+    w.step(1)
+    check(w.block == ex_b + 480 and w.release() > 0, "release at exit + releaseDelay pays")
+    # the pool double refuses an over-removal, as v4 does
+    pool = R.Pool(sqrt_at(T0), 500)
+    pool.modify("x", T0 - 10, T0 + 10, 100)
+    try:
+        pool.modify("x", T0 - 10, T0 + 10, -101)
+        check(False, "over-removal reverts")
+    except R.MathRevert:
+        check(pool.pos[("x", T0 - 10, T0 + 10)][0] == 100, "over-removal reverts with state unchanged")
 
 
 def headroom_exact(rng):
@@ -1869,7 +1914,7 @@ def main():
     for fn in (props_ledger, props_mint, props_bank, props_drip, headroom_exact, props_placement):
         _run(fn, rng)
     for fn in (rules_med9, props_saturation, props_ladder, props_units, rules_pay, rules_gate_leg, rules_clock, rules_actions,
-               rules_r2, rules_r3, rules_r4, rules_r4b, rules_r5, scenario_base_and_vesting, scenario_live_leg, scenario_no_read_when_not_vestable,
+               rules_r2, rules_r3, rules_r4, rules_r4b, rules_r5, rules_r6, scenario_base_and_vesting, scenario_live_leg, scenario_no_read_when_not_vestable,
                scenario_breach_and_removal, scenario_reset_and_registration, scenario_gap, scenario_actions,
                scenario_deltamin, scenario_insolvent, scenario_epilogue):
         _run(fn)

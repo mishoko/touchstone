@@ -486,6 +486,14 @@ def bank_cases():
     R.fee_bank_apply(b, "Breach", dict(count=1, now=1400))
     add("release-after-post-exit-breach", b, "Release", dict(shares=9 * k, now=1480),
         note="a post-exit breach does not defer the release")
+    # saturation at uint128 (never revert)
+    U = R.U128
+    add("sat-accrue-slot", st(cohorts=[(7, U - 1)]), "Accrue", dict(epoch=7, shares=5, gateOpen=False))
+    add("sat-accrue-vested", st(cohorts=[(2, 4)], vestedUnclaimed=U - 1), "Accrue", dict(epoch=7, shares=1, gateOpen=True))
+    add("sat-accrue-pending", st(cohorts=[(2, 4)], maturedPending=U - 1), "Accrue", dict(epoch=7, shares=1, gateOpen=False))
+    add("sat-vest-closed-pending", st(cohorts=[(3, 9)], maturedPending=U - 1), "VestTime", dict(nowEpoch=9, gateOpen=False))
+    add("sat-forfeit-pool", st(cohorts=[(8, 9)], forfeitPool=U - 1, forfeitTotal=U - 1, forfeitStart=1000), "Breach",
+        dict(count=1, now=1000))
     # a chained sequence: accrue x6 epochs with a closed gate, then vest when it opens, then breach
     b = st(bondShares=k, placedByCurator=True)
     for e in range(6):

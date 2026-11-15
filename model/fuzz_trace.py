@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Randomized differential trace of the reference model.
 
-Runs seeded random sequences of every entry point (placements at random legal and edge ranges, deposits,
+Runs seeded random sequences (TEST and DEMO tiers, start blocks from 3 to 12,000, timestamp phases) of every entry point (placements at random legal and edge ranges, deposits,
 withdrawals, swaps, pre-swaps, pokes, retire, claim, top-up, release, reference moves including far moves and
 unreadable windows, pool pushes, silent gaps, unplaced vaults) and prints one line per step with the outcome and
 the full model state. `mutants_model.py` uses it as the witness for every equivalence claim: an equivalent mutant
@@ -19,15 +19,9 @@ T0 = C.T0
 
 
 def state(w):
-    v, h = w.v, w.v.hook
-    return dict(S=v.S, h=v.h.d(), bank=v.bank.d(), NAV0=v.NAV0, d0=v.delta0, tauV0=v.tauV0, segStart=v.segStart,
-                owed=v.baseOwed, epoch=v.epoch, frac=v.epochSwapFrac, swaps=v.swapCount, last=v.lastAction,
-                reads=(v.live_reads, v.mint_reads), recs={k: {kk: (sorted(vv) if isinstance(vv, set) else vv)
-                                                              for kk, vv in r.items()} for k, r in v.records.items()},
-                hook=dict(tauV=h.tauV, out=h.outBlocks, ref=h.refTick, grid=h.refGrid, at=h.refCachedAt,
-                          streak=h.resetStreak, gap=h.gapSinceVerify, empty=h.emptyRange, lo=h.vaultLo, hi=h.vaultHi,
-                          seq=h.breachSeq, pend=h.pendingBreaches, lpb=h.lastPendingBlock, tlp=h.tauVAtLastPending),
-                pool=(v.pool.s, v.pool.tick))
+    """The complete model state, canonicalised (vault, hook, bank, records, pool)."""
+    import probe_rt
+    return probe_rt.canon(w.v)
 
 
 def run(seed, steps=80):
@@ -35,7 +29,11 @@ def run(seed, steps=80):
     st = {"ref": T0, "fail": False}
     third = rng.choice([0, 10 ** 15, 10 ** 19, 10 ** 22])
     seed_amt = rng.choice([(150_000 * C.USDC, 50 * C.ETH), (300_000 * C.USDC, 1 * C.ETH), (1_000 * C.USDC, 90 * C.ETH)])
-    w = C.World(ref_fn=lambda ts: st["ref"], third_L=third, seed_amounts=seed_amt, phase=rng.choice([0, 150]))
+    tier = rng.choice([R.TEST, R.TEST, R.DEMO])
+    start = rng.choice([3, 40, 400, 12000])
+    phase = 10 ** 6 + rng.choice([0, 150]) if start < 1000 else rng.choice([0, 150])
+    w = C.World(tier=tier, ref_fn=lambda ts: st["ref"], third_L=third, seed_amounts=seed_amt, phase=phase,
+                start_block=start)
     w.ref.fail = lambda end: st["fail"]
     out = []
     for i in range(steps):
@@ -95,7 +93,7 @@ def run(seed, steps=80):
             elif op == "release":
                 w.release()
             elif op == "gap":
-                w.step(rng.randint(2, 6) * R.TEST.GRID * 2)
+                w.step(rng.randint(2, 6) * w.t.GRID * 2)
             elif op == "far":
                 st["ref"] = T0 + rng.choice([-300000, 1500, -1500, 0])
         except (R.Revert, R.MathRevert) as ex:

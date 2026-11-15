@@ -400,7 +400,7 @@ def probe_hits(src, m):
             if f.endswith(".py"):
                 shutil.copy(os.path.join(HERE, f), d)
         open(os.path.join(d, "reference.py"), "w").write(instrument(src, m[3], m[1]))
-        tot = [0, 0]
+        tot = [0, 0, 0]  # site runs, condition (all phases), condition outside the self-check
         for i, cmd in enumerate(("import selfcheck; selfcheck.main()", "import fuzz_trace; fuzz_trace.main()",
                                  "import vectors; vectors.main()")):
             out = os.path.join(d, f"probe{i}.json")
@@ -409,7 +409,7 @@ def probe_hits(src, m):
                            capture_output=True, text=True)
             if os.path.exists(out):
                 h = json.load(open(out)).get(m[1], [0, 0])
-                tot = [tot[0] + h[0], tot[1] + h[1]]
+                tot = [tot[0] + h[0], tot[1] + h[1], tot[2] + (h[1] if i > 0 else 0)]
         return tot
     finally:
         shutil.rmtree(d, ignore_errors=True)
@@ -445,9 +445,6 @@ EQUIVALENT = {
     'op:drop0: c[1] > 0 and ne >= c[0] + 1 + V': 'an empty matured cohort: vesting or moving 0 shares changes nothing',
     'op:left: last // G * G + G': 'the B <= last guard skips any boundary at or before lastSnap',
     'op:right: last // G * G + G': 'the B <= last guard skips any boundary at or before lastSnap',
-    'op:left: last // G * G': 'the B <= last guard skips any boundary at or before lastSnap',
-    'op:right: last // G * G': 'the B <= last guard skips any boundary at or before lastSnap',
-    'op:right: last // G': 'the B <= last guard skips any boundary at or before lastSnap',
     'op:drop1: self.NAV0 == 0 or dtau <= 0': 'dtau = 0 gives base 0 on both paths',
     'op:drop0: self.bank.placedByCurator and self.bank.mode in (NORMAL, BREACHED)': 'not placed while NORMAL/BREACHED only before the first placement, when δ0 = 0 makes the base 0',
     'rel:<=-><: s <= U128': 's = 2^128 − 1 occurs in the math vectors; the two quote forms agree there for every x < 2^129',
@@ -482,7 +479,6 @@ UNREACHABLE = {
     'op:drop1: o["refFresh"] and not o["emptyRange"] and not o["gapSinceVerify"] and in_rng(lo, hi, o["re': 'EMPTY stores lo = hi = 0, so the cached-range leg is already false',
     'op:drop0: self.h.L > 0 and dL > 0': 'L > 0 implies dL = ceilDiv(L·s, S) >= 1, and L = 0 implies dL = 0',
     'op:drop1: self.h.L > 0 and dL > 0': 'L > 0 implies dL = ceilDiv(L·s, S) >= 1, and L = 0 implies dL = 0',
-    'op:drop0: self.lastAction and now - self.lastAction < self.t.COOLDOWN': 'lastAction = 0 only before the first action, when now >= COOLDOWN',
     'op:then: mul_div_up(req_val, WAD, nav_ref) if nav_ref else U64': 'NAV at the reference is > 0 after seed (DEAD shares hold value)',
     'op:then: mul_div_up(fill_val, WAD, nav_ref) if nav_ref else 0': 'NAV at the reference is > 0 after seed',
     'op:drop1: now == self.lastSnap and self.ring': 'the ring is non-empty whenever now == lastSnap (every snapshot inserts)',
@@ -680,14 +676,15 @@ def main():
     for m, (_, st, why) in zip(allm, results):
         rule, name = m[0], m[1]
         if st == "SURVIVED" and name in hits:
-            ran, cond = hits[name]
+            ran, cond, cond_ext = hits[name]
             same = why == clean
-            if name in EQUIVALENT and same and cond > 0:
+            if name in EQUIVALENT and same and cond_ext > 0:
                 st, why = "equivalent", f"{EQUIVALENT[name]} [condition reached {cond}x, identical trace]"
             elif name in UNREACHABLE and same and ran > 0 and cond == 0:
                 st, why = "equivalent", f"unreachable: {UNREACHABLE[name]} [site ran {ran}x, condition never; identical trace]"
             else:
-                st, why = "CLAIM-REFUTED", f"trace {'identical' if same else 'DIFFERS'}, site ran {ran}x, condition {cond}x"
+                st, why = "CLAIM-REFUTED", (f"trace {'identical' if same else 'DIFFERS'}, site ran {ran}x, condition {cond}x "
+                                            f"({cond_ext}x in the fuzz and vector phases)")
         status[name] = (rule, st)
         if st != "killed" or "-v" in sys.argv:
             print(f"{st:15s} [{rule}] {name}" + (f"  ({why})" if why else ""))

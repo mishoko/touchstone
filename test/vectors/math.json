@@ -1,0 +1,2042 @@
+{
+ "schema": "touchstone-vectors/1",
+ "specVersion": "2.15",
+ "conventions": {
+  "ports": "TickMath, SqrtPriceMath, FullMath (v4-core) and LiquidityAmounts (v4-periphery) with their roundUp flags.",
+  "LiquidityValue.q": "q(x,s) = s <= 2^128-1 ? mulDiv(s*s, x, 2^192) : mulDiv(mulDiv(s,s,2^64), x, 2^128).",
+  "LiquidityValue.amounts": "Appendix A at sqrt price s with removal rounding (roundUp = false): s <= sa all token0; s >= sb all token1; else getAmount0Delta(s, sb) and getAmount1Delta(sa, s).",
+  "revert": "out = {revert: <error>} when the library function reverts."
+ },
+ "cases": [
+  {
+   "id": "math-000",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "-887272"
+   },
+   "out": {
+    "sqrtPriceX96": "4295128739"
+   }
+  },
+  {
+   "id": "math-001",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "-887271"
+   },
+   "out": {
+    "sqrtPriceX96": "4295343490"
+   }
+  },
+  {
+   "id": "math-002",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "-200000"
+   },
+   "out": {
+    "sqrtPriceX96": "3598751819609688046946419"
+   }
+  },
+  {
+   "id": "math-003",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "-1"
+   },
+   "out": {
+    "sqrtPriceX96": "79224201403219477170569942574"
+   }
+  },
+  {
+   "id": "math-004",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "0"
+   },
+   "out": {
+    "sqrtPriceX96": "79228162514264337593543950336"
+   }
+  },
+  {
+   "id": "math-005",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "1"
+   },
+   "out": {
+    "sqrtPriceX96": "79232123823359799118286999568"
+   }
+  },
+  {
+   "id": "math-006",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "10"
+   },
+   "out": {
+    "sqrtPriceX96": "79267784519130042428790663799"
+   }
+  },
+  {
+   "id": "math-007",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "196250"
+   },
+   "out": {
+    "sqrtPriceX96": "1446042728370400211848465323367120"
+   }
+  },
+  {
+   "id": "math-008",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "196260"
+   },
+   "out": {
+    "sqrtPriceX96": "1446765894353319399313939355477631"
+   }
+  },
+  {
+   "id": "math-009",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "887271"
+   },
+   "out": {
+    "sqrtPriceX96": "1461373636630004318706518188784493106690254656249"
+   }
+  },
+  {
+   "id": "math-010",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "887272"
+   },
+   "out": {
+    "sqrtPriceX96": "1461446703485210103287273052203988822378723970342"
+   }
+  },
+  {
+   "id": "math-011",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "783426"
+   },
+   "out": {
+    "sqrtPriceX96": "8126592545294304755166854775256206497841003327"
+   }
+  },
+  {
+   "id": "math-012",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "-764324"
+   },
+   "out": {
+    "sqrtPriceX96": "2007356937820"
+   }
+  },
+  {
+   "id": "math-013",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "707906"
+   },
+   "out": {
+    "sqrtPriceX96": "186249240794517926508418832455940106000632868"
+   }
+  },
+  {
+   "id": "math-014",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "707066"
+   },
+   "out": {
+    "sqrtPriceX96": "178589143664238596166668598740148379424919281"
+   }
+  },
+  {
+   "id": "math-015",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "-471961"
+   },
+   "out": {
+    "sqrtPriceX96": "4475989675034631325"
+   }
+  },
+  {
+   "id": "math-016",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "-695857"
+   },
+   "out": {
+    "sqrtPriceX96": "61559103409018"
+   }
+  },
+  {
+   "id": "math-017",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "277894"
+   },
+   "out": {
+    "sqrtPriceX96": "85697750461060986763045704148555925"
+   }
+  },
+  {
+   "id": "math-018",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "-96001"
+   },
+   "out": {
+    "sqrtPriceX96": "652151624887482798288442011"
+   }
+  },
+  {
+   "id": "math-019",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "760871"
+   },
+   "out": {
+    "sqrtPriceX96": "2631221266581828829246274703310592546286788515"
+   }
+  },
+  {
+   "id": "math-020",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "-551260"
+   },
+   "out": {
+    "sqrtPriceX96": "84921813922396384"
+   }
+  },
+  {
+   "id": "math-021",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "-34403"
+   },
+   "out": {
+    "sqrtPriceX96": "14186173948411330115129299082"
+   }
+  },
+  {
+   "id": "math-022",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "626829"
+   },
+   "out": {
+    "sqrtPriceX96": "3233090399904912434721846999519782883247747"
+   }
+  },
+  {
+   "id": "math-023",
+   "fn": "TickMath.getSqrtPriceAtTick",
+   "in": {
+    "tick": "887273"
+   },
+   "out": {
+    "revert": "InvalidTick"
+   }
+  },
+  {
+   "id": "math-024",
+   "fn": "TickMath.getTickAtSqrtPrice",
+   "in": {
+    "sqrtPriceX96": "4295128739"
+   },
+   "out": {
+    "tick": "-887272"
+   }
+  },
+  {
+   "id": "math-025",
+   "fn": "TickMath.getTickAtSqrtPrice",
+   "in": {
+    "sqrtPriceX96": "79224201403219477170569942574"
+   },
+   "out": {
+    "tick": "-1"
+   }
+  },
+  {
+   "id": "math-026",
+   "fn": "TickMath.getTickAtSqrtPrice",
+   "in": {
+    "sqrtPriceX96": "79224201403219477170569942573"
+   },
+   "out": {
+    "tick": "-2"
+   }
+  },
+  {
+   "id": "math-027",
+   "fn": "TickMath.getTickAtSqrtPrice",
+   "in": {
+    "sqrtPriceX96": "79228162514264337593543950336"
+   },
+   "out": {
+    "tick": "0"
+   }
+  },
+  {
+   "id": "math-028",
+   "fn": "TickMath.getTickAtSqrtPrice",
+   "in": {
+    "sqrtPriceX96": "79228162514264337593543950335"
+   },
+   "out": {
+    "tick": "-1"
+   }
+  },
+  {
+   "id": "math-029",
+   "fn": "TickMath.getTickAtSqrtPrice",
+   "in": {
+    "sqrtPriceX96": "1446042728370400211848465323367120"
+   },
+   "out": {
+    "tick": "196250"
+   }
+  },
+  {
+   "id": "math-030",
+   "fn": "TickMath.getTickAtSqrtPrice",
+   "in": {
+    "sqrtPriceX96": "1446042728370400211848465323367119"
+   },
+   "out": {
+    "tick": "196249"
+   }
+  },
+  {
+   "id": "math-031",
+   "fn": "TickMath.getTickAtSqrtPrice",
+   "in": {
+    "sqrtPriceX96": "1461373636630004318706518188784493106690254656249"
+   },
+   "out": {
+    "tick": "887271"
+   }
+  },
+  {
+   "id": "math-032",
+   "fn": "TickMath.getTickAtSqrtPrice",
+   "in": {
+    "sqrtPriceX96": "1461373636630004318706518188784493106690254656248"
+   },
+   "out": {
+    "tick": "887270"
+   }
+  },
+  {
+   "id": "math-033",
+   "fn": "TickMath.getTickAtSqrtPrice",
+   "in": {
+    "sqrtPriceX96": "585952047687552844435152750937262973540353697569"
+   },
+   "out": {
+    "tick": "868992"
+   }
+  },
+  {
+   "id": "math-034",
+   "fn": "TickMath.getTickAtSqrtPrice",
+   "in": {
+    "sqrtPriceX96": "1284991448224727587402323876567823851465738155471"
+   },
+   "out": {
+    "tick": "884698"
+   }
+  },
+  {
+   "id": "math-035",
+   "fn": "TickMath.getTickAtSqrtPrice",
+   "in": {
+    "sqrtPriceX96": "1035454012627361202282519139213442727833482736740"
+   },
+   "out": {
+    "tick": "880379"
+   }
+  },
+  {
+   "id": "math-036",
+   "fn": "TickMath.getTickAtSqrtPrice",
+   "in": {
+    "sqrtPriceX96": "1026743778599784022304566634608130760283142671357"
+   },
+   "out": {
+    "tick": "880210"
+   }
+  },
+  {
+   "id": "math-037",
+   "fn": "TickMath.getTickAtSqrtPrice",
+   "in": {
+    "sqrtPriceX96": "274093263442292601369940585573304023715764448112"
+   },
+   "out": {
+    "tick": "853796"
+   }
+  },
+  {
+   "id": "math-038",
+   "fn": "TickMath.getTickAtSqrtPrice",
+   "in": {
+    "sqrtPriceX96": "893758260618679867130527908654089019960319731861"
+   },
+   "out": {
+    "tick": "877436"
+   }
+  },
+  {
+   "id": "math-039",
+   "fn": "TickMath.getTickAtSqrtPrice",
+   "in": {
+    "sqrtPriceX96": "1461446703485210103287273052203988822378723970342"
+   },
+   "out": {
+    "revert": "InvalidSqrtPrice"
+   }
+  },
+  {
+   "id": "math-040",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "1520179124261311355963149899201854",
+    "sqrtPriceBX96": "1375521830882260934757254034938707",
+    "liquidity": "1",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "0"
+   }
+  },
+  {
+   "id": "math-041",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "liquidity": "1",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "1825"
+   }
+  },
+  {
+   "id": "math-042",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "1520179124261311355963149899201854",
+    "sqrtPriceBX96": "1375521830882260934757254034938707",
+    "liquidity": "1",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "1"
+   }
+  },
+  {
+   "id": "math-043",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "liquidity": "1",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "1826"
+   }
+  },
+  {
+   "id": "math-044",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "1520179124261311355963149899201854",
+    "sqrtPriceBX96": "1375521830882260934757254034938707",
+    "liquidity": "1000000000000",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "5480973"
+   }
+  },
+  {
+   "id": "math-045",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "liquidity": "1000000000000",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "1825831734429107"
+   }
+  },
+  {
+   "id": "math-046",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "1520179124261311355963149899201854",
+    "sqrtPriceBX96": "1375521830882260934757254034938707",
+    "liquidity": "1000000000000",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "5480974"
+   }
+  },
+  {
+   "id": "math-047",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "liquidity": "1000000000000",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "1825831734429108"
+   }
+  },
+  {
+   "id": "math-048",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "1520179124261311355963149899201854",
+    "sqrtPriceBX96": "1375521830882260934757254034938707",
+    "liquidity": "1000000000000000000000000",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "5480973053155209836"
+   }
+  },
+  {
+   "id": "math-049",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "liquidity": "1000000000000000000000000",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "1825831734429107086220675607"
+   }
+  },
+  {
+   "id": "math-050",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "1520179124261311355963149899201854",
+    "sqrtPriceBX96": "1375521830882260934757254034938707",
+    "liquidity": "1000000000000000000000000",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "5480973053155209837"
+   }
+  },
+  {
+   "id": "math-051",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "liquidity": "1000000000000000000000000",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "1825831734429107086220675608"
+   }
+  },
+  {
+   "id": "math-052",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "1520179124261311355963149899201854",
+    "sqrtPriceBX96": "1375521830882260934757254034938707",
+    "liquidity": "340282366920938463463374607431768211455",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "1865078483557537470181465742257348"
+   }
+  },
+  {
+   "id": "math-053",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "liquidity": "340282366920938463463374607431768211455",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "621298344190898890614347619391871503038686"
+   }
+  },
+  {
+   "id": "math-054",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "1520179124261311355963149899201854",
+    "sqrtPriceBX96": "1375521830882260934757254034938707",
+    "liquidity": "340282366920938463463374607431768211455",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "1865078483557537470181465742257349"
+   }
+  },
+  {
+   "id": "math-055",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "liquidity": "340282366920938463463374607431768211455",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "621298344190898890614347619391871503038687"
+   }
+  },
+  {
+   "id": "math-056",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "79505933009594642291336626733",
+    "sqrtPriceBX96": "79030349367926598376800521322",
+    "liquidity": "1",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "0"
+   }
+  },
+  {
+   "id": "math-057",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "79030349367926598376800521322",
+    "sqrtPriceBX96": "79505933009594642291336626733",
+    "liquidity": "1",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "0"
+   }
+  },
+  {
+   "id": "math-058",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "79505933009594642291336626733",
+    "sqrtPriceBX96": "79030349367926598376800521322",
+    "liquidity": "1",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "1"
+   }
+  },
+  {
+   "id": "math-059",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "79030349367926598376800521322",
+    "sqrtPriceBX96": "79505933009594642291336626733",
+    "liquidity": "1",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "1"
+   }
+  },
+  {
+   "id": "math-060",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "79505933009594642291336626733",
+    "sqrtPriceBX96": "79030349367926598376800521322",
+    "liquidity": "1000000000000",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "5996710063"
+   }
+  },
+  {
+   "id": "math-061",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "79030349367926598376800521322",
+    "sqrtPriceBX96": "79505933009594642291336626733",
+    "liquidity": "1000000000000",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "6002709473"
+   }
+  },
+  {
+   "id": "math-062",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "79505933009594642291336626733",
+    "sqrtPriceBX96": "79030349367926598376800521322",
+    "liquidity": "1000000000000",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "5996710064"
+   }
+  },
+  {
+   "id": "math-063",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "79030349367926598376800521322",
+    "sqrtPriceBX96": "79505933009594642291336626733",
+    "liquidity": "1000000000000",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "6002709474"
+   }
+  },
+  {
+   "id": "math-064",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "79505933009594642291336626733",
+    "sqrtPriceBX96": "79030349367926598376800521322",
+    "liquidity": "1000000000000000000000000",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "5996710063889785211015"
+   }
+  },
+  {
+   "id": "math-065",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "79030349367926598376800521322",
+    "sqrtPriceBX96": "79505933009594642291336626733",
+    "liquidity": "1000000000000000000000000",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "6002709473192934900320"
+   }
+  },
+  {
+   "id": "math-066",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "79505933009594642291336626733",
+    "sqrtPriceBX96": "79030349367926598376800521322",
+    "liquidity": "1000000000000000000000000",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "5996710063889785211016"
+   }
+  },
+  {
+   "id": "math-067",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "79030349367926598376800521322",
+    "sqrtPriceBX96": "79505933009594642291336626733",
+    "liquidity": "1000000000000000000000000",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "6002709473192934900321"
+   }
+  },
+  {
+   "id": "math-068",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "79505933009594642291336626733",
+    "sqrtPriceBX96": "79030349367926598376800521322",
+    "liquidity": "340282366920938463463374607431768211455",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "2040574694279028226910039580737983308"
+   }
+  },
+  {
+   "id": "math-069",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "79030349367926598376800521322",
+    "sqrtPriceBX96": "79505933009594642291336626733",
+    "liquidity": "340282366920938463463374607431768211455",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "2042616187476831501224391751453638655"
+   }
+  },
+  {
+   "id": "math-070",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "79505933009594642291336626733",
+    "sqrtPriceBX96": "79030349367926598376800521322",
+    "liquidity": "340282366920938463463374607431768211455",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "2040574694279028226910039580737983309"
+   }
+  },
+  {
+   "id": "math-071",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "79030349367926598376800521322",
+    "sqrtPriceBX96": "79505933009594642291336626733",
+    "liquidity": "340282366920938463463374607431768211455",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "2042616187476831501224391751453638656"
+   }
+  },
+  {
+   "id": "math-072",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "4353938549",
+    "sqrtPriceBX96": "4295128739",
+    "liquidity": "1",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "249155729953926214"
+   }
+  },
+  {
+   "id": "math-073",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "4295128739",
+    "sqrtPriceBX96": "4353938549",
+    "liquidity": "1",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "0"
+   }
+  },
+  {
+   "id": "math-074",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "4353938549",
+    "sqrtPriceBX96": "4295128739",
+    "liquidity": "1",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "249155729953926215"
+   }
+  },
+  {
+   "id": "math-075",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "4295128739",
+    "sqrtPriceBX96": "4353938549",
+    "liquidity": "1",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "1"
+   }
+  },
+  {
+   "id": "math-076",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "4353938549",
+    "sqrtPriceBX96": "4295128739",
+    "liquidity": "1000000000000",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "249155729953926214956990643190"
+   }
+  },
+  {
+   "id": "math-077",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "4295128739",
+    "sqrtPriceBX96": "4353938549",
+    "liquidity": "1000000000000",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "0"
+   }
+  },
+  {
+   "id": "math-078",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "4353938549",
+    "sqrtPriceBX96": "4295128739",
+    "liquidity": "1000000000000",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "249155729953926214956990643191"
+   }
+  },
+  {
+   "id": "math-079",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "4295128739",
+    "sqrtPriceBX96": "4353938549",
+    "liquidity": "1000000000000",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "1"
+   }
+  },
+  {
+   "id": "math-080",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "4353938549",
+    "sqrtPriceBX96": "4295128739",
+    "liquidity": "1000000000000000000000000",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "249155729953926214956990643190795560760996"
+   }
+  },
+  {
+   "id": "math-081",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "4295128739",
+    "sqrtPriceBX96": "4353938549",
+    "liquidity": "1000000000000000000000000",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "742"
+   }
+  },
+  {
+   "id": "math-082",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "4353938549",
+    "sqrtPriceBX96": "4295128739",
+    "liquidity": "1000000000000000000000000",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "249155729953926214956990643190795560760997"
+   }
+  },
+  {
+   "id": "math-083",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "4295128739",
+    "sqrtPriceBX96": "4353938549",
+    "liquidity": "1000000000000000000000000",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "743"
+   }
+  },
+  {
+   "id": "math-084",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "4353938549",
+    "sqrtPriceBX96": "4295128739",
+    "liquidity": "340282366920938463463374607431768211455",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "84783301520636178521853672079500488742225957079879537452"
+   }
+  },
+  {
+   "id": "math-085",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "4295128739",
+    "sqrtPriceBX96": "4353938549",
+    "liquidity": "340282366920938463463374607431768211455",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "252586210633973759"
+   }
+  },
+  {
+   "id": "math-086",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "4353938549",
+    "sqrtPriceBX96": "4295128739",
+    "liquidity": "340282366920938463463374607431768211455",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "84783301520636178521853672079500488742225957079879537453"
+   }
+  },
+  {
+   "id": "math-087",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "4295128739",
+    "sqrtPriceBX96": "4353938549",
+    "liquidity": "340282366920938463463374607431768211455",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "252586210633973760"
+   }
+  },
+  {
+   "id": "math-088",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "1461446703485210103287273052203988822378723970342",
+    "sqrtPriceBX96": "1441706552580435738372324372445843561633831752204",
+    "liquidity": "1",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "0"
+   }
+  },
+  {
+   "id": "math-089",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "1441706552580435738372324372445843561633831752204",
+    "sqrtPriceBX96": "1461446703485210103287273052203988822378723970342",
+    "liquidity": "1",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "249155732991034891"
+   }
+  },
+  {
+   "id": "math-090",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "1461446703485210103287273052203988822378723970342",
+    "sqrtPriceBX96": "1441706552580435738372324372445843561633831752204",
+    "liquidity": "1",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "1"
+   }
+  },
+  {
+   "id": "math-091",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "1441706552580435738372324372445843561633831752204",
+    "sqrtPriceBX96": "1461446703485210103287273052203988822378723970342",
+    "liquidity": "1",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "249155732991034892"
+   }
+  },
+  {
+   "id": "math-092",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "1461446703485210103287273052203988822378723970342",
+    "sqrtPriceBX96": "1441706552580435738372324372445843561633831752204",
+    "liquidity": "1000000000000",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "0"
+   }
+  },
+  {
+   "id": "math-093",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "1441706552580435738372324372445843561633831752204",
+    "sqrtPriceBX96": "1461446703485210103287273052203988822378723970342",
+    "liquidity": "1000000000000",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "249155732991034891490733008970"
+   }
+  },
+  {
+   "id": "math-094",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "1461446703485210103287273052203988822378723970342",
+    "sqrtPriceBX96": "1441706552580435738372324372445843561633831752204",
+    "liquidity": "1000000000000",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "1"
+   }
+  },
+  {
+   "id": "math-095",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "1441706552580435738372324372445843561633831752204",
+    "sqrtPriceBX96": "1461446703485210103287273052203988822378723970342",
+    "liquidity": "1000000000000",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "249155732991034891490733008971"
+   }
+  },
+  {
+   "id": "math-096",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "1461446703485210103287273052203988822378723970342",
+    "sqrtPriceBX96": "1441706552580435738372324372445843561633831752204",
+    "liquidity": "1000000000000000000000000",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "742"
+   }
+  },
+  {
+   "id": "math-097",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "1441706552580435738372324372445843561633831752204",
+    "sqrtPriceBX96": "1461446703485210103287273052203988822378723970342",
+    "liquidity": "1000000000000000000000000",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "249155732991034891490733008970169191538411"
+   }
+  },
+  {
+   "id": "math-098",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "1461446703485210103287273052203988822378723970342",
+    "sqrtPriceBX96": "1441706552580435738372324372445843561633831752204",
+    "liquidity": "1000000000000000000000000",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "743"
+   }
+  },
+  {
+   "id": "math-099",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "1441706552580435738372324372445843561633831752204",
+    "sqrtPriceBX96": "1461446703485210103287273052203988822378723970342",
+    "liquidity": "1000000000000000000000000",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "249155732991034891490733008970169191538412"
+   }
+  },
+  {
+   "id": "math-100",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "1461446703485210103287273052203988822378723970342",
+    "sqrtPriceBX96": "1441706552580435738372324372445843561633831752204",
+    "liquidity": "340282366920938463463374607431768211455",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "252586213652192382"
+   }
+  },
+  {
+   "id": "math-101",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "1441706552580435738372324372445843561633831752204",
+    "sqrtPriceBX96": "1461446703485210103287273052203988822378723970342",
+    "liquidity": "340282366920938463463374607431768211455",
+    "roundUp": false
+   },
+   "out": {
+    "amount": "84783302554110707568874401079611084516455520214616979956"
+   }
+  },
+  {
+   "id": "math-102",
+   "fn": "SqrtPriceMath.getAmount0Delta",
+   "in": {
+    "sqrtPriceAX96": "1461446703485210103287273052203988822378723970342",
+    "sqrtPriceBX96": "1441706552580435738372324372445843561633831752204",
+    "liquidity": "340282366920938463463374607431768211455",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "252586213652192383"
+   }
+  },
+  {
+   "id": "math-103",
+   "fn": "SqrtPriceMath.getAmount1Delta",
+   "in": {
+    "sqrtPriceAX96": "1441706552580435738372324372445843561633831752204",
+    "sqrtPriceBX96": "1461446703485210103287273052203988822378723970342",
+    "liquidity": "340282366920938463463374607431768211455",
+    "roundUp": true
+   },
+   "out": {
+    "amount": "84783302554110707568874401079611084516455520214616979957"
+   }
+  },
+  {
+   "id": "math-104",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1375521830882260934757254034938706",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "1000000000000",
+    "amount1": "500000000000000000000"
+   },
+   "out": {
+    "liquidity": "182449355306414797"
+   }
+  },
+  {
+   "id": "math-105",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1375521830882260934757254034938706",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "0",
+    "amount1": "100000000000000000000"
+   },
+   "out": {
+    "liquidity": "0"
+   }
+  },
+  {
+   "id": "math-106",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1375521830882260934757254034938706",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "1000000000000",
+    "amount1": "0"
+   },
+   "out": {
+    "liquidity": "182449355306414797"
+   }
+  },
+  {
+   "id": "math-107",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1375521830882260934757254034938706",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "1",
+    "amount1": "1"
+   },
+   "out": {
+    "liquidity": "182449"
+   }
+  },
+  {
+   "id": "math-108",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1375521830882260934757254034938707",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "1000000000000",
+    "amount1": "500000000000000000000"
+   },
+   "out": {
+    "liquidity": "182449355306414797"
+   }
+  },
+  {
+   "id": "math-109",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1375521830882260934757254034938707",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "0",
+    "amount1": "100000000000000000000"
+   },
+   "out": {
+    "liquidity": "0"
+   }
+  },
+  {
+   "id": "math-110",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1375521830882260934757254034938707",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "1000000000000",
+    "amount1": "0"
+   },
+   "out": {
+    "liquidity": "182449355306414797"
+   }
+  },
+  {
+   "id": "math-111",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1375521830882260934757254034938707",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "1",
+    "amount1": "1"
+   },
+   "out": {
+    "liquidity": "182449"
+   }
+  },
+  {
+   "id": "math-112",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1446042728370400211848465323367120",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "1000000000000",
+    "amount1": "500000000000000000000"
+   },
+   "out": {
+    "liquidity": "374252609615717974"
+   }
+  },
+  {
+   "id": "math-113",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1446042728370400211848465323367120",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "0",
+    "amount1": "100000000000000000000"
+   },
+   "out": {
+    "liquidity": "0"
+   }
+  },
+  {
+   "id": "math-114",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1446042728370400211848465323367120",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "1000000000000",
+    "amount1": "0"
+   },
+   "out": {
+    "liquidity": "0"
+   }
+  },
+  {
+   "id": "math-115",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1446042728370400211848465323367120",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "1",
+    "amount1": "1"
+   },
+   "out": {
+    "liquidity": "0"
+   }
+  },
+  {
+   "id": "math-116",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1520179124261311355963149899201853",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "1000000000000",
+    "amount1": "500000000000000000000"
+   },
+   "out": {
+    "liquidity": {
+     "revert": "SafeCastOverflow"
+    }
+   }
+  },
+  {
+   "id": "math-117",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1520179124261311355963149899201853",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "0",
+    "amount1": "100000000000000000000"
+   },
+   "out": {
+    "liquidity": "0"
+   }
+  },
+  {
+   "id": "math-118",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1520179124261311355963149899201853",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "1000000000000",
+    "amount1": "0"
+   },
+   "out": {
+    "liquidity": {
+     "revert": "SafeCastOverflow"
+    }
+   }
+  },
+  {
+   "id": "math-119",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1520179124261311355963149899201853",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "1",
+    "amount1": "1"
+   },
+   "out": {
+    "liquidity": "0"
+   }
+  },
+  {
+   "id": "math-120",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1520179124261311355963149899201854",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "1000000000000",
+    "amount1": "500000000000000000000"
+   },
+   "out": {
+    "liquidity": "273847798004418938"
+   }
+  },
+  {
+   "id": "math-121",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1520179124261311355963149899201854",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "0",
+    "amount1": "100000000000000000000"
+   },
+   "out": {
+    "liquidity": "54769559600883787"
+   }
+  },
+  {
+   "id": "math-122",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1520179124261311355963149899201854",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "1000000000000",
+    "amount1": "0"
+   },
+   "out": {
+    "liquidity": "0"
+   }
+  },
+  {
+   "id": "math-123",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1520179124261311355963149899201854",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "1",
+    "amount1": "1"
+   },
+   "out": {
+    "liquidity": "0"
+   }
+  },
+  {
+   "id": "math-124",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1520179124261311355963149899201855",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "1000000000000",
+    "amount1": "500000000000000000000"
+   },
+   "out": {
+    "liquidity": "273847798004418938"
+   }
+  },
+  {
+   "id": "math-125",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1520179124261311355963149899201855",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "0",
+    "amount1": "100000000000000000000"
+   },
+   "out": {
+    "liquidity": "54769559600883787"
+   }
+  },
+  {
+   "id": "math-126",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1520179124261311355963149899201855",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "1000000000000",
+    "amount1": "0"
+   },
+   "out": {
+    "liquidity": "0"
+   }
+  },
+  {
+   "id": "math-127",
+   "fn": "LiquidityAmounts.getLiquidityForAmounts",
+   "in": {
+    "sqrtPriceX96": "1520179124261311355963149899201855",
+    "sqrtPriceAX96": "1375521830882260934757254034938707",
+    "sqrtPriceBX96": "1520179124261311355963149899201854",
+    "amount0": "1",
+    "amount1": "1"
+   },
+   "out": {
+    "liquidity": "0"
+   }
+  },
+  {
+   "id": "math-128",
+   "fn": "FullMath.mulDiv",
+   "in": {
+    "a": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+    "b": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+    "denominator": "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+   },
+   "out": {
+    "result": "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+   }
+  },
+  {
+   "id": "math-129",
+   "fn": "FullMath.mulDivRoundingUp",
+   "in": {
+    "a": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+    "b": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+    "denominator": "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+   },
+   "out": {
+    "result": "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+   }
+  },
+  {
+   "id": "math-130",
+   "fn": "FullMath.mulDiv",
+   "in": {
+    "a": "1",
+    "b": "1",
+    "denominator": "3"
+   },
+   "out": {
+    "result": "0"
+   }
+  },
+  {
+   "id": "math-131",
+   "fn": "FullMath.mulDivRoundingUp",
+   "in": {
+    "a": "1",
+    "b": "1",
+    "denominator": "3"
+   },
+   "out": {
+    "result": "1"
+   }
+  },
+  {
+   "id": "math-132",
+   "fn": "FullMath.mulDiv",
+   "in": {
+    "a": "1606938044258990275541962092341162602522202993782792835301376",
+    "b": "1267650600228229401496703205376",
+    "denominator": "1427247692705959881058285969449495136382746631"
+   },
+   "out": {
+    "result": "1427247692705959881058285969449495136382746617"
+   }
+  },
+  {
+   "id": "math-133",
+   "fn": "FullMath.mulDivRoundingUp",
+   "in": {
+    "a": "1606938044258990275541962092341162602522202993782792835301376",
+    "b": "1267650600228229401496703205376",
+    "denominator": "1427247692705959881058285969449495136382746631"
+   },
+   "out": {
+    "result": "1427247692705959881058285969449495136382746618"
+   }
+  },
+  {
+   "id": "math-134",
+   "fn": "FullMath.mulDiv",
+   "in": {
+    "a": "7",
+    "b": "11",
+    "denominator": "13"
+   },
+   "out": {
+    "result": "5"
+   }
+  },
+  {
+   "id": "math-135",
+   "fn": "FullMath.mulDivRoundingUp",
+   "in": {
+    "a": "7",
+    "b": "11",
+    "denominator": "13"
+   },
+   "out": {
+    "result": "6"
+   }
+  },
+  {
+   "id": "math-136",
+   "fn": "FullMath.mulDiv",
+   "in": {
+    "a": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+    "b": "2",
+    "denominator": "1"
+   },
+   "out": {
+    "result": {
+     "revert": "mulDiv"
+    }
+   }
+  },
+  {
+   "id": "math-137",
+   "fn": "FullMath.mulDivRoundingUp",
+   "in": {
+    "a": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+    "b": "2",
+    "denominator": "1"
+   },
+   "out": {
+    "result": {
+     "revert": "mulDiv"
+    }
+   }
+  },
+  {
+   "id": "math-138",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "0",
+    "sqrtPriceX96": "1446042728370400211848465323367120"
+   },
+   "out": {
+    "value": "0"
+   }
+  },
+  {
+   "id": "math-139",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "1",
+    "sqrtPriceX96": "1446042728370400211848465323367120"
+   },
+   "out": {
+    "value": "333121822"
+   }
+  },
+  {
+   "id": "math-140",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "1000000000000",
+    "sqrtPriceX96": "1446042728370400211848465323367120"
+   },
+   "out": {
+    "value": "333121822844583743044"
+   }
+  },
+  {
+   "id": "math-141",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "1000000000000000000000000000000",
+    "sqrtPriceX96": "1446042728370400211848465323367120"
+   },
+   "out": {
+    "value": "333121822844583743044200889666938633556"
+   }
+  },
+  {
+   "id": "math-142",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "0",
+    "sqrtPriceX96": "4340882611719628885575724"
+   },
+   "out": {
+    "value": "0"
+   }
+  },
+  {
+   "id": "math-143",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "1",
+    "sqrtPriceX96": "4340882611719628885575724"
+   },
+   "out": {
+    "value": "0"
+   }
+  },
+  {
+   "id": "math-144",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "1000000000000",
+    "sqrtPriceX96": "4340882611719628885575724"
+   },
+   "out": {
+    "value": "3001"
+   }
+  },
+  {
+   "id": "math-145",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "1000000000000000000000000000000",
+    "sqrtPriceX96": "4340882611719628885575724"
+   },
+   "out": {
+    "value": "3001904803056222492600"
+   }
+  },
+  {
+   "id": "math-146",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "0",
+    "sqrtPriceX96": "340282366920938463463374607431768211455"
+   },
+   "out": {
+    "value": "0"
+   }
+  },
+  {
+   "id": "math-147",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "1",
+    "sqrtPriceX96": "340282366920938463463374607431768211455"
+   },
+   "out": {
+    "value": "18446744073709551615"
+   }
+  },
+  {
+   "id": "math-148",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "1000000000000",
+    "sqrtPriceX96": "340282366920938463463374607431768211455"
+   },
+   "out": {
+    "value": "18446744073709551615999999999999"
+   }
+  },
+  {
+   "id": "math-149",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "1000000000000000000000000000000",
+    "sqrtPriceX96": "340282366920938463463374607431768211455"
+   },
+   "out": {
+    "value": "18446744073709551615999999999999999999891579782751"
+   }
+  },
+  {
+   "id": "math-150",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "0",
+    "sqrtPriceX96": "340282366920938463463374607431768211456"
+   },
+   "out": {
+    "value": "0"
+   }
+  },
+  {
+   "id": "math-151",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "1",
+    "sqrtPriceX96": "340282366920938463463374607431768211456"
+   },
+   "out": {
+    "value": "18446744073709551616"
+   }
+  },
+  {
+   "id": "math-152",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "1000000000000",
+    "sqrtPriceX96": "340282366920938463463374607431768211456"
+   },
+   "out": {
+    "value": "18446744073709551616000000000000"
+   }
+  },
+  {
+   "id": "math-153",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "1000000000000000000000000000000",
+    "sqrtPriceX96": "340282366920938463463374607431768211456"
+   },
+   "out": {
+    "value": "18446744073709551616000000000000000000000000000000"
+   }
+  },
+  {
+   "id": "math-154",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "0",
+    "sqrtPriceX96": "1461446703485210103287273052203988822378723970341"
+   },
+   "out": {
+    "value": "0"
+   }
+  },
+  {
+   "id": "math-155",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "1",
+    "sqrtPriceX96": "1461446703485210103287273052203988822378723970341"
+   },
+   "out": {
+    "value": "340256786836388094070642339899681172762"
+   }
+  },
+  {
+   "id": "math-156",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "1000000000000",
+    "sqrtPriceX96": "1461446703485210103287273052203988822378723970341"
+   },
+   "out": {
+    "value": "340256786836388094070642339899681172762184831912254"
+   }
+  },
+  {
+   "id": "math-157",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "1000000000000000000000000000000",
+    "sqrtPriceX96": "1461446703485210103287273052203988822378723970341"
+   },
+   "out": {
+    "value": "340256786836388094070642339899681172762184831912254825631508231530591"
+   }
+  },
+  {
+   "id": "math-158",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "0",
+    "sqrtPriceX96": "4295128739"
+   },
+   "out": {
+    "value": "0"
+   }
+  },
+  {
+   "id": "math-159",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "1",
+    "sqrtPriceX96": "4295128739"
+   },
+   "out": {
+    "value": "0"
+   }
+  },
+  {
+   "id": "math-160",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "1000000000000",
+    "sqrtPriceX96": "4295128739"
+   },
+   "out": {
+    "value": "0"
+   }
+  },
+  {
+   "id": "math-161",
+   "fn": "LiquidityValue.q",
+   "in": {
+    "x": "1000000000000000000000000000000",
+    "sqrtPriceX96": "4295128739"
+   },
+   "out": {
+    "value": "0"
+   }
+  },
+  {
+   "id": "math-162",
+   "fn": "LiquidityValue.amounts",
+   "in": {
+    "L": "300000000000000000",
+    "lo": "195250",
+    "hi": "197250",
+    "sqrtPriceX96": "1375521830882260934757254034938706"
+   },
+   "out": {
+    "amount0": "1644291915946",
+    "amount1": "0"
+   }
+  },
+  {
+   "id": "math-163",
+   "fn": "LiquidityValue.amounts",
+   "in": {
+    "L": "300000000000000000",
+    "lo": "195250",
+    "hi": "197250",
+    "sqrtPriceX96": "1375521830882260934757254034938707"
+   },
+   "out": {
+    "amount0": "1644291915946",
+    "amount1": "0"
+   }
+  },
+  {
+   "id": "math-164",
+   "fn": "LiquidityValue.amounts",
+   "in": {
+    "L": "300000000000000000",
+    "lo": "195250",
+    "hi": "197250",
+    "sqrtPriceX96": "1446042728370400211848465323367120"
+   },
+   "out": {
+    "amount0": "801597616935",
+    "amount1": "267029659341560293273"
+   }
+  },
+  {
+   "id": "math-165",
+   "fn": "LiquidityValue.amounts",
+   "in": {
+    "L": "300000000000000000",
+    "lo": "195250",
+    "hi": "197250",
+    "sqrtPriceX96": "1520179124261311355963149899201853"
+   },
+   "out": {
+    "amount0": "0",
+    "amount1": "547749520328732125866"
+   }
+  },
+  {
+   "id": "math-166",
+   "fn": "LiquidityValue.amounts",
+   "in": {
+    "L": "300000000000000000",
+    "lo": "195250",
+    "hi": "197250",
+    "sqrtPriceX96": "1520179124261311355963149899201854"
+   },
+   "out": {
+    "amount0": "0",
+    "amount1": "547749520328732125866"
+   }
+  }
+ ]
+}

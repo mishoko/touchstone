@@ -394,7 +394,39 @@
    }
   },
   {
-   "id": "ledger-012-gain-floor",
+   "id": "ledger-012-gate-passes-on-unvested",
+   "fn": "ExecLedger.measure",
+   "in": {
+    "before": {
+     "idle0": "20000000000",
+     "idle1": "600000000000000000000",
+     "L": "0",
+     "lo": "0",
+     "hi": "0"
+    },
+    "after": {
+     "idle0": "10550543265",
+     "idle1": "600000000294",
+     "L": "346075993638199299",
+     "lo": "194320",
+     "hi": "196320"
+    },
+    "sqrtSpot": "1450387152716278242562425184642509",
+    "sqrtRef": "1446042728370400211848465323367120",
+    "S": "1000000000000000000000000",
+    "unvested": "62470467454510186282",
+    "bond": "31235233727255093141"
+   },
+   "out": {
+    "charge": "56842402531645074",
+    "pStar": "1446042728370400211848465323367120",
+    "navAfterPStar": "606605594054360029786",
+    "burn": "93705701181765279423",
+    "ok": true
+   }
+  },
+  {
+   "id": "ledger-013-gain-floor",
    "fn": "ExecLedger.measure",
    "in": {
     "before": {
@@ -426,7 +458,7 @@
    }
   },
   {
-   "id": "ledger-013-tie-spot-ref",
+   "id": "ledger-014-tie-spot-ref",
    "fn": "ExecLedger.measure",
    "in": {
     "before": {
@@ -458,7 +490,7 @@
    }
   },
   {
-   "id": "ledger-014-nav-after-zero",
+   "id": "ledger-015-nav-after-zero",
    "fn": "ExecLedger.measure",
    "in": {
     "before": {
@@ -490,7 +522,7 @@
    }
   },
   {
-   "id": "ledger-015-burn-ceil",
+   "id": "ledger-016-burn-ceil",
    "fn": "ExecLedger.measure",
    "in": {
     "before": {
@@ -522,7 +554,7 @@
    }
   },
   {
-   "id": "ledger-016-out-of-range-noop",
+   "id": "ledger-017-out-of-range-noop",
    "fn": "ExecLedger.measure",
    "in": {
     "before": {
@@ -554,7 +586,7 @@
    }
   },
   {
-   "id": "ledger-017-value",
+   "id": "ledger-018-value",
    "fn": "ExecLedger.value",
    "in": {
     "h": {
@@ -572,7 +604,7 @@
    }
   },
   {
-   "id": "ledger-018-value",
+   "id": "ledger-019-value",
    "fn": "ExecLedger.value",
    "in": {
     "h": {
@@ -590,7 +622,7 @@
    }
   },
   {
-   "id": "ledger-019-value",
+   "id": "ledger-020-value",
    "fn": "ExecLedger.value",
    "in": {
     "h": {
@@ -608,7 +640,7 @@
    }
   },
   {
-   "id": "ledger-020-value",
+   "id": "ledger-021-value",
    "fn": "ExecLedger.value",
    "in": {
     "h": {
@@ -626,7 +658,7 @@
    }
   },
   {
-   "id": "ledger-021-value-q-high-branch",
+   "id": "ledger-022-value-q-high-branch",
    "fn": "ExecLedger.value",
    "in": {
     "h": {
@@ -644,7 +676,7 @@
    }
   },
   {
-   "id": "ledger-022-value-empty",
+   "id": "ledger-023-value-empty",
    "fn": "ExecLedger.value",
    "in": {
     "h": {

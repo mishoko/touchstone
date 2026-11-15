@@ -40,7 +40,7 @@ def run(seed, steps=80):
     out = []
     for i in range(steps):
         op = rng.choice(["place"] * 4 + ["swap"] * 4 + ["deposit", "withdraw", "poke", "poke", "step", "touch", "touch",
-                         "ref", "push", "claim", "topup", "retire", "release", "gap"] + (["far"] if rng.random() < 0.15 else []))
+                         "ref", "push", "claim", "topup", "retire", "release", "gap", "same", "breach"] + (["far"] if rng.random() < 0.15 else []))
         res = "ok"
         try:
             if op == "place":
@@ -76,6 +76,10 @@ def run(seed, steps=80):
             elif op == "touch":
                 w.step(rng.randint(1, 25))
                 w.touch()
+            elif op == "same":
+                w.touch_same_block()
+            elif op == "breach":
+                w.v.process_breach(w.block, w.ts())
             elif op == "ref":
                 st["ref"] += rng.randint(-80, 80)
                 st["fail"] = rng.random() < 0.1

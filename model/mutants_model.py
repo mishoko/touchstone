@@ -42,6 +42,7 @@ RULES = {
     "records": "epoch roll: end of the previous epoch, a stale record for a skipped gap",
     "relational": "every comparison in the model at its exact boundary (generated < <-> <=, > <-> >=)",
     "deletion": "every single-line state assignment and state-changing call in the model (generated statement deletion)",
+    "operand": "every operand of every arithmetic and boolean operator, and each arm of every conditional expression",
 }
 
 # (rule, name, old, new): `old` must occur exactly once in reference.py
@@ -57,14 +58,14 @@ MUTANTS = [
     ("gate", "tryRef returns the cache", "    def try_ref(self, ts):\n        return self.ref.read(ts, 0)", "    def try_ref(self, ts):\n        return True, self.refTick"),
     ("bank", "overwrite vests while the gate is closed", "            if gate:\n                b.vestedUnclaimed = sat(b.vestedUnclaimed + slot[1], U128)",
      "            if True:\n                b.vestedUnclaimed = sat(b.vestedUnclaimed + slot[1], U128)"),
-    ("ledger", "worse-of max -> min", "if best is None or loss > best[0]:", "if best is None or loss < best[0]:"),
-    ("ledger", "0 floor removed", "if loss > 0 else 0", "if loss > 0 else loss"),
-    ("ledger", "reference leg dropped", "    for p in (sqrt_spot, sqrt_ref):", "    for p in (sqrt_spot,):"),
-    ("ledger", "reference-only", "    for p in (sqrt_spot, sqrt_ref):", "    for p in (sqrt_ref,):"),
+    ("ledger", "worse-of max -> min", "    if loss_r > loss_s:  # p* = sqrtSpot on a tie", "    if loss_r < loss_s:  # p* = sqrtSpot on a tie"),
+    ("ledger", "0 floor removed", "    charge = loss if loss > 0 else 0", "    charge = loss"),
+    ("ledger", "reference leg dropped", "    if loss_r > loss_s:  # p* = sqrtSpot on a tie", "    if False:"),
+    ("ledger", "reference-only", "    if loss_r > loss_s:  # p* = sqrtSpot on a tie", "    if True:"),
     ("ledger", "100% -> phi", "    charge = loss if loss > 0 else 0", "    charge = loss // 10 if loss > 0 else 0"),
     ("ledger", "no-op charged", "    charge = loss if loss > 0 else 0", "    charge = loss + 1 if loss >= 0 else 0"),
     ("ledger", "gate removed in measure", "    return charge, p_star, nav_after, burn, burn <= unvested + bond", "    return charge, p_star, nav_after, burn, True"),
-    ("ledger", "burn priced at spot", "        burn = ceil_div(charge * S, nav_after)", "        burn = ceil_div(charge * S, value(after, sqrt_spot)[0])"),
+    ("ledger", "burn priced at spot", "        burn = ceil_div(charge * S, nav_after)", "        burn = ceil_div(charge * S, na_s)"),
     ("ledger", "bond burn reported as bank", "return burn, 0, bank_burn, need", "return burn, 0, bank_burn + need, 0"),
     ("rounding", "burn rounds down", "burn = ceil_div(charge * S, nav_after)", "burn = charge * S // nav_after"),
     ("snapshot", "RESET_RUN = 1", "if self.resetStreak >= self.t.RESET_RUN:", "if self.resetStreak >= 1:"),
@@ -156,7 +157,7 @@ MUTANTS = [
     ("placement", "headroom 1e8", "head = L0 // 10 ** 9 + 1", "head = L0 // 10 ** 8 + 1"),
     ("placement", "DELTA_MIN removed", "            if d_after < t.DELTA_MIN:", "            if False:"),
     ("placement", "DELTA_MIN >= -> >", "            if d_after < t.DELTA_MIN:", "            if d_after <= t.DELTA_MIN:"),
-    ("placement", "saturating leg reverts", "    return min(amount0 * inter // (sb - sa), U128)", "    r = amount0 * inter // (sb - sa)\n    assert r <= U128\n    return r"),
+    ("placement", "saturating leg reverts", "    return min(amount0 * inter // (sb - sa), U128)", "    r = amount0 * inter // (sb - sa)\n    if r > U128:\n        raise MathRevert('SafeCastOverflow')\n    return r"),
     ("placement", "δ_after at spot", "    return L, after, min(delta_of(after, sqrt_ref), U64)", "    return L, after, min(delta_of(after, sqrt_spot), U64)"),
     ("caps", "MAX_SWAPS removed", "if self.swapCount >= t.MAX_SWAPS:", "if False:"),
     ("caps", "per-action cap removed", "if frac > t.MAX_SWAP_ACTION or self.epochSwapFrac", "if False or self.epochSwapFrac"),
@@ -227,72 +228,191 @@ MUTANTS = [
 ]
 
 
-def relational_mutants(src):
-    """Generated boundary mutants: every <, <=, >, >= token in reference.py outside the Pool test double."""
-    import io
-    import tokenize
-    swap = {"<": "<=", "<=": "<", ">": ">=", ">=": ">"}
-    lines = src.splitlines(keepends=True)
-    pool_start = next(i for i, l in enumerate(lines) if l.startswith("class Pool"))
-    pool_end = next(i for i, l in enumerate(lines) if i > pool_start and l.startswith("# ===="))
-    out = []
-    for tok in tokenize.generate_tokens(io.StringIO(src).readline):
-        if tok.type == tokenize.OP and tok.string in swap:
-            row, col = tok.start
-            if pool_start <= row - 1 < pool_end:
+EXCLUDED_CLASSES = ("Pool", "RefSource", "Tier")  # test doubles and tier configuration (checked at construction)
+
+
+def excluded_lines(src):
+    import ast
+    tree = ast.parse(src)
+    out = set()
+    for n in tree.body:
+        if isinstance(n, ast.ClassDef) and n.name in EXCLUDED_CLASSES:
+            out |= set(range(n.lineno, n.end_lineno + 1))
+        elif not isinstance(n, (ast.FunctionDef, ast.ClassDef)):
+            out |= set(range(n.lineno, n.end_lineno + 1))  # module-level configuration and the __main__ block
+    return out
+
+
+def _abs(blines, lineno, col):
+    """Byte offset of an ast (lineno, col_offset); col_offset counts UTF-8 bytes."""
+    return sum(len(l) for l in blines[:lineno - 1]) + col
+
+
+def _sites(src):
+    """ast nodes inside the model's functions (constructors, the revert harness, test doubles and the tier
+    configuration excluded), with byte spans."""
+    import ast
+    bsrc = src.encode()
+    lines = bsrc.splitlines(keepends=True)
+    tree = ast.parse(src)
+    skip = excluded_lines(src)
+    funcs = []
+    for f in ast.walk(tree):
+        if isinstance(f, ast.FunctionDef) and f.name not in ("__init__", "call") and f.lineno not in skip:
+            funcs.append(f)
+    ids, nodes = set(), []
+    for f in funcs:
+        selfful = bool(f.args.args) and f.args.args[0].arg == "self"
+        for n in ast.walk(f):
+            if n is f or id(n) in ids or not hasattr(n, "lineno") or n.lineno in skip:
                 continue
-            line = lines[row - 1]
-            new_line = line[:col] + swap[tok.string] + line[col + len(tok.string):]
-            nth = sum(1 for l in lines[:row - 1] if l.strip() == line.strip())
-            key = f"{line.strip()} |{tok.string}@{col}" + (f" #{nth + 1}" if nth else "")
-            mutated = "".join(lines[:row - 1]) + new_line + "".join(lines[row:])
-            out.append(("relational", key, mutated))
+            ids.add(id(n))
+            nodes.append((n, selfful, _abs(lines, n.lineno, n.col_offset), _abs(lines, n.end_lineno, n.end_col_offset)))
+    nodes.sort(key=lambda x: (x[2], -x[3]))
+    return bsrc, nodes
+
+
+def _keyed(seen, key):
+    seen[key] = seen.get(key, 0) + 1
+    return key + (f" #{seen[key]}" if seen[key] > 1 else "")
+
+
+def relational_mutants(src):
+    """Generated boundary mutants: every <, <=, >, >= in a comparison, swapped with its inclusive or strict twin."""
+    import ast
+    swap = {ast.Lt: ("<", "<="), ast.LtE: ("<=", "<"), ast.Gt: (">", ">="), ast.GtE: (">=", ">")}
+    names = {ast.Lt: "<", ast.LtE: "<=", ast.Gt: ">", ast.GtE: ">=", ast.Eq: "==", ast.NotEq: "!="}
+    bsrc, nodes = _sites(src)
+    out, seen = [], {}
+    for n, _, a, b in nodes:
+        if not isinstance(n, ast.Compare) or any(type(o) not in names for o in n.ops):
+            continue
+        operands = [n.left] + list(n.comparators)
+        lines = bsrc.splitlines(keepends=True)
+        spans = [(_abs(lines, x.lineno, x.col_offset), _abs(lines, x.end_lineno, x.end_col_offset)) for x in operands]
+        for i, op in enumerate(n.ops):
+            if type(op) not in swap:
+                continue
+            old, new = swap[type(op)]
+            gap = bsrc[spans[i][1]:spans[i + 1][0]]
+            k = gap.find(old.encode())
+            if old == "<" and gap[k:k + 2] == b"<=" or old == ">" and gap[k:k + 2] == b">=":
+                k = -1
+            if k < 0:
+                continue
+            pos = spans[i][1] + k
+            mutated = (bsrc[:pos] + new.encode() + bsrc[pos + len(old):]).decode()
+            key = _keyed(seen, f"rel:{old}->{new}: {bsrc[a:b].decode()[:90]}")
+            meta = ("rel", a, b, i, [names[type(o)] for o in n.ops], [bsrc[x:y].decode() for x, y in spans])
+            out.append(("relational", key, mutated, meta))
     return out
 
 
 def deletion_mutants(src):
-    """Generated statement deletions: every single-line assignment, augmented assignment or call statement in
-    reference.py outside the Pool double and the tier table, replaced by `pass` (events are excluded: the model
-    does not assert its event log; s2's scenario vectors pin emitted events)."""
+    """Generated statement deletions: every state-writing statement (an assignment to an attribute or subscript, an
+    augmented assignment, a call statement) replaced by `pass`. Local bindings are excluded (deleting one only
+    raises NameError), and so is the event log (s2's scenario vectors pin emitted events)."""
     import ast
-    lines = src.splitlines(keepends=True)
-    tree = ast.parse(src)
-    pool = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "Pool")
-    skip = set(range(pool.lineno, pool.end_lineno + 1))
-    funcs = [f for f in ast.walk(tree) if isinstance(f, ast.FunctionDef) and f.name not in ("__init__", "call", "from_d")]
-    seen = {}
-    out = []
-    nodes, ids = [], set()
-    for f in funcs:
-        for n in ast.walk(f):
-            if n is not f and id(n) not in ids:
-                ids.add(id(n))
-                nodes.append(n)
-    for node in sorted((n for n in nodes if hasattr(n, "lineno")), key=lambda n: (n.lineno, n.col_offset)):
-        if not isinstance(node, (ast.Assign, ast.AugAssign, ast.Expr)) or node.lineno != node.end_lineno:
+    bsrc, nodes = _sites(src)
+    out, seen = [], {}
+
+    def flat(e):
+        return [x for y in e.elts for x in flat(y)] if isinstance(e, ast.Tuple) else [e]
+    for n, selfful, a, b in nodes:
+        if not isinstance(n, (ast.Assign, ast.AugAssign, ast.Expr)) or n.lineno != n.end_lineno:
             continue
-        if node.lineno in skip or node.col_offset == 0:
+        if isinstance(n, ast.Expr) and not isinstance(n.value, ast.Call):
             continue
-        if isinstance(node, ast.Expr) and not isinstance(node.value, ast.Call):
+        targets = n.targets if isinstance(n, ast.Assign) else ([n.target] if isinstance(n, ast.AugAssign) else [])
+        fl = [x for t in targets for x in flat(t)]
+        if targets and all(isinstance(e, ast.Name) for e in fl):
             continue
-        targets = node.targets if isinstance(node, ast.Assign) else ([node.target] if isinstance(node, ast.AugAssign) else [])
-        def _flat(e):
-            return [x for y in e.elts for x in _flat(y)] if isinstance(e, ast.Tuple) else [e]
-        flat = [x for t in targets for x in _flat(t)]
-        if targets and all(isinstance(e, ast.Name) for e in flat):
-            continue  # a local binding: deleting it only raises NameError (it would not compile in Solidity)
-        line = lines[node.lineno - 1]
-        text = line.strip()
-        if "events.append" in text or text.startswith(("self.ts[", "_SQRT_CACHE")):
+        text = bsrc[a:b].decode()
+        if "events.append" in text or text.startswith(("self.ts[",)):
             continue
-        key = f"del: {text}"
-        seen[key] = seen.get(key, 0) + 1
-        if seen[key] > 1:
-            key += f" #{seen[key]}"
-        indent = line[:len(line) - len(line.lstrip())]
-        mutated = "".join(lines[:node.lineno - 1]) + indent + "pass\n" + "".join(lines[node.lineno:])
-        out.append(("deletion", key, mutated))
+        mutated = (bsrc[:a] + b"pass" + bsrc[b:]).decode()
+        tgt = None
+        if targets:
+            tgt = "(" + ", ".join(ast.get_source_segment(src, e) for e in fl if not isinstance(e, ast.Name)) + ",)"
+        key = _keyed(seen, f"del: {text[:110]}")
+        out.append(("deletion", key, mutated, ("del", a, b, text, tgt, selfful)))
     return out
+
+
+def operand_mutants(src):
+    """Generated operand mutants: replace each binary arithmetic node (+ - * //) by either operand, drop each
+    operand of a boolean and/or, and fix each conditional expression to one arm."""
+    import ast
+    bsrc, nodes = _sites(src)
+    out, seen = [], {}
+    for n, _, a, b in nodes:
+        repls = []
+        if isinstance(n, ast.BinOp) and isinstance(n.op, (ast.Add, ast.Sub, ast.Mult, ast.FloorDiv)):
+            repls = [("left", "(" + ast.get_source_segment(src, n.left) + ")"),
+                     ("right", "(" + ast.get_source_segment(src, n.right) + ")")]
+        elif isinstance(n, ast.BoolOp):
+            op = " and " if isinstance(n.op, ast.And) else " or "
+            for k in range(len(n.values)):
+                rest = [v for j, v in enumerate(n.values) if j != k]
+                repls.append((f"drop{k}", "(" + op.join("(" + ast.get_source_segment(src, v) + ")" for v in rest) + ")"))
+        elif isinstance(n, ast.IfExp):
+            repls = [("then", "(" + ast.get_source_segment(src, n.body) + ")"),
+                     ("else", "(" + ast.get_source_segment(src, n.orelse) + ")")]
+        orig = bsrc[a:b].decode()
+        for tag, text in repls:
+            key = _keyed(seen, f"op:{tag}: {orig[:90]}")
+            out.append(("operand", key, (bsrc[:a] + text.encode() + bsrc[b:]).decode(),
+                        ("op", a, b, orig, text, isinstance(n, ast.BoolOp))))
+    return out
+
+
+def instrument(src, meta, key):
+    """The clean model with a reachability probe at one site (see probe_rt.py)."""
+    bsrc = src.encode()
+    kind, a, b = meta[0], meta[1], meta[2]
+    k = repr(key)
+    if kind == "rel":
+        _, _, _, i, ops, vals = meta
+        rep = f"_PR.rel({k}, {i}, {ops!r}, " + ", ".join("(" + v + ")" for v in vals) + ")"
+    elif kind == "op":
+        _, _, _, orig, alt, as_bool = meta
+        rep = f"_PR.opnd({k}, lambda: ({orig}), lambda: {alt}, {as_bool})"
+    else:
+        _, _, _, text, tgt, selfful = meta
+        line_start = bsrc.rfind(b"\n", 0, a) + 1
+        ind = bsrc[line_start:a].decode()
+        if tgt:
+            rep = (f"__pb = _PR.get(lambda: {tgt}); {text}; _PR.deleted({k}, __pb, _PR.get(lambda: {tgt}))")
+        else:
+            sn = "_PR.snap(self)" if selfful else "None"
+            rep = (f"__pb = {sn}\n{ind}try:\n{ind}    {text}\n{ind}except Exception:\n{ind}    _PR.raised({k})\n"
+                   f"{ind}    raise\n{ind}_PR.deleted({k}, __pb, {sn})")
+    out = (bsrc[:a] + rep.encode() + bsrc[b:]).decode()
+    return "import probe_rt as _PR\n" + out
+
+
+def probe_hits(src, m):
+    """Run the self-check and the fuzz battery on the clean model instrumented at mutant m's site."""
+    import json
+    d = tempfile.mkdtemp()
+    try:
+        for f in os.listdir(HERE):
+            if f.endswith(".py"):
+                shutil.copy(os.path.join(HERE, f), d)
+        open(os.path.join(d, "reference.py"), "w").write(instrument(src, m[3], m[1]))
+        tot = [0, 0]
+        for i, cmd in enumerate(("import selfcheck; selfcheck.main()", "import fuzz_trace; fuzz_trace.main()",
+                                 "import vectors; vectors.main()")):
+            out = os.path.join(d, f"probe{i}.json")
+            subprocess.run([sys.executable, "-c", cmd], cwd=d,
+                           env=dict(os.environ, PROBE_OUT=out, VECTORS_OUT=os.path.join(d, "vec")),
+                           capture_output=True, text=True)
+            if os.path.exists(out):
+                h = json.load(open(out)).get(m[1], [0, 0])
+                tot = [tot[0] + h[0], tot[1] + h[1]]
+        return tot
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
 
 
 def fuzz_trace_of(directory):
@@ -303,43 +423,71 @@ def fuzz_trace_of(directory):
 
 # Relational mutants proven equivalent (keyed by the stripped source line, the operator and its column).
 # Each reason states why the two operators agree on every reachable input.
+# Equivalence claims. EQUIVALENT: the distinguishing condition occurs (probe hits > 0) and the outputs still match.
+# UNREACHABLE: the site runs but its distinguishing condition never occurs (probe hits == 0). Both require the
+# mutant to reproduce the clean randomized trace; probes run the self-check and the fuzz battery.
 EQUIVALENT = {
-    'if navp > amount: |>@24': "differs only at navp == amount exactly (a division by zero); NAV' < base defers on both (checked)",
-    'del: self.refresh(now, ts)': 'a same-block retry: the snapshot of the same call already read the same anchor at the same ts',
+    'rel:<-><=: x < 0': 'x = 0 returns 0 on both branches',
+    'rel:>->>=: x > cap': 'x = cap returns cap on both branches',
+    'rel:<=-><: s <= sa': 's = sa: the in-range branch gives getAmount0Delta(sa, sb) and getAmount1Delta(sa, sa) = 0, the same amounts',
+    'rel:>=->>: s >= sb': 's = sb: the in-range branch gives getAmount0Delta(sb, sb) = 0 and getAmount1Delta(sa, sb), the same amounts',
+    'rel:>->>=: loss > 0': 'loss = 0 gives charge 0 on both branches',
+    'rel:<=-><: sqrt_spot <= sa': 'spot = sa: the in-range branch gives the same add amounts (getAmount1Delta(sa, sa) = 0)',
+    'rel:>=->>: sqrt_spot >= sb': 'spot = sb: the in-range branch gives the same add amounts (getAmount0Delta(sb, sb) = 0)',
+    'rel:>->>=: now > b.forfeitStart': 'now = forfeitStart gives el = 0 on both branches',
+    'rel:>->>=: slot[1] > 0': 'an empty foreign slot: the overwrite moves 0 shares and rewrites the epoch, as the fall-through does',
+    'rel:>->>=: c[1] > 0': 'an empty matured cohort: vesting or moving 0 shares changes nothing',
+    'rel:<=-><: dtau <= 0': 'dtau = 0 gives base = mulDiv(·, δ·0, WAD) = 0 on both branches',
+    'rel:>->>=: self.h.L > 0 #2': 'deposit at L = 0: dL = ceilDiv(0, S) = 0, so the conjunction is false on both sides',
+    'del: self.segStart = o["lastPendingBlock"]': 'dead store: step (4) of the same checkpoint sets segStart := now, and segStart feeds no computation',
+    'op:drop1: T == 0 or b.forfeitPool == 0': 'pool = 0 with T > 0: the drip burns sat(so_far − T) = 0 on both paths',
+    'op:drop0: slot[1] > 0 and slot[0] != e': 'an empty slot: the overwrite moves 0 shares, as the fall-through does',
+    'op:drop0: c[1] > 0 and ne >= c[0] + 1 + V': 'an empty matured cohort: vesting or moving 0 shares changes nothing',
+    'op:left: last // G * G + G': 'the B <= last guard skips any boundary at or before lastSnap',
+    'op:right: last // G * G + G': 'the B <= last guard skips any boundary at or before lastSnap',
+    'op:left: last // G * G': 'the B <= last guard skips any boundary at or before lastSnap',
+    'op:right: last // G * G': 'the B <= last guard skips any boundary at or before lastSnap',
+    'op:right: last // G': 'the B <= last guard skips any boundary at or before lastSnap',
+    'op:drop1: self.NAV0 == 0 or dtau <= 0': 'dtau = 0 gives base 0 on both paths',
+    'op:drop0: self.bank.placedByCurator and self.bank.mode in (NORMAL, BREACHED)': 'not placed while NORMAL/BREACHED only before the first placement, when δ0 = 0 makes the base 0',
+    'rel:<=-><: s <= U128': 's = 2^128 − 1 occurs in the math vectors; the two quote forms agree there for every x < 2^129',
+    'rel:>->>=: L0 > head': 'L0 = head (L0 = 1) gives L = 0 on both branches',
+    'del: self._gate("Retire")': 'the gate reverts only in EXITED, where Op.Retire (Ladder.next) reverts BadMode with the same state',
+    'del: self._gate("ReleaseBond")': 'the gate reverts only outside EXITED, where Op.Release reverts BadMode with the same state',
+    'op:then: now - b.forfeitStart if now > b.forfeitStart else 0': 'now < forfeitStart gives a negative target, and the burn saturates at 0, as with el = 0',
+}
+UNREACHABLE = {
+    'rel:>->>=: sa > sb': 'every caller passes sa < sb (W_TICKS > 0)',
+    'rel:>->>=: sa > sb #2': 'every caller passes sa < sb (W_TICKS > 0)',
+    'rel:<-><=: n < 3': 'at most one crossing per call: a span credits <= 2·GRID < CURE_BLOCKS',
+    'rel:<=-><: B <= last': 'bmin >= floor(last/GRID)·GRID + GRID > last',
+    'rel:>->>=: S_before > 0': 'flows run only after seed (S >= S_SEED)',
     'del: self.lastSnap = now #3': "arm_at_seed: seed's own snapshot already set lastSnap to now",
-    'del: self._latch(self.outBlocks, self.outBlocks)  # defensive step 6 (no crossing left after the prologue)': 'old == new: the latch loop cannot run (the spec lists this defensive call as equivalent)',
+    'del: self._latch(self.outBlocks, self.outBlocks)': 'old == new: the latch loop cannot run',
     'del: self.S -= burned #2': "Op.Breach's drip at now burns 0: checkpoint step (2) already burned the drip owed at the same now",
-    'del: self.S -= burned #3': "Op.Retire's drip at now burns 0: the retire prologue's checkpoint already burned the drip owed at the same now",
-    'del: self.segStart = o["lastPendingBlock"]': 'dead store in the model: step (4) of the same checkpoint sets segStart := now, and segStart feeds no computation',
-    'del: self.delta0 = 0': 'seed: the constructor already sets delta0 = 0',
-    'del: self.tauV0 = self.hook.tauV': "seed: the hook's tauV is 0 at arming, equal to the constructor's tauV0",
+    'del: self.S -= burned #3': "Op.Retire's drip at now burns 0: the retire prologue already burned the drip owed at the same now",
+    'del: self.delta0 = 0': "seed: equal to the constructor's value",
+    'del: self.tauV0 = self.hook.tauV': "seed: the hook's tauV is 0 at arming, equal to the constructor's value",
     'del: self.bank.mode = NORMAL': 'seed: Bank() starts in NORMAL',
-    'del: self._gate("Withdraw")': 'withdraw is allowed in every mode (the entry-point table)',
-    'del: self._gate("Claim")': 'claim is allowed in every mode (the entry-point table)',
-    'del: self._gate("Retire")': 'Op.Retire reverts BadMode in EXITED (Ladder.next), the only mode the table forbids',
-    'del: self._gate("ReleaseBond")': 'Op.Release reverts BadMode outside EXITED, the only modes the table forbids',
-    'return 0 if x < 0 else (cap if x > cap else x) |<@18': 'x = 0 returns 0 on both branches',
-    'return 0 if x < 0 else (cap if x > cap else x) |>@37': 'x = cap returns cap on both branches',
-    'assert self.CURE_BLOCKS >= self.EDGE_DELAY + 2 * self.GRID + self.REF_WINDOW // self.BLOCKTIME + self.GRID |>=@32': 'tier constructor check; no tier sits at equality (TEST 200 vs 130, DEMO 1800 vs 1500, MAINNET 7200 vs 1250)',
-    'if s <= U128: |<=@9': 'at s = 2^128-1 the two quote forms differ only if x >= 2^129 and x = 1 mod 2^63, outside uint128 holdings',
-    'if s <= sa: |<=@9': 's = sa: the in-range branch gives getAmount0Delta(sa, sb) and getAmount1Delta(sa, sa) = 0, the same amounts',
-    'if s >= sb: |>=@9': 's = sb: the in-range branch gives getAmount0Delta(sb, sb) = 0 and getAmount1Delta(sa, sb), the same amounts',
-    'charge = loss if loss > 0 else 0 |>@26': 'loss = 0 gives charge 0 on both branches',
-    'if sa > sb: |>@10': 'sa = sb: swapping equal values is a no-op',
-    'if sa > sb: |>@10 #2': 'sa = sb: swapping equal values is a no-op',
-    'L = L0 - head if L0 > head else 0 |>@24': 'L0 = head gives L = 0 on both branches',
-    'elif sqrt_spot <= sa: |<=@19': 'spot = sa: the in-range branch gives getAmount0Delta(sa, sb, L, up) and 0, the same add amounts',
-    'elif sqrt_spot >= sb: |>=@19': 'spot = sb: the in-range branch gives 0 and getAmount1Delta(sa, sb, L, up), the same add amounts',
-    'el = now - b.forfeitStart if now > b.forfeitStart else 0 |>@41': 'now = forfeitStart gives el = 0 on both branches',
-    'if slot[1] > 0 and slot[0] != e: |>@19': 'an empty foreign slot: the overwrite moves 0 shares and rewrites the epoch, as the fall-through does',
-    'if c[1] > 0 and ne >= c[0] + 1 + V: |>@20': 'a matured empty cohort: vesting or moving 0 shares changes nothing',
-    'while j * C <= new and n < 3: |<@33': 'at most one crossing per call: a span credits <= 2·GRID < CURE_BLOCKS (tier check)',
-    'if len(self.ring) > N_SNAP: |>@26': 'the ring keeps 31 instead of 32 entries; only the last K_MED = 9 are read',
-    'if B <= last: |<=@17': 'unreachable: bmin >= floor(last/GRID)·GRID + GRID > last',
-    'if self.NAV0 == 0 or dtau <= 0: |<=@34': 'dtau = 0 gives base = mulDiv(·, δ·0, WAD) = 0 on both branches',
-    'if S_before > 0: |>@20': 'unreachable: flows run only after seed (S >= S_SEED)',
-    'if self.h.L > 0 and dL > 0: |>@24': 'L = 0 forces dL = ceilDiv(0, S) = 0, so the conjunction is false on both sides',
-    'if self.h.L > 0 and dL > 0: |>@35': 'with L > 0 and shares > 0, dL = ceilDiv(L·s, S) >= 1, so dL = 0 is unreachable',
+    'del: self._gate("Withdraw")': 'withdraw is allowed in every mode, so the gate never reverts',
+    'del: self._gate("Claim")': 'claim is allowed in every mode, so the gate never reverts',
+    'op:drop0: lo % spacing != 0 or hi % spacing != 0': 'after the width check, hi − lo = W_TICKS is a multiple of spacing, so lo and hi are aligned together',
+    'op:drop1: lo % spacing != 0 or hi % spacing != 0': 'after the width check, hi − lo = W_TICKS is a multiple of spacing, so lo and hi are aligned together',
+    'op:drop0: a0 > idle.idle0 or a1 > idle.idle1': 'the headroom keeps both add amounts within idle',
+    'op:drop1: a0 > idle.idle0 or a1 > idle.idle1': 'the headroom keeps both add amounts within idle',
+    'op:drop0: T == 0 or b.forfeitPool == 0': 'forfeitPool <= T, so T = 0 implies pool = 0',
+    'op:drop1: j * C <= new and n < 3': 'at most one crossing per call',
+    'op:drop0: not self.emptyRange and get_sqrt_price_at_tick(lo) < sqrt_price < get_sqrt_price_at_tick(h': 'EMPTY stores lo = hi = 0, so the strict range test is already false',
+    'op:drop1: self.bank.placedByCurator and self.bank.mode in (NORMAL, BREACHED)': 'placedByCurator is cleared on every transition to EXITED',
+    'op:drop1: o["refFresh"] and not o["emptyRange"] and not o["gapSinceVerify"] and in_rng(lo, hi, o["re': 'EMPTY stores lo = hi = 0, so the cached-range leg is already false',
+    'op:drop0: self.h.L > 0 and dL > 0': 'L > 0 implies dL = ceilDiv(L·s, S) >= 1, and L = 0 implies dL = 0',
+    'op:drop1: self.h.L > 0 and dL > 0': 'L > 0 implies dL = ceilDiv(L·s, S) >= 1, and L = 0 implies dL = 0',
+    'op:drop0: self.lastAction and now - self.lastAction < self.t.COOLDOWN': 'lastAction = 0 only before the first action, when now >= COOLDOWN',
+    'op:then: mul_div_up(req_val, WAD, nav_ref) if nav_ref else U64': 'NAV at the reference is > 0 after seed (DEAD shares hold value)',
+    'op:then: mul_div_up(fill_val, WAD, nav_ref) if nav_ref else 0': 'NAV at the reference is > 0 after seed',
+    'op:drop1: now == self.lastSnap and self.ring': 'the ring is non-empty whenever now == lastSnap (every snapshot inserts)',
+    'rel:>->>=: dL > 0': 'deposit: L > 0 implies dL = ceilDiv(L·s, S) >= 1, so dL = 0 with L > 0 never occurs',
+    'op:drop0: self.NAV0 == 0 or dtau <= 0': 'NAV0 > 0 after seed (DEAD shares hold value)',
 }
 
 # Every clause of the curated mutation list -> killed mutants, or a recorded reason.
@@ -460,7 +608,7 @@ CLAUSES = [
 
 
 def mutate(src, m):
-    if m[0] in ("relational", "deletion"):
+    if m[0] in ("relational", "deletion", "operand"):
         return m[2], None
     rule, name, old, new = m[:4]
     replace_all = len(m) > 4 and m[4] == "all"
@@ -497,7 +645,8 @@ def run_one(src, m):
         rv = subprocess.run([sys.executable, "-c", "import vectors; vectors.main()"], cwd=d, env=env,
                             capture_output=True, text=True)
         if rv.returncode != 0:
-            if "AssertionError" in rv.stderr:
+            tb = [l for l in rv.stderr.splitlines() if l.strip().startswith("File ")]
+            if "AssertionError" in rv.stderr and tb and "vectors.py" in tb[-1]:
                 return name, "killed", "vector generator assertion"
             return name, "INVALID", "vector generator crashed: " + rv.stderr.strip().splitlines()[-1][:120]
         for f in ("math.json", "ledger.json", "placement.json", "bank.json"):
@@ -518,24 +667,31 @@ def main():
     if base.returncode != 0:
         print("the clean self-check fails; fix it before measuring mutants:\n" + base.stdout[-800:])
         return 2
-    allm = MUTANTS + relational_mutants(src) + deletion_mutants(src)
+    allm = MUTANTS + relational_mutants(src) + deletion_mutants(src) + operand_mutants(src)
     clean = fuzz_trace_of(HERE)
     names = [m[1] for m in allm]
     assert len(names) == len(set(names)), "duplicate mutant names"
     with ThreadPoolExecutor(jobs) as ex:
         results = list(ex.map(lambda m: run_one(src, m), allm))
     status = {}
+    claimed = [m for m, (_, st, _) in zip(allm, results) if st == "SURVIVED" and (m[1] in EQUIVALENT or m[1] in UNREACHABLE)]
+    with ThreadPoolExecutor(jobs) as ex:
+        hits = dict(zip([m[1] for m in claimed], ex.map(lambda m: probe_hits(src, m), claimed)))
     for m, (_, st, why) in zip(allm, results):
         rule, name = m[0], m[1]
-        if st == "SURVIVED" and name in EQUIVALENT:
-            if why == clean:
-                st, why = "equivalent", EQUIVALENT[name] + " [fuzz witness: identical trace]"
+        if st == "SURVIVED" and name in hits:
+            ran, cond = hits[name]
+            same = why == clean
+            if name in EQUIVALENT and same and cond > 0:
+                st, why = "equivalent", f"{EQUIVALENT[name]} [condition reached {cond}x, identical trace]"
+            elif name in UNREACHABLE and same and ran > 0 and cond == 0:
+                st, why = "equivalent", f"unreachable: {UNREACHABLE[name]} [site ran {ran}x, condition never; identical trace]"
             else:
-                st, why = "EQUIV-REFUTED", "the randomized trace differs from the clean model"
+                st, why = "CLAIM-REFUTED", f"trace {'identical' if same else 'DIFFERS'}, site ran {ran}x, condition {cond}x"
         status[name] = (rule, st)
         if st != "killed" or "-v" in sys.argv:
             print(f"{st:15s} [{rule}] {name}" + (f"  ({why})" if why else ""))
-    stale = sorted(set(EQUIVALENT) - set(status))
+    stale = sorted((set(EQUIVALENT) | set(UNREACHABLE)) - set(status))
     if stale:
         print("EQUIVALENT entries matching no mutant (update after an edit):", stale)
     bad = [n for n, (_, st) in status.items() if st not in ("killed", "equivalent")] + stale

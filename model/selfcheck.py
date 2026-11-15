@@ -56,8 +56,12 @@ class World:
             self.step(min(every, end - self.block))
             self.touch()
 
+    def touch_same_block(self):
+        """refreshRef() in the current block (no block advance)."""
+        self.v.hook.refresh_ref(self.block, self.ts(), self.v.pool.s, self.v.pool.tick)
+
     def place(self, lo, hi, pre=None):
-        return self.v.set_positions(lo, hi, pre, now=self.block, ts=self.ts())
+        return self.v.set_positions(lo, hi, pre if pre is not None else R.Vault.NO_PRESWAP, now=self.block, ts=self.ts())
 
     def poke(self):
         return self.v.poke(self.block, self.ts())
@@ -1596,7 +1600,10 @@ def rules_r4():
     clone = _copy.deepcopy(w.v.pool)
     sh = 10 ** 23 + 9
     a0, a1, _, _ = clone.modify("vault", w.v.h.lo, w.v.h.hi, -(L * sh // S))
-    got = w.withdraw(sh)
+    try:
+        got = w.withdraw(sh)
+    except Exception as ex:
+        got = repr(ex)
     check(got == (i0 * sh // S - a0, i1 * sh // S - a1), "withdraw returns idle slice + liquidity leg", (got, a0, a1))
 
 
@@ -1615,9 +1622,9 @@ def rules_r4b():
     w.poke()
     check(w.v.segStart == w.block, "the checkpoint closes the segment at now")
     # an action whose prologue did not read the live reference reads it exactly once
-    r0 = w.v.live_reads
+    r0 = getattr(w.ref, "live_count", 0)
     w.v.rebalance_swap(False, 10 ** 15, w.block, w.ts())
-    check(w.v.live_reads == r0 + 1, "an action reads the live reference once", w.v.live_reads - r0)
+    check(getattr(w.ref, "live_count", 0) == r0 + 1, "an action reads the live reference once", getattr(w.ref, "live_count", 0) - r0)
     # records: bank and bond burned by a charge
     w = World(seed_amounts=(150_000 * USDC, 500 * ETH), third_L=10 ** 19)
     w.v.pool.push_to(sqrt_at(T0 - 55))
@@ -1656,17 +1663,6 @@ def rules_r4b():
     w.keepalive_run(t.EPOCH - w.block % t.EPOCH + 3)
     first = [ev for ev in h.events if ev[0] == "RefRefreshed"][-1]
     check(h.epochStartRefEpoch == e + 1 and h.epochStartRef == first[2], "epochStartRef = the epoch's first cache write")
-    # med9 is the lower median of the last 9 snapshots; the ring keeps N_SNAP; an unarmed snapshot records its entry
-    h = R.Hook(t, R.RefSource(lambda ts: T0))
-    for i, tk in enumerate([5, 1, 9, 3, 7, 2, 8, 4, 6, 100, 0] + list(range(40))):
-        h.snapshot(1000 + i, 12 * (1000 + i), sqrt_at(T0 + tk), T0 + tk)
-        last = sorted(x for _, x in h.ring[-9:])
-        check(h.med9 == last[(len(last) - 1) // 2] and len(h.ring) == min(i + 1, R.N_SNAP), "med9 and ring size", i)
-    check(h.ring[-1] == (1000 + i, T0 + 39) and h.lastSnap == 1000 + i, "unarmed snapshots record entries")
-    # an armed snapshot records its (block, tick) entry
-    w = World()
-    w.keepalive_run(7)
-    check(w.v.hook.ring[-1] == (w.block, w.v.pool.tick) if w.v.hook.ring else False, "an armed snapshot records its entry")
     # τ_b counts spans with tickNow inside the witness range
     h = R.Hook(t, R.RefSource(lambda ts: T0))
     h.armed, h.refTick, h.refGrid, h.refCachedAt, h.lastSnap, h.ring = True, T0, 10 ** 9, 1000, 1000, [(1000, T0)]
@@ -1674,6 +1670,175 @@ def rules_r4b():
     h.snapshot(1020, 10 ** 12, sqrt_at(T0), T0)
     h.snapshot(1030, 10 ** 12, sqrt_at(T0 + 100), T0 + 100)
     check(h.tauB == 20, "τ_b counts the witness range [lo, hi)", h.tauB)
+
+
+def rules_r5():
+    """Checks added after fix review r5 and the generated operand class."""
+    import copy as _copy
+    t = R.TEST
+    # multi-epoch accrual without claims: every share stays accounted for (gate-open overwrites add to vested)
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.deposit(10 ** 26)
+    for _ in range(9):
+        w.keepalive_run(t.EPOCH)
+        w.poke()
+    conserved(w, "nine epochs without a claim")
+    check(w.v.bank.vestedUnclaimed > 0, "pay vested over nine epochs")
+    # the solvency gate counts unvested pay: bond < burn <= unvested + bond passes
+    h0 = R.Holdings(10 ** 12, 10 ** 21)
+    h1 = R.Holdings(10 ** 12, 10 ** 21 - 10 ** 18)
+    c, p, n, burn, ok = R.measure(h0, h1, sqrt_at(T0), sqrt_at(T0), 10 ** 24, 0, 0)
+    ok2 = R.measure(h0, h1, sqrt_at(T0), sqrt_at(T0), 10 ** 24, burn - 10, 10)[4]
+    ok3 = R.measure(h0, h1, sqrt_at(T0), sqrt_at(T0), 10 ** 24, burn - 11, 10)[4]
+    check(burn > 20 and ok2 and not ok3, "gate: burn <= unvested + bond, both legs count")
+    # tier constants: m_perBlock = 1%/yr per block (WAD), pinned exactly
+    check((R.TEST.m_perBlock, R.DEMO.m_perBlock, R.MAINNET.m_perBlock) ==
+          (10 ** 16 * 12 // 31536000, 10 ** 16 // 31536000, 10 ** 16 * 12 // 31536000), "m_perBlock per tier")
+    # Obs index fields
+    w = World()
+    o = w.v.hook.obs(w.block + 7)
+    check(o["gridIndex"] == (w.block + 7) // t.GRID and o["epoch"] == (w.block + 7) // t.EPOCH, "Obs grid and epoch")
+    # frozen records over a span with two boundaries, τ_v and τ_b credited; and the last-8 cap over a long span
+    h = R.Hook(t, R.RefSource(lambda ts: T0))
+    h.armed, h.vaultLo, h.vaultHi, h.emptyRange = True, T0 - 1000, T0 + 1000, False
+    h.witLo, h.witHi = T0 - 100, T0 + 100
+    h.refTick, h.refGrid, h.refCachedAt, h.lastSnap, h.ring, h.med9 = T0, 10 ** 9, 1005, 1005, [(1005, T0)], T0
+    h.tauV, h.tauB = 3, 4
+    h.snapshot(1043, 10 ** 12, sqrt_at(T0), T0)
+    check(h.frozen.get(51) == (T0, 3 + 15, 4 + 15) and h.frozen.get(52) == (T0, 3 + 35, 4 + 35) and h.tauB == 4 + 38,
+          "frozen τ_v(B), τ_b(B) and τ_b over the span", (h.frozen, h.tauB))
+    h2 = R.Hook(t, R.RefSource(lambda ts: T0))
+    h2.armed, h2.vaultLo, h2.vaultHi, h2.emptyRange = True, T0 - 1000, T0 + 1000, False
+    h2.refTick, h2.refGrid, h2.refCachedAt, h2.lastSnap, h2.ring, h2.med9 = T0, 10 ** 9, 1000, 1000, [(1000, T0)], T0
+    h2.snapshot(1000 + 12 * t.GRID + 5, 10 ** 12, sqrt_at(T0), T0)
+    keys = sorted(h2.frozen)
+    check(len(keys) == 8 and keys[-1] == (1000 + 12 * t.GRID + 5) // t.GRID and keys[0] == keys[-1] - 7 and
+          all(h2.frozen[k][1] == 2 * t.GRID for k in keys if k * t.GRID >= 1000 + 2 * t.GRID),
+          "freeze at most the last 8 boundaries; credit capped at freshness", keys)
+    # _refresh reads the anchored sample (phase-offset timestamps): seed's cache is the anchor's tick
+    f = lambda end: T0 + (end * 7919) % 101  # non-periodic, so reads ending at different times differ
+    w = World(ref_fn=f, phase=150)
+    k = w.ts() // t.GRID_SEC
+    check(w.v.hook.refTick == f(k * t.GRID_SEC) and len({f(k * t.GRID_SEC), f(0), f(t.GRID_SEC), f(w.ts() - t.GRID_SEC),
+                                                          f(w.ts())}) == 5,
+          "the seed refresh reads the TWAP ending at the anchor", w.v.hook.refTick)
+    # a buy (token1 in) through thin depth stops at spot + (FEE_TICKS + BAND_SWAP)
+    w = World(third_L=10 ** 14)
+    amt = min(w.v.h.idle1, w.v.nav(sqrt_at(T0)) * 19 // 1000)
+    w.v.rebalance_swap(False, amt, w.block, w.ts())
+    check(w.v.pool.s == sqrt_at(T0 + 10), "a buy stops exactly at spot + 10 ticks", w.v.pool.tick)
+    # an inactive pre-swap does nothing
+    w = World(seed_amounts=(300_000 * USDC, 20 * ETH))
+    w.place(T0, T0 + 2000, dict(active=False, zeroForOne=True, amountIn=10 ** 9))
+    check(w.v.swapCount == 0 and w.v.epochSwapFrac == 0, "an inactive pre-swap does not swap")
+    # a failed live read never opens the gate, even when tick 0 is inside the range
+    w = World()
+    v = w.v
+    hk = v.hook
+    hk.vaultLo, hk.vaultHi, hk.emptyRange = -1000, 1000, False
+    hk.refTick, hk.refCachedAt, hk.gapSinceVerify = 0, w.block, False
+    v.bank.cohorts[0] = [0, 10 ** 18]
+    v.bank.placedByCurator = True
+    w.ref.fail = lambda end: True
+    o = hk.obs(w.block)
+    v._checkpoint(o, w.block, w.ts())
+    check(v.bank.vestedUnclaimed == 0 and v.bank.maturedPending == 10 ** 18, "a failed live read closes the gate")
+    w.ref.fail = set()
+    # reads are counted at the reference double: an action reuses a successful prologue read
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.keepalive_run(t.EPOCH)
+    w.poke()
+    w.keepalive_run(t.EPOCH * (1 + R.V))
+    w.step(1)
+    n0 = getattr(w.ref, "live_count", 0)
+    w.v.rebalance_swap(False, 10 ** 15, w.block, w.ts())
+    check(getattr(w.ref, "live_count", 0) - n0 == 1, "the action reuses the prologue's live read (one read)")
+    w.keepalive_run(t.COOLDOWN)
+    w.step(1)
+    n0 = getattr(w.ref, "live_count", 0)
+    w.v.rebalance_swap(False, 10 ** 15, w.block, w.ts())
+    check(getattr(w.ref, "live_count", 0) - n0 == 1, "with no prologue read the action reads once")
+    # exact pre-breach forfeitValue and exact record base
+    st = {"ref": T0}
+    w = World(ref_fn=lambda ts: st["ref"])
+    w.place(T0 - 1000, T0 + 1000)
+    w.deposit(10 ** 26)
+    w.keepalive_run(t.EPOCH)
+    w.poke()
+    st["ref"] = T0 + 2500
+    w.keepalive_run(t.CURE_BLOCKS + 3 * t.GRID)
+    w.step(1)
+    v = w.v
+    o = v.hook.snapshot(w.block, w.ts(), v.pool.s, v.pool.tick)
+    e = w.block // t.EPOCH
+    fv0, b0 = v.rec(e)["forfeitValue"], v.rec(e)["base"]
+    exp_fv = R.mul_div(R.mul_div(t.m_perBlock, v.NAV0, R.WAD), v.delta0 * (o["tauVAtLastPending"] - v.tauV0), R.WAD) + v.baseOwed
+    exp_base = R.mul_div(R.mul_div(t.m_perBlock, v.NAV0, R.WAD), v.delta0 * (o["tauV"] - o["tauVAtLastPending"]), R.WAD)
+    v._collect_first()
+    v._checkpoint(o, w.block, w.ts())
+    check(o["pendingBreaches"] == 1 and v.rec(e)["forfeitValue"] - fv0 == exp_fv and exp_fv > 0,
+          "record forfeitValue = the unminted base up to b_last", (v.rec(e)["forfeitValue"] - fv0, exp_fv))
+    check(v.rec(e)["base"] - b0 == exp_base, "record base = the base after b_last", (v.rec(e)["base"] - b0, exp_base))
+    # empty holdings: δ = 0 (no division by zero)
+    try:
+        d = R.delta_of(R.Holdings(), sqrt_at(T0))
+    except Exception as ex:
+        d = repr(ex)
+    check(d == 0, "δ of empty holdings is 0", d)
+    # a same-block refreshRef retries an anchor whose read failed in the block's snapshot
+    w = World()
+    w.keepalive_run(100)
+    w.step(t.GRID - w.block % t.GRID + 1)
+    w.ref.fail = lambda end: True
+    w.poke()
+    k_fail = w.v.hook.refGrid
+    w.ref.fail = set()
+    w.touch_same_block()
+    check(w.v.hook.refCachedAt == w.block and w.v.hook.refGrid == w.ts() // t.GRID_SEC and w.v.hook.refGrid > k_fail,
+          "a same-block refreshRef retries a failed anchor")
+    # NAV' == the mint amount defers (no division by zero; every entry point stays live)
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.deposit(10 ** 26)
+    w.keepalive_run(100)
+    w.step(1)
+    v = w.v
+    o = v.hook.snapshot(w.block, w.ts(), v.pool.s, v.pool.tick)
+    base = R.mul_div(R.mul_div(t.m_perBlock, v.NAV0, R.WAD), v.delta0 * (o["tauV"] - v.tauV0), R.WAD)
+    navp = v.nav(sqrt_at(v.hook.refTick))
+    v.baseOwed = navp - base
+    try:
+        w.withdraw(10 ** 20)
+        check(v.baseOwed == navp or w.v.baseOwed == navp, "NAV' == amount defers the whole amount", w.v.baseOwed)
+    except Exception as ex:
+        check(False, "NAV' == amount defers the whole amount", repr(ex))
+
+
+def rules_med9():
+    t = R.TEST
+    # med9 is the lower median of the last 9 snapshots; the ring keeps N_SNAP; an unarmed snapshot records its entry
+    h = R.Hook(t, R.RefSource(lambda ts: T0))
+    try:
+        for i, tk in enumerate([5, 1, 9, 3, 7, 2, 8, 4, 6, 100, 0] + list(range(40))):
+            h.snapshot(1000 + i, 12 * (1000 + i), sqrt_at(T0 + tk), T0 + tk)
+            last = sorted(x for _, x in h.ring[-9:])
+            check(h.med9 == last[(len(last) - 1) // 2] and len(h.ring) == min(i + 1, R.N_SNAP), "med9 and ring size", i)
+        check(h.ring[-1] == (1000 + i, T0 + 39) and h.lastSnap == 1000 + i, "unarmed snapshots record entries")
+    except Exception as ex:
+        check(False, "med9 and ring size", repr(ex))
+    # an armed snapshot records its (block, tick) entry
+    w = World()
+    w.keepalive_run(7)
+    check(w.v.hook.ring[-1] == (w.block, w.v.pool.tick) if w.v.hook.ring else False, "an armed snapshot records its entry")
+    # frozen τ_v(B) is not credited for a span the clock does not credit to τ_v
+    h = R.Hook(t, R.RefSource(lambda ts: T0 + 1500))
+    h.armed, h.vaultLo, h.vaultHi, h.emptyRange = True, T0 - 1000, T0 + 1000, False
+    h.refTick, h.refGrid, h.refCachedAt, h.lastSnap, h.ring, h.med9 = T0 + 1500, 10 ** 9, 1005, 1005, [(1005, T0)], T0
+    h.tauV = 9
+    h.snapshot(1043, 10 ** 12, sqrt_at(T0), T0)
+    check(h.frozen.get(51) == (T0, 9, 0) and h.frozen.get(52) == (T0, 9, 0), "frozen τ_v(B) uncredited out of range", h.frozen)
 
 
 def headroom_exact(rng):
@@ -1703,8 +1868,8 @@ def main():
     rng = random.Random(20261115)
     for fn in (props_ledger, props_mint, props_bank, props_drip, headroom_exact, props_placement):
         _run(fn, rng)
-    for fn in (props_saturation, props_ladder, props_units, rules_pay, rules_gate_leg, rules_clock, rules_actions,
-               rules_r2, rules_r3, rules_r4, rules_r4b, scenario_base_and_vesting, scenario_live_leg, scenario_no_read_when_not_vestable,
+    for fn in (rules_med9, props_saturation, props_ladder, props_units, rules_pay, rules_gate_leg, rules_clock, rules_actions,
+               rules_r2, rules_r3, rules_r4, rules_r4b, rules_r5, scenario_base_and_vesting, scenario_live_leg, scenario_no_read_when_not_vestable,
                scenario_breach_and_removal, scenario_reset_and_registration, scenario_gap, scenario_actions,
                scenario_deltamin, scenario_insolvent, scenario_epilogue):
         _run(fn)

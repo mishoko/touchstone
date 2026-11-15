@@ -264,6 +264,9 @@ def ledger_cases():
     add("gate-exact", g0, g1, pool.s, sqrt_at(T0), unv_=0,
         bond_=R.measure(g0, g1, pool.s, sqrt_at(T0), S, 0, 0)[3], note="burn == unvested + bond -> ok",
         expect=("ref", True, True))
+    burn_g = R.measure(g0, g1, pool.s, sqrt_at(T0), S, 0, 0)[3]
+    add("gate-passes-on-unvested", g0, g1, pool.s, sqrt_at(T0), unv_=burn_g - burn_g // 3, bond_=burn_g // 3,
+        note="bond < burn <= unvested + bond", expect=("ref", True, True))
     # 11. gain at both prices: the 0 floor
     g = h0.copy()
     g.idle1 += 10 ** 15
@@ -414,6 +417,8 @@ def bank_cases():
         note="occupant epoch 2 in slot 7 mod 5 vests")
     add("accrue-overwrite-gate-closed", st(cohorts=[(2, 4 * k)], maturedPending=k), "Accrue",
         dict(epoch=7, shares=k, gateOpen=False), note="occupant moves to maturedPending")
+    add("accrue-overwrite-gate-open-adds-to-vested", st(cohorts=[(2, 4 * k)], vestedUnclaimed=3 * k), "Accrue",
+        dict(epoch=7, shares=k, gateOpen=True), note="vestedUnclaimed grows by the occupant")
     add("accrue-zero-noop", st(cohorts=[(2, 4 * k)]), "Accrue", dict(epoch=7, shares=0, gateOpen=False))
     # VestTime
     full = dict(cohorts=[(3, k), (4, 2 * k), (5, 3 * k), (6, 4 * k), (7, 5 * k)], maturedPending=6 * k)

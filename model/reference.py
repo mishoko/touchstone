@@ -146,14 +146,14 @@ def measure(before, after, sqrt_spot, sqrt_ref, S, unvested, bond):
     and sqrtSpot on a tie (including charge = 0); burn = ceilDiv(charge·S, NAV_after(p*)); ok iff
     burn ≤ unvested + bond. A positive charge against NAV_after(p*) = 0 cannot be priced in shares:
     burn saturates at type(uint256).max and ok = false."""
-    best = None
-    for p in (sqrt_spot, sqrt_ref):
-        nb, _ = value(before, p)
-        na, _ = value(after, p)
-        loss = nb - na
-        if best is None or loss > best[0]:
-            best = (loss, p, na)
-    loss, p_star, nav_after = best
+    na_s = value(after, sqrt_spot)[0]
+    na_r = value(after, sqrt_ref)[0]
+    loss_s = value(before, sqrt_spot)[0] - na_s
+    loss_r = value(before, sqrt_ref)[0] - na_r
+    if loss_r > loss_s:  # p* = sqrtSpot on a tie
+        loss, p_star, nav_after = loss_r, sqrt_ref, na_r
+    else:
+        loss, p_star, nav_after = loss_s, sqrt_spot, na_s
     charge = loss if loss > 0 else 0
     if charge == 0:
         burn = 0
@@ -224,7 +224,8 @@ def placement_size(idle, lo, hi, sqrt_spot, sqrt_ref):
         a0, a1 = 0, get_amount1_delta(sa, sb, L, True)
     else:
         a0, a1 = get_amount0_delta(sqrt_spot, sb, L, True), get_amount1_delta(sa, sqrt_spot, L, True)
-    assert a0 <= idle.idle0 and a1 <= idle.idle1, "headroom must keep the add within idle"
+    if a0 > idle.idle0 or a1 > idle.idle1:
+        raise MathRevert("InsufficientIdle")  # unreachable with the headroom; a settle would fail
     after = Holdings(idle.idle0 - a0, idle.idle1 - a1, L, lo, hi)
     return L, after, min(delta_of(after, sqrt_ref), U64)
 
@@ -437,6 +438,8 @@ class RefSource:
         self.fail = fail if fail is not None else set()
 
     def read(self, ts, seconds_ago):
+        if seconds_ago == 0:
+            self.live_count = getattr(self, "live_count", 0) + 1  # every live read (tryRef or liveRef)
         end = ts - seconds_ago
         failed = self.fail(end) if callable(self.fail) else end in self.fail
         if failed:
@@ -969,7 +972,6 @@ class Vault:
         self._gate(entry)
         tick_spot, s_spot = self.pool.tick, self.pool.s
         ref = lt if lr else self.hook.live_ref(ts)
-        self.live_reads += 0 if lr else 1
         if abs(tick_spot - ref) > self.t.REF_BAND:
             raise Revert("Fence")
         if self.lastAction and now - self.lastAction < self.t.COOLDOWN:
@@ -1015,7 +1017,9 @@ class Vault:
         self.events.append(("Action", kind, charge, p_star, bank_b, bond_b))
         return charge, p_star, burn
 
-    def set_positions(self, lo, hi, pre=None, now=0, ts=0):
+    NO_PRESWAP = {"active": False, "zeroForOne": False, "amountIn": 0}
+
+    def set_positions(self, lo, hi, pre=NO_PRESWAP, now=0, ts=0):
         """setPositions(lo, hi, PreSwap): prologue, guards, remove, optional pre-swap, add, charge, register. Returns (charge, pStar, burn, deltaAfter)."""
         def f():
             o, tick_spot, s_spot, ref = self._action_common("SetPositions", now, ts)
@@ -1031,7 +1035,7 @@ class Vault:
                 self.h.idle0 -= a0
                 self.h.idle1 -= a1
                 self.h.L = 0
-            if pre and pre.get("active"):
+            if pre["active"]:
                 self._swap_from_idle(pre["zeroForOne"], pre["amountIn"], tick_spot, s_ref, nav_ref)
             L, after, d_after = placement_size(self.h, lo, hi, self.pool.s, s_ref)
             if L > 0:  # settle what the pool takes for L at its current price (equal to the sized amounts)

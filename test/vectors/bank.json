@@ -373,7 +373,97 @@
    }
   },
   {
-   "id": "bank-004-accrue-zero-noop",
+   "id": "bank-004-accrue-overwrite-gate-open-adds-to-vested",
+   "fn": "FeeBank.apply",
+   "in": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "2",
+       "shares": "4000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "3000000000000000000",
+     "bondShares": "0",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0"
+    },
+    "op": "0",
+    "args": {
+     "epoch": "7",
+     "shares": "1000000000000000000",
+     "gateOpen": true
+    }
+   },
+   "out": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "7",
+       "shares": "1000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "7000000000000000000",
+     "bondShares": "0",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0"
+    },
+    "burnShares": "0",
+    "payShares": "0",
+    "a": "4000000000000000000",
+    "b2": "0"
+   }
+  },
+  {
+   "id": "bank-005-accrue-zero-noop",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -463,7 +553,7 @@
    }
   },
   {
-   "id": "bank-005-vest-open",
+   "id": "bank-006-vest-open",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -552,7 +642,7 @@
    }
   },
   {
-   "id": "bank-006-vest-closed",
+   "id": "bank-007-vest-closed",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -641,7 +731,7 @@
    }
   },
   {
-   "id": "bank-007-vest-nothing-matured",
+   "id": "bank-008-vest-nothing-matured",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -730,7 +820,7 @@
    }
   },
   {
-   "id": "bank-008-vest-boundary",
+   "id": "bank-009-vest-boundary",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -819,7 +909,7 @@
    }
   },
   {
-   "id": "bank-009-vest-boundary-minus-1",
+   "id": "bank-010-vest-boundary-minus-1",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -908,7 +998,7 @@
    }
   },
   {
-   "id": "bank-010-charge-youngest-first",
+   "id": "bank-011-charge-youngest-first",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -996,7 +1086,7 @@
    }
   },
   {
-   "id": "bank-011-charge-into-pending-and-bond",
+   "id": "bank-012-charge-into-pending-and-bond",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -1084,7 +1174,7 @@
    }
   },
   {
-   "id": "bank-012-charge-exact-total",
+   "id": "bank-013-charge-exact-total",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -1172,7 +1262,7 @@
    }
   },
   {
-   "id": "bank-013-charge-insolvent",
+   "id": "bank-014-charge-insolvent",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -1221,7 +1311,7 @@
    }
   },
   {
-   "id": "bank-014-charge-zero",
+   "id": "bank-015-charge-zero",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -1309,7 +1399,7 @@
    }
   },
   {
-   "id": "bank-015-drip-1000",
+   "id": "bank-016-drip-1000",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -1397,7 +1487,7 @@
    }
   },
   {
-   "id": "bank-016-drip-1030",
+   "id": "bank-017-drip-1030",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -1485,7 +1575,7 @@
    }
   },
   {
-   "id": "bank-017-drip-1060",
+   "id": "bank-018-drip-1060",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -1573,7 +1663,7 @@
    }
   },
   {
-   "id": "bank-018-drip-1119",
+   "id": "bank-019-drip-1119",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -1661,7 +1751,7 @@
    }
   },
   {
-   "id": "bank-019-drip-1120",
+   "id": "bank-020-drip-1120",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -1749,7 +1839,7 @@
    }
   },
   {
-   "id": "bank-020-drip-5000",
+   "id": "bank-021-drip-5000",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -1837,7 +1927,7 @@
    }
   },
   {
-   "id": "bank-021-drip-partly-burned",
+   "id": "bank-022-drip-partly-burned",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -1925,7 +2015,7 @@
    }
   },
   {
-   "id": "bank-022-drip-zero-length",
+   "id": "bank-023-drip-zero-length",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -2013,7 +2103,7 @@
    }
   },
   {
-   "id": "bank-023-drip-before-start",
+   "id": "bank-024-drip-before-start",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -2101,7 +2191,7 @@
    }
   },
   {
-   "id": "bank-024-breach-normal-1",
+   "id": "bank-025-breach-normal-1",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -2190,7 +2280,7 @@
    }
   },
   {
-   "id": "bank-025-breach-breached-2-to-3",
+   "id": "bank-026-breach-breached-2-to-3",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -2279,7 +2369,7 @@
    }
   },
   {
-   "id": "bank-026-breach-two-at-once",
+   "id": "bank-027-breach-two-at-once",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -2368,7 +2458,7 @@
    }
   },
   {
-   "id": "bank-027-breach-exited-keeps-exitblock",
+   "id": "bank-028-breach-exited-keeps-exitblock",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -2457,7 +2547,7 @@
    }
   },
   {
-   "id": "bank-028-breach-empty-no-restart",
+   "id": "bank-029-breach-empty-no-restart",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -2546,7 +2636,7 @@
    }
   },
   {
-   "id": "bank-029-breach-restart",
+   "id": "bank-030-breach-restart",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -2635,7 +2725,7 @@
    }
   },
   {
-   "id": "bank-030-place-normal",
+   "id": "bank-031-place-normal",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -2721,7 +2811,7 @@
    }
   },
   {
-   "id": "bank-031-place-breached",
+   "id": "bank-032-place-breached",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -2807,7 +2897,7 @@
    }
   },
   {
-   "id": "bank-032-place-exited",
+   "id": "bank-033-place-exited",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -2854,7 +2944,7 @@
    }
   },
   {
-   "id": "bank-033-retire",
+   "id": "bank-034-retire",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -2942,7 +3032,7 @@
    }
   },
   {
-   "id": "bank-034-retire-empty",
+   "id": "bank-035-retire-empty",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3030,7 +3120,7 @@
    }
   },
   {
-   "id": "bank-035-retire-exited",
+   "id": "bank-036-retire-exited",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3079,7 +3169,7 @@
    }
   },
   {
-   "id": "bank-036-retire-running-drip",
+   "id": "bank-037-retire-running-drip",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3167,7 +3257,7 @@
    }
   },
   {
-   "id": "bank-037-claim",
+   "id": "bank-038-claim",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3253,7 +3343,7 @@
    }
   },
   {
-   "id": "bank-038-claim-exited",
+   "id": "bank-039-claim-exited",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3339,7 +3429,7 @@
    }
   },
   {
-   "id": "bank-039-topup",
+   "id": "bank-040-topup",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3427,7 +3517,7 @@
    }
   },
   {
-   "id": "bank-040-release-locked",
+   "id": "bank-041-release-locked",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3477,7 +3567,7 @@
    }
   },
   {
-   "id": "bank-041-release-at-delay",
+   "id": "bank-042-release-at-delay",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3566,7 +3656,7 @@
    }
   },
   {
-   "id": "bank-042-release-partial",
+   "id": "bank-043-release-partial",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3655,7 +3745,7 @@
    }
   },
   {
-   "id": "bank-043-release-above-bond",
+   "id": "bank-044-release-above-bond",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3744,7 +3834,7 @@
    }
   },
   {
-   "id": "bank-044-release-normal",
+   "id": "bank-045-release-normal",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3794,7 +3884,7 @@
    }
   },
   {
-   "id": "bank-045-release-demo-minus-1",
+   "id": "bank-046-release-demo-minus-1",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3844,7 +3934,7 @@
    }
   },
   {
-   "id": "bank-046-release-demo-at",
+   "id": "bank-047-release-demo-at",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3933,7 +4023,7 @@
    }
   },
   {
-   "id": "bank-047-release-after-post-exit-breach",
+   "id": "bank-048-release-after-post-exit-breach",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4022,7 +4112,7 @@
    }
   },
   {
-   "id": "bank-048-seq-accrue-0",
+   "id": "bank-049-seq-accrue-0",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4112,7 +4202,7 @@
    }
   },
   {
-   "id": "bank-049-seq-accrue-1",
+   "id": "bank-050-seq-accrue-1",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4202,7 +4292,7 @@
    }
   },
   {
-   "id": "bank-050-seq-accrue-2",
+   "id": "bank-051-seq-accrue-2",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4292,7 +4382,7 @@
    }
   },
   {
-   "id": "bank-051-seq-accrue-3",
+   "id": "bank-052-seq-accrue-3",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4382,7 +4472,7 @@
    }
   },
   {
-   "id": "bank-052-seq-accrue-4",
+   "id": "bank-053-seq-accrue-4",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4472,7 +4562,7 @@
    }
   },
   {
-   "id": "bank-053-seq-accrue-5",
+   "id": "bank-054-seq-accrue-5",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4562,7 +4652,7 @@
    }
   },
   {
-   "id": "bank-054-seq-vest-open",
+   "id": "bank-055-seq-vest-open",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4651,7 +4741,7 @@
    }
   },
   {
-   "id": "bank-055-seq-breach",
+   "id": "bank-056-seq-breach",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4740,7 +4830,7 @@
    }
   },
   {
-   "id": "bank-056-seq-drip-half",
+   "id": "bank-057-seq-drip-half",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {

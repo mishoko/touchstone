@@ -1,6 +1,6 @@
 {
  "schema": "touchstone-vectors/1",
- "specVersion": "2.21",
+ "specVersion": "2.22",
  "conventions": {
   "measure": "loss_p = NAV_before(p) - NAV_after(p) for p in (sqrtSpot, sqrtRef); charge = max(0, max loss); pStar = argmax, sqrtSpot on a tie (incl. charge 0); navAfterPStar = NAV_after(pStar); burn = ceilDiv(charge*S, navAfterPStar) (0 when charge = 0; type(uint256).max when navAfterPStar = 0 and charge > 0); ok = burn <= unvested + bond.",
   "NAV": "NAV(s) = q(idle0 + x_pos(s), s) + idle1 + y_pos(s); positions per Appendix A with roundUp = false.",

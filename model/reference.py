@@ -29,7 +29,7 @@ from v4math import (  # noqa: E402
     get_liquidity_for_amounts, compute_swap_step_exact_in,
 )
 
-SPEC_VERSION = "2.21"
+SPEC_VERSION = "2.22"
 WAD = 10 ** 18
 U32 = (1 << 32) - 1
 U40 = (1 << 40) - 1
@@ -639,8 +639,9 @@ class Pool:
     gate cells and the self-check to produce real holdings before and after an action. It is a test double,
     not part of the vectors (action vectors take holdings as inputs)."""
 
-    def __init__(self, sqrt_price, fee):
+    def __init__(self, sqrt_price, fee, spacing=10):
         self.s = sqrt_price
+        self.spacing = spacing
         self.tick = get_tick_at_sqrt_price(sqrt_price)
         self.fee = fee
         self.L = 0
@@ -714,10 +715,20 @@ class Pool:
         return sg * a0, sg * a1, f0, f1
 
     def _next_tick(self, down):
-        ks = [t for t in self.net if (t <= self.tick if down else t > self.tick)]
-        if not ks:
-            return MIN_TICK if down else MAX_TICK
-        return max(ks) if down else min(ks)
+        """TickBitmap.nextInitializedTickWithinOneWord: the next initialized tick within the current 256-spacing
+        bitmap word, else the word's boundary (v4 stops a swap step there too; each step rounds separately)."""
+        sp = self.spacing
+        comp = self.tick // sp
+        if down:
+            lo_c = (comp >> 8) << 8
+            ks = [t for t in self.net if lo_c * sp <= t <= comp * sp]
+            nt = max(ks) if ks else lo_c * sp
+        else:
+            c1 = comp + 1
+            hi_c = (((c1 >> 8) + 1) << 8) - 1
+            ks = [t for t in self.net if c1 * sp <= t <= hi_c * sp]
+            nt = min(ks) if ks else hi_c * sp
+        return max(MIN_TICK, min(MAX_TICK, nt))
 
     def swap(self, zero_for_one, amount_in, sqrt_limit):
         """Exact-input swap. Returns (amountIn used, amountOut)."""
@@ -739,10 +750,11 @@ class Pool:
             if fee and self.L:
                 self.fg[0 if zero_for_one else 1] += mul_div(fee, 1 << 128, self.L)
             self.s = s_new
-            if s_new == s_next_tick and nt in self.net:
-                o = self.out[nt]
-                o[0], o[1] = self.fg[0] - o[0], self.fg[1] - o[1]
-                self.L += -self.net[nt] if zero_for_one else self.net[nt]
+            if s_new == s_next_tick:   # v4: at a step's next tick (initialized or a word boundary) tick = nt − 1 / nt
+                if nt in self.net:
+                    o = self.out[nt]
+                    o[0], o[1] = self.fg[0] - o[0], self.fg[1] - o[1]
+                    self.L += -self.net[nt] if zero_for_one else self.net[nt]
                 self.tick = nt - 1 if zero_for_one else nt
             else:
                 self.tick = get_tick_at_sqrt_price(s_new)

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Cell (a): incentive bots (G0 item 2) and the m proposal (spec method: m = max(m_IC, m_PC) under the depositor
-ceiling), at the mainnet tier (12 s blocks, GRID 1 h, EPOCH 7 d, CURE 24 h, V 4 epochs) on 180-day synthetic
+"""Cell (a): incentive bots (G0 item 2) and the m proposal (spec method: m = max(m_IC, m_PC); the depositor ceiling
+needs noise flow and is not measured here: the fee uplift and end NAV are reported), at the mainnet tier (12 s blocks, GRID 1 h, EPOCH 7 d, CURE 24 h, V 4 epochs) on 180-day synthetic
 paths (driftless GBM at σ 40 / 60 / 120 %/yr = the p50 / p90 / p99 buckets; plus a hover path, an OU process
 around the deploy range's upper edge at σ 60 %).
 
 Phases:
 - fit (seeds 0–99): every bot, both observer variants, at m = 0 and m = 1 %/yr. Net pay is affine in m
   (vested pay ∝ m; charges, gas and trading do not depend on m), so per path net(m) = m·P + C with
-  P = (net(1%) − net(0)) / 1% and C = net(0). From these: the method's m_IC, m_PC and the depositor ceiling, and
+  P = (net(1%) − net(0)) / 1% and C = net(0). From these: the method's m_IC and m_PC, the fee uplift, and
   the smallest m at which every gated comparison passes on the fit seeds (m_gate).
 - test (seeds 100–299): every bot, both variants, at the proposed m, plus the m = 0 control; the gate.
 
@@ -114,8 +114,11 @@ def fit(rows):
         fa_up = sum(x["f_actual"] for x in e) / len(e) - sum(x["f_actual"] for x in lz) / len(lz)
         # the smallest m at which edge60 beats every gated bot on the fit seeds (paired CI lower bound > 0)
         m_need = {}
+        m_need_obs = {}
         for bot in B.GATED:
             m_need[bot] = gate_min_m(ix, b, seeds, bot)
+            if bot not in ("lazy",):   # lazy has no observer run (lazy-under-ladder is lazy with an observer)
+                m_need_obs[bot] = gate_min_m(ix, b, seeds, bot, env=True)
         nav = {bot: sum(paired(ix, b, s, bot, 0.0, key="nav_end")[0] for s in seeds) / len(seeds)
                for bot in ("edge60", "lazy", "lazy-quiet", "breach-reset", "idle", "edge-6h")}
         # realised pay per unit of credited in-range time at m = 1% (pay ∝ NAV0, so LVR erodes the mimic's pay)
@@ -123,17 +126,17 @@ def fit(rows):
                max(1e-12, sum(paired(ix, b, s, bot, 0.01, key="f")[0] for s in seeds)) for bot in ("edge60", "lazy-quiet")}
         m_need_max = max(m_need.values())
         out[b] = dict(charges_yr=charges, gas_yr=gas, f_mimic=f_m, f_lazy=fl, f_lazy_max=f_lazy, q=q, m_ic=m_ic,
-                      m_pc=m_pc, fee_uplift=fee_up, f_actual_uplift=fa_up, m_need=m_need, m_need_max=m_need_max,
+                      m_pc=m_pc, fee_uplift=fee_up, f_actual_uplift=fa_up, m_need=m_need, m_need_max=m_need_max, m_need_observer=m_need_obs,
                       nav_end_m0=nav, pay_per_credited_f=ppt)
     return out
 
 
-def gate_min_m(ix, b, seeds, bot, lo=0.0, hi=0.10):
+def gate_min_m(ix, b, seeds, bot, lo=0.0, hi=0.10, env=False):
     """Smallest m (bisection) with the paired one-sided 95% CI lower bound of (edge60 − bot) > 0 on the fit seeds,
     from the per-path affine fit net(m) = m·P + C, paired by `paired` (the same environment, no observer)."""
     def aff(s):
-        b0, m0 = paired(ix, b, s, bot, 0.0)
-        b1, m1 = paired(ix, b, s, bot, 0.01)
+        b0, m0 = paired(ix, b, s, bot, 0.0, env)
+        b1, m1 = paired(ix, b, s, bot, 0.01, env)
         return (m1 - m0) / 0.01, m0, (b1 - b0) / 0.01, b0
 
     A = [aff(s) for s in seeds]
@@ -158,11 +161,6 @@ def gate_min_m(ix, b, seeds, bot, lo=0.0, hi=0.10):
 ENVS = ((False, "no-observer"), (True, "observer"))   # no-observer is the pinned gating environment (spec §10)
 
 
-def env_val(ix, b, s, bot, m, env, key="net"):
-    v = ix.get((b, s, bot, m), {})
-    return v[env][key] if env in v else None
-
-
 def gate(rows, m):
     """Paired comparisons with the mimic and the bot in the SAME environment. The gate is the no-observer
     environment (pinned before the data); the observer environment (a third party calls refreshRef every 2·GRID)
@@ -174,16 +172,17 @@ def gate(rows, m):
         b = bucket(kind, sigma)
         res[b] = {}
         for env, ename in ENVS:
-            mim = [env_val(ix, b, s, "edge60", m, env) for s in seeds]
+            mim = [paired(ix, b, s, "lazy" if env is False else "lazy-under-ladder", m, env)[1] for s in seeds]
             row = dict(mimic_mean=sum(mim) / len(mim), mimic_p5=pctl(mim, 0.05), mimic_p50=pctl(mim, 0.50), cmp={})
             for bot in B.GATED + B.REPORTED:
-                xs = [env_val(ix, b, s, bot, m, env) for s in seeds]
-                if xs[0] is None:
+                if (b, seeds[0], bot, m) not in ix or env not in ix[(b, seeds[0], bot, m)] or \
+                        (bot == "lazy-under-ladder") != env:
                     continue
+                xs = [paired(ix, b, s, bot, m, env)[0] for s in seeds]   # r2 R2-06: the one pairing rule
                 mean, lo, hi = mean_ci([a - x for a, x in zip(mim, xs)])
                 row["cmp"][bot] = dict(bot_mean=sum(xs) / len(xs), diff=mean, ci_lo=lo, se=(hi - mean) / 1.645)
             lz0 = "lazy" if not env else "lazy-under-ladder"
-            d0 = [env_val(ix, b, s, lz0, 0.0, env) - env_val(ix, b, s, "edge60", 0.0, env) for s in seeds]
+            d0 = [a - c for a, c in (paired(ix, b, s, lz0, 0.0, env) for s in seeds)]
             row["control_m0"] = mean_ci(d0)
             e = [ix[(b, s, "edge60", m)][env] for s in seeds]
             row["f_mimic"] = sum(x["f"] for x in e) / len(e)
@@ -229,10 +228,16 @@ def main():
         rows = run_all(range(0, n), (0.0, 0.01), B.ALL)
         with open(os.path.join(OUT, "bots-fit.json"), "w") as fh:
             json.dump(rows, fh)
-        print(json.dumps(fit(rows), indent=1, default=str))
+        res = fit(rows)
+        with open(os.path.join(OUT, "bots-fit-summary.json"), "w") as fh:
+            json.dump(res, fh, indent=1, default=str)
+        print(json.dumps(res, indent=1, default=str))
     elif phase == "refit":
         with open(os.path.join(OUT, "bots-fit.json")) as fh:
-            print(json.dumps(fit(json.load(fh)), indent=1, default=str))
+            res = fit(json.load(fh))
+        with open(os.path.join(OUT, "bots-fit-summary.json"), "w") as fh:   # r2 R2-06: refit writes the summary
+            json.dump(res, fh, indent=1, default=str)
+        print(json.dumps(res, indent=1, default=str))
     elif phase in ("test", "regate"):
         ms = [float(x) for x in sys.argv[2].split(",")]
         n = int(sys.argv[3]) if len(sys.argv) > 3 else 200

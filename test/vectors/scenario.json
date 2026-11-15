@@ -1,6 +1,6 @@
 {
  "schema": "touchstone-vectors/1",
- "specVersion": "2.20",
+ "specVersion": "2.21",
  "conventions": {
   "fn": "VaultHarness.checkpoint(Obs o, bool liveOk, int24 liveTick): the vault's _checkpoint(o) with no PoolManager; the harness sets the state of in.state through its setters, stubs ackBreaches (recorded as an emitted {ackBreaches: {n}}) and overrides _tryRef() to return (liveOk, liveTick) and count its calls.",
   "events": "in.events[i] = {block, ts, obs, live}: vm.roll(block), vm.warp(ts), then checkpoint(obs, live != \"fail\", live == \"fail\" ? 0 : live). The state carries over between events.",

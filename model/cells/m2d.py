@@ -188,7 +188,16 @@ def grief_lane(h, r, d):
         a = run_attack(h, r, r, sg * d, lo, 0, 60)
         b = run_attack(h, r, r, 0, lo, 0, 60)
         if not a or not b:
-            continue
+            # r2 R2-05: when the in-place placement is not legal (a one-sided inventory), the honest curator uses the
+            # bundled edge move: its own move to one unit inside the inventory-side edge at the floored reference
+            # overrides the griefer's push; the move leg is attributed to the griefer (conservative for the lane)
+            c = floor_sp(r)
+            mostly0 = R.q(inv.idle0, sqrt_at(r)) >= inv.idle1
+            lo, ps = (c, sqrt_at(c) + 1) if mostly0 else (c + SPACING - W, sqrt_at(c + SPACING) - 1)
+            a = run_attack(h, r, r, sg * d, lo, 0, 60, push_sqrt=ps)
+            b = a
+            if not a:
+                continue
         g = (a["sybil"], a["charge"] - b["charge"])
         if out is None or g[0] > out[0]:
             out = g
@@ -236,7 +245,7 @@ def run_path(args):
             if j:
                 rows.append(dict(lane="jit", seed=seed, sigma=sigma, d=d, J=J, net=j[0], ctl=j[1], nav=j[2]))
     # lane 4: coerced grief (in-range state)
-    for st in ("in", "exit"):   # r1 R1-01: edge60 places from exit states (and hover-trigger in-range states)
+    for st in ("in", "exit"):   # r1 R1-01: edge60 places from exit states; in-range states stand for the hover trigger
         hi_, ri_, _ = sample_state(seed, sigma, exit_state=(st == "exit"))
         for d in (20, 40, 60):
             g = grief_lane(hi_, ri_, d)

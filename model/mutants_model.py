@@ -39,6 +39,8 @@ RULES = {
     "rounding": "rounding directions and the NAV cap in shares",
     "supply": "share supply conservation",
     "seed": "seed: armed clock, successful refresh, BOND_MIN at REF_SQRT_PRICE, dripBlocks and releaseDelay",
+    "records": "epoch roll: end of the previous epoch, a stale record for a skipped gap",
+    "relational": "every comparison in the model at its exact boundary (generated < <-> <=, > <-> >=)",
 }
 
 # (rule, name, old, new): `old` must occur exactly once in reference.py
@@ -199,7 +201,70 @@ MUTANTS = [
     ("seed", "BOND_MIN at the pool price", "            nav_ref = self.nav(self.REF_SQRT_PRICE)", "            nav_ref = self.nav(self.pool.s)"),
     ("seed", "no BOND_MIN check", "                raise Revert(\"BondMin\")", "                pass"),
     ("seed", "dripBlocks unset at seed", "        self.bank.dripBlocks = self.t.FORFEIT_DRIP_BLOCKS\n", ""),
+    ("base", "segment not closed", '        self.tauV0 = o["tauV"]\n        self.segStart = now', "        self.segStart = now"),
+    ("base", "mint at spot", "                navp = self.nav(get_sqrt_price_at_tick(price))", "                navp = self.nav(self.pool.s)"),
+    ("clock", "hook in-range includes hi", "def in_rng(lo, hi, t):\n    return lo <= t < hi", "def in_rng(lo, hi, t):\n    return lo <= t <= hi"),
+    ("clock", "hook in-range excludes lo", "def in_rng(lo, hi, t):\n    return lo <= t < hi", "def in_rng(lo, hi, t):\n    return lo < t < hi"),
+    ("snapshot", "anchor on the block grid", "ts // self.t.GRID_SEC", "now // self.t.GRID", "all"),
+    ("records", "stale record dropped", '                self.rec(self.epoch + 1)["flags"].add("stale")', "                pass"),
+    ("records", "stale record when nothing is skipped", "            if ne > self.epoch + 1:", "            if ne >= self.epoch + 1:"),
+    ("records", "end of epoch not written", '            self.rec(self.epoch)["end"] = now\n', ""),
+    ("bank", "claim pays maturedPending", "        x = b.vestedUnclaimed\n        b.vestedUnclaimed = 0",
+     "        x = b.vestedUnclaimed + b.maturedPending\n        b.vestedUnclaimed = 0\n        b.maturedPending = 0"),
 ]
+
+
+def relational_mutants(src):
+    """Generated boundary mutants: every <, <=, >, >= token in reference.py outside the Pool test double."""
+    import io
+    import tokenize
+    swap = {"<": "<=", "<=": "<", ">": ">=", ">=": ">"}
+    lines = src.splitlines(keepends=True)
+    pool_start = next(i for i, l in enumerate(lines) if l.startswith("class Pool"))
+    pool_end = next(i for i, l in enumerate(lines) if i > pool_start and l.startswith("# ===="))
+    out = []
+    for tok in tokenize.generate_tokens(io.StringIO(src).readline):
+        if tok.type == tokenize.OP and tok.string in swap:
+            row, col = tok.start
+            if pool_start <= row - 1 < pool_end:
+                continue
+            line = lines[row - 1]
+            new_line = line[:col] + swap[tok.string] + line[col + len(tok.string):]
+            nth = sum(1 for l in lines[:row - 1] if l.strip() == line.strip())
+            key = f"{line.strip()} |{tok.string}@{col}" + (f" #{nth + 1}" if nth else "")
+            mutated = "".join(lines[:row - 1]) + new_line + "".join(lines[row:])
+            out.append(("relational", key, mutated))
+    return out
+
+
+# Relational mutants proven equivalent (keyed by the stripped source line, the operator and its column).
+# Each reason states why the two operators agree on every reachable input.
+EQUIVALENT = {
+    'return 0 if x < 0 else (cap if x > cap else x) |<@18': 'x = 0 returns 0 on both branches',
+    'return 0 if x < 0 else (cap if x > cap else x) |>@37': 'x = cap returns cap on both branches',
+    'assert self.CURE_BLOCKS >= self.EDGE_DELAY + 2 * self.GRID + self.REF_WINDOW // self.BLOCKTIME + self.GRID |>=@32': 'tier constructor check; no tier sits at equality (TEST 200 vs 130, DEMO 1800 vs 1500, MAINNET 7200 vs 1250)',
+    'if s <= U128: |<=@9': 'at s = 2^128-1 the two quote forms differ only if x >= 2^129 and x = 1 mod 2^63, outside uint128 holdings',
+    'if s <= sa: |<=@9': 's = sa: the in-range branch gives getAmount0Delta(sa, sb) and getAmount1Delta(sa, sa) = 0, the same amounts',
+    'if s >= sb: |>=@9': 's = sb: the in-range branch gives getAmount0Delta(sb, sb) = 0 and getAmount1Delta(sa, sb), the same amounts',
+    'charge = loss if loss > 0 else 0 |>@26': 'loss = 0 gives charge 0 on both branches',
+    'if sa > sb: |>@10': 'sa = sb: swapping equal values is a no-op',
+    'if sa > sb: |>@10 #2': 'sa = sb: swapping equal values is a no-op',
+    'L = L0 - head if L0 > head else 0 |>@24': 'L0 = head gives L = 0 on both branches',
+    'elif sqrt_spot <= sa: |<=@19': 'spot = sa: the in-range branch gives getAmount0Delta(sa, sb, L, up) and 0, the same add amounts',
+    'elif sqrt_spot >= sb: |>=@19': 'spot = sb: the in-range branch gives 0 and getAmount1Delta(sa, sb, L, up), the same add amounts',
+    'el = now - b.forfeitStart if now > b.forfeitStart else 0 |>@41': 'now = forfeitStart gives el = 0 on both branches',
+    'if slot[1] > 0 and slot[0] != e: |>@19': 'an empty foreign slot: the overwrite moves 0 shares and rewrites the epoch, as the fall-through does',
+    'if c[1] > 0 and ne >= c[0] + 1 + V: |>@20': 'a matured empty cohort: vesting or moving 0 shares changes nothing',
+    'while j * C <= new and n < 3: |<@33': 'at most one crossing per call: a span credits <= 2·GRID < CURE_BLOCKS (tier check)',
+    'if len(self.ring) > N_SNAP: |>@26': 'the ring keeps 31 instead of 32 entries; only the last K_MED = 9 are read',
+    'if B <= last: |<=@17': 'unreachable: bmin >= floor(last/GRID)·GRID + GRID > last',
+    'if self.NAV0 == 0 or dtau <= 0: |<=@34': 'dtau = 0 gives base = mulDiv(·, δ·0, WAD) = 0 on both branches',
+    'if navp > amount: |>@24': "unreachable: base <= m_perBlock·NAV0·Δτ/WAD is far below NAV' (navp = amount would divide by zero)",
+    'if S_before > 0: |>@20': 'unreachable: flows run only after seed (S >= S_SEED)',
+    'if self.h.L > 0 and dL > 0: |>@24': 'L = 0 forces dL = ceilDiv(0, S) = 0, so the conjunction is false on both sides',
+    'if self.h.L > 0 and dL > 0: |>@35': 'with L > 0 and shares > 0, dL = ceilDiv(L·s, S) >= 1, so dL = 0 is unreachable',
+    'if dL > 0: |>@18': "dL = 0 with L > 0: the zero modify only collects fees, which the same call's prologue already swept",
+}
 
 # Every clause of the curated mutation list -> killed mutants, or a recorded reason.
 CLAUSES = [
@@ -210,7 +275,7 @@ CLAUSES = [
     ("no collect after the vault's own swap", ["no collect after the vault's own swap"]),
     ("fence removed, signed, or on med9", ["rebalanceSwap fence removed", "action fence signed", "fence on med9", "placement fence signed"]),
     ("placement-contains-spot-and-reference removed", ["spot containment removed", "reference containment <= hi"]),
-    ("width rule ≥ instead of =", ["width >= instead of ="]), ("in-range ≤ tickUpper", ["reference containment <= hi"]),
+    ("width rule ≥ instead of =", ["width >= instead of ="]), ("in-range ≤ tickUpper", ["reference containment <= hi", "hook in-range includes hi", "hook in-range excludes lo"]),
     ("cooldown removed", ["cooldown removed"]), ("MAX_SWAPS removed", ["MAX_SWAPS removed"]),
     ("deposit floor instead of ceil", ["deposit rounds down"]),
     ("withdraw with the post-burn supply", ["withdraw with the post-burn supply"]),
@@ -242,7 +307,7 @@ CLAUSES = [
     ("base up to b_last minted instead of forfeited", ["pre-breach base minted"]),
     ("cutoff at the first instead of the last pending block", ["cutoff at the first pending block"]),
     ("breaches ≥ 3 → == 3", ["breaches == 3"]),
-    ("vesting by time without a checkpoint", "n/a: the model vests only inside the checkpoint; claim pays vestedUnclaimed only (Claim vectors)"),
+    ("vesting by time without a checkpoint", ["claim pays maturedPending"]),
     ("no epilogue re-base", ["rebalanceSwap epilogue missing", "withdraw re-base missing", "setPositions epilogue at spot"]),
     ("cohort-slot overwrite without vesting", ["ring overwrite merges occupant"]),
     ("τ(B) interpolation removed", ["τ(B) interpolation removed"]),
@@ -287,8 +352,7 @@ CLAUSES = [
     ("_readRef rounds toward 0", "n/a: the model's reference double returns ticks; `observe` arithmetic is Solidity (U-ref-fail)"),
     ("no length check", "n/a: return-data handling is Solidity"), ("return data not fixed-size", "n/a: Solidity"),
     ("no cardinality check", "n/a: constructor check, Solidity"),
-    ("gate on the block grid instead of the anchor", "equivalent: in the model block time is exact (GRID·blocktime = "
-     "GRID_SEC); the s2 clock vectors carry irregular timestamps"),
+    ("gate on the block grid instead of the anchor", ["anchor on the block grid"]),
     ("vest with the cache out of range", ["cached-range leg dropped"]),
     ("one latch per run instead of one per CURE_BLOCKS", ["one latch per run"]),
     ("action reads the cache instead of liveRef", ["action reads the cache"]),
@@ -319,16 +383,27 @@ CLAUSES = [
 ]
 
 
+def mutate(src, m):
+    if m[0] == "relational":
+        return m[2], None
+    rule, name, old, new = m[:4]
+    replace_all = len(m) > 4 and m[4] == "all"
+    if (src.count(old) < 1) if replace_all else (src.count(old) != 1):
+        return None, f"pattern count {src.count(old)}"
+    return src.replace(old, new), None
+
+
 def run_one(src, m):
-    rule, name, old, new = m
-    if src.count(old) != 1:
-        return name, "NOT-APPLICABLE", f"pattern count {src.count(old)}"
+    name = m[1]
+    msrc, err = mutate(src, m)
+    if msrc is None:
+        return name, "NOT-APPLICABLE", err
     d = tempfile.mkdtemp()
     try:
         for f in os.listdir(HERE):
             if f.endswith(".py"):
                 shutil.copy(os.path.join(HERE, f), d)
-        open(os.path.join(d, "reference.py"), "w").write(src.replace(old, new))
+        open(os.path.join(d, "reference.py"), "w").write(msrc)
         r = subprocess.run([sys.executable, "selfcheck_entry.py"] if False else [sys.executable, "-c",
                            "import selfcheck,sys; sys.exit(selfcheck.main())"], cwd=d, capture_output=True, text=True)
         out = r.stdout
@@ -362,15 +437,23 @@ def run_one(src, m):
 def main():
     jobs = int(sys.argv[sys.argv.index("-j") + 1]) if "-j" in sys.argv else 8
     src = open(os.path.join(HERE, "reference.py")).read()
-    names = [m[1] for m in MUTANTS]
+    allm = MUTANTS + relational_mutants(src)
+    names = [m[1] for m in allm]
     assert len(names) == len(set(names)), "duplicate mutant names"
     with ThreadPoolExecutor(jobs) as ex:
-        results = list(ex.map(lambda m: run_one(src, m), MUTANTS))
+        results = list(ex.map(lambda m: run_one(src, m), allm))
     status = {}
-    for (rule, name, _, _), (_, st, why) in zip(MUTANTS, results):
+    for m, (_, st, why) in zip(allm, results):
+        rule, name = m[0], m[1]
+        if st == "SURVIVED" and name in EQUIVALENT:
+            st, why = "equivalent", EQUIVALENT[name]
         status[name] = (rule, st)
-        print(f"{st:15s} [{rule}] {name}" + (f"  ({why})" if why else ""))
-    bad = [n for n, (_, st) in status.items() if st != "killed"]
+        if st != "killed" or "-v" in sys.argv:
+            print(f"{st:15s} [{rule}] {name}" + (f"  ({why})" if why else ""))
+    stale = sorted(set(EQUIVALENT) - set(status))
+    if stale:
+        print("EQUIVALENT entries matching no mutant (update after an edit):", stale)
+    bad = [n for n, (_, st) in status.items() if st not in ("killed", "equivalent")] + stale
     killed_rules = {r for r, st in status.values() if st == "killed"}
     uncovered = sorted(set(RULES) - killed_rules)
     clause_bad = []
@@ -383,7 +466,10 @@ def main():
                 if status.get(t, (None, "MISSING"))[1] != "killed":
                     clause_bad.append(f"{clause}: mutant '{t}' {status.get(t, (None, 'MISSING'))[1]}")
     n_map = sum(1 for _, t in CLAUSES if not isinstance(t, str))
-    print(f"\n{len(MUTANTS) - len(bad)}/{len(MUTANTS)} killed; rules without a killed mutant: {uncovered or 'none'}; "
+    n_eq = sum(1 for _, st in status.values() if st == "equivalent")
+    n_kill = sum(1 for _, st in status.values() if st == "killed")
+    print(f"\n{n_kill} killed, {n_eq} equivalent (with reasons), {len(bad)} failing, of {len(allm)} "
+          f"({len(MUTANTS)} named + {len(allm) - len(MUTANTS)} generated relational); rules without a killed mutant: {uncovered or 'none'}; "
           f"curated clauses: {len(CLAUSES)} ({n_map} mapped to mutants, {len(CLAUSES) - n_map} with a recorded reason); "
           f"clause problems: {clause_bad or 'none'}")
     return 1 if bad or uncovered or clause_bad else 0

@@ -354,6 +354,8 @@ def placement_cases():
     size("dust-deltamin", R.Holdings(1_000 * USDC, 500 * ETH), T0, T0 + 2000, sqrt_at(T0) + 1, sqrt_at(T0 + 30), True)
     size("token1-edge-saturated-leg", R.Holdings(500_000 * USDC, 500 * ETH), T0 - 1990, T0 + 10, sqrt_at(T0 + 10) - 1,
          sqrt_at(T0), False)
+    size("spot-exactly-at-lo", R.Holdings(10 ** 12, 10 ** 20), T0, T0 + 2000, sqrt_at(T0), sqrt_at(T0 + 30), False)
+    size("spot-exactly-at-hi", R.Holdings(10 ** 6, 10 ** 21), T0 - 1990, T0 + 10, sqrt_at(T0 + 10), sqrt_at(T0), False)
     # exact DELTA_MIN boundary (found by bisection at a large NAV): deltaAfter == 5e17 passes, one raw unit less fails
     bx, by = 1496491847102831049, 5 * 10 ** 26
     size("deltamin-exact", R.Holdings(bx, by), T0, T0 + 2000, sqrt_at(T0) + 1, sqrt_at(T0 + 30), False)

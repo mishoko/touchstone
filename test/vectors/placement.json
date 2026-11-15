@@ -552,7 +552,63 @@
    }
   },
   {
-   "id": "placement-028-deltamin-exact",
+   "id": "placement-028-spot-exactly-at-lo",
+   "fn": "Placement.size",
+   "in": {
+    "idle": {
+     "idle0": "1000000000000",
+     "idle1": "100000000000000000000",
+     "L": "0",
+     "lo": "0",
+     "hi": "0"
+    },
+    "lo": "196250",
+    "hi": "198250",
+    "sqrtSpot": "1446042728370400211848465323367120",
+    "sqrtRef": "1448213311465967470759316625700897"
+   },
+   "out": {
+    "L": "191803254117499921",
+    "after": {
+     "idle0": "1000",
+     "idle1": "100000000000000000000",
+     "L": "191803254117499921",
+     "lo": "196250",
+     "hi": "198250"
+    },
+    "deltaAfter": "769646159031568222"
+   }
+  },
+  {
+   "id": "placement-029-spot-exactly-at-hi",
+   "fn": "Placement.size",
+   "in": {
+    "idle": {
+     "idle0": "1000000",
+     "idle1": "1000000000000000000000",
+     "L": "0",
+     "lo": "0",
+     "hi": "0"
+    },
+    "lo": "194260",
+    "hi": "196260",
+    "sqrtSpot": "1446765894353319399313939355477631",
+    "sqrtRef": "1446042728370400211848465323367120"
+   },
+   "out": {
+    "L": "575487308568365999",
+    "after": {
+     "idle0": "1000000",
+     "idle1": "1000000001523",
+     "L": "575487308568365999",
+     "lo": "194260",
+     "hi": "196260"
+    },
+    "deltaAfter": "999999665877411174"
+   }
+  },
+  {
+   "id": "placement-030-deltamin-exact",
    "fn": "Placement.size",
    "in": {
     "idle": {
@@ -580,7 +636,7 @@
    }
   },
   {
-   "id": "placement-029-deltamin-one-below",
+   "id": "placement-031-deltamin-one-below",
    "fn": "Placement.size",
    "in": {
     "idle": {
@@ -608,7 +664,7 @@
    }
   },
   {
-   "id": "placement-030-empty-idle",
+   "id": "placement-032-empty-idle",
    "fn": "Placement.size",
    "in": {
     "idle": {
@@ -636,7 +692,7 @@
    }
   },
   {
-   "id": "placement-031-tiny-headroom",
+   "id": "placement-033-tiny-headroom",
    "fn": "Placement.size",
    "in": {
     "idle": {
@@ -664,7 +720,7 @@
    }
   },
   {
-   "id": "placement-032-ref-moves-delta",
+   "id": "placement-034-ref-moves-delta",
    "fn": "Placement.size",
    "in": {
     "idle": {

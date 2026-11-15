@@ -686,6 +686,8 @@ class Pool:
         """Add (dL > 0) or remove (dL < 0) liquidity of position (key, lo, hi). Returns (amount0, amount1,
         fees0, fees1): the signed amounts the caller pays (+) or receives (-), plus the fees collected."""
         pk = (key, lo, hi)
+        if dL == 0 and pk not in self.pos:
+            raise MathRevert("CannotUpdateEmptyPosition")  # v4: a zero-delta modify reverts on an empty position
         f0, f1 = self.collect(key, lo, hi)
         if dL == 0:
             return 0, 0, f0, f1

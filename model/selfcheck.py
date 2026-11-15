@@ -25,8 +25,9 @@ class World:
     """A TEST-tier world: a pool with third-party depth, a scripted reference, a vault and a clock."""
 
     def __init__(self, tier=R.TEST, ref_fn=None, third_L=10 ** 19, seed_amounts=(150_000 * USDC, 50 * ETH),
-                 start_block=12_000, ref_fail=None):
+                 start_block=12_000, ref_fail=None, phase=0):
         self.t = tier
+        self.phase = phase  # seconds added to every block timestamp (anchors need not align with blocks)
         self.ref_tick = ref_fn or (lambda ts: T0)
         self.fail = set() if ref_fail is None else ref_fail
         self.ref = R.RefSource(lambda ts: self.ref_tick(ts), self.fail)
@@ -39,7 +40,7 @@ class World:
         self.depositor = 0
 
     def ts(self, b=None):
-        return (self.block if b is None else b) * self.t.BLOCKTIME
+        return (self.block if b is None else b) * self.t.BLOCKTIME + getattr(self, "phase", 0)
 
     def step(self, n=1):
         self.block += n
@@ -1162,6 +1163,190 @@ def rules_r2():
     check(w.v.pool.collect("vault", w.v.h.lo, w.v.h.hi) == (0, 0), "collect-first sweeps fees in every prologue")
 
 
+def rules_r3():
+    """Checks added after fix review r3: segment close, mint price, hook range edges, timestamp phase, inclusive
+    guard boundaries, epoch-roll records."""
+    t = R.TEST
+    # two consecutive checkpoints each mint exactly the base of their own segment (τ_v0 := τ_v closes it)
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.deposit(10 ** 26)
+    for i in range(2):
+        w.keepalive_run(100)
+        v = w.v
+        S0, tau0, nav0, d0 = v.S, v.tauV0, v.NAV0, v.delta0
+        w.step(1)
+        o = v.hook.snapshot(w.block, w.ts(), v.pool.s, v.pool.tick)
+        base = R.mul_div(R.mul_div(t.m_perBlock, nav0, R.WAD), d0 * (o["tauV"] - tau0), R.WAD)
+        v._collect_first()
+        navp = v.nav(sqrt_at(v.hook.refTick))
+        v._checkpoint(o, w.block, w.ts())
+        check(o["tauV"] - tau0 > 90 and v.S - S0 == base * S0 // (navp - base),
+              f"checkpoint {i + 1} mints exactly its own segment's base", (v.S - S0, base))
+        check(v.tauV0 == o["tauV"], "the checkpoint closes the segment (τ_v0 := τ_v)")
+    # mint price = the fresh cache, not spot (spot pushed inside the fence)
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.deposit(10 ** 26)
+    w.keepalive_run(60)
+    w.v.pool.push_to(sqrt_at(T0 + 55))
+    w.step(1)
+    v = w.v
+    S0, tau0, m0 = v.S, v.tauV0, v.mint_reads
+    o = v.hook.snapshot(w.block, w.ts(), v.pool.s, v.pool.tick)
+    base = R.mul_div(R.mul_div(t.m_perBlock, v.NAV0, R.WAD), v.delta0 * (o["tauV"] - tau0), R.WAD)
+    v._collect_first()
+    navp = v.nav(sqrt_at(T0))
+    v._checkpoint(o, w.block, w.ts())
+    check(o["refFresh"] and v.mint_reads == m0 and v.S - S0 == base * S0 // (navp - base),
+          "base shares priced at the fresh cache, not at spot", (v.S - S0, base * S0 // (navp - base)))
+    # freshness boundary: at refCachedAt + 2·GRID − 1 the cache is still fresh (no tryRef for the mint)
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.keepalive_run(30)
+    w.step(t.GRID - w.block % t.GRID + 3)
+    w.touch()
+    cached = w.v.hook.refCachedAt
+    w.ref.fail = lambda end: end % t.GRID_SEC == 0  # no new anchor sample
+    w.block = cached + 2 * t.GRID - 1
+    m0 = w.v.mint_reads
+    w.poke()
+    check(w.v.mint_reads == m0 and w.v.hook.fresh(w.block), "fresh while now < refCachedAt + 2·GRID", w.v.mint_reads - m0)
+    w.ref.fail = set()
+    # hook range edges: the clock counts a reference parked at hi and not one parked at lo
+    for tick, out in ((T0 + 1000, True), (T0 - 1000, False)):
+        w = World(ref_fn=lambda ts, tick=tick: tick)
+        w.v.pool.push_to(sqrt_at(T0))
+        h = w.v.hook
+        h.vaultLo, h.vaultHi, h.emptyRange = T0 - 1000, T0 + 1000, False
+        w.keepalive_run(t.CURE_BLOCKS + 3 * t.GRID)
+        check((h.pendingBreaches > 0) == out and (h.outBlocks > 0 or h.pendingBreaches > 0) == out,
+              "in range is lo <= tick < hi for the cached reference", (tick - T0, h.outBlocks, h.pendingBreaches))
+    # timestamp phase: anchors follow ts, not the block grid
+    for phase in (150, 239):
+        w = World(phase=phase)
+        w.place(T0 - 1000, T0 + 1000)
+        for _ in range(12):
+            w.step(7)
+            w.touch()
+            check(w.v.hook.refGrid == w.ts() // t.GRID_SEC, "the anchor index is ts / GRID_SEC", (phase, w.block))
+    # inclusive guard boundaries
+    w = World(seed_amounts=(150_000 * USDC, 500 * ETH), third_L=10 ** 22)
+    cap_shares = w.v.bank.bondShares * R.WAD // t.BOND_RATIO - w.v.S
+    try:
+        w.deposit(cap_shares)
+        check(w.v.S * t.BOND_RATIO <= w.v.bank.bondShares * R.WAD, "deposit to exactly the NAV cap passes")
+    except R.Revert as ex:
+        check(False, "deposit to exactly the NAV cap passes", ex.err)
+    w = World(seed_amounts=(150_000 * USDC, 500 * ETH), third_L=10 ** 22)
+    nav = w.v.nav(sqrt_at(T0))
+    exact = None
+    for a in range(nav * t.MAX_SWAP_ACTION // R.WAD - 3, nav * t.MAX_SWAP_ACTION // R.WAD + 4):
+        if R.mul_div_up(a, R.WAD, nav) == t.MAX_SWAP_ACTION:
+            exact = a
+    try:
+        w.v.rebalance_swap(False, exact, w.block, w.ts())
+        check(True, "a fraction exactly MAX_SWAP_ACTION passes")
+    except R.Revert as ex:
+        check(False, "a fraction exactly MAX_SWAP_ACTION passes", ex.err)
+    # epoch total exactly MAX_SWAP_EPOCH passes
+    w.keepalive_run(t.COOLDOWN)
+    nav = w.v.nav(sqrt_at(T0))
+    left = t.MAX_SWAP_EPOCH - w.v.epochSwapFrac
+    a2 = None
+    for a in range(nav * min(left, t.MAX_SWAP_ACTION) // R.WAD - 3, nav * min(left, t.MAX_SWAP_ACTION) // R.WAD + 4):
+        if R.mul_div_up(a, R.WAD, nav) == min(left, t.MAX_SWAP_ACTION):
+            a2 = a
+    w.v.rebalance_swap(False, a2, w.block, w.ts())
+    w.keepalive_run(t.COOLDOWN)
+    nav = w.v.nav(sqrt_at(T0))
+    left = t.MAX_SWAP_EPOCH - w.v.epochSwapFrac
+    a3 = max(a for a in range(nav * left // R.WAD - 3, nav * left // R.WAD + 4) if R.mul_div_up(a, R.WAD, nav) <= left)
+    ep = w.block // t.EPOCH
+    try:
+        w.v.rebalance_swap(False, a3, w.block, w.ts())
+        check(w.block // t.EPOCH == ep, "same epoch")
+        check(True, "an epoch total of exactly MAX_SWAP_EPOCH passes")
+    except R.Revert as ex:
+        check(False, "an epoch total of exactly MAX_SWAP_EPOCH passes", ex.err)
+    # amountIn equal to idle passes
+    w = World(seed_amounts=(300_000 * USDC, 1 * ETH), third_L=10 ** 22)
+    try:
+        w.v.rebalance_swap(False, w.v.h.idle1, w.block, w.ts())
+        check(True, "amountIn == idle passes")
+    except R.Revert as ex:
+        check(False, "amountIn == idle passes", ex.err)
+    # the live leg is not read at nowEpoch = e + V (not yet vestable)
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.keepalive_run(t.EPOCH - w.block % t.EPOCH + 1)
+    w.keepalive_run(50)
+    w.poke()
+    e = min(c[0] for c in w.v.bank.cohorts if c[1] > 0)
+    w.keepalive_run((e + R.V) * t.EPOCH + 5 - w.block)
+    r0 = w.v.live_reads
+    w.poke()
+    check(w.block // t.EPOCH == e + R.V and w.v.live_reads == r0, "no live read at nowEpoch = e + V", w.v.live_reads - r0)
+    # deposit adds ceilDiv(L·s, S) liquidity
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    S, L = w.v.S, w.v.h.L
+    sh = 10 ** 21 + 7
+    w.deposit(sh)
+    check(w.v.h.L == L + R.ceil_div(L * sh, S), "deposit adds ceilDiv(L·s, S)", (w.v.h.L - L, R.ceil_div(L * sh, S)))
+    # sizing with spot exactly at sqrtAt(lo) (all token0) and at sqrtAt(hi) (all token1)
+    for sp, idle, side in ((sqrt_at(T0), R.Holdings(10 ** 12, 0), 0), (sqrt_at(T0 + 2000), R.Holdings(0, 10 ** 21), 1)):
+        try:
+            L, after, d = R.placement_size(idle, T0, T0 + 2000, sp, sqrt_at(T0 + 1000))
+            check(L > 0 and (after.idle0 < idle.idle0 if side == 0 else after.idle1 < idle.idle1),
+                  "sizing at exactly a range edge", (side, L))
+        except Exception as ex:
+            check(False, "sizing at exactly a range edge", repr(ex))
+    # nothing to mint: no tryRef read for the mint price
+    w = World()
+    w.ref.fail = lambda end: end % t.GRID_SEC == 0  # the cache cannot refresh, so it is stale at the poke
+    w.step(10 * t.GRID + 3)
+    m0 = w.v.mint_reads
+    w.poke()
+    check(not w.v.hook.fresh(w.block), "stale cache at the poke")
+    w.ref.fail = set()
+    check(w.v.mint_reads == m0, "no mint-price read when there is no base to mint", w.v.mint_reads - m0)
+    # a placement that sizes to L = 0 reverts DeltaMin (and never touches an empty position)
+    w = World(seed_amounts=(0, 50 * ETH))
+    w.v.pool.push_to(sqrt_at(T0) + 1)
+    w.step(1)
+    try:
+        w.place(T0, T0 + 2000)
+        check(False, "an L = 0 placement must revert")
+    except R.Revert as ex:
+        check(ex.err == "DeltaMin", "an L = 0 placement reverts DeltaMin", ex.err)
+    # an unplaced vault's prologue never modifies an empty position
+    w = World()
+    w.keepalive_run(3)
+    w.poke()
+    check(w.v.h.L == 0, "unplaced prologue ok")
+    # claim pays vested pay only (never maturedPending or cohorts)
+    b = R.Bank()
+    b.vestedUnclaimed, b.maturedPending = 3, 5
+    b.cohorts[0] = [0, 7]
+    x = R.fee_bank_apply(b, "Claim", {})[1]
+    check(x == 3 and b.maturedPending == 5 and b.cohorts[0][1] == 7, "claim pays vestedUnclaimed only")
+    # epoch roll records: the previous epoch's end and one stale record per skipped gap
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    e0 = w.v.epoch
+    w.step(3 * t.EPOCH)
+    w.poke()
+    check("end" in w.v.records.get(e0, {}) and "stale" in w.v.records.get(e0 + 1, {}).get("flags", set()),
+          "epoch roll writes the end and flags the gap record stale")
+    w2 = World()
+    w2.place(T0 - 1000, T0 + 1000)
+    e1 = w2.v.epoch
+    w2.keepalive_run(t.EPOCH - w2.block % t.EPOCH + 1)
+    w2.poke()
+    check("stale" not in w2.v.records.get(e1 + 1, {}).get("flags", set()), "no stale record when no epoch is skipped")
+
+
 def headroom_exact(rng):
     for _ in range(200):
         lo = rng.randrange(T0 - 1900, T0 - 100, 10)
@@ -1178,7 +1363,7 @@ CRASHES = []
 def _run(fn, *a):
     try:
         fn(*a)
-    except (R.Revert, R.MathRevert, AssertionError) as ex:
+    except (R.Revert, R.MathRevert) as ex:
         FAILS.append(f"{fn.__name__}: unexpected revert or assertion {ex!r}")
     except Exception as ex:  # a crash is not a check failure (mutation runner counts it as invalid)
         import traceback
@@ -1190,7 +1375,7 @@ def main():
     for fn in (props_ledger, props_mint, props_bank, props_drip, headroom_exact, props_placement):
         _run(fn, rng)
     for fn in (props_saturation, props_ladder, props_units, rules_pay, rules_gate_leg, rules_clock, rules_actions,
-               rules_r2, scenario_base_and_vesting, scenario_live_leg, scenario_no_read_when_not_vestable,
+               rules_r2, rules_r3, scenario_base_and_vesting, scenario_live_leg, scenario_no_read_when_not_vestable,
                scenario_breach_and_removal, scenario_reset_and_registration, scenario_gap, scenario_actions,
                scenario_deltamin, scenario_insolvent, scenario_epilogue):
         _run(fn)

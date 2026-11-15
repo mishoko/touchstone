@@ -1869,7 +1869,7 @@ def rules_r6():
         check(False, "the first action is not subject to COOLDOWN", ex.err)
     # constants (spec §3.2, §6), pinned as literals
     check((R.S_SEED, R.DEAD, R.N_SNAP, R.K_MED, R.V, R.TEST.MAX_SWAPS, R.TEST.DELTA_MIN, R.TEST.BOND_RATIO) ==
-          (10 ** 24, 10 ** 15, 32, 9, 4, 20, 5 * 10 ** 17, 5 * 10 ** 14), "pinned constants")
+          (10 ** 24, 10 ** 15, 32, 9, 4, 20, 5 * 10 ** 17, 6 * 10 ** 14), "pinned constants")
     w = World()
     check(w.v.S == 10 ** 24 and w.v.bank.bondShares == 10 ** 24 - 10 ** 15 and w.v.bank.releaseDelay == 480 and
           w.v.bank.dripBlocks == 120, "seed: S_SEED, DEAD, releaseDelay = V·EPOCH, dripBlocks = EPOCH at TEST")
@@ -1951,7 +1951,7 @@ def rules_r7():
         check(got == row, f"{tr.NAME} per-chain parameters", got)
         check((tr.FEE, tr.SPACING, tr.FEE_TICKS, tr.W_TICKS, tr.BAND_SWAP, tr.REF_BAND, tr.DELTA_MIN, tr.MAX_SWAP_ACTION,
                tr.MAX_SWAP_EPOCH, tr.MAX_SWAPS, tr.RESET_RUN, tr.BOND_RATIO, tr.L_W_TARGET) ==
-              (500, 10, 5, 2000, 5, 60, 5 * 10 ** 17, 2 * 10 ** 16, 5 * 10 ** 16, 20, 2, 5 * 10 ** 14, 1000),
+              (500, 10, 5, 2000, 5, 60, 5 * 10 ** 17, 2 * 10 ** 16, 5 * 10 ** 16, 20, 2, 6 * 10 ** 14, 1000),
               f"{tr.NAME} shared parameters")
     # one skipped epoch flags exactly the skipped record stale
     w = World()
@@ -1970,7 +1970,8 @@ def rules_r7b():
     check(R.PLACEMENT_ERR == {1: "Fence", 2: "Width", 3: "Alignment", 4: "NotContained", 5: "NotContained"},
           "placement error mapping")
     check(all(not R.ladder_allowed(m, R.E["Seed"]) for m in range(3)), "Ladder.allowed(·, Seed) is false")
-    check(all(tr.BOND_MIN == 0 for tr in (R.TEST, R.DEMO, R.MAINNET)), "BOND_MIN in the model's tiers (proposal pending)")
+    check((R.TEST.BOND_MIN, R.DEMO.BOND_MIN, R.MAINNET.BOND_MIN) == (0, 6 * 10 ** 17, 6 * 10 ** 17),
+          "BOND_MIN per tier (owner decision: 0.6 WETH; TEST 0)")
     # a placement that does not contain the reference reverts NotContained (code 5) at the vault
     w = World()
     w.v.pool.push_to(sqrt_at(T0 + 40))

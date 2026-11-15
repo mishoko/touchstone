@@ -41,6 +41,7 @@ RULES = {
     "seed": "seed: armed clock, successful refresh, BOND_MIN at REF_SQRT_PRICE, dripBlocks and releaseDelay",
     "records": "epoch roll: end of the previous epoch, a stale record for a skipped gap",
     "relational": "every comparison in the model at its exact boundary (generated < <-> <=, > <-> >=)",
+    "deletion": "every single-line state assignment and state-changing call in the model (generated statement deletion)",
 }
 
 # (rule, name, old, new): `old` must occur exactly once in reference.py
@@ -209,6 +210,18 @@ MUTANTS = [
     ("records", "stale record dropped", '                self.rec(self.epoch + 1)["flags"].add("stale")', "                pass"),
     ("records", "stale record when nothing is skipped", "            if ne > self.epoch + 1:", "            if ne >= self.epoch + 1:"),
     ("records", "end of epoch not written", '            self.rec(self.epoch)["end"] = now\n', ""),
+    ("base", "baseOwed never minted", "        amount = base + self.baseOwed\n", "        amount = base\n"),
+    ("base", "second deferral overwrites baseOwed", "                self.baseOwed = amount\n", "                self.baseOwed = base\n"),
+    ("base", "no base in BREACHED", "return self.bank.placedByCurator and self.bank.mode in (NORMAL, BREACHED)",
+     "return self.bank.placedByCurator and self.bank.mode in (NORMAL,)"),
+    ("ledger", "swap charge at the post-action spot", '            charge, p_star, burn = self._charge(before, s_spot, s_ref, "rebalanceSwap")',
+     '            charge, p_star, burn = self._charge(before, self.pool.s, s_ref, "rebalanceSwap")'),
+    ("ledger", "placement charge at the post-action spot", '            charge, p_star, burn = self._charge(before, s_spot, s_ref, "setPositions")',
+     '            charge, p_star, burn = self._charge(before, self.pool.s, s_ref, "setPositions")'),
+    ("placement", "sizing at the pre-action spot", "            L, after, d_after = placement_size(self.h, lo, hi, self.pool.s, s_ref)",
+     "            L, after, d_after = placement_size(self.h, lo, hi, s_spot, s_ref)"),
+    ("fence", "no cooldown after rebalanceSwap", "            self.lastAction = now\n            self.NAV0, self.delta0 = self.nav(s_ref), delta_of(self.h, s_ref)\n            return charge, p_star, burn\n",
+     "            self.NAV0, self.delta0 = self.nav(s_ref), delta_of(self.h, s_ref)\n            return charge, p_star, burn\n"),
     ("bank", "claim pays maturedPending", "        x = b.vestedUnclaimed\n        b.vestedUnclaimed = 0",
      "        x = b.vestedUnclaimed + b.maturedPending\n        b.vestedUnclaimed = 0\n        b.maturedPending = 0"),
 ]
@@ -237,9 +250,74 @@ def relational_mutants(src):
     return out
 
 
+def deletion_mutants(src):
+    """Generated statement deletions: every single-line assignment, augmented assignment or call statement in
+    reference.py outside the Pool double and the tier table, replaced by `pass` (events are excluded: the model
+    does not assert its event log; s2's scenario vectors pin emitted events)."""
+    import ast
+    lines = src.splitlines(keepends=True)
+    tree = ast.parse(src)
+    pool = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "Pool")
+    skip = set(range(pool.lineno, pool.end_lineno + 1))
+    funcs = [f for f in ast.walk(tree) if isinstance(f, ast.FunctionDef) and f.name not in ("__init__", "call", "from_d")]
+    seen = {}
+    out = []
+    nodes, ids = [], set()
+    for f in funcs:
+        for n in ast.walk(f):
+            if n is not f and id(n) not in ids:
+                ids.add(id(n))
+                nodes.append(n)
+    for node in sorted((n for n in nodes if hasattr(n, "lineno")), key=lambda n: (n.lineno, n.col_offset)):
+        if not isinstance(node, (ast.Assign, ast.AugAssign, ast.Expr)) or node.lineno != node.end_lineno:
+            continue
+        if node.lineno in skip or node.col_offset == 0:
+            continue
+        if isinstance(node, ast.Expr) and not isinstance(node.value, ast.Call):
+            continue
+        targets = node.targets if isinstance(node, ast.Assign) else ([node.target] if isinstance(node, ast.AugAssign) else [])
+        def _flat(e):
+            return [x for y in e.elts for x in _flat(y)] if isinstance(e, ast.Tuple) else [e]
+        flat = [x for t in targets for x in _flat(t)]
+        if targets and all(isinstance(e, ast.Name) for e in flat):
+            continue  # a local binding: deleting it only raises NameError (it would not compile in Solidity)
+        line = lines[node.lineno - 1]
+        text = line.strip()
+        if "events.append" in text or text.startswith(("self.ts[", "_SQRT_CACHE")):
+            continue
+        key = f"del: {text}"
+        seen[key] = seen.get(key, 0) + 1
+        if seen[key] > 1:
+            key += f" #{seen[key]}"
+        indent = line[:len(line) - len(line.lstrip())]
+        mutated = "".join(lines[:node.lineno - 1]) + indent + "pass\n" + "".join(lines[node.lineno:])
+        out.append(("deletion", key, mutated))
+    return out
+
+
+def fuzz_trace_of(directory):
+    r = subprocess.run([sys.executable, "-c", "import fuzz_trace; fuzz_trace.main()"], cwd=directory,
+                       capture_output=True, text=True)
+    return next((l for l in r.stdout.splitlines() if l.startswith("TRACE")), "TRACE-FAILED " + r.stderr[-200:])
+
+
 # Relational mutants proven equivalent (keyed by the stripped source line, the operator and its column).
 # Each reason states why the two operators agree on every reachable input.
 EQUIVALENT = {
+    'if navp > amount: |>@24': "differs only at navp == amount exactly (a division by zero); NAV' < base defers on both (checked)",
+    'del: self.refresh(now, ts)': 'a same-block retry: the snapshot of the same call already read the same anchor at the same ts',
+    'del: self.lastSnap = now #3': "arm_at_seed: seed's own snapshot already set lastSnap to now",
+    'del: self._latch(self.outBlocks, self.outBlocks)  # defensive step 6 (no crossing left after the prologue)': 'old == new: the latch loop cannot run (the spec lists this defensive call as equivalent)',
+    'del: self.S -= burned #2': "Op.Breach's drip at now burns 0: checkpoint step (2) already burned the drip owed at the same now",
+    'del: self.S -= burned #3': "Op.Retire's drip at now burns 0: the retire prologue's checkpoint already burned the drip owed at the same now",
+    'del: self.segStart = o["lastPendingBlock"]': 'dead store in the model: step (4) of the same checkpoint sets segStart := now, and segStart feeds no computation',
+    'del: self.delta0 = 0': 'seed: the constructor already sets delta0 = 0',
+    'del: self.tauV0 = self.hook.tauV': "seed: the hook's tauV is 0 at arming, equal to the constructor's tauV0",
+    'del: self.bank.mode = NORMAL': 'seed: Bank() starts in NORMAL',
+    'del: self._gate("Withdraw")': 'withdraw is allowed in every mode (the entry-point table)',
+    'del: self._gate("Claim")': 'claim is allowed in every mode (the entry-point table)',
+    'del: self._gate("Retire")': 'Op.Retire reverts BadMode in EXITED (Ladder.next), the only mode the table forbids',
+    'del: self._gate("ReleaseBond")': 'Op.Release reverts BadMode outside EXITED, the only modes the table forbids',
     'return 0 if x < 0 else (cap if x > cap else x) |<@18': 'x = 0 returns 0 on both branches',
     'return 0 if x < 0 else (cap if x > cap else x) |>@37': 'x = cap returns cap on both branches',
     'assert self.CURE_BLOCKS >= self.EDGE_DELAY + 2 * self.GRID + self.REF_WINDOW // self.BLOCKTIME + self.GRID |>=@32': 'tier constructor check; no tier sits at equality (TEST 200 vs 130, DEMO 1800 vs 1500, MAINNET 7200 vs 1250)',
@@ -259,11 +337,9 @@ EQUIVALENT = {
     'if len(self.ring) > N_SNAP: |>@26': 'the ring keeps 31 instead of 32 entries; only the last K_MED = 9 are read',
     'if B <= last: |<=@17': 'unreachable: bmin >= floor(last/GRID)·GRID + GRID > last',
     'if self.NAV0 == 0 or dtau <= 0: |<=@34': 'dtau = 0 gives base = mulDiv(·, δ·0, WAD) = 0 on both branches',
-    'if navp > amount: |>@24': "unreachable: base <= m_perBlock·NAV0·Δτ/WAD is far below NAV' (navp = amount would divide by zero)",
     'if S_before > 0: |>@20': 'unreachable: flows run only after seed (S >= S_SEED)',
     'if self.h.L > 0 and dL > 0: |>@24': 'L = 0 forces dL = ceilDiv(0, S) = 0, so the conjunction is false on both sides',
     'if self.h.L > 0 and dL > 0: |>@35': 'with L > 0 and shares > 0, dL = ceilDiv(L·s, S) >= 1, so dL = 0 is unreachable',
-    'if dL > 0: |>@18': "dL = 0 with L > 0: the zero modify only collects fees, which the same call's prologue already swept",
 }
 
 # Every clause of the curated mutation list -> killed mutants, or a recorded reason.
@@ -276,7 +352,7 @@ CLAUSES = [
     ("fence removed, signed, or on med9", ["rebalanceSwap fence removed", "action fence signed", "fence on med9", "placement fence signed"]),
     ("placement-contains-spot-and-reference removed", ["spot containment removed", "reference containment <= hi"]),
     ("width rule ≥ instead of =", ["width >= instead of ="]), ("in-range ≤ tickUpper", ["reference containment <= hi", "hook in-range includes hi", "hook in-range excludes lo"]),
-    ("cooldown removed", ["cooldown removed"]), ("MAX_SWAPS removed", ["MAX_SWAPS removed"]),
+    ("cooldown removed", ["cooldown removed", "no cooldown after rebalanceSwap"]), ("MAX_SWAPS removed", ["MAX_SWAPS removed"]),
     ("deposit floor instead of ceil", ["deposit rounds down"]),
     ("withdraw with the post-burn supply", ["withdraw with the post-burn supply"]),
     ("L headroom removed", ["headroom removed", "headroom without +1", "headroom 1e8"]),
@@ -330,7 +406,7 @@ CLAUSES = [
     ("gap set at ≥ instead of >", ["gap flag at >="]), ("baseOwed survives a breach", ["baseOwed kept at a breach"]),
     ("registration does not clear the gap", ["registration keeps the gap"]),
     ("maturedPending never vests", ["maturedPending never vests"]),
-    ("baseOwed minted twice or never", ["baseOwed minted twice", "deferral dropped"]),
+    ("baseOwed minted twice or never", ["baseOwed minted twice", "deferral dropped", "baseOwed never minted", "second deferral overwrites baseOwed"]),
     ("drip restarted by an empty forfeit", ["drip restarted by an empty forfeit"]),
     ("credit beyond the freshness window", ["no staleness truncation"]),
     ("gapSinceVerify not set by a stale span", ["gap flag never set"]),
@@ -384,7 +460,7 @@ CLAUSES = [
 
 
 def mutate(src, m):
-    if m[0] == "relational":
+    if m[0] in ("relational", "deletion"):
         return m[2], None
     rule, name, old, new = m[:4]
     replace_all = len(m) > 4 and m[4] == "all"
@@ -429,7 +505,7 @@ def run_one(src, m):
                 return name, "killed", f"vectors differ ({f})"
         if crashes:
             return name, "INVALID", "crash only"
-        return name, "SURVIVED", ""
+        return name, "SURVIVED", fuzz_trace_of(d)
     finally:
         shutil.rmtree(d, ignore_errors=True)
 
@@ -437,7 +513,13 @@ def run_one(src, m):
 def main():
     jobs = int(sys.argv[sys.argv.index("-j") + 1]) if "-j" in sys.argv else 8
     src = open(os.path.join(HERE, "reference.py")).read()
-    allm = MUTANTS + relational_mutants(src)
+    base = subprocess.run([sys.executable, "-c", "import selfcheck,sys; sys.exit(selfcheck.main())"], cwd=HERE,
+                          capture_output=True, text=True)
+    if base.returncode != 0:
+        print("the clean self-check fails; fix it before measuring mutants:\n" + base.stdout[-800:])
+        return 2
+    allm = MUTANTS + relational_mutants(src) + deletion_mutants(src)
+    clean = fuzz_trace_of(HERE)
     names = [m[1] for m in allm]
     assert len(names) == len(set(names)), "duplicate mutant names"
     with ThreadPoolExecutor(jobs) as ex:
@@ -446,7 +528,10 @@ def main():
     for m, (_, st, why) in zip(allm, results):
         rule, name = m[0], m[1]
         if st == "SURVIVED" and name in EQUIVALENT:
-            st, why = "equivalent", EQUIVALENT[name]
+            if why == clean:
+                st, why = "equivalent", EQUIVALENT[name] + " [fuzz witness: identical trace]"
+            else:
+                st, why = "EQUIV-REFUTED", "the randomized trace differs from the clean model"
         status[name] = (rule, st)
         if st != "killed" or "-v" in sys.argv:
             print(f"{st:15s} [{rule}] {name}" + (f"  ({why})" if why else ""))
@@ -469,7 +554,7 @@ def main():
     n_eq = sum(1 for _, st in status.values() if st == "equivalent")
     n_kill = sum(1 for _, st in status.values() if st == "killed")
     print(f"\n{n_kill} killed, {n_eq} equivalent (with reasons), {len(bad)} failing, of {len(allm)} "
-          f"({len(MUTANTS)} named + {len(allm) - len(MUTANTS)} generated relational); rules without a killed mutant: {uncovered or 'none'}; "
+          f"({len(MUTANTS)} named + {len(allm) - len(MUTANTS)} generated relational and deletion); rules without a killed mutant: {uncovered or 'none'}; "
           f"curated clauses: {len(CLAUSES)} ({n_map} mapped to mutants, {len(CLAUSES) - n_map} with a recorded reason); "
           f"clause problems: {clause_bad or 'none'}")
     return 1 if bad or uncovered or clause_bad else 0

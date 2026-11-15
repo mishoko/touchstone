@@ -519,10 +519,11 @@ def scenario_gap():
     w.poke()
     tv = w.v.hook.tauV
     cached = w.v.hook.refCachedAt
+    prev = w.v.hook.lastSnap
     w.step(w.t.EPOCH * (2 + R.V))  # silence
     w.poke()
     check(w.v.hook.gapSinceVerify, "a span past the cache freshness sets gapSinceVerify")
-    check(w.v.hook.tauV - tv == cached + 2 * w.t.GRID - (w.v.hook.ring[-2][0]), "span credit truncated at freshness",
+    check(w.v.hook.tauV - tv == cached + 2 * w.t.GRID - prev, "span credit truncated at freshness",
           (w.v.hook.tauV - tv))
     check(w.v.bank.vestedUnclaimed == 0 and w.v.bank.maturedPending > 0, "gap: matured pay waits in maturedPending")
     check(w.v.hook.resetStreak == 1, "the gap-closing anchor is the first of RESET_RUN", w.v.hook.resetStreak)
@@ -764,6 +765,7 @@ def rules_clock():
     check(h.resetStreak == 1 and h.outBlocks == 50, "streak restarts after a skipped anchor", (h.resetStreak, h.outBlocks))
     h.snapshot(2060, 2060 * t.BLOCKTIME, sqrt_at(T0), T0)
     check(h.outBlocks == 0 and not h.gapSinceVerify, "RESET_RUN consecutive in-range anchors reset the run")
+    check(h.resetStreak == 0, "a reset ends the run and zeroes the streak")
     # an out-of-range sample zeroes the streak
     h = hook({101: T0 + 1500}, 1)
     h.snapshot(2020, 2020 * t.BLOCKTIME, sqrt_at(T0), T0)
@@ -1347,6 +1349,333 @@ def rules_r3():
     check("stale" not in w2.v.records.get(e1 + 1, {}).get("flags", set()), "no stale record when no epoch is skipped")
 
 
+def rules_r4():
+    """Checks added after fix review r4: exact deferred and BREACHED base, the spot leg of the charge, every entry
+    point's prologue, fee credit, swap output, records, and the remaining guards."""
+    import copy as _copy
+    t = R.TEST
+
+    def exact_checkpoint(w, label):
+        """Run one checkpoint by hand and assert the exact minted shares or the exact deferral (step 4)."""
+        v = w.v
+        w.step(1)
+        o = v.hook.snapshot(w.block, w.ts(), v.pool.s, v.pool.tick)
+        v._collect_first()
+        elig = v.bank.placedByCurator and v.bank.mode in (R.NORMAL, R.BREACHED)
+        dtau = o["tauV"] - v.tauV0
+        base = R.mul_div(R.mul_div(t.m_perBlock, v.NAV0, R.WAD), v.delta0 * dtau, R.WAD) if (elig and dtau > 0) else 0
+        amount = base + v.baseOwed
+        price = o["refTick"] if o["refFresh"] else None
+        if price is None:
+            ok, tk = w.ref.read(w.ts(), 0)
+            price = tk if ok else None
+        S0 = v.S
+        nav = v.nav(sqrt_at(price)) if price is not None else 0
+        v._checkpoint(o, w.block, w.ts())
+        if amount == 0:
+            check(v.S == S0 and v.baseOwed == 0, f"{label}: nothing to mint")
+        elif price is None or nav <= amount:
+            check(v.S == S0 and v.baseOwed == amount, f"{label}: deferred exactly", (v.baseOwed, amount))
+        else:
+            sh = amount * S0 // (nav - amount)
+            check(v.S - S0 == sh and v.baseOwed == 0, f"{label}: minted exactly", (v.S - S0, sh))
+        return base, amount, price
+    # two consecutive unpriced checkpoints accumulate baseOwed; the priced one mints base + baseOwed
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.deposit(10 ** 26)
+    w.keepalive_run(100)
+    w.ref.fail = lambda end: True
+    w.step(60)
+    b1, a1, _ = exact_checkpoint(w, "unpriced checkpoint 1")
+    w.step(5)
+    b2, a2, _ = exact_checkpoint(w, "unpriced checkpoint 2")
+    check(b1 > 0 and a2 == a1 + b2, "deferrals accumulate", (a1, b2, a2))
+    w.ref.fail = set()
+    w.touch()
+    b3, a3, p3 = exact_checkpoint(w, "priced checkpoint after two deferrals")
+    check(p3 is not None and a3 >= a2, "the priced checkpoint mints the deferred base too", (a3, a2))
+    # stale cache but a readable live reference: mint at the tryRef price
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.deposit(10 ** 26)
+    w.keepalive_run(100)
+    w.ref.fail = lambda end: end % t.GRID_SEC == 0  # anchors fail, so the cache goes stale; live reads work
+    w.step(60)
+    m0 = w.v.mint_reads
+    b, a, p = exact_checkpoint(w, "stale cache, live price")
+    check(a > 0 and p is not None and w.v.mint_reads == m0 + 1, "stale cache: mint at the tryRef price")
+    w.ref.fail = set()
+    # base accrues in BREACHED
+    st = {"ref": T0}
+    w = World(ref_fn=lambda ts: st["ref"])
+    w.place(T0 - 1000, T0 + 1000)
+    w.deposit(10 ** 26)
+    st["ref"] = T0 + 1500
+    w.keepalive_run(t.CURE_BLOCKS + 3 * t.GRID)
+    w.poke()
+    check(w.v.bank.mode == R.BREACHED, "breached")
+    st["ref"] = T0
+    w.keepalive_run(100)
+    b, a, p = exact_checkpoint(w, "base in BREACHED")
+    check(b > 0, "base accrues in BREACHED", b)
+    # NAV' <= base defers (far reference)
+    w = World(seed_amounts=(300_000 * USDC, 50 * ETH))
+    w.place(T0 - 1000, T0 + 1000)
+    w.keepalive_run(100)
+    h = w.v.hook
+    w.step(1)
+    w.touch()
+    h.refTick = T0 - 300000
+    b, a, p = exact_checkpoint(w, "NAV' <= base")
+    check(a > 0 and w.v.baseOwed == a, "NAV' <= base keeps the amount in baseOwed", (a, w.v.baseOwed))
+    # a withdrawal works on an unplaced vault (L = 0)
+    w = World()
+    w.deposit(10 ** 24)
+    w.step(3)
+    out = w.withdraw(10 ** 24)
+    check(out[0] > 0 and out[1] > 0, "withdraw from an unplaced vault (L = 0)")
+    # the charge's spot leg is the pre-action spot (pStar = spot), for a swap and a placement with a pre-swap
+    s_ref = sqrt_at(T0)
+    w = World(seed_amounts=(150_000 * USDC, 500 * ETH), third_L=10 ** 19)
+    w.v.pool.push_to(sqrt_at(T0 - 55))
+    w.step(1)
+    w.poke()
+    before, s_pre = w.v.h.copy(), w.v.pool.s
+    amt = w.v.nav(s_ref) * 15 // 1000
+    c, p, burn = w.v.rebalance_swap(False, amt, w.block, w.ts())
+    exp = R.measure(before, w.v.h, s_pre, s_ref, 1, 0, 0)
+    check(w.v.pool.s != s_pre and p == s_pre and c == exp[0], "swap charge priced at the pre-action spot", (c, exp[0]))
+    w = World(seed_amounts=(300_000 * USDC, 20 * ETH), third_L=10 ** 19)
+    w.place(T0, T0 + 2000)
+    w.keepalive_run(t.COOLDOWN)
+    w.v.pool.push_to(sqrt_at(T0 + 40))
+    w.step(1)
+    w.poke()
+    before, s_pre = w.v.h.copy(), w.v.pool.s
+    pre = dict(active=True, zeroForOne=True, amountIn=w.v.h.idle0 // 50)
+    c, p, burn, d = w.place(T0, T0 + 2000, pre)
+    hh = w.v.h
+    x, y = R.get_amount0_delta(w.v.pool.s, sqrt_at(hh.hi), hh.L, True), R.get_amount1_delta(sqrt_at(hh.lo), w.v.pool.s, hh.L, True)
+    L_exp = R.placement_size(R.Holdings(hh.idle0 + x, hh.idle1 + y), hh.lo, hh.hi, w.v.pool.s, s_ref)[0]
+    check(hh.L == L_exp and hh.idle0 >= 0 and hh.idle1 >= 0, "L sized at the post-pre-swap spot", (hh.L, L_exp))
+    exp = R.measure(before, w.v.h, s_pre, s_ref, 1, 0, 0)
+    check(w.v.pool.s != s_pre and c == exp[0] and p == exp[1], "placement charge priced at the pre-action spot",
+          (c, exp[0], p == s_pre))
+    # cooldown after rebalanceSwap
+    w = World(seed_amounts=(150_000 * USDC, 500 * ETH), third_L=10 ** 22)
+    w.v.rebalance_swap(False, 10 ** 17, w.block, w.ts())
+    w.step(1)
+    try:
+        w.v.rebalance_swap(False, 10 ** 17, w.block, w.ts())
+        check(False, "a second swap within COOLDOWN must revert")
+    except R.Revert as ex:
+        check(ex.err == "Cooldown", "COOLDOWN after rebalanceSwap", ex.err)
+    # swap output reaches idle exactly (replay the same swap on a clone of the pool)
+    w = World(seed_amounts=(150_000 * USDC, 500 * ETH), third_L=10 ** 20)
+    for zfo in (True, False):
+        w.keepalive_run(t.COOLDOWN)
+        clone = _copy.deepcopy(w.v.pool)
+        amt = (w.v.h.idle0 if zfo else w.v.h.idle1) // 100
+        i0, i1 = w.v.h.idle0, w.v.h.idle1
+        lim = sqrt_at(w.v.pool.tick - 10) if zfo else sqrt_at(w.v.pool.tick + 10)
+        used, out = clone.swap(zfo, amt, lim)
+        w.v.rebalance_swap(zfo, amt, w.block, w.ts())
+        d0, d1 = w.v.h.idle0 - i0, w.v.h.idle1 - i1
+        check((d0, d1) == ((-used, out) if zfo else (out, -used)), "swap moves idle by exactly the fill", (zfo, d0, d1))
+    # collect-first credits the fees to idle
+    w = World(third_L=10 ** 17)
+    w.place(T0 - 1000, T0 + 1000)
+    w.v.pool.swap(False, 10 ** 18, sqrt_at(T0 + 8))
+    w.v.pool.swap(True, 10 ** 10, sqrt_at(T0 - 8))
+    owed = _copy.deepcopy(w.v.pool).collect("vault", w.v.h.lo, w.v.h.hi)
+    i0, i1 = w.v.h.idle0, w.v.h.idle1
+    w.step(1)
+    w.poke()
+    check(owed[0] + owed[1] > 0 and (w.v.h.idle0 - i0, w.v.h.idle1 - i1) == owed, "collected fees credited to idle", owed)
+    # every entry point runs the prologue (snapshot and checkpoint) before its own effect
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.deposit(10 ** 25)
+    for name, call in (("withdraw", lambda: w.withdraw(10 ** 20)), ("claim", lambda: w.claim()),
+                       ("topUpBond", lambda: w.v.top_up_bond(5, w.block, w.ts())),
+                       ("processBreach", lambda: w.v.process_breach(w.block, w.ts())),
+                       ("poke", lambda: w.poke()), ("deposit", lambda: w.deposit(10 ** 20))):
+        w.keepalive_run(30)
+        w.step(1)
+        bond0 = w.v.bank.bondShares
+        call()
+        check(w.v.hook.lastSnap == w.block and w.v.tauV0 == w.v.hook.tauV, f"{name} runs the prologue first")
+        if name == "topUpBond":
+            check(w.v.bank.bondShares == bond0 + 5, "topUpBond adds to the bond")
+    # claim pays pay that its own prologue just vested
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.keepalive_run(t.EPOCH)
+    w.poke()
+    w.keepalive_run(t.EPOCH * (1 + R.V))
+    w.step(1)
+    paid = w.claim()
+    check(paid > 0, "claim's prologue vests matured pay before paying", paid)
+    # releaseBond runs the prologue (the drip burns at its block)
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.keepalive_run(t.EPOCH)
+    w.poke()
+    w.keepalive_run(t.COOLDOWN)
+    w.v.retire(w.block, w.ts())
+    w.keepalive_run(R.V * t.EPOCH)
+    w.step(1)
+    w.release()
+    check(w.v.hook.lastSnap == w.block, "releaseBond runs the prologue")
+    # epoch swap fraction resets at the roll
+    w = World(seed_amounts=(150_000 * USDC, 500 * ETH), third_L=10 ** 22)
+    w.v.rebalance_swap(False, 10 ** 17, w.block, w.ts())
+    check(w.v.epochSwapFrac > 0, "fraction counted")
+    w.keepalive_run(t.EPOCH)
+    w.poke()
+    check(w.v.epochSwapFrac == 0 and w.v.swapCount == 0, "epoch roll resets the swap fraction and count")
+    # records: base, minted, charge, breach flag, forfeits, unverified, retire forfeitValue
+    st = {"ref": T0}
+    w = World(ref_fn=lambda ts: st["ref"])
+    w.place(T0 - 1000, T0 + 1000)
+    w.deposit(10 ** 26)
+    w.keepalive_run(60)
+    w.step(1)
+    e = w.block // t.EPOCH
+    r0 = dict(w.v.rec(e))
+    S0 = w.v.S
+    w.poke()
+    r = w.v.rec(e)
+    check(r["base"] > r0["base"] and r["minted"] - r0["minted"] == w.v.S - S0, "records: base and minted")
+    w.keepalive_run(t.COOLDOWN)
+    w.v.pool.push_to(sqrt_at(T0 + 50))
+    w.step(1)
+    ch0 = w.v.rec(w.v.epoch)["charge"]
+    c, p, burn, d = w.place(T0 + 50 - 1990, T0 + 60)
+    check(c > 0 and w.v.rec(w.v.epoch)["charge"] == ch0 + c, "records: charge", c)
+    st["ref"] = T0 + 2500
+    w.keepalive_run(t.CURE_BLOCKS + 3 * t.GRID)
+    unv = w.v.bank.unvested()
+    e = (w.block + 1) // t.EPOCH
+    f0 = w.v.rec(e)["forfeited"]
+    w.step(1)
+    w.poke()
+    rr = w.v.rec(e)
+    check("breach" in rr["flags"] and rr["forfeited"] - f0 == unv and rr["forfeitValue"] > 0,
+          "records: breach flag and forfeits", (rr["forfeited"] - f0, unv, rr["forfeitValue"]))
+    w.step(10 * t.GRID)
+    w.poke()
+    check("unverified" in w.v.rec(w.block // t.EPOCH)["flags"] or not w.v.hook.gapSinceVerify, "gap seen")
+    w.step(1)
+    w.poke()
+    check("unverified" in w.v.rec(w.block // t.EPOCH)["flags"], "records: unverified flag while a gap is open")
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.keepalive_run(t.COOLDOWN)
+    w.v.baseOwed = 12345
+    w.ref.fail = lambda end: True
+    w.step(3 * t.GRID)
+    fv0 = w.v.rec(w.block // t.EPOCH)["forfeitValue"]
+    w.v.retire(w.block, w.ts())
+    w.ref.fail = set()
+    check(w.v.rec(w.block // t.EPOCH)["forfeitValue"] >= fv0 + 12345, "records: retire forfeitValue includes baseOwed")
+    # deposit and withdraw return the exact amounts paid and received (idle slice + liquidity leg)
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.step(1)
+    w.poke()
+    S, i0, i1, L = w.v.S, w.v.h.idle0, w.v.h.idle1, w.v.h.L
+    clone = _copy.deepcopy(w.v.pool)
+    sh = 10 ** 24 + 3
+    a0, a1, _, _ = clone.modify("vault", w.v.h.lo, w.v.h.hi, R.ceil_div(L * sh, S))
+    paid = w.deposit(sh)
+    check(paid == (R.ceil_div(i0 * sh, S) + a0, R.ceil_div(i1 * sh, S) + a1), "deposit returns idle slice + liquidity leg",
+          (paid, a0, a1))
+    S, i0, i1, L = w.v.S, w.v.h.idle0, w.v.h.idle1, w.v.h.L
+    clone = _copy.deepcopy(w.v.pool)
+    sh = 10 ** 23 + 9
+    a0, a1, _, _ = clone.modify("vault", w.v.h.lo, w.v.h.hi, -(L * sh // S))
+    got = w.withdraw(sh)
+    check(got == (i0 * sh // S - a0, i1 * sh // S - a1), "withdraw returns idle slice + liquidity leg", (got, a0, a1))
+
+
+def rules_r4b():
+    """Clause checks from the generated statement-deletion class."""
+    t = R.TEST
+    # seed initialises epoch, NAV0 at the cached reference, segStart, and records its own snapshot
+    w = World()
+    v = w.v
+    check(v.epoch == w.block // t.EPOCH and v.segStart == w.block and v.NAV0 == v.nav(sqrt_at(v.hook.refTick)) > 0,
+          "seed initialises epoch, segStart and NAV0 at the cache")
+    check(v.hook.ring and v.hook.ring[0][0] == w.block and v.hook.lastSnap == w.block, "seed records its snapshot")
+    # the checkpoint sets segStart := now
+    w.keepalive_run(30)
+    w.step(1)
+    w.poke()
+    check(w.v.segStart == w.block, "the checkpoint closes the segment at now")
+    # an action whose prologue did not read the live reference reads it exactly once
+    r0 = w.v.live_reads
+    w.v.rebalance_swap(False, 10 ** 15, w.block, w.ts())
+    check(w.v.live_reads == r0 + 1, "an action reads the live reference once", w.v.live_reads - r0)
+    # records: bank and bond burned by a charge
+    w = World(seed_amounts=(150_000 * USDC, 500 * ETH), third_L=10 ** 19)
+    w.v.pool.push_to(sqrt_at(T0 - 55))
+    w.step(1)
+    bond0 = w.v.bank.bondShares
+    c, p, burn = w.v.rebalance_swap(False, w.v.nav(sqrt_at(T0)) // 100, w.block, w.ts())
+    r = w.v.rec(w.v.epoch)
+    check(burn > 0 and r["bondBurned"] == bond0 - w.v.bank.bondShares and r["bankBurned"] + r["bondBurned"] == burn,
+          "records: bank and bond burned", (r["bankBurned"], r["bondBurned"], burn))
+    # records: bank burned (with unvested pay present)
+    w = World(seed_amounts=(300_000 * USDC, 20 * ETH), third_L=10 ** 19)
+    w.place(T0, T0 + 2000)
+    w.deposit(10 ** 26)
+    w.v.pool.push_to(sqrt_at(T0 + 30))  # strictly inside the range, so τ_v accrues
+    w.keepalive_run(t.EPOCH)
+    w.poke()
+    unv = w.v.bank.unvested()
+    w.v.pool.push_to(sqrt_at(T0 + 55))
+    w.keepalive_run(1)
+    rb = w.v.rec(w.v.epoch)
+    b0, d0, bond0 = rb["bankBurned"], rb["bondBurned"], w.v.bank.bondShares
+    c, p, burn = w.v.rebalance_swap(False, w.v.h.idle1 // 50, w.block, w.ts())
+    rb = w.v.rec(w.v.epoch)
+    check(unv > 0 and burn > unv and w.v.bank.unvested() == 0 and rb["bankBurned"] - b0 > 0 and
+          rb["bondBurned"] - d0 == bond0 - w.v.bank.bondShares and rb["bankBurned"] - b0 + rb["bondBurned"] - d0 == burn,
+          "records: bank then bond burned", (burn, unv))
+    # registration zeroes the streak; epochStartRef is the epoch's first cache write
+    w = World()
+    h = w.v.hook
+    w.keepalive_run(20)
+    check(h.epochStartRefEpoch == w.block // t.EPOCH or h.epochStartRefEpoch == (w.block - 20) // t.EPOCH, "epoch start ref set")
+    h.resetStreak = 1
+    w.place(T0 - 1000, T0 + 1000)
+    check(h.resetStreak == 0, "registration zeroes the reset streak")
+    e = w.block // t.EPOCH
+    w.keepalive_run(t.EPOCH - w.block % t.EPOCH + 3)
+    first = [ev for ev in h.events if ev[0] == "RefRefreshed"][-1]
+    check(h.epochStartRefEpoch == e + 1 and h.epochStartRef == first[2], "epochStartRef = the epoch's first cache write")
+    # med9 is the lower median of the last 9 snapshots; the ring keeps N_SNAP; an unarmed snapshot records its entry
+    h = R.Hook(t, R.RefSource(lambda ts: T0))
+    for i, tk in enumerate([5, 1, 9, 3, 7, 2, 8, 4, 6, 100, 0] + list(range(40))):
+        h.snapshot(1000 + i, 12 * (1000 + i), sqrt_at(T0 + tk), T0 + tk)
+        last = sorted(x for _, x in h.ring[-9:])
+        check(h.med9 == last[(len(last) - 1) // 2] and len(h.ring) == min(i + 1, R.N_SNAP), "med9 and ring size", i)
+    check(h.ring[-1] == (1000 + i, T0 + 39) and h.lastSnap == 1000 + i, "unarmed snapshots record entries")
+    # an armed snapshot records its (block, tick) entry
+    w = World()
+    w.keepalive_run(7)
+    check(w.v.hook.ring[-1] == (w.block, w.v.pool.tick) if w.v.hook.ring else False, "an armed snapshot records its entry")
+    # τ_b counts spans with tickNow inside the witness range
+    h = R.Hook(t, R.RefSource(lambda ts: T0))
+    h.armed, h.refTick, h.refGrid, h.refCachedAt, h.lastSnap, h.ring = True, T0, 10 ** 9, 1000, 1000, [(1000, T0)]
+    h.witLo, h.witHi = T0 - 100, T0 + 100
+    h.snapshot(1020, 10 ** 12, sqrt_at(T0), T0)
+    h.snapshot(1030, 10 ** 12, sqrt_at(T0 + 100), T0 + 100)
+    check(h.tauB == 20, "τ_b counts the witness range [lo, hi)", h.tauB)
+
+
 def headroom_exact(rng):
     for _ in range(200):
         lo = rng.randrange(T0 - 1900, T0 - 100, 10)
@@ -1375,7 +1704,7 @@ def main():
     for fn in (props_ledger, props_mint, props_bank, props_drip, headroom_exact, props_placement):
         _run(fn, rng)
     for fn in (props_saturation, props_ladder, props_units, rules_pay, rules_gate_leg, rules_clock, rules_actions,
-               rules_r2, rules_r3, scenario_base_and_vesting, scenario_live_leg, scenario_no_read_when_not_vestable,
+               rules_r2, rules_r3, rules_r4, rules_r4b, scenario_base_and_vesting, scenario_live_leg, scenario_no_read_when_not_vestable,
                scenario_breach_and_removal, scenario_reset_and_registration, scenario_gap, scenario_actions,
                scenario_deltamin, scenario_insolvent, scenario_epilogue):
         _run(fn)

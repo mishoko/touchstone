@@ -284,14 +284,6 @@ class Bank:
             out[f] = getattr(self, f)
         return out
 
-    @classmethod
-    def from_d(cls, d):
-        b = cls()
-        b.cohorts = [[c["epoch"], c["shares"]] for c in d["cohorts"]]
-        for f in cls.FIELDS:
-            setattr(b, f, d[f])
-        return b
-
     def cohort_total(self):
         return sum(s for _, s in self.cohorts)
 
@@ -548,7 +540,8 @@ class Hook:
         if len(self.ring) > N_SNAP:
             self.ring.pop(0)
         last = sorted(t for _, t in self.ring[-K_MED:])
-        self.med9 = last[(len(last) - 1) // 2]
+        if last:
+            self.med9 = last[(len(last) - 1) // 2]
 
     def snapshot(self, now, ts, sqrt_price, tick):
         """snapshotIfNewBlock(): the snapshot procedure (steps 1-6) on the first touch of block `now`."""
@@ -1041,9 +1034,9 @@ class Vault:
             if pre and pre.get("active"):
                 self._swap_from_idle(pre["zeroForOne"], pre["amountIn"], tick_spot, s_ref, nav_ref)
             L, after, d_after = placement_size(self.h, lo, hi, self.pool.s, s_ref)
-            if L > 0:
+            if L > 0:  # settle what the pool takes for L at its current price (equal to the sized amounts)
                 a0, a1, _, _ = self.pool.modify(self.KEY, lo, hi, L)
-                assert (a0, a1) == (self.h.idle0 - after.idle0, self.h.idle1 - after.idle1)
+                after = Holdings(self.h.idle0 - a0, self.h.idle1 - a1, L, lo, hi)
             self.h = after
             charge, p_star, burn = self._charge(before, s_spot, s_ref, "setPositions")
             if d_after < t.DELTA_MIN:

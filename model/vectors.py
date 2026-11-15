@@ -461,6 +461,8 @@ def bank_cases():
     add("retire-empty", st(placedByCurator=True, forfeitPool=k, forfeitTotal=2 * k, forfeitStart=1100), "Retire",
         dict(now=1130), note="empty forfeit does not restart the drip")
     add("retire-exited", st(mode=R.EXITED), "Retire", dict(now=1200), note="BadMode")
+    add("retire-running-drip", st(cohorts=[(8, 2 * k)], forfeitPool=12 * k, forfeitTotal=12 * k, forfeitStart=1000),
+        "Retire", dict(now=1060), note="burns the 6k owed first, then T = 6k + 2k")
     # Claim / TopUp / Release
     add("claim", st(vestedUnclaimed=7 * k), "Claim", {})
     add("claim-exited", st(vestedUnclaimed=7 * k, mode=R.EXITED), "Claim", {}, note="claim open in every mode")
@@ -468,6 +470,8 @@ def bank_cases():
     ex = dict(mode=R.EXITED, breaches=3, exitBlock=1000, bondShares=9 * k)
     add("release-locked", st(**ex), "Release", dict(shares=9 * k, now=1479))
     add("release-at-delay", st(**ex), "Release", dict(shares=9 * k, now=1480))
+    add("release-partial", st(**ex), "Release", dict(shares=4 * k, now=1480))
+    add("release-above-bond", st(**ex), "Release", dict(shares=20 * k, now=1480), note="pays min(shares, bondShares)")
     add("release-normal", st(bondShares=9 * k), "Release", dict(shares=9 * k, now=10 ** 6), note="BadMode")
     dm = dict(mode=R.EXITED, breaches=3, exitBlock=10000, bondShares=9 * k, dripBlocks=3600, releaseDelay=14400)
     add("release-demo-minus-1", st(**dm), "Release", dict(shares=9 * k, now=10000 + 14400 - 1),

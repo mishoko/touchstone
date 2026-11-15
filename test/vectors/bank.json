@@ -3079,7 +3079,95 @@
    }
   },
   {
-   "id": "bank-036-claim",
+   "id": "bank-036-retire-running-drip",
+   "fn": "FeeBank.apply",
+   "in": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "8",
+       "shares": "2000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "0",
+     "forfeitPool": "12000000000000000000",
+     "forfeitTotal": "12000000000000000000",
+     "forfeitStart": "1000",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0"
+    },
+    "op": "6",
+    "args": {
+     "now": "1060"
+    }
+   },
+   "out": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "8",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "0",
+     "forfeitPool": "8000000000000000000",
+     "forfeitTotal": "8000000000000000000",
+     "forfeitStart": "1060",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "2",
+     "placedByCurator": false,
+     "exitBlock": "1060"
+    },
+    "burnShares": "6000000000000000000",
+    "payShares": "0",
+    "a": "2000000000000000000",
+    "b2": "2"
+   }
+  },
+  {
+   "id": "bank-037-claim",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3165,7 +3253,7 @@
    }
   },
   {
-   "id": "bank-037-claim-exited",
+   "id": "bank-038-claim-exited",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3251,7 +3339,7 @@
    }
   },
   {
-   "id": "bank-038-topup",
+   "id": "bank-039-topup",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3339,7 +3427,7 @@
    }
   },
   {
-   "id": "bank-039-release-locked",
+   "id": "bank-040-release-locked",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3389,7 +3477,7 @@
    }
   },
   {
-   "id": "bank-040-release-at-delay",
+   "id": "bank-041-release-at-delay",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3478,7 +3566,185 @@
    }
   },
   {
-   "id": "bank-041-release-normal",
+   "id": "bank-042-release-partial",
+   "fn": "FeeBank.apply",
+   "in": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "9000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "3",
+     "mode": "2",
+     "placedByCurator": false,
+     "exitBlock": "1000"
+    },
+    "op": "9",
+    "args": {
+     "shares": "4000000000000000000",
+     "now": "1480"
+    }
+   },
+   "out": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "5000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "3",
+     "mode": "2",
+     "placedByCurator": false,
+     "exitBlock": "1000"
+    },
+    "burnShares": "0",
+    "payShares": "4000000000000000000",
+    "a": "4000000000000000000",
+    "b2": "0"
+   }
+  },
+  {
+   "id": "bank-043-release-above-bond",
+   "fn": "FeeBank.apply",
+   "in": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "9000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "3",
+     "mode": "2",
+     "placedByCurator": false,
+     "exitBlock": "1000"
+    },
+    "op": "9",
+    "args": {
+     "shares": "20000000000000000000",
+     "now": "1480"
+    }
+   },
+   "out": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "0",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "3",
+     "mode": "2",
+     "placedByCurator": false,
+     "exitBlock": "1000"
+    },
+    "burnShares": "0",
+    "payShares": "9000000000000000000",
+    "a": "9000000000000000000",
+    "b2": "0"
+   }
+  },
+  {
+   "id": "bank-044-release-normal",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3528,7 +3794,7 @@
    }
   },
   {
-   "id": "bank-042-release-demo-minus-1",
+   "id": "bank-045-release-demo-minus-1",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3578,7 +3844,7 @@
    }
   },
   {
-   "id": "bank-043-release-demo-at",
+   "id": "bank-046-release-demo-at",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3667,7 +3933,7 @@
    }
   },
   {
-   "id": "bank-044-release-after-post-exit-breach",
+   "id": "bank-047-release-after-post-exit-breach",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3756,7 +4022,7 @@
    }
   },
   {
-   "id": "bank-045-seq-accrue-0",
+   "id": "bank-048-seq-accrue-0",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3846,7 +4112,7 @@
    }
   },
   {
-   "id": "bank-046-seq-accrue-1",
+   "id": "bank-049-seq-accrue-1",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3936,7 +4202,7 @@
    }
   },
   {
-   "id": "bank-047-seq-accrue-2",
+   "id": "bank-050-seq-accrue-2",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4026,7 +4292,7 @@
    }
   },
   {
-   "id": "bank-048-seq-accrue-3",
+   "id": "bank-051-seq-accrue-3",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4116,7 +4382,7 @@
    }
   },
   {
-   "id": "bank-049-seq-accrue-4",
+   "id": "bank-052-seq-accrue-4",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4206,7 +4472,7 @@
    }
   },
   {
-   "id": "bank-050-seq-accrue-5",
+   "id": "bank-053-seq-accrue-5",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4296,7 +4562,7 @@
    }
   },
   {
-   "id": "bank-051-seq-vest-open",
+   "id": "bank-054-seq-vest-open",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4385,7 +4651,7 @@
    }
   },
   {
-   "id": "bank-052-seq-breach",
+   "id": "bank-055-seq-breach",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4474,7 +4740,7 @@
    }
   },
   {
-   "id": "bank-053-seq-drip-half",
+   "id": "bank-056-seq-drip-half",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {

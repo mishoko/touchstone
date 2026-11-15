@@ -28,7 +28,7 @@ Definitions (the spec's bot list, made executable; the conventions are logged in
   pokes only while in range.
 - lazy-keepalive: never re-places; keep-alive pings while the cache is in range; silent while out; pings at every
   anchor while a gap is open after a return; epoch pokes while in range.
-- dodge: lazy that, when the observed clock reaches CURE − 1 GRID, makes the legal placement with the smallest
+- dodge: lazy that, when the observed clock reaches CURE − 3·GRID (a touch credits ≤ 2·GRID), makes the legal placement with the smallest
   δ_after ≥ DELTA_MIN, then idles again.
 - breach-reset: lazy that, at the same trigger, makes edge60's (cheapest) placement, then idles again.
 - idle: never places (EMPTY); pokes once a day. dust: tries a placement with only dust deployed (reverts

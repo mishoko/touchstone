@@ -41,19 +41,27 @@ from common import R, sqrt_at, SIGMAS, TEST_SEEDS, W, SPACING, floor_sp, sample_
 from n4 import run_attack, coalition_net, candidates, F_CAP  # noqa
 
 ETH = 10 ** 18
-D1 = (20, 100, 1000, 2000, 3000)
+D1 = (20, 40, 50, 60, 100, 1000, 2000, 3000)   # 20 and 100+ pre-registered; 40–60 added (r1 R1-07)
 K1 = (0, 0.05, 0.3, 1, 3)
 CYCLES_PER_YEAR = 365 * 24 * 3600 // (30 * 12)     # one per COOLDOWN (30 blocks of 12 s)
 OUT_SHARE = {0.40: 1 - 0.970, 0.60: 1 - 0.952, 1.20: 1 - 0.901}   # edge60 out-of-range time (cell (a) fit, f_actual)
 # An out-of-range attack re-places the vault, so it is available once per exit; the attacker may pick the best of
 # the COOLDOWN slots in the hour before edge60 re-places (10 slots; E[max of n] <= n·E[max(0, ·)]). Exits per year =
-# edge60's placements per year (cell (a) fit: an upper bound, since hover-triggered placements are counted too).
-EXITS_PER_YEAR = {0.40: 172.0, 0.60: 276.0, 1.20: 640.0}
+# edge60's placements per year (cell (a) fit; hover-triggered placements are counted too).
+EXITS_PER_YEAR = {0.40: 179.0, 0.60: 284.0, 1.20: 557.0}   # edge60 placements/yr, cell (a) fit
 SLOTS_PER_EXIT = 10
 GAS_GWEI = 5
 CYCLE_GAS_WEI = (450_000 + 2 * 120_000) * GAS_GWEI * 10 ** 9   # reported variant; the gated net excludes gas
 BOUND = {0.40: None, 0.60: 1e-3, 1.20: 6e-3}
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "output", "g0")
+
+
+def n_opps(variant, sigma):
+    """Opportunities per year: one per COOLDOWN in range; out of range one per exit with up to SLOTS_PER_EXIT slots
+    (an attack re-places the vault). Not an upper bound: a curator may wait up to CURE within an exit (r1 R1-06)."""
+    if variant == "exit":
+        return min(CYCLES_PER_YEAR * OUT_SHARE[sigma], EXITS_PER_YEAR[sigma] * SLOTS_PER_EXIT)
+    return CYCLES_PER_YEAR * (1 - OUT_SHARE[sigma])
 
 
 def third_range(r, d_signed):
@@ -213,10 +221,14 @@ def run_path(args):
             on = best_attack(hs, rs, ref, (20, 30), (0, 1), True)[R.WAD]
             fo = best_attack(hs, rs, ref, (20, 30), (0,), "fence")[R.WAD]
             # remedy study (reported, not the spec): a third leg at the reference pool's spot = the market ± its fee
-            u = rng.randint(-5, 5)
-            rm = best_attack(hs, rs, ref, (20, 30), (0, 1), True, extra=sqrt_at(rs + u))[R.WAD]
+            # the attacker picks the deep pool's spot offset that helps it most (r1 R1-02): within its fee band
+            # (±5 ticks) and within the fee band plus ~12 s of drift (±10 ticks)
+            rm = {}
+            for band_u, us in ((5, (-5, -3, 0, 3, 5)), (10, (-10, -7, -5, 0, 5, 7, 10))):
+                rm[band_u] = max(best_attack(hs, rs, ref, (20, 30), (0, 1), True, extra=sqrt_at(rs + u))[R.WAD][0]
+                                 for u in us)
             rows.append(dict(lane=f"rate-{variant}", seed=seed, sigma=sigma, lag=ell, net=on[0], ctl=fo[0],
-                             remedy=rm[0], nav=R.value(hs, sqrt_at(rs))[0]))
+                             remedy5=rm[5], remedy10=rm[10], nav=R.value(hs, sqrt_at(rs))[0]))
     # lane 3: JIT
     for d in (0, 20, 60):
         for J in (10 ** 20, 10 ** 22, 10 ** 24):
@@ -224,12 +236,13 @@ def run_path(args):
             if j:
                 rows.append(dict(lane="jit", seed=seed, sigma=sigma, d=d, J=J, net=j[0], ctl=j[1], nav=j[2]))
     # lane 4: coerced grief (in-range state)
-    hi_, ri_, _ = sample_state(seed, sigma, exit_state=False)
-    for d in (20, 40, 60):
-        g = grief_lane(hi_, ri_, d)
-        if g:
-            rows.append(dict(lane="grief", seed=seed, sigma=sigma, d=d, net=g[0], extra_charge=g[1],
-                             nav=R.value(hi_, sqrt_at(ri_))[0]))
+    for st in ("in", "exit"):   # r1 R1-01: edge60 places from exit states (and hover-trigger in-range states)
+        hi_, ri_, _ = sample_state(seed, sigma, exit_state=(st == "exit"))
+        for d in (20, 40, 60):
+            g = grief_lane(hi_, ri_, d)
+            if g:
+                rows.append(dict(lane="grief", state=st, seed=seed, sigma=sigma, d=d, net=g[0], extra_charge=g[1],
+                                 nav=R.value(hi_, sqrt_at(ri_))[0]))
     return rows
 
 
@@ -255,18 +268,19 @@ def summarize(rows):
     for sg in SIGMAS:
         c = [bp(r) for r in rows if r["lane"] == "oneshot-ctl-fenceonly" and r["sigma"] == sg]
         m, lo, _ = mean_ci(c)
-        print(f"    control fence-only (d=20) σ {sg}: mean {m:.4f} bp, CI lo {lo:.4f}")
+        print(f"    control fence-only (d ≤ 60, pooled) σ {sg}: mean {m:.4f} bp, CI lo {lo:.4f}")
         ok &= lo > 0
     ok &= min(res[f"guardoff-1000-{sg}"][1] for sg in SIGMAS) > 0
     print("  lane 2 rate (lag leak), NAV fraction per year:")
     for sg in SIGMAS:
         rate = rate_c = 0.0
-        parts, gas_parts = {}, {}
+        parts, gas_parts, ci_parts = {}, {}, {}
         for v in ("exit", "in"):
             g = [r for r in rows if r["lane"] == f"rate-{v}" and r["sigma"] == sg]
-            n_opp = (min(CYCLES_PER_YEAR * OUT_SHARE[sg], EXITS_PER_YEAR[sg] * SLOTS_PER_EXIT) if v == "exit"
-                     else CYCLES_PER_YEAR * (1 - OUT_SHARE[sg]))
+            n_opp = n_opps(v, sg)
             e = sum(max(0.0, r["net"]) / r["nav"] for r in g) / len(g)
+            m_, lo_, hi_ = mean_ci([n_opp * max(0.0, r["net"]) / r["nav"] for r in g])
+            ci_parts[v] = (lo_, hi_)
             eg = sum(max(0.0, r["net"] - CYCLE_GAS_WEI) / r["nav"] for r in g) / len(g)
             ec = sum(max(0.0, r["ctl"]) / r["nav"] for r in g) / len(g)
             gas_parts[v] = n_opp * eg
@@ -276,20 +290,23 @@ def summarize(rows):
             rate_c += n_opp * ec
         b = BOUND[sg]
         rate_gas = sum(gas_parts.values())
-        rem = 0.0
-        for v in ("exit", "in"):
-            g = [r for r in rows if r["lane"] == f"rate-{v}" and r["sigma"] == sg]
-            n_opp = (min(CYCLES_PER_YEAR * OUT_SHARE[sg], EXITS_PER_YEAR[sg] * SLOTS_PER_EXIT) if v == "exit"
-                     else CYCLES_PER_YEAR * (1 - OUT_SHARE[sg]))
-            rem += n_opp * sum(max(0.0, r.get("remedy", 0)) / r["nav"] for r in g) / len(g)
-        print(f"    σ {sg}: remedy study (third leg at the reference pool's spot, market ± 5 ticks): "
-              f"{rem * 100:.5f}%/yr; positive cycles {sum(1 for r in rows if r['lane'].startswith('rate') and r['sigma'] == sg and r.get('remedy', 0) > 0)}")
-        res[f"rate_remedy-{sg}"] = rem
+        for key, lab in (("remedy5", "± 5 ticks (fee band)"), ("remedy10", "± 10 ticks (fee band + 12 s drift)")):
+            rem = 0.0
+            for v in ("exit", "in"):
+                g = [r for r in rows if r["lane"] == f"rate-{v}" and r["sigma"] == sg]
+                rem += n_opps(v, sg) * sum(max(0.0, r[key]) / r["nav"] for r in g) / len(g)
+            npos = sum(1 for r in rows if r["lane"].startswith("rate") and r["sigma"] == sg and r[key] > 0)
+            print(f"    σ {sg}: remedy study, third leg at the reference pool's spot, attacker-chosen offset {lab}: "
+                  f"{rem * 100:.5f}%/yr; positive cycles {npos}")
+            res[f"rate_{key}-{sg}"] = rem
         print(f"    σ {sg}: with gas (a cycle = one placement + two swaps, {CYCLE_GAS_WEI / 1e18:.5f} ETH at "
               f"{GAS_GWEI} gwei, NAV ≈ 1,000 WETH): {rate_gas * 100:.5f}%/yr (out {gas_parts['exit'] * 100:.5f}, "
               f"in {gas_parts['in'] * 100:.5f})")
         res[f"rate_gas-{sg}"] = rate_gas
         verdict = "reported" if b is None else ("PASS" if rate <= b else "FAIL")
+        print(f"    σ {sg}: 90% CI of the sum ≈ [{(ci_parts['exit'][0] + ci_parts['in'][0]) * 100:.4f}, "
+              f"{(ci_parts['exit'][1] + ci_parts['in'][1]) * 100:.4f}]%/yr (out [{ci_parts['exit'][0] * 100:.4f}, "
+              f"{ci_parts['exit'][1] * 100:.4f}], in [{ci_parts['in'][0] * 100:.4f}, {ci_parts['in'][1] * 100:.4f}])")
         print(f"    σ {sg}: lag leak {rate * 100:.5f}%/yr (out {parts['exit'][2] * 100:.5f}, in {parts['in'][2] * 100:.5f}; "
               f"positive cycles out {parts['exit'][1]}/{parts['exit'][0]}, in {parts['in'][1]}/{parts['in'][0]}; "
               f"max cycle net out {parts['exit'][4]:.4f} bp, in {parts['in'][4]:.4f} bp) bound {b} -> {verdict}; "
@@ -312,8 +329,16 @@ def summarize(rows):
         ok &= lo > 0
     gr = [r for r in rows if r["lane"] == "grief"]
     if gr:
+        for st in ("in", "exit"):
+            g2 = [r for r in gr if r["state"] == st]
+            if g2:
+                m2 = max(g2, key=lambda r: r["net"])
+                print(f"    grief, {st} states: {len(g2)} rows, {sum(1 for r in g2 if r['net'] > 0)} > 0, max "
+                      f"{bp(m2):.4f} bp (σ {m2['sigma']}, d={m2['d']}), curator extra charge max "
+                      f"{max(bp(r, 'extra_charge') for r in g2):.4f} bp")
+        ok &= max(r["net"] for r in gr) <= 1   # item 1b's rule (net ≤ 0) applies to the grief lane (r1 R1-01)
         mg = max(gr, key=lambda r: r["net"])
-        print(f"  lane 4 coerced grief (reported): {len(gr)} rows; griefer max net {mg['net'] / ETH:.5f} ETH "
+        print(f"  lane 4 coerced grief (gated: net ≤ 0): {len(gr)} rows; griefer max net {mg['net'] / ETH:.5f} ETH "
               f"({bp(mg):.4f} bp; d={mg['d']}); griefer positive rows {sum(1 for r in gr if r['net'] > 0)}; "
               f"curator extra charge p50 / max {pctl([bp(r, 'extra_charge') for r in gr], 0.5):.4f} / "
               f"{max(bp(r, 'extra_charge') for r in gr):.4f} bp")

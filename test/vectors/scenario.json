@@ -1,12 +1,17 @@
 {
  "schema": "touchstone-vectors/1",
- "specVersion": "2.19",
+ "specVersion": "2.20",
  "conventions": {
   "fn": "VaultHarness.checkpoint(Obs o, bool liveOk, int24 liveTick): the vault's _checkpoint(o) with no PoolManager; the harness sets the state of in.state through its setters, stubs ackBreaches (recorded as an emitted {ackBreaches: {n}}) and overrides _tryRef() to return (liveOk, liveTick) and count its calls.",
   "events": "in.events[i] = {block, ts, obs, live}: vm.roll(block), vm.warp(ts), then checkpoint(obs, live != \"fail\", live == \"fail\" ? 0 : live). The state carries over between events.",
   "state": "{holdings {idle0, idle1, L, lo, hi} (lo/hi = the registered range; EMPTY = 0/0), bank (as bank.json), NAV0, delta0 (WAD), tauV0, segStart, S, baseOwed, epoch, epochSwapFrac, swapCount, records}; in.state.records is empty.",
-  "out": "out.steps[i] = {state after event i, liveReads (the _tryRef calls during the event: 0 or 1; the gate's live leg is read only when vestable, and a mint at a stale cache reads tryRef), emitted}. emitted pins the vault events Checkpoint(tauV, tauB, nav0, delta, base, L, lo, hi), BreachProcessed(count, lastBlock, forfeited) and CheckpointDeferred() plus the ackBreaches stub, in order; other events (ModeChanged, EpochRecorded) are checked through the state.",
-  "records": "records[e] = {base, minted, forfeited, forfeitValue, flags (subset of breach, deferred, stale, unverified), end (0 until the epoch roll writes it)}: the EpochRecord fields the checkpoint writes."
+  "out": "out.steps[i] = {state after event i, liveReads (the _tryRef calls during the event: 0 or 1; the gate's live leg is read only when vestable, and a mint at a stale cache reads tryRef), emitted}. emitted pins the vault events Checkpoint(tauV, tauB, nav0, delta, base, L, lo, hi), BreachProcessed(count, lastBlock, forfeited) and CheckpointDeferred() plus the ackBreaches stub, in order; ModeChanged and EpochRecorded are not pinned here (the mode is in state.bank; the record subset below is all the vectors pin; the remaining EpochRecord fields are tested by U-mode and the P4 record tests).",
+  "records": "records[e] = {base, minted, forfeited, forfeitValue, flags, end (0 until the epoch roll writes it)}: the subset of EpochRecord the model computes. flags are names; as a u8 the bit of each flag is its position in the record's flag list (0 stale, 1 witnessMissing, 2 witnessFallback, 3 breach, 4 refStale, 5 deferred, 6 unverified).",
+  "notes": {
+   "scenario-001-gate-live-out": "cache fresh and in range, live reference out: no vest, matured cohort to maturedPending",
+   "scenario-003-gate-live-fail-tick0-inside": "a failed read whose tick field is 0 inside the range must not open the gate",
+   "scenario-009-only-maturedPending-reads": "only maturedPending matured: the live leg is read and an out-of-range live reference blocks the vest"
+  }
  },
  "cases": [
   {
@@ -353,8 +358,7 @@
       ]
      }
     ]
-   },
-   "note": "cache fresh and in range, live reference out: no vest, matured cohort to maturedPending"
+   }
   },
   {
    "id": "scenario-002-gate-live-fail",
@@ -700,8 +704,7 @@
       ]
      }
     ]
-   },
-   "note": "a failed read whose tick field is 0 inside the range must not open the gate"
+   }
   },
   {
    "id": "scenario-004-gate-cache-stale",
@@ -1741,8 +1744,7 @@
       ]
      }
     ]
-   },
-   "note": "only maturedPending matured: the live leg is read and an out-of-range live reference blocks the vest"
+   }
   },
   {
    "id": "scenario-010-only-maturedPending-vests",

@@ -550,6 +550,9 @@ HOOK_EVENTS = {"RefReadFailed": ("grid",), "RefRefreshed": ("grid", "tick"), "Ga
                "GapSet": ("block",), "BreachLatched": ("seq", "block"), "RangeRegistered": ("lo", "hi", "liveTick")}
 
 
+CLOCK_NOTES, SCENARIO_NOTES = {}, {}
+
+
 class _Script:
     """The MockRefPool script: every `observe` during the current event returns the TWAP tick `v`, or fails when
     `v == "fail"` (the anchored read and the live read alike)."""
@@ -653,7 +656,7 @@ def clock_cases():
                            events=seq.ev),
                 "out": dict(steps=steps)}
         if note:
-            case["note"] = note
+            CLOCK_NOTES[case["id"]] = note
         cases.append(case)
         return steps
 
@@ -854,9 +857,12 @@ CLOCK_CONV = {
            "RefReadFailed(grid), RefRefreshed(grid, tick), GapCleared(kind), GapSet(block), BreachLatched(seq, block), "
            "RangeRegistered(lo, hi, liveTick))} or {revert: <error>} with the state unchanged.",
     "tiers": "TEST: blocktime 12 s, GRID 20, GRID_SEC 240, EPOCH 120, CURE_BLOCKS 200, RESET_RUN 2; DEMO: blocktime 1 s, "
-             "GRID 300, GRID_SEC 300, EPOCH 3600, CURE_BLOCKS 1800. ts = block × blocktime + phase.",
+             "GRID 300, GRID_SEC 300, EPOCH 3600, CURE_BLOCKS 1800; RESET_RUN 2 in both. ts = block × blocktime + phase.",
     "conventions": "an unarmed snapshot records its ring entry only; med9 over fewer than 9 entries is the lower "
-                   "median; EMPTY stores vaultLo = vaultHi = 0 and counts as out of range.",
+                   "median; EMPTY stores vaultLo = vaultHi = 0 and counts as out of range; armAtSeed whose refresh "
+                   "fails reverts RefUnreadable; ackBreaches(n) with n > pendingBreaches saturates pendingBreaches "
+                   "at 0 (never reverts).",
+    "notes": CLOCK_NOTES,
 }
 
 
@@ -1015,7 +1021,7 @@ def scenario_cases():
         case = {"id": f"scenario-{len(cases):03d}-{tag}", "fn": "VaultHarness.checkpoint",
                 "in": dict(tier=t.NAME, state=st, events=events), "out": dict(steps=steps)}
         if note:
-            case["note"] = note
+            SCENARIO_NOTES[case["id"]] = note
         cases.append(case)
         return steps
 
@@ -1148,10 +1154,14 @@ SCENARIO_CONV = {
     "out": "out.steps[i] = {state after event i, liveReads (the _tryRef calls during the event: 0 or 1; the gate's live "
            "leg is read only when vestable, and a mint at a stale cache reads tryRef), emitted}. emitted pins the "
            "vault events Checkpoint(tauV, tauB, nav0, delta, base, L, lo, hi), BreachProcessed(count, lastBlock, "
-           "forfeited) and CheckpointDeferred() plus the ackBreaches stub, in order; other events (ModeChanged, "
-           "EpochRecorded) are checked through the state.",
-    "records": "records[e] = {base, minted, forfeited, forfeitValue, flags (subset of breach, deferred, stale, "
-               "unverified), end (0 until the epoch roll writes it)}: the EpochRecord fields the checkpoint writes.",
+           "forfeited) and CheckpointDeferred() plus the ackBreaches stub, in order; ModeChanged and EpochRecorded "
+           "are not pinned here (the mode is in state.bank; the record subset below is all the vectors pin; the "
+           "remaining EpochRecord fields are tested by U-mode and the P4 record tests).",
+    "records": "records[e] = {base, minted, forfeited, forfeitValue, flags, end (0 until the epoch roll writes it)}: "
+               "the subset of EpochRecord the model computes. flags are names; as a u8 the bit of each flag is its "
+               "position in the record's flag list (0 stale, 1 witnessMissing, 2 witnessFallback, 3 breach, "
+               "4 refStale, 5 deferred, 6 unverified).",
+    "notes": SCENARIO_NOTES,
 }
 
 

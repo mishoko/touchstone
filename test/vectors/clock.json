@@ -1,12 +1,24 @@
 {
  "schema": "touchstone-vectors/1",
- "specVersion": "2.19",
+ "specVersion": "2.20",
  "conventions": {
   "fn": "HookHarness.events: the hook (TouchstoneHook with an internal virtual _slot0() seam and a scripted MockRefPool) is constructed fresh per case; in.witness sets witLo/witHi by a harness setter; then each event of in.events runs in order at vm.roll(block) / vm.warp(ts) with the pool slot0 = (sqrtPrice, tick).",
   "events": "each event is {op: {block, ts, sqrtPrice, tick, ref, ...}}; op \u2208 snapshot (snapshotIfNewBlock), refreshRef, refresh (the internal _refresh: steps 1 and 5 only, exposed by the harness), arm (armAtSeed; the vault's seed snapshot is a separate preceding event), setVaultRange {lo, hi, liveTick} (called as the vault), ackBreaches {n} (called as the vault). `ref` is what every MockRefPool observe returns during that event: a TWAP tick, or \"fail\" (the call reverts inside the mock).",
   "out": "out.steps[i] for event i: {obs (the Obs struct after the event, at block = the event's block and the event's pool tick), state {refGrid, lastSnap, armed, vaultLo, vaultHi, epochStartRef}, frozen (the frozen(gridIndex) entries written or changed by the event), emitted (the hook's events in order: RefReadFailed(grid), RefRefreshed(grid, tick), GapCleared(kind), GapSet(block), BreachLatched(seq, block), RangeRegistered(lo, hi, liveTick))} or {revert: <error>} with the state unchanged.",
-  "tiers": "TEST: blocktime 12 s, GRID 20, GRID_SEC 240, EPOCH 120, CURE_BLOCKS 200, RESET_RUN 2; DEMO: blocktime 1 s, GRID 300, GRID_SEC 300, EPOCH 3600, CURE_BLOCKS 1800. ts = block \u00d7 blocktime + phase.",
-  "conventions": "an unarmed snapshot records its ring entry only; med9 over fewer than 9 entries is the lower median; EMPTY stores vaultLo = vaultHi = 0 and counts as out of range."
+  "tiers": "TEST: blocktime 12 s, GRID 20, GRID_SEC 240, EPOCH 120, CURE_BLOCKS 200, RESET_RUN 2; DEMO: blocktime 1 s, GRID 300, GRID_SEC 300, EPOCH 3600, CURE_BLOCKS 1800; RESET_RUN 2 in both. ts = block \u00d7 blocktime + phase.",
+  "conventions": "an unarmed snapshot records its ring entry only; med9 over fewer than 9 entries is the lower median; EMPTY stores vaultLo = vaultHi = 0 and counts as out of range; armAtSeed whose refresh fails reverts RefUnreadable; ackBreaches(n) with n > pendingBreaches saturates pendingBreaches at 0 (never reverts).",
+  "notes": {
+   "clock-000-empty-three-breaches": "EMPTY counts as out of range (vaultLo = vaultHi = 0); touched every GRID",
+   "clock-001-empty-unobserved": "an unobserved EMPTY vault is not breached; the gap is flagged",
+   "clock-007-gap-then-reset": "refreshRef after a gap closes the span with the old cache first",
+   "clock-011-park-lo-exact": "\u03c4_v needs the pool sqrtPrice strictly inside (sqrtAt(lo), sqrtAt(hi))",
+   "clock-012-park-lo-plus1": "\u03c4_v needs the pool sqrtPrice strictly inside (sqrtAt(lo), sqrtAt(hi))",
+   "clock-013-park-hi-exact": "\u03c4_v needs the pool sqrtPrice strictly inside (sqrtAt(lo), sqrtAt(hi))",
+   "clock-014-park-hi-minus1": "\u03c4_v needs the pool sqrtPrice strictly inside (sqrtAt(lo), sqrtAt(hi))",
+   "clock-024-demo-anchor-phase0": "anchor k = floor(ts / GRID_SEC); one read per anchor",
+   "clock-025-demo-anchor-phase150": "anchor k = floor(ts / GRID_SEC); one read per anchor",
+   "clock-026-demo-anchor-phase299": "anchor k = floor(ts / GRID_SEC); one read per anchor"
+  }
  },
  "cases": [
   {
@@ -1803,8 +1815,7 @@
       ]
      }
     ]
-   },
-   "note": "EMPTY counts as out of range (vaultLo = vaultHi = 0); touched every GRID"
+   }
   },
   {
    "id": "clock-001-empty-unobserved",
@@ -2009,8 +2020,7 @@
       ]
      }
     ]
-   },
-   "note": "an unobserved EMPTY vault is not breached; the gap is flagged"
+   }
   },
   {
    "id": "clock-002-registered-two-latches-ack",
@@ -4837,8 +4847,7 @@
       ]
      }
     ]
-   },
-   "note": "refreshRef after a gap closes the span with the old cache first"
+   }
   },
   {
    "id": "clock-008-reset-streak-nonconsecutive",
@@ -6123,8 +6132,7 @@
       ]
      }
     ]
-   },
-   "note": "\u03c4_v needs the pool sqrtPrice strictly inside (sqrtAt(lo), sqrtAt(hi))"
+   }
   },
   {
    "id": "clock-012-park-lo-plus1",
@@ -6491,8 +6499,7 @@
       ]
      }
     ]
-   },
-   "note": "\u03c4_v needs the pool sqrtPrice strictly inside (sqrtAt(lo), sqrtAt(hi))"
+   }
   },
   {
    "id": "clock-013-park-hi-exact",
@@ -6859,8 +6866,7 @@
       ]
      }
     ]
-   },
-   "note": "\u03c4_v needs the pool sqrtPrice strictly inside (sqrtAt(lo), sqrtAt(hi))"
+   }
   },
   {
    "id": "clock-014-park-hi-minus1",
@@ -7227,8 +7233,7 @@
       ]
      }
     ]
-   },
-   "note": "\u03c4_v needs the pool sqrtPrice strictly inside (sqrtAt(lo), sqrtAt(hi))"
+   }
   },
   {
    "id": "clock-015-dodge-pool-push",
@@ -14337,8 +14342,7 @@
       ]
      }
     ]
-   },
-   "note": "anchor k = floor(ts / GRID_SEC); one read per anchor"
+   }
   },
   {
    "id": "clock-025-demo-anchor-phase150",
@@ -14651,8 +14655,7 @@
       ]
      }
     ]
-   },
-   "note": "anchor k = floor(ts / GRID_SEC); one read per anchor"
+   }
   },
   {
    "id": "clock-026-demo-anchor-phase299",
@@ -14965,8 +14968,7 @@
       ]
      }
     ]
-   },
-   "note": "anchor k = floor(ts / GRID_SEC); one read per anchor"
+   }
   },
   {
    "id": "clock-027-test-anchor-phase150",

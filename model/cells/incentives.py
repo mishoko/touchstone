@@ -13,7 +13,8 @@ Phases:
 
 Net (ETH) = pay vested by the horizon (valued when it vests) − bond burned by charges − gas − the curator's own
 spot-move trading loss. Pay still unvested at the horizon is reported separately (net_incl_unvested).
-A gated bot's net per path is its better variant (no observer, or a third party observing every 2·GRID).
+The mimic and each bot are paired in the same environment (`paired`): the fit and the gate use no observer
+(§10); the observer environment is reported by the gate.
 """
 import json
 import math
@@ -42,6 +43,14 @@ YEARS = DAYS / 365.0
 
 def bucket(kind, sigma):
     return f"{kind}-{int(sigma * 100)}"
+
+
+def paired(ix, b, s, bot, m, env=False, key="net"):
+    """The ONE pairing rule for fit and gate (r1 R1-04): the mimic and the bot in the same environment; the fit
+    and the gate use the no-observer environment (§10); lazy-under-ladder exists only with an observer."""
+    if bot == "lazy-under-ladder":
+        env = True
+    return ix[(b, s, bot, m)][env][key], ix[(b, s, "edge60", m)][env][key]
 
 
 def run_job(args):
@@ -79,14 +88,6 @@ def index(rows):
     return ix
 
 
-def best(ix, b, seed, bot, m, key="net"):
-    """A gated bot's per-path value: its better variant; edge60 (the mimic) uses the no-observer variant."""
-    v = ix[(b, seed, bot, m)]
-    if bot == "edge60":
-        return v[False][key]
-    return max(x[key] for x in v.values())
-
-
 # ----------------------------------------------------------------------------- fit: the m proposal
 def fit(rows):
     ix = index(rows)
@@ -100,13 +101,14 @@ def fit(rows):
         f_m = sum(x["f"] for x in e) / len(e)
         fl = {}
         for bot in B.LAZY_FAMILY:
-            vals = [best(ix, b, s, bot, 0.01, "f") for s in seeds]
+            vals = [paired(ix, b, s, bot, 0.01, key="f")[0] for s in seeds]
             fl[bot] = sum(vals) / len(vals)
         f_lazy = max(fl.values())
         q = pctl([c for x in e for c in x["action_charges"]], 0.99)
         m_ic = (charges + gas) / (NAV * (f_m - f_lazy)) if f_m > f_lazy else math.inf
         m_pc = (charges + gas + O_USD / ETH_USD + R_CARRY * BOND_ETH + q) / (NAV * f_m)
-        # depositor ceiling: fee uplift of edge60 over lazy (no observer), per NAV per year (arbitrage flow only)
+        # the fee uplift of edge60 over lazy (no observer), per NAV per year, arbitrage flow only. NOT a depositor
+        # ceiling: at depth 0 the extra in-range time is LVR (end NAV is reported); the ceiling needs noise flow (Track B)
         lz = [ix[(b, s, "lazy", 0.01)][False] for s in seeds]
         fee_up = (sum(x["fees"] for x in e) - sum(x["fees"] for x in lz)) / len(e) / NAV / YEARS
         fa_up = sum(x["f_actual"] for x in e) / len(e) - sum(x["f_actual"] for x in lz) / len(lz)
@@ -114,34 +116,30 @@ def fit(rows):
         m_need = {}
         for bot in B.GATED:
             m_need[bot] = gate_min_m(ix, b, seeds, bot)
+        nav = {bot: sum(paired(ix, b, s, bot, 0.0, key="nav_end")[0] for s in seeds) / len(seeds)
+               for bot in ("edge60", "lazy", "lazy-quiet", "breach-reset", "idle", "edge-6h")}
+        # realised pay per unit of credited in-range time at m = 1% (pay ∝ NAV0, so LVR erodes the mimic's pay)
+        ppt = {bot: sum(paired(ix, b, s, bot, 0.01, key="minted")[0] for s in seeds) /
+               max(1e-12, sum(paired(ix, b, s, bot, 0.01, key="f")[0] for s in seeds)) for bot in ("edge60", "lazy-quiet")}
+        m_need_max = max(m_need.values())
         out[b] = dict(charges_yr=charges, gas_yr=gas, f_mimic=f_m, f_lazy=fl, f_lazy_max=f_lazy, q=q, m_ic=m_ic,
-                      m_pc=m_pc, fee_uplift=fee_up, f_actual_uplift=fa_up, m_need=m_need)
-    return out
-
-
-def diff_ci(ix, b, seeds, bot, m):
-    d = [best(ix, b, s, "edge60", m) - best(ix, b, s, bot, m) for s in seeds]
-    return mean_ci(d)
-
-
-def affine(ix, b, s, bot):
-    """Per path: (P, C) with net(m) = m·P + C, for the bot's better variant at each m (recomputed per m)."""
-    v0, v1 = ix[(b, s, bot, 0.0)], ix[(b, s, bot, 0.01)]
-    out = {}
-    for k in v0:
-        out[k] = ((v1[k]["net"] - v0[k]["net"]) / 0.01, v0[k]["net"])
+                      m_pc=m_pc, fee_uplift=fee_up, f_actual_uplift=fa_up, m_need=m_need, m_need_max=m_need_max,
+                      nav_end_m0=nav, pay_per_credited_f=ppt)
     return out
 
 
 def gate_min_m(ix, b, seeds, bot, lo=0.0, hi=0.10):
-    """Smallest m (bisection, 1e-4 resolution) with the paired one-sided 95% CI lower bound of
-    (edge60 − bot) > 0 on the fit seeds, using the affine fit per path and variant."""
-    aff_m = [affine(ix, b, s, "edge60")[False] for s in seeds]
-    aff_b = [affine(ix, b, s, bot) for s in seeds]
+    """Smallest m (bisection) with the paired one-sided 95% CI lower bound of (edge60 − bot) > 0 on the fit seeds,
+    from the per-path affine fit net(m) = m·P + C, paired by `paired` (the same environment, no observer)."""
+    def aff(s):
+        b0, m0 = paired(ix, b, s, bot, 0.0)
+        b1, m1 = paired(ix, b, s, bot, 0.01)
+        return (m1 - m0) / 0.01, m0, (b1 - b0) / 0.01, b0
+
+    A = [aff(s) for s in seeds]
 
     def lo_ci(m):
-        d = [(pm * m + cm) - max(p * m + c for (p, c) in ab.values()) for (pm, cm), ab in zip(aff_m, aff_b)]
-        return mean_ci(d)[1]
+        return mean_ci([(pm * m + cm) - (pb * m + cb) for pm, cm, pb, cb in A])[1]
 
     if lo_ci(hi) <= 0:
         return math.inf
@@ -153,8 +151,6 @@ def gate_min_m(ix, b, seeds, bot, lo=0.0, hi=0.10):
             hi = mid
         else:
             lo = mid
-        if hi - lo < 1e-5:
-            break
     return hi
 
 
@@ -212,8 +208,10 @@ def verdict(res, m):
         if g["mimic_mean"] < 0:
             fails.append(f"{b}: mimic mean net < 0")
         for bot in B.GATED:
-            c = g["cmp"].get(bot)
-            if c and c["ci_lo"] <= 0:
+            c = (envs["observer"] if bot == "lazy-under-ladder" else g)["cmp"].get(bot)
+            if c is None:
+                fails.append(f"{b}: no gating row for {bot}")   # r1 R1-08: a missing row fails
+            elif c["ci_lo"] <= 0:
                 fails.append(f"{b}: mimic > {bot} fails (diff {c['diff']:.4f}, CI lo {c['ci_lo']:.4f})")
         c = g["cmp"]["delayed-24h"]
         if c["diff"] < -2 * c["se"]:

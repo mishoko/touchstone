@@ -159,7 +159,9 @@ def summarize(rows):
     for keep in (True, False):
         for frac in FRACS:
             n_ = sum(1 for r in rows if r["keep"] == keep and r["frac"] == frac)
-            print(f"  rows present: {'rebalanceSwap' if keep else 'pre-swap'} at {frac / 1e16:.1f}% of NAV: {n_}")
+            exp = len({(r["seed"], r["sigma"]) for r in rows}) * 2 * len(DS) * len(JS) * 2 * len(KS)
+            print(f"  rows present: {'rebalanceSwap' if keep else 'pre-swap'} at {frac / 1e16:.1f}% of NAV: {n_} of {exp} "
+                  "(dropped: the pushed tick rounds past the fence)")
             res[f"rows_{'swap' if keep else 'preswap'}_{frac}"] = n_
     res["ok"] = ok
     print("ADV-3 verdict:", "PASS" if ok else "FAIL")

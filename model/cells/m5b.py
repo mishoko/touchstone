@@ -14,8 +14,11 @@ vault property whether or not they are collected).
 Assertion (reference = market): on every row, charge ≥ realised loss − 1 wei. With the reference at the market price
 this holds by construction once fees are collected first (the reference leg values the action at the price the loss is
 realised at); the cell's evidence is that collect-first holds over fee-rich segments, which the control exercises.
-Lag lane (reported, not the assertion): the reference lags the market by ℓ (10-minute TWAP lag draws); there the
-charge can fall short of the realised loss (registry F-027), and the rows uncovered are counted.
+Lag lane (reported, not the assertion): the reference lags the market by ℓ (10-minute TWAP lag draws), with spot at
+the market (off = 0) or moved onto the lagging reference by a trade before the action (off = −ℓ). The rows where the
+charge falls short of the realised loss are counted per condition: with spot at the market the spot leg covers the
+loss; with spot pre-moved onto the lagging reference the market lies beyond both priced legs, which is the lag-leak
+mechanism (registry F-021), not the honest-placement mismatch of F-027.
 Control: collect-first disabled. NAV_before is then computed from holdings without the uncollected fees, which the
 action's own modify pays out into NAV_after, so the fees offset the action's cost. The per-path shortfall
 max(0, realised loss − control charge) must have mean > 0 and one-sided 95% CI lower bound > 0 in every σ bucket.
@@ -161,7 +164,7 @@ def run_path(args):
                     for kind, lo in [("swap", None)] + [("place", lo) for lo in legal_ranges(r + off, ref)]:
                         a = act(h, r, 20, 10, off, frac, zfo, kind, lo, ref=ref)
                         if a:
-                            rows.append(dict(lane="lag", lag=ell, seed=seed, sigma=sigma, state=state, frac=frac,
+                            rows.append(dict(lane="lag", lag=ell, off=off, seed=seed, sigma=sigma, state=state, frac=frac,
                                              zfo=zfo, kind=kind, nav=nav, charge=a[0], realised=a[1], fees=a[2],
                                              ctl_charge=None))
     return rows
@@ -196,13 +199,18 @@ def summarize(rows):
     for kind in ("swap", "place"):
         for frac in FRACS:
             n_ = sum(1 for r in rows if r["kind"] == kind and r["frac"] == frac)
-            print(f"  rows present: {kind} at {frac / 1e16:.1f}% of NAV: {n_}")
+            exp = "" if kind == "place" else f" of {len({(r['seed'], r['sigma']) for r in rows}) * 2 * len(WASH) * len(OFFS) * 2} " \
+                "(dropped: a swap that fills nothing against out-of-range liquidity, or a push beyond the fence)"
+            print(f"  rows present: {kind} at {frac / 1e16:.1f}% of NAV: {n_}{exp}")
             res[f"rows_{kind}_{frac}"] = n_
-    if lag:
-        unc = [(r["realised"] - r["charge"]) * 1e4 / r["nav"] for r in lag]
-        res["lag"] = dict(rows=len(lag), uncovered_rows=sum(1 for u in unc if u > 0), max_uncovered_bp=max(unc))
-        print(f"  lag lane (reported; registry F-027): {len(lag)} rows, charge < realised loss on "
-              f"{res['lag']['uncovered_rows']}, max shortfall {max(unc):.4f} bp")
+    for cond, name in ((lambda r: r["off"] == 0, "spot at the market"), (lambda r: r["off"] != 0, "spot pre-moved onto the lagging reference (lag leak, F-021)")):
+        g = [r for r in lag if cond(r)]
+        if g:
+            unc = [(r["realised"] - r["charge"]) * 1e4 / r["nav"] for r in g]
+            res[f"lag_{'market' if name.startswith('spot at') else 'premoved'}"] = dict(
+                rows=len(g), uncovered_rows=sum(1 for u in unc if u > 0), max_uncovered_bp=max(unc))
+            print(f"  lag lane, {name}: {len(g)} rows, charge < realised loss on {sum(1 for u in unc if u > 0)}, "
+                  f"max shortfall {max(unc):.4f} bp")
     res["ok"] = ok
     print("M-5b verdict:", "PASS" if ok else "FAIL")
     return res

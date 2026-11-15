@@ -23,7 +23,8 @@ of a deep Uniswap v3 pool for the same pair fixed at deployment, and charges tha
 deferred pay and bond; an action they cannot cover, or one taken more than a published band from that reference, reverts. The curator's
 pay never vests while the vault is outside the reference price; observed absence past a published cure window forfeits all
 its unvested pay, three breaches remove it, and depositors can always exit in kind. Market moves, positioning and token mix are not covered, skill is not
-rewarded, and the reference TWAP is assumed not to be moved.
+rewarded, and the reference TWAP is assumed not to be moved; the measured cost of moving it will be published with
+the security results.
 
 **Known limitation (measured).** The charge prices an action at the worse of spot and a 10-minute TWAP. When the market
 moves beyond both within the TWAP's lag, a curator colluding with a trader can place liquidity at a stale price and let
@@ -31,8 +32,7 @@ the trader take the difference; honest placements made while the TWAP lags are a
 arbitrage goes uncharged, others are overcharged). On synthetic paths this lag leak measured 1.2% of NAV a year at 60%
 annual volatility (90% CI 0.6–1.8%) on a lane that fixes the size of the price push, and more when the push is free.
 Widening the charge to the reference pool's current price ± a margin closes it only with a margin wide enough to
-overcharge honest curators heavily. This is an open problem of the design and is reported as a negative result. The measured cost of moving it will be published with the
-security results.
+overcharge honest curators heavily. This is an open problem of the design and is reported as a negative result.
 
 There is no keeper, operator, admin or off-chain feed. The one external input is the reference pool's TWAP, because a
 new hook pool whose vault is out of range has no reliable price of its own.

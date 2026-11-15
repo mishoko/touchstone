@@ -2084,6 +2084,28 @@ def rules_r7d():
           (L1 - w.v.h.L,))
 
 
+def rules_r8():
+    """Fix review r8 MINORs: seed epoch at a non-aligned block; hook counters saturate at their caps."""
+    t = R.TEST
+    w = World(start_block=12_001)
+    check(w.v.epoch == 100, "seed epoch = floor(block / EPOCH)", w.v.epoch)
+    w.place(T0 - 1000, T0 + 1000)
+    w.step(12_120 - w.block)
+    w.poke()
+    check(w.v.records[100].get("end") == 12_120 and w.v.epoch == 101 and w.v.swapCount == 0, "roll at the epoch boundary")
+    h = R.Hook(t, R.RefSource(lambda ts: T0 + 3000))
+    h.armed, h.vaultLo, h.vaultHi, h.emptyRange = True, T0 - 1000, T0 + 1000, False
+    h.refTick, h.refGrid, h.refCachedAt, h.lastSnap, h.ring = T0 + 3000, 10 ** 9, 1000, 1000, [(1000, T0)]
+    h.outBlocks, h.breachSeq, h.pendingBreaches, h.tauB = R.U64 - 5, R.U32, R.U32, R.U64 - 1
+    h.witLo, h.witHi = T0 - 100, T0 + 100
+    try:
+        h.snapshot(1040, 10 ** 12, sqrt_at(T0), T0)
+        ok = (h.outBlocks, h.breachSeq, h.pendingBreaches, h.tauB) == (R.U64, R.U32, R.U32, R.U64)
+    except (R.Revert, R.MathRevert) as ex:
+        ok = repr(ex)
+    check(ok is True, "hook counters saturate at their caps", ok)
+
+
 def headroom_exact(rng):
     for _ in range(200):
         lo = rng.randrange(T0 - 1900, T0 - 100, 10)
@@ -2112,7 +2134,7 @@ def main():
     for fn in (props_ledger, props_mint, props_bank, props_drip, headroom_exact, props_placement):
         _run(fn, rng)
     for fn in (rules_med9, props_saturation, props_ladder, props_units, rules_pay, rules_gate_leg, rules_clock, rules_actions,
-               rules_r2, rules_r3, rules_r4, rules_r4b, rules_r5, rules_r6, rules_r7, rules_r7b, rules_r7c, rules_r7d, scenario_base_and_vesting, scenario_live_leg, scenario_no_read_when_not_vestable,
+               rules_r2, rules_r3, rules_r4, rules_r4b, rules_r5, rules_r6, rules_r7, rules_r7b, rules_r7c, rules_r7d, rules_r8, scenario_base_and_vesting, scenario_live_leg, scenario_no_read_when_not_vestable,
                scenario_breach_and_removal, scenario_reset_and_registration, scenario_gap, scenario_actions,
                scenario_deltamin, scenario_insolvent, scenario_epilogue):
         _run(fn)

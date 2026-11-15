@@ -739,6 +739,7 @@ def rules_gate_leg():
     w.poke()
     w.keepalive_run(R.TEST.EPOCH * (1 + R.V))
     w.ref_tick = anchor_split(lambda ts: T0 + 1500, lambda ts: T0)
+    w.step(7)  # touches 7 blocks after the anchor: an anchored read and a live read differ
     w.keepalive_run(R.TEST.GRID)
     vu, r0 = w.v.bank.vestedUnclaimed, w.v.live_reads
     w.step(1)
@@ -882,34 +883,322 @@ def rules_actions():
         check(False, "swap counters reset at the epoch roll", ex.err)
 
 
+def rules_r2():
+    """Clause-level checks added after fix review r2 (each kills a named mutant in model/mutants_model.py)."""
+    t = R.TEST
+    k = 10 ** 18
+    # Breach that does not exit keeps placedByCurator; a new forfeit restarts the drip with T = remaining + new
+    b = R.Bank()
+    b.dripBlocks, b.placedByCurator = 120, True
+    b.cohorts[0] = [5, k]
+    R.fee_bank_apply(b, "Breach", dict(count=1, now=500))
+    check(b.placedByCurator and b.mode == R.BREACHED, "a non-exiting breach keeps placedByCurator")
+    b = R.Bank()
+    b.dripBlocks = 120
+    b.forfeitPool = b.forfeitTotal = 12 * k
+    b.forfeitStart = 1000
+    b.cohorts[3] = [8, 2 * k]
+    burned = R.fee_bank_apply(b, "Breach", dict(count=1, now=1060))[0]
+    check(burned == 6 * k and b.forfeitPool == 8 * k and b.forfeitTotal == 8 * k and b.forfeitStart == 1060,
+          "drip owed burned first, then T = remaining + new, start = now", (burned, b.forfeitPool, b.forfeitTotal))
+    burned = R.fee_bank_apply(b, "Drip", dict(now=1061))[0]
+    check(burned == 8 * k // 120, "restarted drip burns T/dripBlocks per block", burned)
+    # Charge never burns vested pay
+    b = R.Bank()
+    b.cohorts[0], b.maturedPending, b.vestedUnclaimed, b.bondShares = [3, k], k, 5 * k, 10 * k
+    R.fee_bank_apply(b, "Charge", dict(burn=4 * k))
+    check(b.vestedUnclaimed == 5 * k and b.bondShares == 8 * k, "vested pay is never burned")
+    # τ_v needs the cached reference in range; the span is credited with the pre-commit cache
+    h = R.Hook(t, R.RefSource(lambda ts: T0 + 1500))
+    h.armed, h.vaultLo, h.vaultHi, h.emptyRange = True, T0 - 1000, T0 + 1000, False
+    h.refTick, h.refGrid, h.refCachedAt, h.lastSnap, h.ring = T0 + 1500, 10 ** 9, 1000, 1000, [(1000, T0)]
+    h.snapshot(1020, 10 ** 12, sqrt_at(T0), T0)
+    check(h.tauV == 0 and h.outBlocks == 20, "τ_v needs the cached reference in range")
+    h = R.Hook(t, R.RefSource(lambda ts: T0 + 1500))
+    h.armed, h.vaultLo, h.vaultHi, h.emptyRange = True, T0 - 1000, T0 + 1000, False
+    h.refTick, h.refGrid, h.refCachedAt, h.lastSnap, h.ring = T0, 100, 2000, 2000, [(2000, T0)]
+    h.snapshot(2020, 2020 * t.BLOCKTIME, sqrt_at(T0), T0)
+    check(h.tauV == 20 and h.outBlocks == 0 and h.refTick == T0 + 1500,
+          "the span is credited with the cache before this block's commit", (h.tauV, h.outBlocks))
+    check(h.frozen.get(101) is not None and h.frozen[101][1] == 20, "frozen τ_v at the grid boundary", h.frozen)
+    h = R.Hook(t, R.RefSource(lambda ts: T0))
+    h.armed, h.vaultLo, h.vaultHi, h.emptyRange = True, T0 - 1000, T0 + 1000, False
+    h.refTick, h.refGrid, h.refCachedAt, h.lastSnap, h.ring, h.med9 = T0, 10 ** 9, 1000, 1005, [(1005, T0)], T0
+    h.snapshot(1035, 10 ** 12, sqrt_at(T0), T0)
+    check(h.frozen.get(51) == (T0, 15, 0), "τ_v(B) interpolated at the boundary inside the span", h.frozen)
+    # latch at exactly CURE; two pending latches keep the last block
+    h = R.Hook(t, R.RefSource(lambda ts: T0 + 3000))
+    h.armed, h.vaultLo, h.vaultHi, h.emptyRange = True, T0 - 1000, T0 + 1000, False
+    h.refTick, h.refGrid, h.refCachedAt, h.lastSnap, h.outBlocks, h.ring = T0 + 3000, 10 ** 9, 1000, 1000, 160, [(1000, T0)]
+    h.snapshot(1040, 10 ** 12, sqrt_at(T0), T0)
+    check(h.pendingBreaches == 1 and h.lastPendingBlock == 1040, "latch when outBlocks reaches CURE exactly")
+    h.outBlocks, h.refCachedAt = 390, 1040
+    h.snapshot(1080, 10 ** 12, sqrt_at(T0), T0)
+    check(h.pendingBreaches == 2 and h.lastPendingBlock == 1050, "the latest crossing is the pending cutoff",
+          h.lastPendingBlock)
+    # the fence is two-sided on rebalanceSwap; actions fail closed on an unreadable reference
+    w = World()
+    w.v.pool.push_to(sqrt_at(T0 - 61))
+    w.keepalive_run(1)
+    try:
+        w.v.rebalance_swap(False, 10 ** 15, w.block, w.ts())
+        check(False, "a swap with spot below the fence must revert")
+    except R.Revert as ex:
+        check(ex.err == "Fence", "two-sided fence", ex.err)
+    w.v.pool.push_to(sqrt_at(T0))
+    w.keepalive_run(1)
+    w.ref.fail = lambda end: end == w.ts()
+    try:
+        w.v.rebalance_swap(False, 10 ** 15, w.block, w.ts())
+        check(False, "an unreadable reference must revert the action")
+    except R.Revert as ex:
+        check(ex.err == "RefUnreadable", "actions fail closed on an unreadable reference", ex.err)
+    w.ref.fail = set()
+    # swap cap valued at the live reference on the current NAV; limit on the adverse side; counters add the fill
+    st = {"ref": T0}
+    w = World(ref_fn=lambda ts: st["ref"], third_L=10 ** 22)
+    st["ref"] = T0 + 200
+    w.v.pool.push_to(sqrt_at(T0 + 200))
+    w.keepalive_run(3 * t.GRID)
+    s_ref = sqrt_at(T0 + 200)
+    nav = w.v.nav(s_ref)
+    amt = R.mul_div(nav * 1995 // 100000, 1 << 192, s_ref * s_ref)
+    try:
+        w.v.rebalance_swap(True, amt, w.block, w.ts())
+        frac = w.v.epochSwapFrac
+        check(True, "1.995% at the live reference passes the per-action cap")
+    except R.Revert as ex:
+        check(False, "1.995% at the live reference passes the per-action cap", ex.err)
+        frac = 0
+    w.keepalive_run(t.COOLDOWN)
+    w.v.pool.push_to(sqrt_at(T0 + 150))
+    s_ref = sqrt_at(T0 + 200)
+    nav = w.v.nav(s_ref)
+    amt = R.mul_div(nav * 2003 // 100000, 1 << 192, s_ref * s_ref)
+    try:
+        w.v.rebalance_swap(True, amt, w.block, w.ts())
+        check(False, "2.003% valued at the reference must revert even when spot is lower")
+    except R.Revert as ex:
+        check(ex.err in ("SwapCap", "Fence"), "swap cap valued at the reference", ex.err)
+    # thin pool: a partial fill stops at the adverse limit and the counter adds the filled amount
+    w = World(third_L=10 ** 14)
+    s_ref = sqrt_at(T0)
+    amt = min(w.v.h.idle0, R.mul_div(w.v.nav(s_ref) * 19 // 1000, 1 << 192, s_ref * s_ref))
+    i0 = w.v.h.idle0
+    nav_before = w.v.nav(s_ref)
+    w.v.rebalance_swap(True, amt, w.block, w.ts())
+    used = i0 - w.v.h.idle0
+    nav_ref = w.v.nav(s_ref)
+    check(w.v.epochSwapFrac == R.mul_div_up(R.q(used, s_ref), R.WAD, nav_before),
+          "epoch counter = ceil(filled value · WAD / NAV(ref))", (w.v.epochSwapFrac, used))
+    check(used < amt and w.v.pool.tick == T0 - 10 - 1 or w.v.pool.s == sqrt_at(T0 - 10),
+          "a swap stops at spot − (FEE_TICKS + BAND_SWAP)", (w.v.pool.tick, used, amt))
+    check(w.v.pool.s >= sqrt_at(T0 - 10), "the limit is on the adverse side and is never passed", w.v.pool.s)
+    check(w.v.epochSwapFrac < R.mul_div_up(R.q(amt, s_ref), R.WAD, nav_ref) and w.v.epochSwapFrac > 0,
+          "epoch counter adds the filled amount", w.v.epochSwapFrac)
+    # the per-action fraction rounds up: a request whose floor fraction equals the cap reverts
+    w = World(seed_amounts=(150_000 * USDC, 500 * ETH), third_L=10 ** 22)
+    nav = w.v.nav(sqrt_at(T0))
+    amt = nav * t.MAX_SWAP_ACTION // R.WAD + 1
+    check(amt * R.WAD // nav == t.MAX_SWAP_ACTION and amt <= w.v.h.idle1, "boundary request constructed")
+    try:
+        w.v.rebalance_swap(False, amt, w.block, w.ts())
+        check(False, "a request just above the cap must revert")
+    except R.Revert as ex:
+        check(ex.err == "SwapCap", "per-action fraction rounds up", ex.err)
+    # DELTA_MIN boundary in the vault: deltaAfter == DELTA_MIN places, one raw unit less reverts
+    for x, ok in ((1496491847102831049, True), (1496491847102831048, False)):
+        st = {"ref": T0 + 30}
+        w = World(ref_fn=lambda ts: st["ref"], third_L=0, seed_amounts=(x, 5 * 10 ** 26))
+        w.v.pool.push_to(sqrt_at(T0) + 1)
+        w.step(1)
+        try:
+            ch, p, burn, d = w.place(T0, T0 + 2000)
+            check(ok and d == t.DELTA_MIN, "deltaAfter == DELTA_MIN places", d)
+        except R.Revert as ex:
+            check(not ok and ex.err == "DeltaMin", "deltaAfter one unit below DELTA_MIN reverts", ex.err)
+    # a pre-swap counts toward the caps and the counters; it is charged with the placement (charge from the
+    # holdings before the pre-swap)
+    w = World(seed_amounts=(300_000 * USDC, 20 * ETH), third_L=10 ** 21)
+    w.place(T0, T0 + 2000)
+    w.keepalive_run(t.COOLDOWN)
+    w.v.pool.push_to(sqrt_at(T0 + 55))
+    w.keepalive_run(1)
+    w.poke()  # sweep the fees the push paid to the position, so `before` matches the action's collect-first state
+    before = w.v.h.copy()
+    s_ref = sqrt_at(T0)
+    s_spot = w.v.pool.s
+    pre = dict(active=True, zeroForOne=False, amountIn=w.v.nav(s_ref) // 100)
+    n0 = w.v.swapCount
+    ch, p, burn, d = w.place(T0, T0 + 2000, pre)
+    expect = max(0, R.value(before, s_spot)[0] - R.value(w.v.h, s_spot)[0], R.value(before, s_ref)[0] - R.value(w.v.h, s_ref)[0])
+    check(w.v.swapCount == n0 + 1 and w.v.epochSwapFrac > 0, "a pre-swap counts toward MAX_SWAPS and the epoch cap")
+    check(ch == expect, "the pre-swap is charged with the placement", (ch, expect))
+    check(w.v.NAV0 == w.v.nav(s_ref) and w.v.delta0 == R.delta_of(w.v.h, s_ref),
+          "setPositions epilogue: NAV0 and δ0 at the live reference, not at spot")
+    # rebalanceSwap never changes the mode and never resets the clock
+    st = {"ref": T0}
+    w = World(ref_fn=lambda ts: st["ref"], third_L=10 ** 21)
+    w.place(T0 - 1000, T0 + 1000)
+    w.keepalive_run(t.COOLDOWN)
+    w.v.bank.mode = R.BREACHED
+    st["ref"] = T0 + 1010
+    w.v.pool.push_to(sqrt_at(T0 + 1010))
+    w.keepalive_run(3 * t.GRID)
+    ob = w.v.hook.outBlocks
+    w.v.rebalance_swap(False, w.v.h.idle1 // 10 + 1, w.block, w.ts())
+    check(w.v.bank.mode == R.BREACHED and w.v.hook.outBlocks == ob, "rebalanceSwap changes neither the mode nor the clock")
+    # two pending breaches are both counted
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.keepalive_run(40)
+    h = w.v.hook
+    h.pendingBreaches, h.lastPendingBlock, h.tauVAtLastPending = 2, w.block, h.tauV
+    w.step(1)
+    w.poke()
+    check(w.v.bank.breaches == 2 and h.pendingBreaches == 0, "two pending breaches are both processed")
+    # deposits checkpoint first (base minted before the deposit)
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.keepalive_run(60)
+    c0 = w.v.bank.cohort_total()
+    w.deposit(10 ** 24)
+    check(w.v.bank.cohort_total() > c0, "a deposit runs the checkpoint first")
+    # withdraw pays floor(bucket·s / S_pre)
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.deposit(10 ** 26)
+    S, i0, i1, L = w.v.S, w.v.h.idle0, w.v.h.idle1, w.v.h.L
+    sh = 10 ** 25 + 7
+    w.withdraw(sh)
+    check(w.v.h.idle0 == i0 - i0 * sh // S and w.v.h.idle1 == i1 - i1 * sh // S and w.v.h.L == L - L * sh // S,
+          "withdraw pays floor(bucket·s/S) with the pre-burn supply")
+    # a matured cohort with a pending breach and the gate open is forfeited, not vested
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.keepalive_run(t.EPOCH)
+    w.poke()
+    w.keepalive_run(t.EPOCH * (1 + R.V))
+    h = w.v.hook
+    h.pendingBreaches, h.lastPendingBlock, h.tauVAtLastPending = 1, w.block, h.tauV
+    w.step(1)
+    vu = w.v.bank.vestedUnclaimed
+    w.poke()
+    check(w.v.bank.vestedUnclaimed == vu and w.v.bank.unvested() <= w.v.bank.cohort_total(),
+          "breaches are processed before vesting")
+    # the gate needs a fresh cache: at exactly refCachedAt + 2·GRID (stale, no gap yet) nothing vests
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.keepalive_run(t.EPOCH)
+    w.poke()
+    w.keepalive_run(t.EPOCH * (1 + R.V))
+    w.step(t.GRID - w.block % t.GRID + 3)  # first touch of a new anchor, 3 blocks after it: the cache is unaligned
+    w.touch()
+    cached = w.v.hook.refCachedAt
+    check(cached == w.block, "refresh at the first touch of the anchor")
+    w.ref.fail = lambda end: end % t.GRID_SEC == 0  # anchored reads fail; live reads (unaligned) succeed
+    w.block = cached + 2 * t.GRID
+    vu = w.v.bank.vestedUnclaimed
+    w.poke()
+    check(not w.v.hook.gapSinceVerify and w.v.bank.vestedUnclaimed == vu and w.v.bank.maturedPending > 0,
+          "a stale cache closes the gate", (w.v.hook.gapSinceVerify, w.v.bank.vestedUnclaimed - vu))
+    w.ref.fail = set()
+    # the forfeit drips: half an epoch after a breach about half the pool is burned
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.keepalive_run(t.EPOCH)
+    w.poke()
+    h = w.v.hook
+    h.pendingBreaches, h.lastPendingBlock, h.tauVAtLastPending = 1, w.block, h.tauV
+    w.step(1)
+    w.poke()
+    T = w.v.bank.forfeitTotal
+    w.keepalive_run(t.EPOCH // 2)
+    w.poke()
+    check(T > 0 and abs(w.v.bank.forfeitPool - T // 2) <= T // 20, "forfeit drips over one epoch", (w.v.bank.forfeitPool, T))
+    # registration writes the live tick (not the old cache)
+    st = {"ref": T0}
+    w = World(ref_fn=lambda ts: st["ref"])
+    w.place(T0 - 1000, T0 + 1000)
+    w.keepalive_run(t.COOLDOWN)
+    st["ref"] = T0 + 30
+    w.step(1)
+    w.place(T0 - 1000, T0 + 1000)
+    check(w.v.hook.refTick == T0 + 30, "registration writes the live tick", w.v.hook.refTick)
+    # seed: an unreadable reference reverts; BOND_MIN is checked at REF_SQRT_PRICE, not at the pool price
+    try:
+        World(ref_fail=lambda end: True)
+        check(False, "seed with an unreadable reference must revert")
+    except R.Revert as ex:
+        check(ex.err == "RefUnreadable", "seed requires a successful refresh", ex.err)
+    probe = World()
+    bond_val = R.mul_div(probe.v.nav(sqrt_at(T0)), probe.v.bank.bondShares, probe.v.S)
+    tier = R.Tier(**{**t.__dict__, "BOND_MIN": bond_val})
+    w = World.__new__(World)
+    w.t, w.ref_tick, w.fail = tier, (lambda ts: T0), set()
+    w.ref = R.RefSource(lambda ts: T0, w.fail)
+    pool = R.Pool(sqrt_at(T0 - 500), tier.FEE)
+    w.v = R.Vault(tier, w.ref, pool, sqrt_ref_price=sqrt_at(T0))
+    w.block, w.depositor = 12_000, 0
+    try:
+        w.v.seed(150_000 * USDC, 50 * ETH, now=w.block, ts=w.ts())
+        check(True, "BOND_MIN valued at REF_SQRT_PRICE")
+    except R.Revert as ex:
+        check(False, "BOND_MIN valued at REF_SQRT_PRICE", ex.err)
+    tier2 = R.Tier(**{**t.__dict__, "BOND_MIN": bond_val + 10 ** 12})
+    w.v = R.Vault(tier2, w.ref, R.Pool(sqrt_at(T0), tier2.FEE), sqrt_ref_price=sqrt_at(T0))
+    try:
+        w.v.seed(150_000 * USDC, 50 * ETH, now=w.block, ts=w.ts())
+        check(False, "a bond below BOND_MIN must revert")
+    except R.Revert as ex:
+        check(ex.err == "BondMin", "BOND_MIN enforced at seed", ex.err)
+    # prologue collect-first sweeps fees earned between actions
+    w = World(third_L=10 ** 17)
+    w.place(T0 - 1000, T0 + 1000)
+    w.v.pool.swap(True, 10 ** 10, sqrt_at(T0 - 5))
+    w.v.pool.swap(False, 10 ** 17, sqrt_at(T0 + 5))
+    w.keepalive_run(1)
+    w.poke()
+    check(w.v.pool.collect("vault", w.v.h.lo, w.v.h.hi) == (0, 0), "collect-first sweeps fees in every prologue")
+
+
+def headroom_exact(rng):
+    for _ in range(200):
+        lo = rng.randrange(T0 - 1900, T0 - 100, 10)
+        idle = R.Holdings(rng.randint(10 ** 6, 10 ** 13), rng.randint(10 ** 12, 10 ** 22))
+        sp = sqrt_at(T0) + rng.randint(0, 10 ** 9)
+        L0 = R.get_liquidity_for_amounts(sp, sqrt_at(lo), sqrt_at(lo + 2000), idle.idle0, idle.idle1)
+        L, _, _ = R.placement_size(idle, lo, lo + 2000, sp, sqrt_at(T0))
+        check(L == (L0 - (L0 // 10 ** 9 + 1) if L0 > L0 // 10 ** 9 + 1 else 0), "L = L0 − (L0/1e9 + 1)", (L, L0))
+
+
+CRASHES = []
+
+
+def _run(fn, *a):
+    try:
+        fn(*a)
+    except (R.Revert, R.MathRevert, AssertionError) as ex:
+        FAILS.append(f"{fn.__name__}: unexpected revert or assertion {ex!r}")
+    except Exception as ex:  # a crash is not a check failure (mutation runner counts it as invalid)
+        import traceback
+        CRASHES.append(f"{fn.__name__} crashed: {ex!r}\n{traceback.format_exc()[-600:]}")
+
+
 def main():
     rng = random.Random(20261115)
-    props_ledger(rng)
-    props_mint(rng)
-    props_bank(rng)
-    props_drip(rng)
-    props_saturation()
-    props_ladder()
-    props_placement(rng)
-    props_units()
-    for sc in (rules_pay, rules_gate_leg, rules_clock, rules_actions):
-        try:
-            sc()
-        except Exception as ex:
-            import traceback
-            FAILS.append(f"{sc.__name__} crashed: {ex!r}\n{traceback.format_exc()}")
-    for sc in (scenario_base_and_vesting, scenario_live_leg, scenario_no_read_when_not_vestable,
+    for fn in (props_ledger, props_mint, props_bank, props_drip, headroom_exact, props_placement):
+        _run(fn, rng)
+    for fn in (props_saturation, props_ladder, props_units, rules_pay, rules_gate_leg, rules_clock, rules_actions,
+               rules_r2, scenario_base_and_vesting, scenario_live_leg, scenario_no_read_when_not_vestable,
                scenario_breach_and_removal, scenario_reset_and_registration, scenario_gap, scenario_actions,
                scenario_deltamin, scenario_insolvent, scenario_epilogue):
-        try:
-            sc()
-        except Exception as ex:  # a crash is a failed check
-            import traceback
-            FAILS.append(f"{sc.__name__} crashed: {ex!r}\n{traceback.format_exc()}")
-    if FAILS:
-        print(f"SELF-CHECK FAILED: {len(FAILS)} of {N_CHECKS[0]} checks")
+        _run(fn)
+    print(f"SUMMARY named_failures={len(FAILS)} crashes={len(CRASHES)} checks={N_CHECKS[0]}")
+    if FAILS or CRASHES:
+        print(f"SELF-CHECK FAILED: {len(FAILS)} of {N_CHECKS[0]} checks; {len(CRASHES)} crashes")
         seen = {}
-        for f in FAILS:
+        for f in FAILS + CRASHES:
             k = f.split(":")[0]
             seen[k] = seen.get(k, 0) + 1
             if seen[k] <= 2:

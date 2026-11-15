@@ -215,6 +215,33 @@ def summarize(rows):
     return res
 
 
+def fee_free(seeds=range(100, 160)):
+    """Diagnostic: the same search with a 0-fee pool. The 100% charge alone must leave the coalition at <= a
+    rounding tolerance of q(4, s) + 4 wei (one raw unit of each token per modify); with the charge off it profits."""
+    global FEE
+    fee0, FEE = FEE, 0
+    try:
+        worst, off = None, []
+        for sigma in SIGMAS:
+            for seed in seeds:
+                for exit_state in (False, True):
+                    h, r, _ = sample_state(seed, sigma, exit_state=exit_state)
+                    for d in DS:
+                        b = best_for_path(h, r, d, 0)
+                        if not b:
+                            continue
+                        n, tol = b[(R.WAD, F_CAP)][0], R.q(4, sqrt_at(r)) + 4
+                        if worst is None or n - tol > worst[0] - worst[1]:
+                            worst = (n, tol)
+                        off.append(b[(0, F_CAP)][0] * 1e4 / b[(0, F_CAP)][1])
+        print(f"fee-free: max net at 100% = {worst[0]} wei (tolerance {worst[1]}); charge off: max {max(off):.3f} bp")
+        return worst[0] <= worst[1] and max(off) > 0
+    finally:
+        FEE = fee0
+
+
 if __name__ == "__main__":
+    if "--fee-free" in sys.argv:
+        sys.exit(0 if fee_free() else 1)
     r = main(quick="--quick" in sys.argv)
     print(json.dumps(r, indent=1, default=str))

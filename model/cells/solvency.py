@@ -128,7 +128,7 @@ def worst_place(band):
                     if lo == lo_min and abs(lo + W - 1 - T0) <= band:
                         spots.append(sqrt_at(lo + W) - 1)      # one unit below sqrtAt(hi)
                     for sp in spots:
-                        for pre, jit in [(None, 0)] + [(z, j) for z in (True, False) for j in (10 ** 18, 10 ** 19, 10 ** 24)]:
+                        for pre, jit in [(None, 0)] + [(z, j) for z in (True, False) for j in JIT_SIZES]:
                             hb = h0.copy()
                             if hb.L:
                                 x, y = R.position_amounts(hb.L, hb.lo, hb.hi, sp)

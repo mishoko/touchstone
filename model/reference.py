@@ -29,7 +29,7 @@ from v4math import (  # noqa: E402
     get_liquidity_for_amounts, compute_swap_step_exact_in,
 )
 
-SPEC_VERSION = "2.15"
+SPEC_VERSION = "2.16"
 WAD = 10 ** 18
 U32 = (1 << 32) - 1
 U40 = (1 << 40) - 1
@@ -786,7 +786,7 @@ class Vault:
 
     # ---- atomic call wrapper
     def call(self, fn, *a, **kw):
-        snap = copy.deepcopy((self.__dict__))
+        snap = copy.deepcopy(self.__dict__, {id(self.hook.ref): self.hook.ref})  # the reference source is external
         try:
             return fn(*a, **kw)
         except (Revert, MathRevert):

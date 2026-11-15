@@ -15,7 +15,7 @@ from v4math import (MIN_TICK, MAX_TICK, MIN_SQRT_PRICE, MAX_SQRT_PRICE, MathReve
                     mul_div_up, get_sqrt_price_at_tick as sqrt_at, get_tick_at_sqrt_price, get_amount0_delta,
                     get_amount1_delta, get_liquidity_for_amounts)
 
-OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "test", "vectors")
+OUT = os.environ.get("VECTORS_OUT") or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "test", "vectors")
 SCHEMA = "touchstone-vectors/1"
 MIN_CASES = {"math": 40, "ledger": 10, "bank": 30, "placement": 10}
 
@@ -334,6 +334,16 @@ def placement_cases():
     chk("spot-at-hi", T0 - 2000, T0, T0, T0 - 30, 4)
     chk("ref-not-contained", T0, T0 + 2000, T0 + 5, T0 - 20, 5)
     chk("multi-fail-first", T0 - 995, T0 + 1000, T0 + 200, T0, 1)
+    # boundaries, both sides (fix review r2, R2-02)
+    chk("fence-below", T0 - 1000, T0 + 1000, T0 - 61, T0, 1)
+    chk("fence-below-exact", T0 - 1000, T0 + 1000, T0 - 60, T0, 0)
+    chk("ref-at-hi", T0 - 1960, T0 + 40, T0 + 39, T0 + 40, 5)
+    chk("ref-at-lo", T0, T0 + 2000, T0 + 30, T0, 0)
+    chk("spot-at-lo", T0, T0 + 2000, T0, T0 + 30, 0)
+    chk("spot-below-lo", T0, T0 + 2000, T0 - 1, T0 + 30, 4)
+    chk("ref-below-lo", T0, T0 + 2000, T0 + 30, T0 - 1, 5)
+    chk("width-wider", T0 - 1000, T0 + 1010, T0, T0, 2)
+    chk("width-narrower", T0 - 1000, T0 + 990, T0, T0, 2)
     idle = R.Holdings(1_500_000 * USDC, 500 * ETH)
     size("centred", idle, T0 - 1000, T0 + 1000, sqrt_at(T0), sqrt_at(T0), False)
     size("token0-side-edge", R.Holdings(3_000_000 * USDC, 2 * ETH), T0, T0 + 2000, sqrt_at(T0) + 1, sqrt_at(T0 + 20), False)
@@ -344,6 +354,10 @@ def placement_cases():
     size("dust-deltamin", R.Holdings(1_000 * USDC, 500 * ETH), T0, T0 + 2000, sqrt_at(T0) + 1, sqrt_at(T0 + 30), True)
     size("token1-edge-saturated-leg", R.Holdings(500_000 * USDC, 500 * ETH), T0 - 1990, T0 + 10, sqrt_at(T0 + 10) - 1,
          sqrt_at(T0), False)
+    # exact DELTA_MIN boundary (found by bisection at a large NAV): deltaAfter == 5e17 passes, one raw unit less fails
+    bx, by = 1496491847102831049, 5 * 10 ** 26
+    size("deltamin-exact", R.Holdings(bx, by), T0, T0 + 2000, sqrt_at(T0) + 1, sqrt_at(T0 + 30), False)
+    size("deltamin-one-below", R.Holdings(bx - 1, by), T0, T0 + 2000, sqrt_at(T0) + 1, sqrt_at(T0 + 30), True)
     size("empty-idle", R.Holdings(), T0 - 1000, T0 + 1000, sqrt_at(T0), sqrt_at(T0), True)
     size("tiny-headroom", R.Holdings(1000, 1000), T0 - 1000, T0 + 1000, sqrt_at(T0), sqrt_at(T0), True)
     size("ref-moves-delta", idle, T0 - 1000, T0 + 1000, sqrt_at(T0), sqrt_at(T0 + 60), False)

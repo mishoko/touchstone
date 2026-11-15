@@ -28,8 +28,8 @@ the security results.
 
 **Known limitation (measured).** The charge prices an action at the worse of spot and a 10-minute TWAP. When the market
 moves beyond both within the TWAP's lag, a curator colluding with a trader can place liquidity at a stale price and let
-the trader take the difference; honest placements made while the TWAP lags are also mis-charged (some of their loss to
-arbitrage goes uncharged, others are overcharged). On synthetic paths this lag leak measured 1.2% of NAV a year at 60%
+the trader take the difference; honest placements made while the TWAP lags are also mis-charged when the curator first moves the pool price to its
+target (some of their loss to arbitrage goes uncharged, others are overcharged). On synthetic paths this lag leak measured 1.2% of NAV a year at 60%
 annual volatility (90% CI 0.6–1.8%) on a lane that fixes the size of the price push, and more when the push is free.
 Widening the charge to the reference pool's current price ± a margin closes it only with a margin wide enough to
 overcharge honest curators heavily. This is an open problem of the design and is reported as a negative result.

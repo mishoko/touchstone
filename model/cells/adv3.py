@@ -64,7 +64,7 @@ def swap_attack(h, r, d, J, zfo, frac, keep, k):
         syb0, syb1 = (-ain, aout) if z else (aout, -ain)
     tick_spot = pool.tick
     if abs(tick_spot - r) > BAND:     # the fence (reference = market)
-        return None
+        return "fence"
     lim = tick_spot - SLIP if zfo else tick_spot + SLIP
     jlo, jhi = (floor_sp(lim), floor_sp(tick_spot) + 10) if zfo else (floor_sp(tick_spot), floor_sp(lim) + 10)
     if J:
@@ -82,10 +82,10 @@ def swap_attack(h, r, d, J, zfo, frac, keep, k):
         hb = R.Holdings(hb.idle0 - a0, hb.idle1 - a1)
     amt = R.mul_div(nav0 * frac // R.WAD, 1 << 192, sr * sr) if zfo else nav0 * frac // R.WAD
     if amt == 0 or amt > (hb.idle0 if zfo else hb.idle1):
-        return None
+        return "idle"
     used, out = pool.swap(zfo, amt, sqrt_at(lim))
     if used == 0:
-        return None
+        return "unfilled"
     after = hb.copy()
     if zfo:
         after.idle0, after.idle1 = after.idle0 - used, after.idle1 + out
@@ -123,7 +123,9 @@ def run_path(args):
                         for frac in FRACS:
                             for k in KS:
                                 a = swap_attack(h, r, d, J, zfo, frac, keep, k)
-                                if a:
+                                if isinstance(a, str):
+                                    rows.append(dict(drop=a, keep=keep, frac=frac, seed=seed, sigma=sigma))
+                                elif a:
                                     rows.append(dict(seed=seed, sigma=sigma, state=state, keep=keep, d=d, J=J,
                                                      zfo=zfo, frac=frac, k=k, nav=a["nav0"], charge=a["charge"],
                                                      net=coalition_net(a, R.WAD, F_CAP),
@@ -133,6 +135,8 @@ def run_path(args):
 
 
 def summarize(rows):
+    drops = [r for r in rows if "drop" in r]
+    rows = [r for r in rows if "drop" not in r]
     mx = max(rows, key=lambda r: r["net"])
     ok = mx["net"] <= 1
     res = dict(rows=len(rows), max_net_wei=mx["net"], max_net_bp=mx["net"] * 1e4 / mx["nav"],
@@ -159,9 +163,12 @@ def summarize(rows):
     for keep in (True, False):
         for frac in FRACS:
             n_ = sum(1 for r in rows if r["keep"] == keep and r["frac"] == frac)
-            exp = len({(r["seed"], r["sigma"]) for r in rows}) * 2 * len(DS) * len(JS) * 2 * len(KS)
-            print(f"  rows present: {'rebalanceSwap' if keep else 'pre-swap'} at {frac / 1e16:.1f}% of NAV: {n_} of {exp} "
-                  "(dropped: the pushed tick rounds past the fence)")
+            why = {}
+            for d in drops:
+                if d["keep"] == keep and d["frac"] == frac:
+                    why[d["drop"]] = why.get(d["drop"], 0) + 1
+            print(f"  rows present: {'rebalanceSwap' if keep else 'pre-swap'} at {frac / 1e16:.1f}% of NAV: {n_} "
+                  f"(dropped, counted by cause: {why})")
             res[f"rows_{'swap' if keep else 'preswap'}_{frac}"] = n_
     res["ok"] = ok
     print("ADV-3 verdict:", "PASS" if ok else "FAIL")

@@ -15,10 +15,11 @@ Assertion (reference = market): on every row, charge ≥ realised loss − 1 wei
 this holds by construction once fees are collected first (the reference leg values the action at the price the loss is
 realised at); the cell's evidence is that collect-first holds over fee-rich segments, which the control exercises.
 Lag lane (reported, not the assertion): the reference lags the market by ℓ (10-minute TWAP lag draws), with spot at
-the market (off = 0) or moved onto the lagging reference by a trade before the action (off = −ℓ). The rows where the
-charge falls short of the realised loss are counted per condition: with spot at the market the spot leg covers the
-loss; with spot pre-moved onto the lagging reference the market lies beyond both priced legs, which is the lag-leak
-mechanism (registry F-021), not the honest-placement mismatch of F-027.
+the market (off = 0) or moved onto the lagging reference before the vault reads it (off = −ℓ; e.g. the curator's own
+bundled move to its target, which runs before the action). The rows where the charge falls short of the realised loss
+are counted per condition. With spot at the market the spot leg covers the loss. With spot pre-moved, the market lies
+beyond both priced legs: the honest-placement undercharge (registry F-027) and, when a colluder takes the value, the
+lag leak (F-021) are this one mechanism.
 Control: collect-first disabled. NAV_before is then computed from holdings without the uncollected fees, which the
 action's own modify pays out into NAV_after, so the fees offset the action's cost. The per-path shortfall
 max(0, realised loss − control charge) must have mean > 0 and one-sided 95% CI lower bound > 0 in every σ bucket.
@@ -77,7 +78,7 @@ def act(h, r, x, n, off, frac, zfo, kind, lo_new=None, collect_first=True, ref=N
         pool.push_to(sqrt_at(r + off))        # spot displaced within the fence (a trader's push)
     tick_spot = pool.tick
     if abs(tick_spot - ref) > BAND:
-        return None
+        return "fence"
     hb = h.copy()
     if h.L and collect_first:
         _, _, f0, f1 = pool.modify("vault", hb.lo, hb.hi, 0)
@@ -94,10 +95,10 @@ def act(h, r, x, n, off, frac, zfo, kind, lo_new=None, collect_first=True, ref=N
     lim = sqrt_at(tick_spot - SLIP if zfo else tick_spot + SLIP)
     if kind == "swap":
         if amt > (hb.idle0 if zfo else hb.idle1):
-            return None
+            return "idle"
         used, out = pool.swap(zfo, amt, lim)
         if used == 0:
-            return None
+            return "unfilled"
         after = hb.copy()
         if zfo:
             after.idle0, after.idle1 = after.idle0 - used, after.idle1 + out
@@ -109,12 +110,12 @@ def act(h, r, x, n, off, frac, zfo, kind, lo_new=None, collect_first=True, ref=N
             after.idle1 += f1
     else:
         if placement_illegal(lo_new, tick_spot, ref):
-            return None
+            return "illegal"
         if hb.L:
             a0, a1, f0, f1 = pool.modify("vault", hb.lo, hb.hi, -hb.L)
             hb = R.Holdings(hb.idle0 - a0 + f0, hb.idle1 - a1 + f1)
         if amt > (hb.idle0 if zfo else hb.idle1):
-            return None
+            return "idle"
         used, out = pool.swap(zfo, amt, lim)
         if zfo:
             hb.idle0, hb.idle1 = hb.idle0 - used, hb.idle1 + out
@@ -122,7 +123,7 @@ def act(h, r, x, n, off, frac, zfo, kind, lo_new=None, collect_first=True, ref=N
             hb.idle1, hb.idle0 = hb.idle1 - used, hb.idle0 + out
         L, after, dl = R.placement_size(hb, lo_new, lo_new + W, pool.s, sref)
         if dl < R.WAD // 2 or L == 0:
-            return None
+            return "delta"
         pool.modify("vault", lo_new, lo_new + W, L)
     charge = R.measure(before, after, s_spot, sref, 10 ** 24, 0, 10 ** 24)[0]
     realised = nav_r - R.value(after, sr)[0]
@@ -147,15 +148,17 @@ def run_path(args):
                         cand = [("swap", None)] + [("place", lo) for lo in legal_ranges(r + off, r)]
                         for kind, lo in cand:
                             a = act(h, r, x, n, off, frac, zfo, kind, lo)
-                            if a is None:
+                            if isinstance(a, str):
+                                rows.append(dict(lane="drop", reason=a, kind=kind, frac=frac))
                                 continue
                             c = act(h, r, x, n, off, frac, zfo, kind, lo, collect_first=False)
+                            c = None if isinstance(c, str) else c
                             row = dict(lane="market", seed=seed, sigma=sigma, state=state, x=x, n=n, off=off, frac=frac, zfo=zfo,
                                        kind=kind, lo=lo, nav=nav, charge=a[0], realised=a[1], fees=a[2],
                                        ctl_charge=c[0] if c else None)
                             rows.append(row)
-        # lag lane (reported): the reference lags the market; wash (20, 10); spot at the market or moved to the
-        # lagging reference (as a curator's own move to its target does)
+        # lag lane (reported): the reference lags the market; wash (20, 10); spot at the market or moved onto the
+        # lagging reference before the vault reads it (e.g. the curator's own bundled move)
         for ell in lags(seed, sigma, 3):
             ref = r - ell
             for off in sorted({0, -ell}):
@@ -163,7 +166,7 @@ def run_path(args):
                 for zfo in (True, False):
                     for kind, lo in [("swap", None)] + [("place", lo) for lo in legal_ranges(r + off, ref)]:
                         a = act(h, r, 20, 10, off, frac, zfo, kind, lo, ref=ref)
-                        if a:
+                        if not isinstance(a, str):
                             rows.append(dict(lane="lag", lag=ell, off=off, seed=seed, sigma=sigma, state=state, frac=frac,
                                              zfo=zfo, kind=kind, nav=nav, charge=a[0], realised=a[1], fees=a[2],
                                              ctl_charge=None))
@@ -172,6 +175,7 @@ def run_path(args):
 
 def summarize(rows):
     lag = [r for r in rows if r["lane"] == "lag"]
+    drops = [r for r in rows if r["lane"] == "drop"]
     rows = [r for r in rows if r["lane"] == "market"]
     gap = max(rows, key=lambda r: r["realised"] - r["charge"])
     ok = gap["realised"] - gap["charge"] <= 1
@@ -199,11 +203,14 @@ def summarize(rows):
     for kind in ("swap", "place"):
         for frac in FRACS:
             n_ = sum(1 for r in rows if r["kind"] == kind and r["frac"] == frac)
-            exp = "" if kind == "place" else f" of {len({(r['seed'], r['sigma']) for r in rows}) * 2 * len(WASH) * len(OFFS) * 2} " \
-                "(dropped: a swap that fills nothing against out-of-range liquidity, or a push beyond the fence)"
-            print(f"  rows present: {kind} at {frac / 1e16:.1f}% of NAV: {n_}{exp}")
+            why = {}
+            for d in drops:
+                if d["kind"] == kind and d["frac"] == frac:
+                    why[d["reason"]] = why.get(d["reason"], 0) + 1
+            print(f"  rows present: {kind} at {frac / 1e16:.1f}% of NAV: {n_} (dropped, counted by cause: {why})")
+            res[f"drops_{kind}_{frac}"] = why
             res[f"rows_{kind}_{frac}"] = n_
-    for cond, name in ((lambda r: r["off"] == 0, "spot at the market"), (lambda r: r["off"] != 0, "spot pre-moved onto the lagging reference (lag leak, F-021)")):
+    for cond, name in ((lambda r: r["off"] == 0, "spot at the market"), (lambda r: r["off"] != 0, "spot pre-moved onto the lagging reference before the read (F-027; F-021 when colluding)")):
         g = [r for r in lag if cond(r)]
         if g:
             unc = [(r["realised"] - r["charge"]) * 1e4 / r["nav"] for r in g]

@@ -32,23 +32,29 @@ KS = (0, 1)
 FEE = 500
 
 
-def run_attack(h, r, ref, d_signed, lo, k, band):
+def run_attack(h, r, ref, d_signed, lo, k, band, push_sqrt=None, guard=True, third_lo=None, third_hi=None,
+               extra_sqrt=None):
     """Execute push -> setPositions -> revert. Returns None if the placement is illegal, else a dict with
-    the Sybil's P&L, the vault NAVs, the charge and navAfterPStar (all token1 wei at sqrt_at(r))."""
+    the Sybil's P&L, the vault NAVs, the charge and navAfterPStar (all token1 wei at sqrt_at(r)).
+    `push_sqrt` (cell (g), N4-edge) pushes to an exact sqrt price (one unit inside an edge) instead of r + d.
+    `guard=False` (cell (f) controls) disables the reference guard: no fence, the range need not contain the
+    reference, and the charge prices at spot only. `third_lo/third_hi` place the third-party liquidity (default
+    ±3,000 ticks around r)."""
     sr = sqrt_at(r)
     pool = R.Pool(sr, FEE)
     if h.L:
         pool.modify("vault", h.lo, h.hi, h.L)
-    third = k * (h.L if h.L else 10 ** 17)
+    third = int(k * (h.L if h.L else 10 ** 17))
     if third:
-        pool.modify("lp", floor_sp(r) - 3000, floor_sp(r) + 3000, third)
+        pool.modify("lp", floor_sp(r) - 3000 if third_lo is None else third_lo,
+                    floor_sp(r) + 3000 if third_hi is None else third_hi, third)
     nav0 = R.value(h, sr)[0]
     # 1. push
-    ain, aout, zfo = pool.push_to(sqrt_at(r + d_signed))
+    ain, aout, zfo = pool.push_to(push_sqrt if push_sqrt is not None else sqrt_at(r + d_signed))
     syb0, syb1 = (-ain, aout) if zfo else (aout, -ain)
     tick_spot = pool.tick
-    if R.placement_check(lo, lo + W, tick_spot, ref, band, W, SPACING):
-        return None
+    if R.placement_check(lo, lo + W, tick_spot, ref if guard else tick_spot, band if guard else 10 ** 6, W, SPACING):
+        return None  # guard "fence" (cell (f) control) keeps the fence and containment but charges at spot only
     # 2. the curator's action: collect first, remove, size at spot, add
     hb = h.copy()
     if hb.L:
@@ -56,7 +62,7 @@ def run_attack(h, r, ref, d_signed, lo, k, band):
         hb.idle0 += f0
         hb.idle1 += f1
     before = hb.copy()
-    s_spot, s_ref = pool.s, sqrt_at(ref)
+    s_spot, s_ref = pool.s, (sqrt_at(ref) if guard is True else pool.s)
     if hb.L:
         a0, a1, _, _ = pool.modify("vault", hb.lo, hb.hi, -hb.L)
         hb = R.Holdings(hb.idle0 - a0, hb.idle1 - a1)
@@ -65,6 +71,10 @@ def run_attack(h, r, ref, d_signed, lo, k, band):
         return None
     pool.modify("vault", lo, lo + W, L)
     charge, p_star, nav_after, burn, ok = R.measure(before, after, s_spot, s_ref, S_TOT, 0, S_TOT)
+    if extra_sqrt is not None:  # cell (f) remedy study: a third worse-of leg (not the spec's charge)
+        l3 = R.value(before, extra_sqrt)[0] - R.value(after, extra_sqrt)[0]
+        if l3 > charge:
+            charge, nav_after = l3, R.value(after, extra_sqrt)[0]
     # 3. revert to r
     ain, aout, zfo = pool.push_to(sr)
     if zfo:

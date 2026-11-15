@@ -1,11 +1,12 @@
 """Golden-vector emitter for the Touchstone reference model.
 
-Writes `test/vectors/{math,ledger,bank,placement}.json`, each
+Writes `test/vectors/{math,ledger,bank,placement,clock,mode,scenario}.json`, each
 `{schema, specVersion, conventions, cases:[{id, fn, in, out}]}` with every integer as a decimal string.
 Action vectors take holdings before and after as inputs; the holdings are produced here by executing
 the action against the model's pool simulator, so they are realistic, but the vectors themselves need
 no swap math to check.
 """
+import copy
 import json
 import os
 import random
@@ -17,7 +18,7 @@ from v4math import (MIN_TICK, MAX_TICK, MIN_SQRT_PRICE, MAX_SQRT_PRICE, MathReve
 
 OUT = os.environ.get("VECTORS_OUT") or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "test", "vectors")
 SCHEMA = "touchstone-vectors/1"
-MIN_CASES = {"math": 40, "ledger": 10, "bank": 30, "placement": 10}
+MIN_CASES = {"math": 40, "ledger": 10, "bank": 30, "placement": 10, "clock": 30, "mode": 30, "scenario": 30}
 
 T0 = 196250  # tier A orientation: token0 USDC (6 decimals), token1 WETH (18 decimals); ≈ 3,000 USDC/WETH
 USDC = 10 ** 6
@@ -541,12 +542,628 @@ BANK_CONV = {
 }
 
 
+# ======================================================================== clock (HookHarness)
+OBS_FIELDS = ("med9", "tickSpot", "refTick", "refCachedAt", "refFresh", "resetStreak", "gapSinceVerify", "emptyRange",
+              "tauV", "tauB", "outBlocks", "breachSeq", "pendingBreaches", "lastPendingBlock", "tauVAtLastPending",
+              "gridIndex", "epoch")
+HOOK_EVENTS = {"RefReadFailed": ("grid",), "RefRefreshed": ("grid", "tick"), "GapCleared": ("kind",),
+               "GapSet": ("block",), "BreachLatched": ("seq", "block"), "RangeRegistered": ("lo", "hi", "liveTick")}
+
+
+class _Script:
+    """The MockRefPool script: every `observe` during the current event returns the TWAP tick `v`, or fails when
+    `v == "fail"` (the anchored read and the live read alike)."""
+
+    def __init__(self, v=T0):
+        self.v = v
+
+    def source(self):
+        return R.RefSource(lambda end: self.v, lambda end: self.v == "fail")
+
+
+def _emitted(evs):
+    out = []
+    for e in evs:
+        name, args = e[0], e[1:]
+        keys = HOOK_EVENTS.get(name) or VAULT_EVENTS[name]
+        out.append({name: dict(zip(keys, args))})
+    return out
+
+
+def _hook_step(h, sc, op, a):
+    """Run one clock event on hook `h` (atomic: a revert leaves the state unchanged). Returns the step's `out`."""
+    sc.v = a["ref"]
+    n0, fz0 = len(h.events), dict(h.frozen)
+    keep = {k: v for k, v in h.__dict__.items() if k != "ref"}
+    snap = copy.deepcopy(keep)
+    b, ts = a["block"], a["ts"]
+    try:
+        if op == "snapshot":
+            h.snapshot(b, ts, a["sqrtPrice"], a["tick"])
+        elif op == "refreshRef":
+            h.refresh_ref(b, ts, a["sqrtPrice"], a["tick"])
+        elif op == "refresh":
+            h.refresh(b, ts)
+        elif op == "arm":
+            h.arm_at_seed(b, ts)
+        elif op == "setVaultRange":
+            h.set_vault_range(a["lo"], a["hi"], a["liveTick"], b, ts)
+        elif op == "ackBreaches":
+            h.ack_breaches(a["n"])
+        else:
+            raise ValueError(op)
+    except R.Revert as ex:
+        h.__dict__.update(snap)
+        return dict(revert=ex.err)
+    o = h.obs(b, a["tick"])
+    return dict(obs={f: o[f] for f in OBS_FIELDS},
+                state=dict(refGrid=h.refGrid, lastSnap=h.lastSnap, armed=h.armed, vaultLo=h.vaultLo, vaultHi=h.vaultHi,
+                           epochStartRef=h.epochStartRef),
+                frozen=[dict(gridIndex=g, med9=v[0], tauV=v[1], tauB=v[2]) for g, v in sorted(h.frozen.items())
+                        if fz0.get(g) != v],
+                emitted=_emitted(h.events[n0:]))
+
+
+class ClockSeq:
+    """Builds a clock case: a fresh hook, an optional witness range, then events at the TEST (or DEMO) tier."""
+
+    def __init__(self, tier=R.TEST, phase=0, tick=T0):
+        self.t, self.phase = tier, phase
+        self.set_price(tick)
+        self.ev = []
+
+    def ts(self, b):
+        return b * self.t.BLOCKTIME + self.phase
+
+    def set_price(self, tick=None, sqrt=None):
+        self.sqrt = sqrt if sqrt is not None else sqrt_at(tick)
+        self.tick = get_tick_at_sqrt_price(self.sqrt)
+
+    def add(self, op, b, ref=T0, **kw):
+        self.ev.append({op: dict(block=b, ts=self.ts(b), sqrtPrice=self.sqrt, tick=self.tick, ref=ref, **kw)})
+        return self
+
+    def arm(self, b, ref=T0):
+        return self.add("snapshot", b, ref).add("arm", b, ref)
+
+    def touches(self, b0, n, every, ref=T0):
+        for i in range(n):
+            self.add("refreshRef", b0 + i * every, ref)
+        return b0 + (n - 1) * every
+
+
+def clock_cases():
+    cases = []
+    t = R.TEST
+    G, C = t.GRID, t.CURE_BLOCKS
+    LO, HI = T0 - 1000, T0 + 1000
+    OUT = T0 + 1500
+
+    def add(tag, seq, witness=None, note=""):
+        sc = _Script()
+        h = R.Hook(seq.t, sc.source())
+        if witness:
+            h.witLo, h.witHi = witness
+        steps = []
+        for ev in seq.ev:
+            (op, a), = ev.items()
+            steps.append(_hook_step(h, sc, op, a))
+        case = {"id": f"clock-{len(cases):03d}-{tag}", "fn": "HookHarness.events",
+                "in": dict(tier=seq.t.NAME, witness=dict(lo=witness[0], hi=witness[1]) if witness else dict(lo=0, hi=0),
+                           events=seq.ev),
+                "out": dict(steps=steps)}
+        if note:
+            case["note"] = note
+        cases.append(case)
+        return steps
+
+    # 1. EMPTY (unplaced) vault: observed out-of-range time latches at CURE and reaches breachSeq 3 after three
+    s = ClockSeq().arm(1000)
+    s.touches(1000 + G, 3 * C // G + 1, G)
+    st = add("empty-three-breaches", s, note="EMPTY counts as out of range (vaultLo = vaultHi = 0); touched every GRID")
+    assert st[-1]["obs"]["breachSeq"] == 3 and st[-1]["obs"]["emptyRange"], "EMPTY case must latch three breaches"
+    # 1b. EMPTY with nobody observing: one late touch credits only the freshness window and sets the gap
+    s = ClockSeq().arm(1000)
+    s.add("refreshRef", 1000 + 10 * C)
+    st = add("empty-unobserved", s, note="an unobserved EMPTY vault is not breached; the gap is flagged")
+    assert st[-1]["obs"]["outBlocks"] == 2 * G and st[-1]["obs"]["gapSinceVerify"] and st[-1]["obs"]["breachSeq"] == 0
+    # 2. registration starts a run; out-of-range observed time latches; ack
+    s = ClockSeq().arm(2000)
+    s.add("setVaultRange", 2000, lo=LO, hi=HI, liveTick=T0)
+    end = s.touches(2000 + G, 2 * C // G + 1, G, ref=OUT)
+    s.add("ackBreaches", end, ref=OUT, n=2)
+    st = add("registered-two-latches-ack", s)
+    assert st[-2]["obs"]["breachSeq"] == 2 and st[-1]["obs"]["pendingBreaches"] == 0
+    # 3. stale boundary: now == refCachedAt + 2·GRID credits fully with no gap; +1 sets the gap (in range: τ_v)
+    for extra, tag in ((0, "stale-boundary-exact-in"), (1, "stale-boundary-plus1-in")):
+        s = ClockSeq().arm(3000)
+        s.add("setVaultRange", 3000, lo=LO, hi=HI, liveTick=T0)
+        s.add("snapshot", 3000 + 2 * G + extra)
+        st = add(tag, s)
+        assert st[-1]["obs"]["tauV"] == 2 * G and st[-1]["obs"]["gapSinceVerify"] == bool(extra)
+    for extra, tag in ((0, "stale-boundary-exact-out"), (1, "stale-boundary-plus1-out")):
+        s = ClockSeq().arm(3000)
+        s.add("setVaultRange", 3000, lo=LO, hi=HI, liveTick=T0)
+        s.add("refreshRef", 3000 + G, ref=OUT)
+        s.add("snapshot", 3000 + 3 * G + extra, ref=OUT)
+        st = add(tag, s)
+        assert st[-1]["obs"]["outBlocks"] == 2 * G and st[-1]["obs"]["gapSinceVerify"] == bool(extra)
+    # 4. gap -> RESET_RUN consecutive in-range anchors -> gap cleared (kind 1), outBlocks 0
+    s = ClockSeq().arm(4000)
+    s.add("setVaultRange", 4000, lo=LO, hi=HI, liveTick=T0)
+    s.touches(4000 + G, 3, G, ref=OUT)
+    s.add("refreshRef", 4000 + 12 * G, ref=T0)   # gap: closes with the old (out) cache first, then reads in range
+    s.add("refreshRef", 4000 + 13 * G, ref=T0)   # second consecutive in-range anchor: reset
+    st = add("gap-then-reset", s, note="refreshRef after a gap closes the span with the old cache first")
+    assert st[-2]["obs"]["gapSinceVerify"] and not st[-1]["obs"]["gapSinceVerify"] and st[-1]["obs"]["outBlocks"] == 0
+    # 5. non-consecutive in-range anchors do not reset (streak restarts at 1)
+    s = ClockSeq().arm(5000)
+    s.add("setVaultRange", 5000, lo=LO, hi=HI, liveTick=T0)
+    s.touches(5000 + G, 4, G, ref=OUT)
+    s.add("refreshRef", 5000 + 5 * G, ref=T0)
+    s.add("refreshRef", 5000 + 7 * G, ref=T0)    # anchor skipped: streak 1 again
+    s.add("refreshRef", 5000 + 8 * G, ref=OUT)   # out: streak 0
+    st = add("reset-streak-nonconsecutive", s)
+    assert st[-1]["obs"]["outBlocks"] > 0 and st[-1]["obs"]["resetStreak"] == 0
+    # 6. failed read changes nothing; a retry in a later block of the same anchor commits
+    s = ClockSeq().arm(6000)
+    s.add("setVaultRange", 6000, lo=LO, hi=HI, liveTick=T0)
+    s.add("refreshRef", 6000 + G, ref="fail")
+    s.add("refreshRef", 6000 + G + 3, ref=T0 + 7)
+    s.add("refreshRef", 6000 + G + 5, ref=T0 + 9)   # same anchor: no second read
+    st = add("failed-read-then-retry", s)
+    assert st[-3]["emitted"][-1] == {"RefReadFailed": {"grid": (6000 + G) * 12 // 240}} and st[-1]["obs"]["refTick"] == T0 + 7
+    # 7. arm with an unreadable reference reverts
+    s = ClockSeq().add("snapshot", 7000).add("arm", 7000, ref="fail")
+    st = add("arm-unreadable-reverts", s)
+    assert st[-1] == {"revert": "RefUnreadable"}
+    # 8. parking: sqrtPrice exactly at either edge earns no τ_v; one unit inside earns
+    for tag, sq in (("park-lo-exact", sqrt_at(LO)), ("park-lo-plus1", sqrt_at(LO) + 1),
+                    ("park-hi-exact", sqrt_at(HI)), ("park-hi-minus1", sqrt_at(HI) - 1)):
+        s = ClockSeq().arm(8000)
+        s.add("setVaultRange", 8000, lo=LO, hi=HI, liveTick=T0)
+        s.set_price(sqrt=sq)
+        s.add("snapshot", 8001)
+        s.touches(8000 + G, 3, G)
+        st = add(tag, s, note="τ_v needs the pool sqrtPrice strictly inside (sqrtAt(lo), sqrtAt(hi))")
+        assert (st[-1]["obs"]["tauV"] > 0) == tag.endswith(("plus1", "minus1"))
+    # 9. dodge: the pool price pushed inside does not stop the clock while the reference is out
+    s = ClockSeq().arm(9000)
+    s.add("setVaultRange", 9000, lo=LO, hi=HI, liveTick=T0)
+    s.touches(9000 + G, C // G + 1, G, ref=OUT)
+    st = add("dodge-pool-push", s)
+    assert st[-1]["obs"]["breachSeq"] == 1 and st[-1]["obs"]["tauV"] == G  # only the span before the first out-of-range sample
+    # 10. grief: the pool held far outside does not run the clock while the reference is in range
+    s = ClockSeq().arm(10000)
+    s.add("setVaultRange", 10000, lo=LO, hi=HI, liveTick=T0)
+    s.set_price(OUT + 500)
+    s.touches(10000 + G, C // G + 2, G)
+    st = add("grief-pool-held-off", s)
+    assert st[-1]["obs"]["outBlocks"] == 0 and st[-1]["obs"]["tauV"] == 0
+    # 11. unarmed snapshots record ring entries only; med9 over fewer than 9 entries is the lower median
+    s = ClockSeq()
+    for i, tk in enumerate((T0, T0 + 30, T0 - 20, T0 + 10)):
+        s.set_price(tk)
+        s.add("snapshot", 11000 + i)
+    st = add("unarmed-ring-only", s)
+    assert st[-1]["obs"]["med9"] == T0 and st[-1]["obs"]["tauV"] == 0 and not st[-1]["state"]["armed"]
+    # 12. ring wrap and med9 over 40 consecutive blocks
+    s = ClockSeq().arm(12000)
+    rng = random.Random(12)
+    for i in range(1, 41):
+        s.set_price(T0 + rng.randint(-80, 80))
+        s.add("snapshot", 12000 + i)
+    add("ring-wrap-med9", s)
+    # 13. witness τ_b
+    s = ClockSeq().arm(13000)
+    s.add("setVaultRange", 13000, lo=LO, hi=HI, liveTick=T0)
+    s.touches(13000 + G, 4, G)
+    s.set_price(T0 + 1200)
+    s.touches(13000 + 5 * G, 3, G)
+    st = add("witness-taub", s, witness=(T0 - 1000, T0 + 1000))
+    assert st[-1]["obs"]["tauB"] == 4 * G  # the witness span ends when the pool leaves it
+    # 14. a long span freezes at most the last 8 boundaries, credited only to refCachedAt + 2·GRID
+    s = ClockSeq().arm(14000)
+    s.add("setVaultRange", 14000, lo=LO, hi=HI, liveTick=T0)
+    s.add("refreshRef", 14000 + 15 * G + 7)
+    st = add("frozen-last-eight", s)
+    assert len(st[-1]["frozen"]) == 8
+    # 15. registration keeps pending breaches; writes the cache; clears the gap; outBlocks 0
+    s = ClockSeq().arm(15000)
+    s.add("setVaultRange", 15000, lo=LO, hi=HI, liveTick=T0)
+    s.touches(15000 + G, C // G + 1, G, ref=OUT)
+    s.add("snapshot", 15000 + (C // G + 6) * G, ref=OUT)        # gap
+    s.add("setVaultRange", 15000 + (C // G + 6) * G, ref=OUT, lo=LO + 1500, hi=HI + 1500, liveTick=OUT)
+    st = add("register-keeps-pending", s)
+    o = st[-1]["obs"]
+    assert o["pendingBreaches"] == 1 and not o["gapSinceVerify"] and o["outBlocks"] == 0 and o["refTick"] == OUT
+    # 16. latch block and τ_v at the latch (in range first, then out)
+    s = ClockSeq().arm(16000)
+    s.add("setVaultRange", 16000, lo=LO, hi=HI, liveTick=T0)
+    s.touches(16000 + G, 5, G)
+    s.touches(16000 + 6 * G, C // G + 1, G, ref=OUT)
+    st = add("latch-block-and-tauv", s)
+    assert st[-1]["obs"]["tauVAtLastPending"] == st[-1]["obs"]["tauV"] > 0
+    # 17. epochStartRef: the first cache write of a new epoch
+    s = ClockSeq().arm(17000)
+    s.touches(17000 + G, 8, G, ref=T0 + 40)
+    add("epoch-start-ref", s)
+    # 18. DEMO tier: two callers in one anchor get the same value; phases 0 / 150 / 299
+    for ph in (0, 150, 299):
+        s = ClockSeq(tier=R.DEMO, phase=ph).arm(36000)
+        s.add("setVaultRange", 36000, lo=LO, hi=HI, liveTick=T0)
+        s.add("refreshRef", 36000 + 310, ref=T0 + 11)
+        s.add("refreshRef", 36000 + 320, ref=T0 + 99)
+        s.add("refreshRef", 36000 + 610, ref=T0 + 13)
+        st = add(f"demo-anchor-phase{ph}", s, note="anchor k = floor(ts / GRID_SEC); one read per anchor")
+    # 19. TEST with a phase of 150 s: one anchor spanning two block grids refreshes once
+    s = ClockSeq(phase=150).arm(19000)
+    s.add("setVaultRange", 19000, lo=LO, hi=HI, liveTick=T0)
+    for i, b in enumerate((19008, 19012, 19020, 19028, 19033)):
+        s.add("refreshRef", b, ref=T0 + i)
+    add("test-anchor-phase150", s)
+    # 20. the internal _refresh alone (steps 1 and 5) after a snapshot in the same block
+    s = ClockSeq().arm(20000)
+    s.add("setVaultRange", 20000, lo=LO, hi=HI, liveTick=T0)
+    s.add("snapshot", 20000 + G, ref="fail")
+    s.add("refresh", 20000 + G, ref=T0 + 5)
+    add("refresh-after-failed-snapshot-read", s)
+    # 21-50. random sequences (snapshot, refreshRef, registration, ack, failure, parking, phases)
+    rng = random.Random(2002)
+    for i in range(30):
+        tier = R.TEST if i % 3 else R.DEMO
+        s = ClockSeq(tier=tier, phase=rng.choice((0, 7, 150))).arm(30000 if tier is R.TEST else 360000)
+        b = s.ev[-1]["arm"]["block"]
+        lo, hi = 0, 0
+        for _ in range(rng.randint(15, 30)):
+            b += rng.choice((1, 3, tier.GRID // 2, tier.GRID, tier.GRID + 1, 2 * tier.GRID, 2 * tier.GRID + 1, 7 * tier.GRID))
+            ref = rng.choice((T0, T0 + 900, T0 - 1100, OUT, "fail", T0 + rng.randint(-1200, 1200)))
+            r = rng.random()
+            if hi and r < 0.15:
+                s.set_price(sqrt=rng.choice((sqrt_at(lo), sqrt_at(lo) + 1, sqrt_at(hi), sqrt_at(hi) - 1)))
+            elif r < 0.5:
+                s.set_price(T0 + rng.randint(-1300, 1300))
+            op = rng.random()
+            if op < 0.12 and ref != "fail":
+                lt = ref
+                c = lt // 10 * 10 - rng.choice((0, 500, 1990))
+                lo, hi = c, c + 2000
+                s.add("setVaultRange", b, ref=ref, lo=lo, hi=hi, liveTick=lt)
+            elif op < 0.18:
+                s.add("ackBreaches", b, ref=ref, n=rng.randint(0, 2))
+            elif op < 0.55:
+                s.add("snapshot", b, ref=ref)
+            else:
+                s.add("refreshRef", b, ref=ref)
+        add(f"random-{i:02d}", s, witness=(T0 - 1000, T0 + 1000) if i % 2 else None)
+    return cases
+
+
+CLOCK_CONV = {
+    "fn": "HookHarness.events: the hook (TouchstoneHook with an internal virtual _slot0() seam and a scripted "
+          "MockRefPool) is constructed fresh per case; in.witness sets witLo/witHi by a harness setter; then each "
+          "event of in.events runs in order at vm.roll(block) / vm.warp(ts) with the pool slot0 = (sqrtPrice, tick).",
+    "events": "each event is {op: {block, ts, sqrtPrice, tick, ref, ...}}; op ∈ snapshot (snapshotIfNewBlock), "
+              "refreshRef, refresh (the internal _refresh: steps 1 and 5 only, exposed by the harness), arm "
+              "(armAtSeed; the vault's seed snapshot is a separate preceding event), setVaultRange {lo, hi, liveTick} "
+              "(called as the vault), ackBreaches {n} (called as the vault). `ref` is what every MockRefPool observe "
+              "returns during that event: a TWAP tick, or \"fail\" (the call reverts inside the mock).",
+    "out": "out.steps[i] for event i: {obs (the Obs struct after the event, at block = the event's block and the "
+           "event's pool tick), state {refGrid, lastSnap, armed, vaultLo, vaultHi, epochStartRef}, frozen (the "
+           "frozen(gridIndex) entries written or changed by the event), emitted (the hook's events in order: "
+           "RefReadFailed(grid), RefRefreshed(grid, tick), GapCleared(kind), GapSet(block), BreachLatched(seq, block), "
+           "RangeRegistered(lo, hi, liveTick))} or {revert: <error>} with the state unchanged.",
+    "tiers": "TEST: blocktime 12 s, GRID 20, GRID_SEC 240, EPOCH 120, CURE_BLOCKS 200, RESET_RUN 2; DEMO: blocktime 1 s, "
+             "GRID 300, GRID_SEC 300, EPOCH 3600, CURE_BLOCKS 1800. ts = block × blocktime + phase.",
+    "conventions": "an unarmed snapshot records its ring entry only; med9 over fewer than 9 entries is the lower "
+                   "median; EMPTY stores vaultLo = vaultHi = 0 and counts as out of range.",
+}
+
+
+# ======================================================================== mode (Ladder)
+def mode_cases():
+    cases = []
+
+    def nxt(tag, mode, breaches, ev, count):
+        try:
+            m, b, x = R.ladder_next(mode, breaches, ev, count)
+            out = dict(mode=m, breaches=b, exited=x)
+        except R.Revert as e:
+            out = dict(revert=e.err)
+        cases.append({"id": f"mode-{len(cases):03d}-{tag}", "fn": "Ladder.next",
+                      "in": dict(mode=mode, breaches=breaches, ev=ev, count=count), "out": out})
+
+    U = R.U32
+    for mode in (R.NORMAL, R.BREACHED, R.EXITED):
+        for br in (0, 1, 2, 3, U - 1):
+            for cnt in (0, 1, 2, 3, U):
+                nxt(f"next-m{mode}-b{br}-breach{cnt}", mode, br, R.EV_BREACH, cnt)
+        for ev, nm in ((R.EV_PLACE, "place"), (R.EV_RETIRE, "retire")):
+            for br in (0, 2, 3):
+                for cnt in (0, 1):
+                    nxt(f"next-m{mode}-b{br}-{nm}{cnt}", mode, br, ev, cnt)
+    for mode in (R.NORMAL, R.BREACHED, R.EXITED):
+        for ent, name in enumerate(R.ENTRY):
+            cases.append({"id": f"mode-{len(cases):03d}-allowed-m{mode}-{name}", "fn": "Ladder.allowed",
+                          "in": dict(mode=mode, entry=ent), "out": dict(allowed=R.ladder_allowed(mode, ent))})
+    # sequences: each event applies Ladder.next to the previous output; a revert leaves the state unchanged
+    seqs = {
+        "seq-three-single-breaches": [(R.EV_BREACH, 1)] * 4,
+        "seq-place-does-not-reset-breaches": [(R.EV_BREACH, 1), (R.EV_PLACE, 0), (R.EV_BREACH, 1), (R.EV_PLACE, 0),
+                                              (R.EV_BREACH, 1), (R.EV_PLACE, 0)],
+        "seq-three-at-once": [(R.EV_BREACH, 3), (R.EV_BREACH, 1), (R.EV_RETIRE, 0)],
+        "seq-retire-then-breach": [(R.EV_RETIRE, 0), (R.EV_BREACH, 1), (R.EV_PLACE, 0), (R.EV_BREACH, 0)],
+        "seq-zero-count-identity": [(R.EV_BREACH, 0), (R.EV_BREACH, 2), (R.EV_BREACH, 0), (R.EV_BREACH, 1)],
+    }
+    for tag, evs in seqs.items():
+        mode, br = R.NORMAL, 0
+        steps = []
+        for ev, cnt in evs:
+            try:
+                mode, br, x = R.ladder_next(mode, br, ev, cnt)
+                steps.append(dict(mode=mode, breaches=br, exited=x))
+            except R.Revert as e:
+                steps.append(dict(revert=e.err))
+        cases.append({"id": f"mode-{len(cases):03d}-{tag}", "fn": "Ladder.next",
+                      "in": dict(mode=R.NORMAL, breaches=0, events=[dict(ev=e, count=c) for e, c in evs]),
+                      "out": dict(steps=steps)})
+    return cases
+
+
+MODE_CONV = {
+    "fn": "Ladder.next(uint8 mode, uint32 breaches, uint8 ev, uint32 count) -> (mode, breaches, exited) and "
+          "Ladder.allowed(uint8 mode, uint8 entry) -> bool, both pure.",
+    "encodings": "mode 0 NORMAL, 1 BREACHED, 2 EXITED; ev 0 Breach, 1 Place, 2 Retire; entry = uint8(Entry) with "
+                 "Entry {Deposit, Withdraw, SetPositions, RebalanceSwap, Claim, TopUpBond, Retire, ReleaseBond, Poke, "
+                 "ProcessBreach, Seed}.",
+    "single": "in {mode, breaches, ev, count} -> out {mode, breaches, exited} or {revert: BadMode}. breaches saturate "
+              "at type(uint32).max; Breach with count 0 is the identity; exited is true only on a transition from "
+              "NORMAL or BREACHED to EXITED; Place and Retire on EXITED revert BadMode.",
+    "allowed": "in {mode, entry} -> out {allowed}: the entry-point table of the mode machine; allowed(·, Seed) is false "
+               "(seed is gated by onlyFactory and once).",
+    "sequences": "in {mode, breaches, events[{ev, count}]}: Ladder.next applied in order to the previous output; out.steps[i] "
+                 "is the result after event i ({revert} leaves the state unchanged).",
+}
+
+
+# ======================================================================== scenario (VaultHarness.checkpoint)
+VAULT_EVENTS = {"Checkpoint": ("tauV", "tauB", "nav0", "delta", "base", "L", "lo", "hi"),
+                "BreachProcessed": ("count", "lastBlock", "forfeited"), "CheckpointDeferred": (),
+                "ackBreaches": ("n",)}
+
+
+class _AckStub:
+    """The harness stubs `ackBreaches`: it records the call (emitted as {ackBreaches: {n}})."""
+
+    def __init__(self, vault, lo, hi):
+        self.vault, self.vaultLo, self.vaultHi = vault, lo, hi
+
+    def try_ref(self, ts):
+        return self.vault._live_src.read(ts, 0)
+
+    def ack_breaches(self, n):
+        self.vault.events.append(("ackBreaches", n))
+
+
+def _vault_state(v):
+    recs = {}
+    for e, r in sorted(v.records.items()):
+        recs[str(e)] = dict(base=r["base"], minted=r["minted"], forfeited=r["forfeited"],
+                            forfeitValue=r["forfeitValue"], flags=sorted(r["flags"]), end=r.get("end", 0))
+    b = v.bank  # serialised field by field (not through Bank.d) so a defect there is caught by the vectors, not a crash
+    bank = {"cohorts": [{"epoch": e, "shares": s_} for e, s_ in b.cohorts], **{f: getattr(b, f) for f in R.Bank.FIELDS}}
+    return dict(holdings=v.h.d(), bank=bank, NAV0=v.NAV0, delta0=v.delta0, tauV0=v.tauV0, segStart=v.segStart,
+                S=v.S, baseOwed=v.baseOwed, epoch=v.epoch, epochSwapFrac=v.epochSwapFrac, swapCount=v.swapCount,
+                records=recs)
+
+
+def _new_harness(tier, st):
+    v = R.Vault(tier, None, None)
+    v.h = R.Holdings(**st["holdings"])
+    b = R.Bank()
+    for k2, val in st["bank"].items():
+        if k2 == "cohorts":
+            b.cohorts = [[c["epoch"], c["shares"]] for c in val]
+        else:
+            setattr(b, k2, val)
+    v.bank = b
+    for k2 in ("NAV0", "delta0", "tauV0", "segStart", "S", "baseOwed", "epoch", "epochSwapFrac", "swapCount"):
+        setattr(v, k2, st[k2])
+    v.hook = _AckStub(v, st["holdings"]["lo"], st["holdings"]["hi"])
+    return v
+
+
+def scenario_cases():
+    cases = []
+    t = R.TEST
+    LO, HI = T0 - 1000, T0 + 1000
+    k = 10 ** 18
+
+    def obs(now, tauV, refFresh=True, refTick=T0, gap=False, empty=False, pending=0, lastPending=0, tauVAt=0, tauB=0):
+        return dict(med9=T0, tickSpot=T0, refTick=refTick, refCachedAt=now - (1 if refFresh else 2 * t.GRID + 1),
+                    refFresh=refFresh, resetStreak=0, gapSinceVerify=gap, emptyRange=empty, tauV=tauV, tauB=tauB,
+                    outBlocks=0, breachSeq=pending, pendingBreaches=pending, lastPendingBlock=lastPending,
+                    tauVAtLastPending=tauVAt, gridIndex=now // t.GRID, epoch=now // t.EPOCH)
+
+    def state(now, cohorts=(), mp=0, vu=0, bond=10 ** 21, mode=R.NORMAL, placed=True, breaches=0, fpool=0, ftot=0,
+              fstart=0, empty=False, S=S_SEED, baseOwed=0, tauV0=0, segStart=None, epoch=None, idle=(150_000 * USDC, 50 * ETH),
+              L=0, delta0=WAD // 2, exitBlock=0):
+        lo, hi = (0, 0) if empty else (LO, HI)
+        bank = R.Bank()
+        for e, s_ in cohorts:
+            bank.cohorts[e % R.RING] = [e, s_]
+        bank.maturedPending, bank.vestedUnclaimed, bank.bondShares = mp, vu, bond
+        bank.mode, bank.placedByCurator, bank.breaches, bank.exitBlock = mode, placed, breaches, exitBlock
+        bank.forfeitPool, bank.forfeitTotal, bank.forfeitStart = fpool, ftot, fstart
+        bank.dripBlocks, bank.releaseDelay = t.EPOCH, R.V * t.EPOCH
+        h = R.Holdings(idle[0], idle[1], L, lo, hi)
+        nav0 = R.value(h, sqrt_at(T0))[0]
+        return dict(holdings=h.d(), bank=bank.d(), NAV0=nav0, delta0=0 if empty else delta0, tauV0=tauV0,
+                    segStart=now - 50 if segStart is None else segStart, S=S, baseOwed=baseOwed,
+                    epoch=now // t.EPOCH if epoch is None else epoch, epochSwapFrac=0, swapCount=0, records={})
+
+    def add(tag, st, events, note=""):
+        v = _new_harness(t, st)
+        steps = []
+        for ev in events:
+            v._live_src = R.RefSource(lambda end, x=ev["live"]: 0 if x == "fail" else x, lambda end, x=ev["live"]: x == "fail")
+            n0 = len(v.events)
+            v._checkpoint(ev["obs"], ev["block"], ev["ts"])
+            reads = getattr(v._live_src, "live_count", 0)
+            assert reads <= 1, "a checkpoint reads the live reference at most once"
+            steps.append(dict(state=_vault_state(v), liveReads=reads, emitted=_emitted(v.events[n0:])))
+        case = {"id": f"scenario-{len(cases):03d}-{tag}", "fn": "VaultHarness.checkpoint",
+                "in": dict(tier=t.NAME, state=st, events=events), "out": dict(steps=steps)}
+        if note:
+            case["note"] = note
+        cases.append(case)
+        return steps
+
+    def ev(now, o, live=T0, phase=0):
+        return dict(block=now, ts=now * t.BLOCKTIME + phase, obs=o, live=live)
+
+    n = 1200  # epoch 10 at TEST
+    # gate legs with a matured cohort (epoch 5 vests at epoch 10)
+    st = add("gate-open-vests", state(n, cohorts=[(5, 7 * k)]), [ev(n, obs(n, 40), T0)])
+    assert st[0]["liveReads"] == 1 and st[0]["state"]["bank"]["vestedUnclaimed"] == 7 * k
+    st = add("gate-live-out", state(n, cohorts=[(5, 7 * k)]), [ev(n, obs(n, 40), T0 + 1500)],
+             note="cache fresh and in range, live reference out: no vest, matured cohort to maturedPending")
+    assert st[0]["state"]["bank"]["maturedPending"] == 7 * k
+    st = add("gate-live-fail", state(n, cohorts=[(5, 7 * k)]), [ev(n, obs(n, 40), "fail")])
+    assert st[0]["state"]["bank"]["maturedPending"] == 7 * k and st[0]["liveReads"] == 1
+    st = add("gate-live-fail-tick0-inside", dict(state(n, cohorts=[(5, 7 * k)]), holdings=dict(idle0=10 ** 11, idle1=50 * ETH, L=0, lo=-1000, hi=1000)),
+             [ev(n, obs(n, 40, refTick=0), "fail")], note="a failed read whose tick field is 0 inside the range must not open the gate")
+    assert st[0]["state"]["bank"]["vestedUnclaimed"] == 0
+    for tag, o in (("gate-cache-stale", obs(n, 40, refFresh=False)), ("gate-cache-out", obs(n, 40, refTick=T0 + 1500)),
+                   ("gate-gap", obs(n, 40, gap=True))):
+        st = add(tag, state(n, cohorts=[(5, 7 * k)]), [ev(n, o, T0)])
+        assert st[0]["liveReads"] == (1 if tag == "gate-cache-stale" else 0)  # a stale cache reads tryRef for the mint
+    st = add("gate-empty", state(n, cohorts=[(5, 7 * k)], empty=True, placed=False), [ev(n, obs(n, 40, empty=True), T0)])
+    assert st[0]["liveReads"] == 0
+    # read only when vestable
+    st = add("not-vestable-no-read", state(n, cohorts=[(8, 7 * k)]), [ev(n, obs(n, 40), T0)])
+    assert st[0]["liveReads"] == 0
+    st = add("only-maturedPending-reads", state(n, cohorts=[(8, 7 * k)], mp=3 * k), [ev(n, obs(n, 40), T0 + 1500)],
+             note="only maturedPending matured: the live leg is read and an out-of-range live reference blocks the vest")
+    assert st[0]["liveReads"] == 1 and st[0]["state"]["bank"]["maturedPending"] == 3 * k
+    st = add("only-maturedPending-vests", state(n, cohorts=[(8, 7 * k)], mp=3 * k), [ev(n, obs(n, 40), T0)])
+    assert st[0]["state"]["bank"]["vestedUnclaimed"] == 3 * k
+    # pending breach with a matured cohort: one live read that step (3) makes moot
+    st = add("breach-with-matured-cohort", state(n, cohorts=[(5, 7 * k), (9, 2 * k)], tauV0=10),
+             [ev(n, obs(n, 60, pending=1, lastPending=n - 20, tauVAt=30), T0)])
+    s0 = st[0]
+    assert s0["liveReads"] == 1 and s0["state"]["bank"]["forfeitPool"] == 9 * k and s0["state"]["bank"]["vestedUnclaimed"] == 0
+    # forfeiture of unminted base up to b_last and baseOwed; base after b_last accrues
+    st = add("breach-forfeits-base-and-owed", state(n, cohorts=[(9, 2 * k)], baseOwed=5 * 10 ** 12, tauV0=0, segStart=n - 100),
+             [ev(n, obs(n, 90, pending=2, lastPending=n - 30, tauVAt=70), T0)])
+    assert st[0]["state"]["baseOwed"] == 0 and st[0]["state"]["bank"]["breaches"] == 2
+    st = add("third-breach-exits", state(n, cohorts=[(9, 2 * k)], breaches=2, mode=R.BREACHED),
+             [ev(n, obs(n, 60, pending=1, lastPending=n - 5, tauVAt=60), T0)])
+    assert st[0]["state"]["bank"]["mode"] == R.EXITED and st[0]["state"]["bank"]["exitBlock"] == n
+    st = add("exited-breach-keeps-exitblock", state(n, mode=R.EXITED, placed=False, breaches=3, exitBlock=n - 300),
+             [ev(n, obs(n, 60, pending=1, lastPending=n - 5, tauVAt=60), T0)])
+    assert st[0]["state"]["bank"]["exitBlock"] == n - 300 and st[0]["state"]["bank"]["breaches"] == 4
+    # accrual: base minted at the fresh cache price; not placed -> no base; BREACHED accrues
+    st = add("accrue-fresh-cache", state(n), [ev(n, obs(n, 50, refTick=T0 + 30), T0)])
+    assert st[0]["state"]["bank"]["cohorts"][n // t.EPOCH % R.RING]["shares"] > 0
+    add("accrue-not-placed", state(n, placed=False), [ev(n, obs(n, 50), T0)])
+    add("accrue-breached", state(n, mode=R.BREACHED, breaches=1), [ev(n, obs(n, 50), T0)])
+    add("accrue-exited-none", state(n, mode=R.EXITED, placed=False, breaches=3), [ev(n, obs(n, 50), T0)])
+    # deferral: stale cache, tryRef fails -> baseOwed; then minted at the tryRef price next checkpoint
+    st = add("defer-then-mint-at-tryref", state(n), [ev(n, obs(n, 50, refFresh=False), "fail"),
+                                                     ev(n + 7, obs(n + 7, 57, refFresh=False), T0 - 40)])
+    assert st[0]["state"]["baseOwed"] > 0 and st[1]["state"]["baseOwed"] == 0 and st[0]["liveReads"] == 1
+    st = add("two-unpriced-checkpoints", state(n), [ev(n, obs(n, 50, refFresh=False), "fail"),
+                                                    ev(n + 9, obs(n + 9, 59, refFresh=False), "fail")])
+    assert st[1]["state"]["baseOwed"] > st[0]["state"]["baseOwed"] > 0
+    st = add("navp-not-above-amount-defers", dict(state(n), holdings=dict(idle0=0, idle1=10, L=0, lo=LO, hi=HI)),
+             [ev(n, obs(n, 10 ** 9), T0)])
+    assert st[0]["state"]["baseOwed"] > 0
+    # ring overwrite of a matured occupant: gate open -> vested; closed -> maturedPending
+    st = add("overwrite-gate-open", state(n, cohorts=[(5, 4 * k)]), [ev(n, obs(n, 40), T0)])
+    st = add("overwrite-gate-closed", state(n, cohorts=[(5, 4 * k)]), [ev(n, obs(n, 40), T0 + 1500)])
+    assert st[0]["state"]["bank"]["maturedPending"] == 4 * k
+    # drip: forfeit pool burns over dripBlocks; S decreases
+    st = add("drip-half", state(n, fpool=10 * k, ftot=10 * k, fstart=n - t.EPOCH // 2), [ev(n, obs(n, 0), T0)])
+    assert st[0]["state"]["bank"]["forfeitPool"] == 5 * k
+    # epoch roll: one record closed; a skipped epoch flagged stale; swap counters reset
+    st0 = state(n, epoch=8)
+    st0["epochSwapFrac"], st0["swapCount"] = 3 * 10 ** 16, 4
+    st = add("epoch-roll-skip", st0, [ev(n, obs(n, 0), T0)])
+    assert "stale" in st[0]["state"]["records"]["9"]["flags"] and st[0]["state"]["swapCount"] == 0
+    # unverified flag; S == 0 skip
+    add("unverified-flag", state(n), [ev(n, obs(n, 40, gap=True), T0)])
+    st = add("unseeded-skip", state(n, S=0), [ev(n, obs(n, 40), T0)])
+    assert st[0]["emitted"] == []
+    # phase on the timestamp (the checkpoint does not read ts except for the live read)
+    add("phase-150", state(n, cohorts=[(5, 7 * k)]), [ev(n, obs(n, 40), T0, phase=150)])
+    # a multi-event sequence through accrual, vesting and a breach
+    evs = []
+    tv = 0
+    for i in range(1, 9):
+        now = n + i * 60
+        tv += 55
+        evs.append(ev(now, obs(now, tv, refTick=T0 + 5 * i), T0 + 5 * i))
+    evs.append(ev(n + 600, obs(n + 600, tv, pending=1, lastPending=n + 590, tauVAt=tv), T0))
+    add("sequence-accrue-vest-breach", state(n, cohorts=[(6, 3 * k)]), evs)
+    # random states
+    rng = random.Random(3003)
+    for i in range(30):
+        now = rng.randrange(1200, 3600)
+        ne = now // t.EPOCH
+        empty = rng.random() < 0.1
+        coh = [(e, rng.choice((0, rng.randint(1, 10 ** 22)))) for e in range(max(0, ne - 6), ne + 1)]
+        coh = coh[-R.RING:]
+        st0 = state(now, cohorts=coh, mp=rng.choice((0, 0, rng.randint(1, 10 ** 21))), vu=rng.randint(0, 10 ** 20),
+                    bond=rng.randint(10 ** 19, 10 ** 23), mode=rng.choice((0, 0, 1, 2)), placed=not empty and rng.random() < 0.85,
+                    breaches=rng.randint(0, 3), empty=empty, baseOwed=rng.choice((0, rng.randint(1, 10 ** 15))),
+                    tauV0=rng.randint(0, 500), segStart=now - rng.randint(1, 400), epoch=ne - rng.choice((0, 0, 1, 2)),
+                    L=0 if empty else rng.choice((0, rng.randint(10 ** 15, 10 ** 18))), delta0=rng.randint(0, WAD),
+                    fpool=rng.choice((0, rng.randint(1, 10 ** 21))), fstart=now - rng.randint(0, 200))
+        st0["bank"]["forfeitTotal"] = st0["bank"]["forfeitPool"] + rng.choice((0, rng.randint(0, 10 ** 20)))
+        if st0["bank"]["mode"] == R.EXITED:
+            st0["bank"]["placedByCurator"] = False
+        tauV = st0["tauV0"] + rng.randint(0, 300)
+        pend = rng.choice((0, 0, 0, 1, 2))
+        o = obs(now, tauV, refFresh=rng.random() < 0.8, refTick=rng.choice((T0, T0 + 999, T0 - 1000, T0 + 1000, T0 + 1500)),
+                gap=rng.random() < 0.2, empty=empty, pending=pend,
+                lastPending=rng.randint(st0["segStart"], now) if pend else 0,
+                tauVAt=rng.randint(st0["tauV0"], tauV) if pend else 0)
+        live = rng.choice((T0, T0 + 1000, T0 - 1001, "fail", T0 + rng.randint(-900, 900)))
+        add(f"random-{i:02d}", st0, [ev(now, o, live, phase=rng.choice((0, 150)))])
+    return cases
+
+
+S_SEED, WAD = R.S_SEED, R.WAD
+
+SCENARIO_CONV = {
+    "fn": "VaultHarness.checkpoint(Obs o, bool liveOk, int24 liveTick): the vault's _checkpoint(o) with no PoolManager; "
+          "the harness sets the state of in.state through its setters, stubs ackBreaches (recorded as an emitted "
+          "{ackBreaches: {n}}) and overrides _tryRef() to return (liveOk, liveTick) and count its calls.",
+    "events": "in.events[i] = {block, ts, obs, live}: vm.roll(block), vm.warp(ts), then checkpoint(obs, live != \"fail\", "
+              "live == \"fail\" ? 0 : live). The state carries over between events.",
+    "state": "{holdings {idle0, idle1, L, lo, hi} (lo/hi = the registered range; EMPTY = 0/0), bank (as bank.json), NAV0, "
+             "delta0 (WAD), tauV0, segStart, S, baseOwed, epoch, epochSwapFrac, swapCount, records}; in.state.records "
+             "is empty.",
+    "out": "out.steps[i] = {state after event i, liveReads (the _tryRef calls during the event: 0 or 1; the gate's live "
+           "leg is read only when vestable, and a mint at a stale cache reads tryRef), emitted}. emitted pins the "
+           "vault events Checkpoint(tauV, tauB, nav0, delta, base, L, lo, hi), BreachProcessed(count, lastBlock, "
+           "forfeited) and CheckpointDeferred() plus the ackBreaches stub, in order; other events (ModeChanged, "
+           "EpochRecorded) are checked through the state.",
+    "records": "records[e] = {base, minted, forfeited, forfeitValue, flags (subset of breach, deferred, stale, "
+               "unverified), end (0 until the epoch roll writes it)}: the EpochRecord fields the checkpoint writes.",
+}
+
+
 def main():
     n = {}
     n["math"] = write("math", MATH_CONV, math_cases())
     n["ledger"] = write("ledger", LEDGER_CONV, ledger_cases())
     n["placement"] = write("placement", PLACEMENT_CONV, placement_cases())
     n["bank"] = write("bank", BANK_CONV, bank_cases())
+    n["clock"] = write("clock", CLOCK_CONV, clock_cases())
+    n["mode"] = write("mode", MODE_CONV, mode_cases())
+    n["scenario"] = write("scenario", SCENARIO_CONV, scenario_cases())
     print("vectors:", ", ".join(f"{k} {v}" for k, v in n.items()), f"-> {OUT} (specVersion {R.SPEC_VERSION})")
     return n
 

@@ -1,0 +1,262 @@
+#!/usr/bin/env python3
+"""Cell (a): incentive bots (G0 item 2) and the m proposal (spec method: m = max(m_IC, m_PC) under the depositor
+ceiling), at the mainnet tier (12 s blocks, GRID 1 h, EPOCH 7 d, CURE 24 h, V 4 epochs) on 180-day synthetic
+paths (driftless GBM at σ 40 / 60 / 120 %/yr = the p50 / p90 / p99 buckets; plus a hover path, an OU process
+around the deploy range's upper edge at σ 60 %).
+
+Phases:
+- fit (seeds 0–99): every bot, both observer variants, at m = 0 and m = 1 %/yr. Net pay is affine in m
+  (vested pay ∝ m; charges, gas and trading do not depend on m), so per path net(m) = m·P + C with
+  P = (net(1%) − net(0)) / 1% and C = net(0). From these: the method's m_IC, m_PC and the depositor ceiling, and
+  the smallest m at which every gated comparison passes on the fit seeds (m_gate).
+- test (seeds 100–299): every bot, both variants, at the proposed m, plus the m = 0 control; the gate.
+
+Net (ETH) = pay vested by the horizon (valued when it vests) − bond burned by charges − gas − the curator's own
+spot-move trading loss. Pay still unvested at the horizon is reported separately (net_incl_unvested).
+A gated bot's net per path is its better variant (no observer, or a third party observing every 2·GRID).
+"""
+import json
+import math
+import multiprocessing as mp
+import os
+import sys
+import time
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import sim as S  # noqa: E402
+import bots as B  # noqa: E402
+from common import T0, mean_ci, pctl  # noqa: E402
+
+DAYS = 180
+NAV = 1000.0                   # ETH; = BOND_MIN / BOND_RATIO, the NAV cap of a minimum-bond vault
+ETH_USD = 3000.0               # tier A at T0
+O_USD = 20_000.0               # operations, $/yr (spec default)
+R_CARRY = 0.05                 # bond carry rate
+BOND_ETH = 0.6                 # BOND_MIN
+SIGMAS = (0.40, 0.60, 1.20)
+KINDS = [("gbm", s) for s in SIGMAS] + [("hover", 0.60)]
+OUT = os.path.join(os.path.dirname(os.path.dirname(HERE)), "output", "g0")
+YEARS = DAYS / 365.0
+
+
+def bucket(kind, sigma):
+    return f"{kind}-{int(sigma * 100)}"
+
+
+def run_job(args):
+    seed, kind, sigma, ms, bots = args
+    path = S.market_path(seed, sigma, DAYS, kind, edge=T0 + 1000)
+    rows = []
+    for name in bots:
+        variants = (True,) if name == "lazy-under-ladder" else (False,) if name == "lazy" else (False, True)
+        for obs in variants:
+            for m in ms:
+                sim = S.Sim(path, m, observer=obs, place=B.PLACES.get(name, True))
+                r = sim.run(B.make(name), DAYS * 24)
+                r.update(bot=name, seed=seed, kind=kind, sigma=sigma, m=m, observer=obs)
+                rows.append(r)
+    return rows
+
+
+def run_all(seeds, ms, bots, procs=9):
+    jobs = [(sd, k, s, ms, bots) for (k, s) in KINDS for sd in seeds]
+    t0 = time.time()
+    rows = []
+    with mp.Pool(procs) as pool:
+        for i, r in enumerate(pool.imap_unordered(run_job, jobs, chunksize=2)):
+            rows.extend(r)
+            if (i + 1) % 100 == 0:
+                print(f"  {i + 1}/{len(jobs)} jobs, {time.time() - t0:.0f}s", flush=True)
+    return rows
+
+
+def index(rows):
+    """(bucket, seed, bot, m) -> net per variant."""
+    ix = {}
+    for r in rows:
+        ix.setdefault((bucket(r["kind"], r["sigma"]), r["seed"], r["bot"], r["m"]), {})[r["observer"]] = r
+    return ix
+
+
+def best(ix, b, seed, bot, m, key="net"):
+    """A gated bot's per-path value: its better variant; edge60 (the mimic) uses the no-observer variant."""
+    v = ix[(b, seed, bot, m)]
+    if bot == "edge60":
+        return v[False][key]
+    return max(x[key] for x in v.values())
+
+
+# ----------------------------------------------------------------------------- fit: the m proposal
+def fit(rows):
+    ix = index(rows)
+    seeds = sorted({r["seed"] for r in rows})
+    out = {}
+    for (kind, sigma) in KINDS:
+        b = bucket(kind, sigma)
+        e = [ix[(b, s, "edge60", 0.01)][False] for s in seeds]
+        charges = sum(x["charges"] for x in e) / len(e) / YEARS
+        gas = sum(x["gas"] - x["trade"] for x in e) / len(e) / YEARS
+        f_m = sum(x["f"] for x in e) / len(e)
+        fl = {}
+        for bot in B.LAZY_FAMILY:
+            vals = [best(ix, b, s, bot, 0.01, "f") for s in seeds]
+            fl[bot] = sum(vals) / len(vals)
+        f_lazy = max(fl.values())
+        q = pctl([c for x in e for c in x["action_charges"]], 0.99)
+        m_ic = (charges + gas) / (NAV * (f_m - f_lazy)) if f_m > f_lazy else math.inf
+        m_pc = (charges + gas + O_USD / ETH_USD + R_CARRY * BOND_ETH + q) / (NAV * f_m)
+        # depositor ceiling: fee uplift of edge60 over lazy (no observer), per NAV per year (arbitrage flow only)
+        lz = [ix[(b, s, "lazy", 0.01)][False] for s in seeds]
+        fee_up = (sum(x["fees"] for x in e) - sum(x["fees"] for x in lz)) / len(e) / NAV / YEARS
+        fa_up = sum(x["f_actual"] for x in e) / len(e) - sum(x["f_actual"] for x in lz) / len(lz)
+        # the smallest m at which edge60 beats every gated bot on the fit seeds (paired CI lower bound > 0)
+        m_need = {}
+        for bot in B.GATED:
+            m_need[bot] = gate_min_m(ix, b, seeds, bot)
+        out[b] = dict(charges_yr=charges, gas_yr=gas, f_mimic=f_m, f_lazy=fl, f_lazy_max=f_lazy, q=q, m_ic=m_ic,
+                      m_pc=m_pc, fee_uplift=fee_up, f_actual_uplift=fa_up, m_need=m_need)
+    return out
+
+
+def diff_ci(ix, b, seeds, bot, m):
+    d = [best(ix, b, s, "edge60", m) - best(ix, b, s, bot, m) for s in seeds]
+    return mean_ci(d)
+
+
+def affine(ix, b, s, bot):
+    """Per path: (P, C) with net(m) = m·P + C, for the bot's better variant at each m (recomputed per m)."""
+    v0, v1 = ix[(b, s, bot, 0.0)], ix[(b, s, bot, 0.01)]
+    out = {}
+    for k in v0:
+        out[k] = ((v1[k]["net"] - v0[k]["net"]) / 0.01, v0[k]["net"])
+    return out
+
+
+def gate_min_m(ix, b, seeds, bot, lo=0.0, hi=0.10):
+    """Smallest m (bisection, 1e-4 resolution) with the paired one-sided 95% CI lower bound of
+    (edge60 − bot) > 0 on the fit seeds, using the affine fit per path and variant."""
+    aff_m = [affine(ix, b, s, "edge60")[False] for s in seeds]
+    aff_b = [affine(ix, b, s, bot) for s in seeds]
+
+    def lo_ci(m):
+        d = [(pm * m + cm) - max(p * m + c for (p, c) in ab.values()) for (pm, cm), ab in zip(aff_m, aff_b)]
+        return mean_ci(d)[1]
+
+    if lo_ci(hi) <= 0:
+        return math.inf
+    if lo_ci(lo) > 0:
+        return lo
+    for _ in range(40):
+        mid = (lo + hi) / 2
+        if lo_ci(mid) > 0:
+            hi = mid
+        else:
+            lo = mid
+        if hi - lo < 1e-5:
+            break
+    return hi
+
+
+# ----------------------------------------------------------------------------- test: the gate
+ENVS = ((False, "no-observer"), (True, "observer"))   # no-observer is the pinned gating environment (spec §10)
+
+
+def env_val(ix, b, s, bot, m, env, key="net"):
+    v = ix.get((b, s, bot, m), {})
+    return v[env][key] if env in v else None
+
+
+def gate(rows, m):
+    """Paired comparisons with the mimic and the bot in the SAME environment. The gate is the no-observer
+    environment (pinned before the data); the observer environment (a third party calls refreshRef every 2·GRID)
+    is reported."""
+    ix = index(rows)
+    seeds = sorted({r["seed"] for r in rows})
+    res = {}
+    for (kind, sigma) in KINDS:
+        b = bucket(kind, sigma)
+        res[b] = {}
+        for env, ename in ENVS:
+            mim = [env_val(ix, b, s, "edge60", m, env) for s in seeds]
+            row = dict(mimic_mean=sum(mim) / len(mim), mimic_p5=pctl(mim, 0.05), mimic_p50=pctl(mim, 0.50), cmp={})
+            for bot in B.GATED + B.REPORTED:
+                xs = [env_val(ix, b, s, bot, m, env) for s in seeds]
+                if xs[0] is None:
+                    continue
+                mean, lo, hi = mean_ci([a - x for a, x in zip(mim, xs)])
+                row["cmp"][bot] = dict(bot_mean=sum(xs) / len(xs), diff=mean, ci_lo=lo, se=(hi - mean) / 1.645)
+            lz0 = "lazy" if not env else "lazy-under-ladder"
+            d0 = [env_val(ix, b, s, lz0, 0.0, env) - env_val(ix, b, s, "edge60", 0.0, env) for s in seeds]
+            row["control_m0"] = mean_ci(d0)
+            e = [ix[(b, s, "edge60", m)][env] for s in seeds]
+            row["f_mimic"] = sum(x["f"] for x in e) / len(e)
+            row["f_actual_mimic"] = sum(x["f_actual"] for x in e) / len(e)
+            row["actions_yr"] = sum(x["actions"] for x in e) / len(e) / YEARS
+            row["pings_yr"] = sum(x["pings"] for x in e) / len(e) / YEARS
+            row["charges_yr"] = sum(x["charges"] for x in e) / len(e) / YEARS
+            row["gas_yr"] = sum(x["gas"] for x in e) / len(e) / YEARS
+            row["breached_mimic"] = sum(1 for x in e if x["breaches"] > 0)
+            row["mimic_incl_unvested_mean"] = sum(x["net_incl_unvested"] for x in e) / len(e)
+            res[b][ename] = row
+    return res
+
+
+def verdict(res, m):
+    """The pre-registered rule on the gating environment; returns (ok, failures)."""
+    fails = []
+    for b, envs in res.items():
+        g = envs["no-observer"]
+        if b == "gbm-60" and g["mimic_p5"] < 0:
+            fails.append(f"{b}: mimic p5 net {g['mimic_p5']:.4f} < 0")
+        if g["mimic_mean"] < 0:
+            fails.append(f"{b}: mimic mean net < 0")
+        for bot in B.GATED:
+            c = g["cmp"].get(bot)
+            if c and c["ci_lo"] <= 0:
+                fails.append(f"{b}: mimic > {bot} fails (diff {c['diff']:.4f}, CI lo {c['ci_lo']:.4f})")
+        c = g["cmp"]["delayed-24h"]
+        if c["diff"] < -2 * c["se"]:
+            fails.append(f"{b}: delayed-24h > mimic + 2 SE")
+        if g["control_m0"][1] <= 0:
+            fails.append(f"{b}: control m = 0 (lazy ≥ mimic) CI lo {g['control_m0'][1]:.4f} <= 0")
+    return not fails, fails
+
+
+def main():
+    os.makedirs(OUT, exist_ok=True)
+    phase = sys.argv[1] if len(sys.argv) > 1 else "fit"
+    if phase == "fit":
+        n = int(sys.argv[2]) if len(sys.argv) > 2 else 100
+        rows = run_all(range(0, n), (0.0, 0.01), B.ALL)
+        with open(os.path.join(OUT, "bots-fit.json"), "w") as fh:
+            json.dump(rows, fh)
+        print(json.dumps(fit(rows), indent=1, default=str))
+    elif phase == "refit":
+        with open(os.path.join(OUT, "bots-fit.json")) as fh:
+            print(json.dumps(fit(json.load(fh)), indent=1, default=str))
+    elif phase in ("test", "regate"):
+        ms = [float(x) for x in sys.argv[2].split(",")]
+        n = int(sys.argv[3]) if len(sys.argv) > 3 else 200
+        fn = os.path.join(OUT, "bots-test.json")
+        if phase == "test":
+            rows = run_all(range(100, 100 + n), tuple([0.0] + ms), B.ALL)
+            with open(fn, "w") as fh:
+                json.dump(rows, fh)
+        else:
+            with open(fn) as fh:
+                rows = json.load(fh)
+        out = {}
+        for m in ms:
+            res = gate(rows, m)
+            ok, fails = verdict(res, m)
+            out[str(m)] = dict(gate=res, ok=ok, fails=fails)
+            print(f"m = {m * 100:.2f}%/yr: {'PASS' if ok else 'FAIL'} ({len(fails)} failing rows)")
+            for f in fails:
+                print("   ", f)
+        with open(os.path.join(OUT, "bots-test-summary.json"), "w") as fh:
+            json.dump(out, fh, indent=1, default=str)
+
+
+if __name__ == "__main__":
+    main()

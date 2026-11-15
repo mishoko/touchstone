@@ -1,0 +1,2270 @@
+{
+ "schema": "touchstone-vectors/1",
+ "specVersion": "2.19",
+ "conventions": {
+  "fn": "Ladder.next(uint8 mode, uint32 breaches, uint8 ev, uint32 count) -> (mode, breaches, exited) and Ladder.allowed(uint8 mode, uint8 entry) -> bool, both pure.",
+  "encodings": "mode 0 NORMAL, 1 BREACHED, 2 EXITED; ev 0 Breach, 1 Place, 2 Retire; entry = uint8(Entry) with Entry {Deposit, Withdraw, SetPositions, RebalanceSwap, Claim, TopUpBond, Retire, ReleaseBond, Poke, ProcessBreach, Seed}.",
+  "single": "in {mode, breaches, ev, count} -> out {mode, breaches, exited} or {revert: BadMode}. breaches saturate at type(uint32).max; Breach with count 0 is the identity; exited is true only on a transition from NORMAL or BREACHED to EXITED; Place and Retire on EXITED revert BadMode.",
+  "allowed": "in {mode, entry} -> out {allowed}: the entry-point table of the mode machine; allowed(\u00b7, Seed) is false (seed is gated by onlyFactory and once).",
+  "sequences": "in {mode, breaches, events[{ev, count}]}: Ladder.next applied in order to the previous output; out.steps[i] is the result after event i ({revert} leaves the state unchanged)."
+ },
+ "cases": [
+  {
+   "id": "mode-000-next-m0-b0-breach0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "0",
+    "ev": "0",
+    "count": "0"
+   },
+   "out": {
+    "mode": "0",
+    "breaches": "0",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-001-next-m0-b0-breach1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "0",
+    "ev": "0",
+    "count": "1"
+   },
+   "out": {
+    "mode": "1",
+    "breaches": "1",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-002-next-m0-b0-breach2",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "0",
+    "ev": "0",
+    "count": "2"
+   },
+   "out": {
+    "mode": "1",
+    "breaches": "2",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-003-next-m0-b0-breach3",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "0",
+    "ev": "0",
+    "count": "3"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "3",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-004-next-m0-b0-breach4294967295",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "0",
+    "ev": "0",
+    "count": "4294967295"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-005-next-m0-b1-breach0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "1",
+    "ev": "0",
+    "count": "0"
+   },
+   "out": {
+    "mode": "0",
+    "breaches": "1",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-006-next-m0-b1-breach1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "1",
+    "ev": "0",
+    "count": "1"
+   },
+   "out": {
+    "mode": "1",
+    "breaches": "2",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-007-next-m0-b1-breach2",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "1",
+    "ev": "0",
+    "count": "2"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "3",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-008-next-m0-b1-breach3",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "1",
+    "ev": "0",
+    "count": "3"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-009-next-m0-b1-breach4294967295",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "1",
+    "ev": "0",
+    "count": "4294967295"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-010-next-m0-b2-breach0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "2",
+    "ev": "0",
+    "count": "0"
+   },
+   "out": {
+    "mode": "0",
+    "breaches": "2",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-011-next-m0-b2-breach1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "2",
+    "ev": "0",
+    "count": "1"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "3",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-012-next-m0-b2-breach2",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "2",
+    "ev": "0",
+    "count": "2"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-013-next-m0-b2-breach3",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "2",
+    "ev": "0",
+    "count": "3"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "5",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-014-next-m0-b2-breach4294967295",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "2",
+    "ev": "0",
+    "count": "4294967295"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-015-next-m0-b3-breach0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "3",
+    "ev": "0",
+    "count": "0"
+   },
+   "out": {
+    "mode": "0",
+    "breaches": "3",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-016-next-m0-b3-breach1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "3",
+    "ev": "0",
+    "count": "1"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-017-next-m0-b3-breach2",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "3",
+    "ev": "0",
+    "count": "2"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "5",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-018-next-m0-b3-breach3",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "3",
+    "ev": "0",
+    "count": "3"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "6",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-019-next-m0-b3-breach4294967295",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "3",
+    "ev": "0",
+    "count": "4294967295"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-020-next-m0-b4294967294-breach0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "4294967294",
+    "ev": "0",
+    "count": "0"
+   },
+   "out": {
+    "mode": "0",
+    "breaches": "4294967294",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-021-next-m0-b4294967294-breach1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "4294967294",
+    "ev": "0",
+    "count": "1"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-022-next-m0-b4294967294-breach2",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "4294967294",
+    "ev": "0",
+    "count": "2"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-023-next-m0-b4294967294-breach3",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "4294967294",
+    "ev": "0",
+    "count": "3"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-024-next-m0-b4294967294-breach4294967295",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "4294967294",
+    "ev": "0",
+    "count": "4294967295"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-025-next-m0-b0-place0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "0",
+    "ev": "1",
+    "count": "0"
+   },
+   "out": {
+    "mode": "0",
+    "breaches": "0",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-026-next-m0-b0-place1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "0",
+    "ev": "1",
+    "count": "1"
+   },
+   "out": {
+    "mode": "0",
+    "breaches": "0",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-027-next-m0-b2-place0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "2",
+    "ev": "1",
+    "count": "0"
+   },
+   "out": {
+    "mode": "0",
+    "breaches": "2",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-028-next-m0-b2-place1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "2",
+    "ev": "1",
+    "count": "1"
+   },
+   "out": {
+    "mode": "0",
+    "breaches": "2",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-029-next-m0-b3-place0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "3",
+    "ev": "1",
+    "count": "0"
+   },
+   "out": {
+    "mode": "0",
+    "breaches": "3",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-030-next-m0-b3-place1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "3",
+    "ev": "1",
+    "count": "1"
+   },
+   "out": {
+    "mode": "0",
+    "breaches": "3",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-031-next-m0-b0-retire0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "0",
+    "ev": "2",
+    "count": "0"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "0",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-032-next-m0-b0-retire1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "0",
+    "ev": "2",
+    "count": "1"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "0",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-033-next-m0-b2-retire0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "2",
+    "ev": "2",
+    "count": "0"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "2",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-034-next-m0-b2-retire1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "2",
+    "ev": "2",
+    "count": "1"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "2",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-035-next-m0-b3-retire0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "3",
+    "ev": "2",
+    "count": "0"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "3",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-036-next-m0-b3-retire1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "3",
+    "ev": "2",
+    "count": "1"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "3",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-037-next-m1-b0-breach0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "0",
+    "ev": "0",
+    "count": "0"
+   },
+   "out": {
+    "mode": "1",
+    "breaches": "0",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-038-next-m1-b0-breach1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "0",
+    "ev": "0",
+    "count": "1"
+   },
+   "out": {
+    "mode": "1",
+    "breaches": "1",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-039-next-m1-b0-breach2",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "0",
+    "ev": "0",
+    "count": "2"
+   },
+   "out": {
+    "mode": "1",
+    "breaches": "2",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-040-next-m1-b0-breach3",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "0",
+    "ev": "0",
+    "count": "3"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "3",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-041-next-m1-b0-breach4294967295",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "0",
+    "ev": "0",
+    "count": "4294967295"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-042-next-m1-b1-breach0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "1",
+    "ev": "0",
+    "count": "0"
+   },
+   "out": {
+    "mode": "1",
+    "breaches": "1",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-043-next-m1-b1-breach1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "1",
+    "ev": "0",
+    "count": "1"
+   },
+   "out": {
+    "mode": "1",
+    "breaches": "2",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-044-next-m1-b1-breach2",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "1",
+    "ev": "0",
+    "count": "2"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "3",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-045-next-m1-b1-breach3",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "1",
+    "ev": "0",
+    "count": "3"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-046-next-m1-b1-breach4294967295",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "1",
+    "ev": "0",
+    "count": "4294967295"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-047-next-m1-b2-breach0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "2",
+    "ev": "0",
+    "count": "0"
+   },
+   "out": {
+    "mode": "1",
+    "breaches": "2",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-048-next-m1-b2-breach1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "2",
+    "ev": "0",
+    "count": "1"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "3",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-049-next-m1-b2-breach2",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "2",
+    "ev": "0",
+    "count": "2"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-050-next-m1-b2-breach3",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "2",
+    "ev": "0",
+    "count": "3"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "5",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-051-next-m1-b2-breach4294967295",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "2",
+    "ev": "0",
+    "count": "4294967295"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-052-next-m1-b3-breach0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "3",
+    "ev": "0",
+    "count": "0"
+   },
+   "out": {
+    "mode": "1",
+    "breaches": "3",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-053-next-m1-b3-breach1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "3",
+    "ev": "0",
+    "count": "1"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-054-next-m1-b3-breach2",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "3",
+    "ev": "0",
+    "count": "2"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "5",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-055-next-m1-b3-breach3",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "3",
+    "ev": "0",
+    "count": "3"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "6",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-056-next-m1-b3-breach4294967295",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "3",
+    "ev": "0",
+    "count": "4294967295"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-057-next-m1-b4294967294-breach0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "4294967294",
+    "ev": "0",
+    "count": "0"
+   },
+   "out": {
+    "mode": "1",
+    "breaches": "4294967294",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-058-next-m1-b4294967294-breach1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "4294967294",
+    "ev": "0",
+    "count": "1"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-059-next-m1-b4294967294-breach2",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "4294967294",
+    "ev": "0",
+    "count": "2"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-060-next-m1-b4294967294-breach3",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "4294967294",
+    "ev": "0",
+    "count": "3"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-061-next-m1-b4294967294-breach4294967295",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "4294967294",
+    "ev": "0",
+    "count": "4294967295"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-062-next-m1-b0-place0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "0",
+    "ev": "1",
+    "count": "0"
+   },
+   "out": {
+    "mode": "0",
+    "breaches": "0",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-063-next-m1-b0-place1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "0",
+    "ev": "1",
+    "count": "1"
+   },
+   "out": {
+    "mode": "0",
+    "breaches": "0",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-064-next-m1-b2-place0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "2",
+    "ev": "1",
+    "count": "0"
+   },
+   "out": {
+    "mode": "0",
+    "breaches": "2",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-065-next-m1-b2-place1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "2",
+    "ev": "1",
+    "count": "1"
+   },
+   "out": {
+    "mode": "0",
+    "breaches": "2",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-066-next-m1-b3-place0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "3",
+    "ev": "1",
+    "count": "0"
+   },
+   "out": {
+    "mode": "0",
+    "breaches": "3",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-067-next-m1-b3-place1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "3",
+    "ev": "1",
+    "count": "1"
+   },
+   "out": {
+    "mode": "0",
+    "breaches": "3",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-068-next-m1-b0-retire0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "0",
+    "ev": "2",
+    "count": "0"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "0",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-069-next-m1-b0-retire1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "0",
+    "ev": "2",
+    "count": "1"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "0",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-070-next-m1-b2-retire0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "2",
+    "ev": "2",
+    "count": "0"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "2",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-071-next-m1-b2-retire1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "2",
+    "ev": "2",
+    "count": "1"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "2",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-072-next-m1-b3-retire0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "3",
+    "ev": "2",
+    "count": "0"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "3",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-073-next-m1-b3-retire1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "1",
+    "breaches": "3",
+    "ev": "2",
+    "count": "1"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "3",
+    "exited": true
+   }
+  },
+  {
+   "id": "mode-074-next-m2-b0-breach0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "0",
+    "ev": "0",
+    "count": "0"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "0",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-075-next-m2-b0-breach1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "0",
+    "ev": "0",
+    "count": "1"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "1",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-076-next-m2-b0-breach2",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "0",
+    "ev": "0",
+    "count": "2"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "2",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-077-next-m2-b0-breach3",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "0",
+    "ev": "0",
+    "count": "3"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "3",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-078-next-m2-b0-breach4294967295",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "0",
+    "ev": "0",
+    "count": "4294967295"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-079-next-m2-b1-breach0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "1",
+    "ev": "0",
+    "count": "0"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "1",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-080-next-m2-b1-breach1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "1",
+    "ev": "0",
+    "count": "1"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "2",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-081-next-m2-b1-breach2",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "1",
+    "ev": "0",
+    "count": "2"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "3",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-082-next-m2-b1-breach3",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "1",
+    "ev": "0",
+    "count": "3"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-083-next-m2-b1-breach4294967295",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "1",
+    "ev": "0",
+    "count": "4294967295"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-084-next-m2-b2-breach0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "2",
+    "ev": "0",
+    "count": "0"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "2",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-085-next-m2-b2-breach1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "2",
+    "ev": "0",
+    "count": "1"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "3",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-086-next-m2-b2-breach2",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "2",
+    "ev": "0",
+    "count": "2"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-087-next-m2-b2-breach3",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "2",
+    "ev": "0",
+    "count": "3"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "5",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-088-next-m2-b2-breach4294967295",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "2",
+    "ev": "0",
+    "count": "4294967295"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-089-next-m2-b3-breach0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "3",
+    "ev": "0",
+    "count": "0"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "3",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-090-next-m2-b3-breach1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "3",
+    "ev": "0",
+    "count": "1"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-091-next-m2-b3-breach2",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "3",
+    "ev": "0",
+    "count": "2"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "5",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-092-next-m2-b3-breach3",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "3",
+    "ev": "0",
+    "count": "3"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "6",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-093-next-m2-b3-breach4294967295",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "3",
+    "ev": "0",
+    "count": "4294967295"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-094-next-m2-b4294967294-breach0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "4294967294",
+    "ev": "0",
+    "count": "0"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967294",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-095-next-m2-b4294967294-breach1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "4294967294",
+    "ev": "0",
+    "count": "1"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-096-next-m2-b4294967294-breach2",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "4294967294",
+    "ev": "0",
+    "count": "2"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-097-next-m2-b4294967294-breach3",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "4294967294",
+    "ev": "0",
+    "count": "3"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-098-next-m2-b4294967294-breach4294967295",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "4294967294",
+    "ev": "0",
+    "count": "4294967295"
+   },
+   "out": {
+    "mode": "2",
+    "breaches": "4294967295",
+    "exited": false
+   }
+  },
+  {
+   "id": "mode-099-next-m2-b0-place0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "0",
+    "ev": "1",
+    "count": "0"
+   },
+   "out": {
+    "revert": "BadMode"
+   }
+  },
+  {
+   "id": "mode-100-next-m2-b0-place1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "0",
+    "ev": "1",
+    "count": "1"
+   },
+   "out": {
+    "revert": "BadMode"
+   }
+  },
+  {
+   "id": "mode-101-next-m2-b2-place0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "2",
+    "ev": "1",
+    "count": "0"
+   },
+   "out": {
+    "revert": "BadMode"
+   }
+  },
+  {
+   "id": "mode-102-next-m2-b2-place1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "2",
+    "ev": "1",
+    "count": "1"
+   },
+   "out": {
+    "revert": "BadMode"
+   }
+  },
+  {
+   "id": "mode-103-next-m2-b3-place0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "3",
+    "ev": "1",
+    "count": "0"
+   },
+   "out": {
+    "revert": "BadMode"
+   }
+  },
+  {
+   "id": "mode-104-next-m2-b3-place1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "3",
+    "ev": "1",
+    "count": "1"
+   },
+   "out": {
+    "revert": "BadMode"
+   }
+  },
+  {
+   "id": "mode-105-next-m2-b0-retire0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "0",
+    "ev": "2",
+    "count": "0"
+   },
+   "out": {
+    "revert": "BadMode"
+   }
+  },
+  {
+   "id": "mode-106-next-m2-b0-retire1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "0",
+    "ev": "2",
+    "count": "1"
+   },
+   "out": {
+    "revert": "BadMode"
+   }
+  },
+  {
+   "id": "mode-107-next-m2-b2-retire0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "2",
+    "ev": "2",
+    "count": "0"
+   },
+   "out": {
+    "revert": "BadMode"
+   }
+  },
+  {
+   "id": "mode-108-next-m2-b2-retire1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "2",
+    "ev": "2",
+    "count": "1"
+   },
+   "out": {
+    "revert": "BadMode"
+   }
+  },
+  {
+   "id": "mode-109-next-m2-b3-retire0",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "3",
+    "ev": "2",
+    "count": "0"
+   },
+   "out": {
+    "revert": "BadMode"
+   }
+  },
+  {
+   "id": "mode-110-next-m2-b3-retire1",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "2",
+    "breaches": "3",
+    "ev": "2",
+    "count": "1"
+   },
+   "out": {
+    "revert": "BadMode"
+   }
+  },
+  {
+   "id": "mode-111-allowed-m0-Deposit",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "0",
+    "entry": "0"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-112-allowed-m0-Withdraw",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "0",
+    "entry": "1"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-113-allowed-m0-SetPositions",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "0",
+    "entry": "2"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-114-allowed-m0-RebalanceSwap",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "0",
+    "entry": "3"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-115-allowed-m0-Claim",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "0",
+    "entry": "4"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-116-allowed-m0-TopUpBond",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "0",
+    "entry": "5"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-117-allowed-m0-Retire",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "0",
+    "entry": "6"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-118-allowed-m0-ReleaseBond",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "0",
+    "entry": "7"
+   },
+   "out": {
+    "allowed": false
+   }
+  },
+  {
+   "id": "mode-119-allowed-m0-Poke",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "0",
+    "entry": "8"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-120-allowed-m0-ProcessBreach",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "0",
+    "entry": "9"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-121-allowed-m0-Seed",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "0",
+    "entry": "10"
+   },
+   "out": {
+    "allowed": false
+   }
+  },
+  {
+   "id": "mode-122-allowed-m1-Deposit",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "1",
+    "entry": "0"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-123-allowed-m1-Withdraw",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "1",
+    "entry": "1"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-124-allowed-m1-SetPositions",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "1",
+    "entry": "2"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-125-allowed-m1-RebalanceSwap",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "1",
+    "entry": "3"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-126-allowed-m1-Claim",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "1",
+    "entry": "4"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-127-allowed-m1-TopUpBond",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "1",
+    "entry": "5"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-128-allowed-m1-Retire",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "1",
+    "entry": "6"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-129-allowed-m1-ReleaseBond",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "1",
+    "entry": "7"
+   },
+   "out": {
+    "allowed": false
+   }
+  },
+  {
+   "id": "mode-130-allowed-m1-Poke",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "1",
+    "entry": "8"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-131-allowed-m1-ProcessBreach",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "1",
+    "entry": "9"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-132-allowed-m1-Seed",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "1",
+    "entry": "10"
+   },
+   "out": {
+    "allowed": false
+   }
+  },
+  {
+   "id": "mode-133-allowed-m2-Deposit",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "2",
+    "entry": "0"
+   },
+   "out": {
+    "allowed": false
+   }
+  },
+  {
+   "id": "mode-134-allowed-m2-Withdraw",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "2",
+    "entry": "1"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-135-allowed-m2-SetPositions",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "2",
+    "entry": "2"
+   },
+   "out": {
+    "allowed": false
+   }
+  },
+  {
+   "id": "mode-136-allowed-m2-RebalanceSwap",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "2",
+    "entry": "3"
+   },
+   "out": {
+    "allowed": false
+   }
+  },
+  {
+   "id": "mode-137-allowed-m2-Claim",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "2",
+    "entry": "4"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-138-allowed-m2-TopUpBond",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "2",
+    "entry": "5"
+   },
+   "out": {
+    "allowed": false
+   }
+  },
+  {
+   "id": "mode-139-allowed-m2-Retire",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "2",
+    "entry": "6"
+   },
+   "out": {
+    "allowed": false
+   }
+  },
+  {
+   "id": "mode-140-allowed-m2-ReleaseBond",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "2",
+    "entry": "7"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-141-allowed-m2-Poke",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "2",
+    "entry": "8"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-142-allowed-m2-ProcessBreach",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "2",
+    "entry": "9"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-143-allowed-m2-Seed",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "2",
+    "entry": "10"
+   },
+   "out": {
+    "allowed": false
+   }
+  },
+  {
+   "id": "mode-144-seq-three-single-breaches",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "0",
+    "events": [
+     {
+      "ev": "0",
+      "count": "1"
+     },
+     {
+      "ev": "0",
+      "count": "1"
+     },
+     {
+      "ev": "0",
+      "count": "1"
+     },
+     {
+      "ev": "0",
+      "count": "1"
+     }
+    ]
+   },
+   "out": {
+    "steps": [
+     {
+      "mode": "1",
+      "breaches": "1",
+      "exited": false
+     },
+     {
+      "mode": "1",
+      "breaches": "2",
+      "exited": false
+     },
+     {
+      "mode": "2",
+      "breaches": "3",
+      "exited": true
+     },
+     {
+      "mode": "2",
+      "breaches": "4",
+      "exited": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "mode-145-seq-place-does-not-reset-breaches",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "0",
+    "events": [
+     {
+      "ev": "0",
+      "count": "1"
+     },
+     {
+      "ev": "1",
+      "count": "0"
+     },
+     {
+      "ev": "0",
+      "count": "1"
+     },
+     {
+      "ev": "1",
+      "count": "0"
+     },
+     {
+      "ev": "0",
+      "count": "1"
+     },
+     {
+      "ev": "1",
+      "count": "0"
+     }
+    ]
+   },
+   "out": {
+    "steps": [
+     {
+      "mode": "1",
+      "breaches": "1",
+      "exited": false
+     },
+     {
+      "mode": "0",
+      "breaches": "1",
+      "exited": false
+     },
+     {
+      "mode": "1",
+      "breaches": "2",
+      "exited": false
+     },
+     {
+      "mode": "0",
+      "breaches": "2",
+      "exited": false
+     },
+     {
+      "mode": "2",
+      "breaches": "3",
+      "exited": true
+     },
+     {
+      "revert": "BadMode"
+     }
+    ]
+   }
+  },
+  {
+   "id": "mode-146-seq-three-at-once",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "0",
+    "events": [
+     {
+      "ev": "0",
+      "count": "3"
+     },
+     {
+      "ev": "0",
+      "count": "1"
+     },
+     {
+      "ev": "2",
+      "count": "0"
+     }
+    ]
+   },
+   "out": {
+    "steps": [
+     {
+      "mode": "2",
+      "breaches": "3",
+      "exited": true
+     },
+     {
+      "mode": "2",
+      "breaches": "4",
+      "exited": false
+     },
+     {
+      "revert": "BadMode"
+     }
+    ]
+   }
+  },
+  {
+   "id": "mode-147-seq-retire-then-breach",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "0",
+    "events": [
+     {
+      "ev": "2",
+      "count": "0"
+     },
+     {
+      "ev": "0",
+      "count": "1"
+     },
+     {
+      "ev": "1",
+      "count": "0"
+     },
+     {
+      "ev": "0",
+      "count": "0"
+     }
+    ]
+   },
+   "out": {
+    "steps": [
+     {
+      "mode": "2",
+      "breaches": "0",
+      "exited": true
+     },
+     {
+      "mode": "2",
+      "breaches": "1",
+      "exited": false
+     },
+     {
+      "revert": "BadMode"
+     },
+     {
+      "mode": "2",
+      "breaches": "1",
+      "exited": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "mode-148-seq-zero-count-identity",
+   "fn": "Ladder.next",
+   "in": {
+    "mode": "0",
+    "breaches": "0",
+    "events": [
+     {
+      "ev": "0",
+      "count": "0"
+     },
+     {
+      "ev": "0",
+      "count": "2"
+     },
+     {
+      "ev": "0",
+      "count": "0"
+     },
+     {
+      "ev": "0",
+      "count": "1"
+     }
+    ]
+   },
+   "out": {
+    "steps": [
+     {
+      "mode": "0",
+      "breaches": "0",
+      "exited": false
+     },
+     {
+      "mode": "1",
+      "breaches": "2",
+      "exited": false
+     },
+     {
+      "mode": "1",
+      "breaches": "2",
+      "exited": false
+     },
+     {
+      "mode": "2",
+      "breaches": "3",
+      "exited": true
+     }
+    ]
+   }
+  }
+ ]
+}

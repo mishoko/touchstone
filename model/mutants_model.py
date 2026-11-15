@@ -759,7 +759,7 @@ def run_one(src, m):
             if "AssertionError" in rv.stderr and tb and "vectors.py" in tb[-1]:
                 return name, "killed", "vector generator assertion"
             return name, "INVALID", "vector generator crashed: " + rv.stderr.strip().splitlines()[-1][:120]
-        for f in ("math.json", "ledger.json", "placement.json", "bank.json"):
+        for f in sorted(x for x in os.listdir(VEC) if x.endswith(".json")):  # every committed vector file (s2: clock, mode, scenario)
             if not filecmp.cmp(os.path.join(vd, f), os.path.join(VEC, f), shallow=False):
                 return name, "killed", f"vectors differ ({f})"
         if crashes:

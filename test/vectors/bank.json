@@ -3,10 +3,11 @@
  "specVersion": "2.15",
  "conventions": {
   "fn": "FeeBank.apply(Bank storage b, Op op, bytes args) -> (burnShares, payShares, a, b2); in.bank is the state before, out.bank after; out = {revert: <error>} when apply reverts (state unchanged).",
-  "Op": "enum Op {Accrue, Breach, VestTime, Drip, Charge, Place, Retire, Claim, TopUp, Release}; opIndex = ordinal.",
+  "Op": "enum Op {Accrue, Breach, VestTime, Drip, Charge, Place, Retire, Claim, TopUp, Release}; in.op is the ordinal; the case id names the op.",
+  "fields": "in {bank, op, args}; out {bank, burnShares, payShares, a, b2} or {revert}; Bank = {cohorts[5] {epoch, shares}, maturedPending, vestedUnclaimed, bondShares, forfeitPool, forfeitTotal, forfeitStart, dripBlocks, releaseDelay, breaches, mode, placedByCurator, exitBlock}.",
   "args": "Accrue (epoch, shares, gateOpen); Breach (count, now); VestTime (nowEpoch, gateOpen); Drip (now); Charge (burn); Place (); Retire (now); Claim (); TopUp (shares); Release (shares, now).",
   "returns": "Charge (bank burned, bond burned); Breach/Retire (forfeited, mode after); VestTime/Accrue (vested, moved to maturedPending); Drip (burned, 0); Claim/TopUp/Release/Place (shares moved, 0). Breach and Retire first burn the drip owed at `now` (returned as burnShares), then forfeit; an empty forfeit does not restart the drip.",
-  "cohorts": "V = 4; ring of V+1 = 5 slots {epoch, shares} at index epoch mod 5; a cohort vests when nowEpoch >= epoch + 1 + V; Charge burns cohorts youngest (highest epoch) first, then maturedPending, then the bond.",
+  "cohorts": "V = 4; ring of V+1 = 5 slots {epoch, shares} at index epoch mod 5; a cohort vests when nowEpoch >= epoch + 1 + V; Charge burns cohorts youngest (highest epoch) first, then maturedPending, then the bond. A slot emptied by Charge, VestTime, Breach or Retire keeps its epoch (only shares go to 0); a slot is occupied iff shares > 0.",
   "mode": "0 NORMAL, 1 BREACHED, 2 EXITED. Release requires EXITED and now >= exitBlock + releaseDelay.",
   "tier": "dripBlocks and releaseDelay are Bank fields written at seed (TEST: 120 and 480; DEMO cases: 3600, 14400)."
  },
@@ -14,7 +15,6 @@
   {
    "id": "bank-000-accrue-empty",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -52,8 +52,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Accrue",
-    "opIndex": "0",
+    "op": "0",
     "args": {
      "epoch": "7",
      "shares": "3000000000000000000",
@@ -106,7 +105,6 @@
   {
    "id": "bank-001-accrue-same-epoch",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -144,8 +142,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Accrue",
-    "opIndex": "0",
+    "op": "0",
     "args": {
      "epoch": "7",
      "shares": "2000000000000000000",
@@ -198,7 +195,6 @@
   {
    "id": "bank-002-accrue-overwrite-gate-open",
    "fn": "FeeBank.apply",
-   "note": "occupant epoch 2 in slot 7 mod 5 vests",
    "in": {
     "bank": {
      "cohorts": [
@@ -236,8 +232,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Accrue",
-    "opIndex": "0",
+    "op": "0",
     "args": {
      "epoch": "7",
      "shares": "1000000000000000000",
@@ -290,7 +285,6 @@
   {
    "id": "bank-003-accrue-overwrite-gate-closed",
    "fn": "FeeBank.apply",
-   "note": "occupant moves to maturedPending",
    "in": {
     "bank": {
      "cohorts": [
@@ -328,8 +322,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Accrue",
-    "opIndex": "0",
+    "op": "0",
     "args": {
      "epoch": "7",
      "shares": "1000000000000000000",
@@ -382,7 +375,6 @@
   {
    "id": "bank-004-accrue-zero-noop",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -420,8 +412,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Accrue",
-    "opIndex": "0",
+    "op": "0",
     "args": {
      "epoch": "7",
      "shares": "0",
@@ -474,7 +465,6 @@
   {
    "id": "bank-005-vest-open",
    "fn": "FeeBank.apply",
-   "note": "epochs 3, 4 matured (e+1+V <= 9) plus maturedPending vest",
    "in": {
     "bank": {
      "cohorts": [
@@ -512,8 +502,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "VestTime",
-    "opIndex": "2",
+    "op": "2",
     "args": {
      "nowEpoch": "9",
      "gateOpen": true
@@ -535,11 +524,11 @@
        "shares": "5000000000000000000"
       },
       {
-       "epoch": "0",
+       "epoch": "3",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "4",
        "shares": "0"
       }
      ],
@@ -565,7 +554,6 @@
   {
    "id": "bank-006-vest-closed",
    "fn": "FeeBank.apply",
-   "note": "matured -> maturedPending",
    "in": {
     "bank": {
      "cohorts": [
@@ -603,8 +591,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "VestTime",
-    "opIndex": "2",
+    "op": "2",
     "args": {
      "nowEpoch": "9",
      "gateOpen": false
@@ -626,11 +613,11 @@
        "shares": "5000000000000000000"
       },
       {
-       "epoch": "0",
+       "epoch": "3",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "4",
        "shares": "0"
       }
      ],
@@ -656,7 +643,6 @@
   {
    "id": "bank-007-vest-nothing-matured",
    "fn": "FeeBank.apply",
-   "note": "only maturedPending vests",
    "in": {
     "bank": {
      "cohorts": [
@@ -694,8 +680,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "VestTime",
-    "opIndex": "2",
+    "op": "2",
     "args": {
      "nowEpoch": "7",
      "gateOpen": true
@@ -747,7 +732,6 @@
   {
    "id": "bank-008-vest-boundary",
    "fn": "FeeBank.apply",
-   "note": "vestBlock = 8\u00b7EPOCH",
    "in": {
     "bank": {
      "cohorts": [
@@ -785,8 +769,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "VestTime",
-    "opIndex": "2",
+    "op": "2",
     "args": {
      "nowEpoch": "8",
      "gateOpen": true
@@ -808,7 +791,7 @@
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "3",
        "shares": "0"
       },
       {
@@ -838,7 +821,6 @@
   {
    "id": "bank-009-vest-boundary-minus-1",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -876,8 +858,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "VestTime",
-    "opIndex": "2",
+    "op": "2",
     "args": {
      "nowEpoch": "7",
      "gateOpen": true
@@ -929,7 +910,6 @@
   {
    "id": "bank-010-charge-youngest-first",
    "fn": "FeeBank.apply",
-   "note": "7 (5k), 6 (4k), 5 (1k)",
    "in": {
     "bank": {
      "cohorts": [
@@ -967,8 +947,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Charge",
-    "opIndex": "4",
+    "op": "4",
     "args": {
      "burn": "10000000000000000000"
     }
@@ -981,11 +960,11 @@
        "shares": "2000000000000000000"
       },
       {
-       "epoch": "0",
+       "epoch": "6",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "7",
        "shares": "0"
       },
       {
@@ -1019,7 +998,6 @@
   {
    "id": "bank-011-charge-into-pending-and-bond",
    "fn": "FeeBank.apply",
-   "note": "cohort, then maturedPending, then bond",
    "in": {
     "bank": {
      "cohorts": [
@@ -1057,8 +1035,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Charge",
-    "opIndex": "4",
+    "op": "4",
     "args": {
      "burn": "5000000000000000000"
     }
@@ -1075,7 +1052,7 @@
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "7",
        "shares": "0"
       },
       {
@@ -1109,7 +1086,6 @@
   {
    "id": "bank-012-charge-exact-total",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -1147,8 +1123,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Charge",
-    "opIndex": "4",
+    "op": "4",
     "args": {
      "burn": "3000000000000000000"
     }
@@ -1165,7 +1140,7 @@
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "7",
        "shares": "0"
       },
       {
@@ -1199,7 +1174,6 @@
   {
    "id": "bank-013-charge-insolvent",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -1237,8 +1211,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Charge",
-    "opIndex": "4",
+    "op": "4",
     "args": {
      "burn": "3000000000000000001"
     }
@@ -1250,7 +1223,6 @@
   {
    "id": "bank-014-charge-zero",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -1288,8 +1260,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Charge",
-    "opIndex": "4",
+    "op": "4",
     "args": {
      "burn": "0"
     }
@@ -1340,7 +1311,6 @@
   {
    "id": "bank-015-drip-1000",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -1378,8 +1348,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Drip",
-    "opIndex": "3",
+    "op": "3",
     "args": {
      "now": "1000"
     }
@@ -1430,7 +1399,6 @@
   {
    "id": "bank-016-drip-1030",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -1468,8 +1436,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Drip",
-    "opIndex": "3",
+    "op": "3",
     "args": {
      "now": "1030"
     }
@@ -1520,7 +1487,6 @@
   {
    "id": "bank-017-drip-1060",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -1558,8 +1524,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Drip",
-    "opIndex": "3",
+    "op": "3",
     "args": {
      "now": "1060"
     }
@@ -1610,7 +1575,6 @@
   {
    "id": "bank-018-drip-1119",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -1648,8 +1612,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Drip",
-    "opIndex": "3",
+    "op": "3",
     "args": {
      "now": "1119"
     }
@@ -1700,7 +1663,6 @@
   {
    "id": "bank-019-drip-1120",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -1738,8 +1700,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Drip",
-    "opIndex": "3",
+    "op": "3",
     "args": {
      "now": "1120"
     }
@@ -1790,7 +1751,6 @@
   {
    "id": "bank-020-drip-5000",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -1828,8 +1788,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Drip",
-    "opIndex": "3",
+    "op": "3",
     "args": {
      "now": "5000"
     }
@@ -1880,7 +1839,6 @@
   {
    "id": "bank-021-drip-partly-burned",
    "fn": "FeeBank.apply",
-   "note": "target 6k burned so far; 3k already burned; burn 3k",
    "in": {
     "bank": {
      "cohorts": [
@@ -1918,8 +1876,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Drip",
-    "opIndex": "3",
+    "op": "3",
     "args": {
      "now": "1060"
     }
@@ -1970,7 +1927,6 @@
   {
    "id": "bank-022-drip-zero-length",
    "fn": "FeeBank.apply",
-   "note": "dripBlocks 0 burns all, never divides by zero",
    "in": {
     "bank": {
      "cohorts": [
@@ -2008,8 +1964,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Drip",
-    "opIndex": "3",
+    "op": "3",
     "args": {
      "now": "1000"
     }
@@ -2060,7 +2015,6 @@
   {
    "id": "bank-023-drip-before-start",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -2098,8 +2052,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Drip",
-    "opIndex": "3",
+    "op": "3",
     "args": {
      "now": "900"
     }
@@ -2150,7 +2103,6 @@
   {
    "id": "bank-024-breach-normal-1",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -2188,8 +2140,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Breach",
-    "opIndex": "1",
+    "op": "1",
     "args": {
      "count": "1",
      "now": "1100"
@@ -2199,23 +2150,23 @@
     "bank": {
      "cohorts": [
       {
-       "epoch": "0",
+       "epoch": "5",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "6",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "7",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "3",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "4",
        "shares": "0"
       }
      ],
@@ -2241,7 +2192,6 @@
   {
    "id": "bank-025-breach-breached-2-to-3",
    "fn": "FeeBank.apply",
-   "note": "removal: exitBlock = now, placedByCurator = false",
    "in": {
     "bank": {
      "cohorts": [
@@ -2279,8 +2229,7 @@
      "placedByCurator": true,
      "exitBlock": "0"
     },
-    "op": "Breach",
-    "opIndex": "1",
+    "op": "1",
     "args": {
      "count": "1",
      "now": "1100"
@@ -2290,23 +2239,23 @@
     "bank": {
      "cohorts": [
       {
-       "epoch": "0",
+       "epoch": "5",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "6",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "7",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "3",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "4",
        "shares": "0"
       }
      ],
@@ -2332,7 +2281,6 @@
   {
    "id": "bank-026-breach-two-at-once",
    "fn": "FeeBank.apply",
-   "note": "1 + 2 >= 3 -> EXITED",
    "in": {
     "bank": {
      "cohorts": [
@@ -2370,8 +2318,7 @@
      "placedByCurator": true,
      "exitBlock": "0"
     },
-    "op": "Breach",
-    "opIndex": "1",
+    "op": "1",
     "args": {
      "count": "2",
      "now": "1100"
@@ -2381,23 +2328,23 @@
     "bank": {
      "cohorts": [
       {
-       "epoch": "0",
+       "epoch": "5",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "6",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "7",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "3",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "4",
        "shares": "0"
       }
      ],
@@ -2423,7 +2370,6 @@
   {
    "id": "bank-027-breach-exited-keeps-exitblock",
    "fn": "FeeBank.apply",
-   "note": "EXITED + Breach(1) -> (EXITED, 4), exitBlock unchanged",
    "in": {
     "bank": {
      "cohorts": [
@@ -2461,8 +2407,7 @@
      "placedByCurator": false,
      "exitBlock": "700"
     },
-    "op": "Breach",
-    "opIndex": "1",
+    "op": "1",
     "args": {
      "count": "1",
      "now": "1100"
@@ -2514,7 +2459,6 @@
   {
    "id": "bank-028-breach-empty-no-restart",
    "fn": "FeeBank.apply",
-   "note": "owed drip burned; empty forfeit does not restart the drip",
    "in": {
     "bank": {
      "cohorts": [
@@ -2552,8 +2496,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Breach",
-    "opIndex": "1",
+    "op": "1",
     "args": {
      "count": "1",
      "now": "1060"
@@ -2605,7 +2548,6 @@
   {
    "id": "bank-029-breach-restart",
    "fn": "FeeBank.apply",
-   "note": "burn owed 6k first, then T = 6k remaining + 2k new, start = now",
    "in": {
     "bank": {
      "cohorts": [
@@ -2643,8 +2585,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Breach",
-    "opIndex": "1",
+    "op": "1",
     "args": {
      "count": "1",
      "now": "1060"
@@ -2666,7 +2607,7 @@
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "8",
        "shares": "0"
       },
       {
@@ -2696,7 +2637,6 @@
   {
    "id": "bank-030-place-normal",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -2734,8 +2674,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Place",
-    "opIndex": "5",
+    "op": "5",
     "args": {}
    },
    "out": {
@@ -2784,7 +2723,6 @@
   {
    "id": "bank-031-place-breached",
    "fn": "FeeBank.apply",
-   "note": "new run: mode NORMAL, breaches kept",
    "in": {
     "bank": {
      "cohorts": [
@@ -2822,8 +2760,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Place",
-    "opIndex": "5",
+    "op": "5",
     "args": {}
    },
    "out": {
@@ -2872,7 +2809,6 @@
   {
    "id": "bank-032-place-exited",
    "fn": "FeeBank.apply",
-   "note": "BadMode: no placement after removal",
    "in": {
     "bank": {
      "cohorts": [
@@ -2910,8 +2846,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Place",
-    "opIndex": "5",
+    "op": "5",
     "args": {}
    },
    "out": {
@@ -2921,7 +2856,6 @@
   {
    "id": "bank-033-retire",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -2959,8 +2893,7 @@
      "placedByCurator": true,
      "exitBlock": "0"
     },
-    "op": "Retire",
-    "opIndex": "6",
+    "op": "6",
     "args": {
      "now": "1200"
     }
@@ -2969,23 +2902,23 @@
     "bank": {
      "cohorts": [
       {
-       "epoch": "0",
+       "epoch": "5",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "6",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "7",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "3",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "4",
        "shares": "0"
       }
      ],
@@ -3011,7 +2944,6 @@
   {
    "id": "bank-034-retire-empty",
    "fn": "FeeBank.apply",
-   "note": "empty forfeit does not restart the drip",
    "in": {
     "bank": {
      "cohorts": [
@@ -3049,8 +2981,7 @@
      "placedByCurator": true,
      "exitBlock": "0"
     },
-    "op": "Retire",
-    "opIndex": "6",
+    "op": "6",
     "args": {
      "now": "1130"
     }
@@ -3101,7 +3032,6 @@
   {
    "id": "bank-035-retire-exited",
    "fn": "FeeBank.apply",
-   "note": "BadMode",
    "in": {
     "bank": {
      "cohorts": [
@@ -3139,8 +3069,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Retire",
-    "opIndex": "6",
+    "op": "6",
     "args": {
      "now": "1200"
     }
@@ -3152,7 +3081,6 @@
   {
    "id": "bank-036-claim",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -3190,8 +3118,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Claim",
-    "opIndex": "7",
+    "op": "7",
     "args": {}
    },
    "out": {
@@ -3240,7 +3167,6 @@
   {
    "id": "bank-037-claim-exited",
    "fn": "FeeBank.apply",
-   "note": "claim open in every mode",
    "in": {
     "bank": {
      "cohorts": [
@@ -3278,8 +3204,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Claim",
-    "opIndex": "7",
+    "op": "7",
     "args": {}
    },
    "out": {
@@ -3328,7 +3253,6 @@
   {
    "id": "bank-038-topup",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -3366,8 +3290,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "TopUp",
-    "opIndex": "8",
+    "op": "8",
     "args": {
      "shares": "2000000000000000000"
     }
@@ -3418,7 +3341,6 @@
   {
    "id": "bank-039-release-locked",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -3456,8 +3378,7 @@
      "placedByCurator": false,
      "exitBlock": "1000"
     },
-    "op": "Release",
-    "opIndex": "9",
+    "op": "9",
     "args": {
      "shares": "9000000000000000000",
      "now": "1479"
@@ -3470,7 +3391,6 @@
   {
    "id": "bank-040-release-at-delay",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -3508,8 +3428,7 @@
      "placedByCurator": false,
      "exitBlock": "1000"
     },
-    "op": "Release",
-    "opIndex": "9",
+    "op": "9",
     "args": {
      "shares": "9000000000000000000",
      "now": "1480"
@@ -3561,7 +3480,6 @@
   {
    "id": "bank-041-release-normal",
    "fn": "FeeBank.apply",
-   "note": "BadMode",
    "in": {
     "bank": {
      "cohorts": [
@@ -3599,8 +3517,7 @@
      "placedByCurator": false,
      "exitBlock": "0"
     },
-    "op": "Release",
-    "opIndex": "9",
+    "op": "9",
     "args": {
      "shares": "9000000000000000000",
      "now": "1000000"
@@ -3613,7 +3530,6 @@
   {
    "id": "bank-042-release-demo-minus-1",
    "fn": "FeeBank.apply",
-   "note": "DEMO: releaseDelay = V\u00b7EPOCH = 14400 != dripBlocks 3600",
    "in": {
     "bank": {
      "cohorts": [
@@ -3651,8 +3567,7 @@
      "placedByCurator": false,
      "exitBlock": "10000"
     },
-    "op": "Release",
-    "opIndex": "9",
+    "op": "9",
     "args": {
      "shares": "9000000000000000000",
      "now": "24399"
@@ -3665,7 +3580,6 @@
   {
    "id": "bank-043-release-demo-at",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -3703,8 +3617,7 @@
      "placedByCurator": false,
      "exitBlock": "10000"
     },
-    "op": "Release",
-    "opIndex": "9",
+    "op": "9",
     "args": {
      "shares": "9000000000000000000",
      "now": "24400"
@@ -3756,7 +3669,6 @@
   {
    "id": "bank-044-release-after-post-exit-breach",
    "fn": "FeeBank.apply",
-   "note": "a post-exit breach does not defer the release",
    "in": {
     "bank": {
      "cohorts": [
@@ -3794,8 +3706,7 @@
      "placedByCurator": false,
      "exitBlock": "1000"
     },
-    "op": "Release",
-    "opIndex": "9",
+    "op": "9",
     "args": {
      "shares": "9000000000000000000",
      "now": "1480"
@@ -3847,7 +3758,6 @@
   {
    "id": "bank-045-seq-accrue-0",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -3885,8 +3795,7 @@
      "placedByCurator": true,
      "exitBlock": "0"
     },
-    "op": "Accrue",
-    "opIndex": "0",
+    "op": "0",
     "args": {
      "epoch": "0",
      "shares": "1000000000000000000",
@@ -3939,7 +3848,6 @@
   {
    "id": "bank-046-seq-accrue-1",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -3977,8 +3885,7 @@
      "placedByCurator": true,
      "exitBlock": "0"
     },
-    "op": "Accrue",
-    "opIndex": "0",
+    "op": "0",
     "args": {
      "epoch": "1",
      "shares": "2000000000000000000",
@@ -4031,7 +3938,6 @@
   {
    "id": "bank-047-seq-accrue-2",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -4069,8 +3975,7 @@
      "placedByCurator": true,
      "exitBlock": "0"
     },
-    "op": "Accrue",
-    "opIndex": "0",
+    "op": "0",
     "args": {
      "epoch": "2",
      "shares": "3000000000000000000",
@@ -4123,7 +4028,6 @@
   {
    "id": "bank-048-seq-accrue-3",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -4161,8 +4065,7 @@
      "placedByCurator": true,
      "exitBlock": "0"
     },
-    "op": "Accrue",
-    "opIndex": "0",
+    "op": "0",
     "args": {
      "epoch": "3",
      "shares": "4000000000000000000",
@@ -4215,7 +4118,6 @@
   {
    "id": "bank-049-seq-accrue-4",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -4253,8 +4155,7 @@
      "placedByCurator": true,
      "exitBlock": "0"
     },
-    "op": "Accrue",
-    "opIndex": "0",
+    "op": "0",
     "args": {
      "epoch": "4",
      "shares": "5000000000000000000",
@@ -4307,7 +4208,6 @@
   {
    "id": "bank-050-seq-accrue-5",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -4345,8 +4245,7 @@
      "placedByCurator": true,
      "exitBlock": "0"
     },
-    "op": "Accrue",
-    "opIndex": "0",
+    "op": "0",
     "args": {
      "epoch": "5",
      "shares": "6000000000000000000",
@@ -4399,7 +4298,6 @@
   {
    "id": "bank-051-seq-vest-open",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -4437,8 +4335,7 @@
      "placedByCurator": true,
      "exitBlock": "0"
     },
-    "op": "VestTime",
-    "opIndex": "2",
+    "op": "2",
     "args": {
      "nowEpoch": "6",
      "gateOpen": true
@@ -4452,7 +4349,7 @@
        "shares": "6000000000000000000"
       },
       {
-       "epoch": "0",
+       "epoch": "1",
        "shares": "0"
       },
       {
@@ -4490,7 +4387,6 @@
   {
    "id": "bank-052-seq-breach",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
@@ -4499,7 +4395,7 @@
        "shares": "6000000000000000000"
       },
       {
-       "epoch": "0",
+       "epoch": "1",
        "shares": "0"
       },
       {
@@ -4528,8 +4424,7 @@
      "placedByCurator": true,
      "exitBlock": "0"
     },
-    "op": "Breach",
-    "opIndex": "1",
+    "op": "1",
     "args": {
      "count": "1",
      "now": "725"
@@ -4539,23 +4434,23 @@
     "bank": {
      "cohorts": [
       {
-       "epoch": "0",
+       "epoch": "5",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "1",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "2",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "3",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "4",
        "shares": "0"
       }
      ],
@@ -4581,28 +4476,27 @@
   {
    "id": "bank-053-seq-drip-half",
    "fn": "FeeBank.apply",
-   "note": "",
    "in": {
     "bank": {
      "cohorts": [
       {
-       "epoch": "0",
+       "epoch": "5",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "1",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "2",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "3",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "4",
        "shares": "0"
       }
      ],
@@ -4619,8 +4513,7 @@
      "placedByCurator": true,
      "exitBlock": "0"
     },
-    "op": "Drip",
-    "opIndex": "3",
+    "op": "3",
     "args": {
      "now": "785"
     }
@@ -4629,23 +4522,23 @@
     "bank": {
      "cohorts": [
       {
-       "epoch": "0",
+       "epoch": "5",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "1",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "2",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "3",
        "shares": "0"
       },
       {
-       "epoch": "0",
+       "epoch": "4",
        "shares": "0"
       }
      ],

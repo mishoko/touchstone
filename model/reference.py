@@ -321,7 +321,7 @@ def _forfeit_all(b, now):
     is > 0 (the drip owed so far must already have been burned)."""
     new = b.cohort_total() + b.maturedPending
     for c in b.cohorts:
-        c[0], c[1] = 0, 0
+        c[1] = 0  # an emptied slot keeps its epoch; only shares are cleared
     b.maturedPending = 0
     if new > 0:
         b.forfeitPool = sat(b.forfeitPool + new, U128)
@@ -371,7 +371,7 @@ def fee_bank_apply(b, op, args):
                     vested += c[1]
                 else:
                     moved += c[1]
-                c[0], c[1] = 0, 0
+                c[1] = 0
         if gate:
             vested += b.maturedPending
             b.maturedPending = 0
@@ -395,8 +395,6 @@ def fee_bank_apply(b, op, args):
             c[1] -= x
             need -= x
             bank_burn += x
-            if c[1] == 0:
-                c[0] = 0
         x = min(need, b.maturedPending)
         b.maturedPending -= x
         need -= x

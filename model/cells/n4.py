@@ -3,7 +3,8 @@
 
 Coalition = curator + a Sybil trader. The Sybil pushes the pool price d ticks from the market price r,
 the curator re-places the vault at the pushed spot (no pre-swap; any legal W-wide aligned range containing
-spot and the reference, chosen to maximise the coalition's gain), and the Sybil swaps the price back to r.
+spot and the reference, chosen to maximise the coalition's gain over a 40-tick grid of
+legal ranges, both edges, and a ±30-tick refinement around the best), and the Sybil swaps the price back to r.
 Everything is valued at r. The curator's wealth change counts its holding fraction f of the vault and the
 burn of its deferred pay and bond for the charge (scaled by φ: φ = 1 is Touchstone, φ < 1 the controls).
 

@@ -3,7 +3,8 @@
  "specVersion": "2.15",
  "conventions": {
   "check": "errCode = first failing code in numeric order: 1 |tickSpot - refTick| > band; 2 hi - lo != wTicks; 3 lo or hi not a multiple of spacing; 4 not lo <= tickSpot < hi; 5 not lo <= refTick < hi; 0 ok. The vault maps 1 Fence, 2 Width, 3 Alignment, 4 and 5 NotContained.",
-  "size": "L = getLiquidityForAmounts(sqrtSpot, sqrtAt(lo), sqrtAt(hi), idle0, idle1) - (L/1e9 + 1), floored at 0; after = idle minus the v4 add amounts of L at sqrtSpot (roundUp = true); deltaAfter = min(WAD, positionValue(sqrtRef)*WAD / NAV(sqrtRef)) of `after` (0 when NAV = 0). belowDeltaMin = deltaAfter < DELTA_MIN (0.5 WAD): the vault reverts DeltaMin."
+  "size": "L = getLiquidityForAmounts(sqrtSpot, sqrtAt(lo), sqrtAt(hi), idle0, idle1) - (L/1e9 + 1), floored at 0; after = idle minus the v4 add amounts of L at sqrtSpot (roundUp = true); deltaAfter = min(WAD, positionValue(sqrtRef)*WAD / NAV(sqrtRef)) of `after` (0 when NAV = 0). deltaAfter < DELTA_MIN (0.5 WAD) means the vault reverts DeltaMin. Legs saturate at type(uint128).max (spot one unit inside an edge, case token1-edge-saturated-leg).",
+  "fields": "Placement.check in {lo, hi, tickSpot, refTick, band, wTicks, spacing} out {errCode}; Placement.size in {idle, lo, hi, sqrtSpot, sqrtRef} out {L, after, deltaAfter}; idle/after are Holdings {idle0, idle1, L, lo, hi}."
  },
  "cases": [
   {
@@ -207,8 +208,7 @@
      "lo": "195250",
      "hi": "197250"
     },
-    "deltaAfter": "999682632577702133",
-    "belowDeltaMin": false
+    "deltaAfter": "999682632577702133"
    }
   },
   {
@@ -236,8 +236,7 @@
      "lo": "196250",
      "hi": "198250"
     },
-    "deltaAfter": "998006687732928470",
-    "belowDeltaMin": false
+    "deltaAfter": "998006687732928470"
    }
   },
   {
@@ -265,8 +264,7 @@
      "lo": "194260",
      "hi": "196260"
     },
-    "deltaAfter": "999996674370097901",
-    "belowDeltaMin": false
+    "deltaAfter": "999996674370097901"
    }
   },
   {
@@ -294,8 +292,7 @@
      "lo": "196260",
      "hi": "198260"
     },
-    "deltaAfter": "769118074733718648",
-    "belowDeltaMin": false
+    "deltaAfter": "769118074733718648"
    }
   },
   {
@@ -323,12 +320,11 @@
      "lo": "194240",
      "hi": "196240"
     },
-    "deltaAfter": "230881924266103773",
-    "belowDeltaMin": true
+    "deltaAfter": "230881924266103773"
    }
   },
   {
-   "id": "placement-016-dust-deltamin",
+   "id": "placement-016-edge-balanced",
    "fn": "Placement.size",
    "in": {
     "idle": {
@@ -352,12 +348,67 @@
      "lo": "196250",
      "hi": "198250"
     },
-    "deltaAfter": "500585376679215546",
-    "belowDeltaMin": false
+    "deltaAfter": "500585376679215546"
    }
   },
   {
-   "id": "placement-017-empty-idle",
+   "id": "placement-017-dust-deltamin",
+   "fn": "Placement.size",
+   "in": {
+    "idle": {
+     "idle0": "1000000000",
+     "idle1": "500000000000000000000",
+     "L": "0",
+     "lo": "0",
+     "hi": "0"
+    },
+    "lo": "196250",
+    "hi": "198250",
+    "sqrtSpot": "1446042728370400211848465323367121",
+    "sqrtRef": "1448213311465967470759316625700897"
+   },
+   "out": {
+    "L": "191803254117499",
+    "after": {
+     "idle0": "1",
+     "idle1": "499999999999999999999",
+     "L": "191803254117499",
+     "lo": "196250",
+     "hi": "198250"
+    },
+    "deltaAfter": "667783268899076"
+   }
+  },
+  {
+   "id": "placement-018-token1-edge-saturated-leg",
+   "fn": "Placement.size",
+   "in": {
+    "idle": {
+     "idle0": "500000000000",
+     "idle1": "500000000000000000000",
+     "L": "0",
+     "lo": "0",
+     "hi": "0"
+    },
+    "lo": "194260",
+    "hi": "196260",
+    "sqrtSpot": "1446765894353319399313939355477630",
+    "sqrtRef": "1446042728370400211848465323367120"
+   },
+   "out": {
+    "L": "287743654284182999",
+    "after": {
+     "idle0": "499999999999",
+     "idle1": "500000001630",
+     "L": "287743654284182999",
+     "lo": "194260",
+     "hi": "196260"
+    },
+    "deltaAfter": "750118500625665384"
+   }
+  },
+  {
+   "id": "placement-019-empty-idle",
    "fn": "Placement.size",
    "in": {
     "idle": {
@@ -381,12 +432,11 @@
      "lo": "195250",
      "hi": "197250"
     },
-    "deltaAfter": "0",
-    "belowDeltaMin": true
+    "deltaAfter": "0"
    }
   },
   {
-   "id": "placement-018-tiny-headroom",
+   "id": "placement-020-tiny-headroom",
    "fn": "Placement.size",
    "in": {
     "idle": {
@@ -410,12 +460,11 @@
      "lo": "195250",
      "hi": "197250"
     },
-    "deltaAfter": "0",
-    "belowDeltaMin": true
+    "deltaAfter": "0"
    }
   },
   {
-   "id": "placement-019-ref-moves-delta",
+   "id": "placement-021-ref-moves-delta",
    "fn": "Placement.size",
    "in": {
     "idle": {
@@ -439,8 +488,7 @@
      "lo": "195250",
      "hi": "197250"
     },
-    "deltaAfter": "999683555138141247",
-    "belowDeltaMin": false
+    "deltaAfter": "999683555138141247"
    }
   }
  ]

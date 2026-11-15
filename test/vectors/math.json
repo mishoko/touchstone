@@ -5,7 +5,8 @@
   "ports": "TickMath, SqrtPriceMath, FullMath (v4-core) and LiquidityAmounts (v4-periphery) with their roundUp flags.",
   "LiquidityValue.q": "q(x,s) = s <= 2^128-1 ? mulDiv(s*s, x, 2^192) : mulDiv(mulDiv(s,s,2^64), x, 2^128).",
   "LiquidityValue.amounts": "Appendix A at sqrt price s with removal rounding (roundUp = false): s <= sa all token0; s >= sb all token1; else getAmount0Delta(s, sb) and getAmount1Delta(sa, s).",
-  "revert": "out = {revert: <error>} when the library function reverts."
+  "revert": "out = {revert: <error name>} when the upstream function reverts; \"\" means a revert with empty data (FullMath). Error names: InvalidTick, InvalidSqrtPrice, InvalidPrice, SafeCastOverflow.",
+  "fields": "TickMath.getSqrtPriceAtTick in {tick} out {sqrtPriceX96}; TickMath.getTickAtSqrtPrice in {sqrtPriceX96} out {tick}; SqrtPriceMath.getAmount0Delta/getAmount1Delta in {sqrtPriceAX96, sqrtPriceBX96, liquidity, roundUp} out {amount}; LiquidityAmounts.getLiquidityForAmounts in {sqrtPriceX96, sqrtPriceAX96, sqrtPriceBX96, amount0, amount1} out {liquidity}; FullMath.mulDiv/mulDivRoundingUp in {a, b, denominator} out {result}; LiquidityValue.q in {x, sqrtPriceX96} out {value}; LiquidityValue.amounts in {L, lo, hi, sqrtPriceX96} out {amount0, amount1}."
  },
  "cases": [
   {
@@ -1419,9 +1420,7 @@
     "amount1": "500000000000000000000"
    },
    "out": {
-    "liquidity": {
-     "revert": "SafeCastOverflow"
-    }
+    "revert": "SafeCastOverflow"
    }
   },
   {
@@ -1449,9 +1448,7 @@
     "amount1": "0"
    },
    "out": {
-    "liquidity": {
-     "revert": "SafeCastOverflow"
-    }
+    "revert": "SafeCastOverflow"
    }
   },
   {
@@ -1685,9 +1682,7 @@
     "denominator": "1"
    },
    "out": {
-    "result": {
-     "revert": "mulDiv"
-    }
+    "revert": ""
    }
   },
   {
@@ -1699,9 +1694,7 @@
     "denominator": "1"
    },
    "out": {
-    "result": {
-     "revert": "mulDiv"
-    }
+    "revert": ""
    }
   },
   {

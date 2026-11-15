@@ -51,14 +51,17 @@ def with_old(idle, kind, r=T0):
     return h
 
 
-def jit_fill(zfo, amount, spot_tick, lim_tick, own=None):
+JIT_SIZES = (10 ** 17, 10 ** 18, 2 * 10 ** 18, 5 * 10 ** 18, 10 ** 19, 10 ** 20, 10 ** 21, 10 ** 24)
+
+
+def jit_fill(zfo, amount, spot_tick, lim_tick, own=None, jit=10 ** 24):
     """Execute an exact-input swap from spot to the limit with coalition JIT liquidity at the limit and,
     optionally, the vault's own position in the path. Returns (used, out, fees0, fees1 to the own position)."""
     pool = R.Pool(sqrt_at(spot_tick), FEE)
     if own and own.L:
         pool.modify("vault", own.lo, own.hi, own.L)
     j = (lim_tick, lim_tick + SPACING) if zfo else (lim_tick - SPACING, lim_tick)
-    pool.modify("jit", j[0], j[1], 10 ** 24)
+    pool.modify("jit", j[0], j[1], jit)
     used, out = pool.swap(zfo, amount, sqrt_at(lim_tick))
     f0 = f1 = 0
     if own and own.L:
@@ -91,17 +94,18 @@ def worst_swap(band):
                     if amt == 0:
                         continue
                     lim = spot_t - 10 if zfo else spot_t + 10
-                    used, out, f0, f1 = jit_fill(zfo, amt, spot_t, lim, own=h0)
-                    h1 = h0.copy()
-                    if zfo:
-                        h1.idle0, h1.idle1 = h1.idle0 - used, h1.idle1 + out
-                    else:
-                        h1.idle1, h1.idle0 = h1.idle1 - used, h1.idle0 + out
-                    h1.idle0 += f0
-                    h1.idle1 += f1
-                    rt, c, n, p = ratio(h0, h1, sqrt_at(spot_t), s_ref)
-                    if rt > best[0]:
-                        best = (rt, dict(theta=theta, old=kind, spot_off=off, zfo=zfo, amount=amt, charge=c, navp=n,
+                    for jit in JIT_SIZES:  # the JIT size that pushes the fill deepest into the band
+                      used, out, f0, f1 = jit_fill(zfo, amt, spot_t, lim, own=h0, jit=jit)
+                      h1 = h0.copy()
+                      if zfo:
+                          h1.idle0, h1.idle1 = h1.idle0 - used, h1.idle1 + out
+                      else:
+                          h1.idle1, h1.idle0 = h1.idle1 - used, h1.idle0 + out
+                      h1.idle0 += f0
+                      h1.idle1 += f1
+                      rt, c, n, p = ratio(h0, h1, sqrt_at(spot_t), s_ref)
+                      if rt > best[0]:
+                        best = (rt, dict(theta=theta, old=kind, spot_off=off, zfo=zfo, amount=amt, jit=jit, charge=c, navp=n,
                                          leg="ref" if p == s_ref else "spot", before=h0.d(), after=h1.d(),
                                          sqrtSpot=sqrt_at(spot_t), sqrtRef=s_ref))
     return best
@@ -124,7 +128,7 @@ def worst_place(band):
                     if lo == lo_min and abs(lo + W - 1 - T0) <= band:
                         spots.append(sqrt_at(lo + W) - 1)      # one unit below sqrtAt(hi)
                     for sp in spots:
-                        for pre in (None, True, False):
+                        for pre, jit in [(None, 0)] + [(z, j) for z in (True, False) for j in (10 ** 18, 10 ** 19, 10 ** 24)]:
                             hb = h0.copy()
                             if hb.L:
                                 x, y = R.position_amounts(hb.L, hb.lo, hb.hi, sp)
@@ -136,12 +140,12 @@ def worst_place(band):
                                     continue
                                 tk = R.get_tick_at_sqrt_price(sp)
                                 lim = tk - 10 if pre else tk + 10
-                                used, out, _, _ = jit_fill(pre, amt, tk, lim)
+                                used, out, _, _ = jit_fill(pre, amt, tk, lim, jit=jit)
                                 if pre:
                                     hb.idle0, hb.idle1 = hb.idle0 - used, hb.idle1 + out
                                 else:
                                     hb.idle1, hb.idle0 = hb.idle1 - used, hb.idle0 + out
-                                sp_after = sqrt_at(lim)
+                                sp_after = sqrt_at(lim)  # conservative: spot at the limit (max L for the add)
                             L, h1, d = R.placement_size(hb, lo, lo + W, sp_after, s_ref)
                             if d < R.WAD // 2:
                                 continue

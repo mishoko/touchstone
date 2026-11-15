@@ -6,13 +6,12 @@
   "NAV": "NAV(s) = q(idle0 + x_pos(s), s) + idle1 + y_pos(s); positions per Appendix A with roundUp = false.",
   "value": "ExecLedger.value(h, sqrtP) = (NAV(sqrtP), val(x_pos, y_pos, sqrtP)).",
   "holdings": "Holdings {idle0, idle1, L, lo, hi}; before/after are inputs.",
-  "note": "the `note` field is documentation and is not read by the runner."
+  "fields": "ExecLedger.measure in {before, after, sqrtSpot, sqrtRef, S, unvested, bond} out {charge, pStar, navAfterPStar, burn, ok}; ExecLedger.value in {h, sqrtP} out {nav, posValue}; Holdings = {idle0, idle1, L, lo, hi}."
  },
  "cases": [
   {
    "id": "ledger-000-zero-action",
    "fn": "ExecLedger.measure",
-   "note": "no-op action: charge 0",
    "in": {
     "before": {
      "idle0": "1500",
@@ -45,7 +44,6 @@
   {
    "id": "ledger-001-rerange-at-ref",
    "fn": "ExecLedger.measure",
-   "note": "no-swap re-range, spot = reference: rounding only",
    "in": {
     "before": {
      "idle0": "1500",
@@ -78,7 +76,6 @@
   {
    "id": "ledger-002-pushed-spot",
    "fn": "ExecLedger.measure",
-   "note": "spot +60; edge placement; p* = ref (deltaAfter 994206092329371942)",
    "in": {
     "before": {
      "idle0": "20000000000",
@@ -111,7 +108,6 @@
   {
    "id": "ledger-003-lagging-ref",
    "fn": "ExecLedger.measure",
-   "note": "reference 40 ticks below spot (deltaAfter 991602196723439017)",
    "in": {
     "before": {
      "idle0": "3000000000000",
@@ -144,7 +140,6 @@
   {
    "id": "ledger-004-swap-deep",
    "fn": "ExecLedger.measure",
-   "note": "rebalanceSwap 2% NAV, limit 10 ticks: fee + impact",
    "in": {
     "before": {
      "idle0": "1500000000000",
@@ -177,7 +172,6 @@
   {
    "id": "ledger-005-swap-thin",
    "fn": "ExecLedger.measure",
-   "note": "rebalanceSwap 2% NAV, limit 10 ticks: fee + impact",
    "in": {
     "before": {
      "idle0": "1500000000000",
@@ -210,7 +204,6 @@
   {
    "id": "ledger-006-swap-own-liquidity",
    "fn": "ExecLedger.measure",
-   "note": "own position in range collects part of the fee",
    "in": {
     "before": {
      "idle0": "1499047599972",
@@ -243,7 +236,6 @@
   {
    "id": "ledger-007-swap-fence-sell",
    "fn": "ExecLedger.measure",
-   "note": "spot +60, JIT at the limit; spot leg worse",
    "in": {
     "before": {
      "idle0": "1500000000000",
@@ -276,7 +268,6 @@
   {
    "id": "ledger-008-swap-fence-buy",
    "fn": "ExecLedger.measure",
-   "note": "buy token0 60 ticks above the reference",
    "in": {
     "before": {
      "idle0": "1500000000000",
@@ -309,7 +300,6 @@
   {
    "id": "ledger-009-edge-placement",
    "fn": "ExecLedger.measure",
-   "note": "edge60 token0 side (deltaAfter 252821718659253188)",
    "in": {
     "before": {
      "idle0": "3000000000000",
@@ -342,7 +332,6 @@
   {
    "id": "ledger-010-gate-revert",
    "fn": "ExecLedger.measure",
-   "note": "burn > unvested + bond -> ok = false (Insolvent)",
    "in": {
     "before": {
      "idle0": "20000000000",
@@ -375,7 +364,6 @@
   {
    "id": "ledger-011-gate-exact",
    "fn": "ExecLedger.measure",
-   "note": "burn == unvested + bond -> ok",
    "in": {
     "before": {
      "idle0": "20000000000",
@@ -408,7 +396,6 @@
   {
    "id": "ledger-012-gain-floor",
    "fn": "ExecLedger.measure",
-   "note": "NAV rises at both prices: charge 0",
    "in": {
     "before": {
      "idle0": "3000000000000",
@@ -441,7 +428,6 @@
   {
    "id": "ledger-013-tie-spot-ref",
    "fn": "ExecLedger.measure",
-   "note": "equal losses: p* = sqrtSpot",
    "in": {
     "before": {
      "idle0": "3000000000000",
@@ -474,7 +460,6 @@
   {
    "id": "ledger-014-nav-after-zero",
    "fn": "ExecLedger.measure",
-   "note": "burn saturates at type(uint256).max; ok = false",
    "in": {
     "before": {
      "idle0": "10",
@@ -507,7 +492,6 @@
   {
    "id": "ledger-015-burn-ceil",
    "fn": "ExecLedger.measure",
-   "note": "ceilDiv(charge\u00b7S, NAV')",
    "in": {
     "before": {
      "idle0": "3000000000000",
@@ -540,7 +524,6 @@
   {
    "id": "ledger-016-out-of-range-noop",
    "fn": "ExecLedger.measure",
-   "note": "position above spot; no-op",
    "in": {
     "before": {
      "idle0": "1500",

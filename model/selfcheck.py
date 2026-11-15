@@ -66,11 +66,28 @@ class World:
         self.depositor += shares
         return r
 
+    def withdraw(self, shares):
+        r = self.v.withdraw(shares, self.block, self.ts())
+        self.depositor -= shares
+        return r
 
-def share_conservation(w):
-    v, b = w.v, w.v.bank
-    held = R.DEAD + w.depositor + b.cohort_total() + b.maturedPending + b.vestedUnclaimed + b.bondShares + b.forfeitPool
-    return held + w.claimed if hasattr(w, "claimed") else held
+    def claim(self):
+        x = self.v.claim(self.block, self.ts())
+        self.claimed = getattr(self, "claimed", 0) + x
+        return x
+
+    def release(self):
+        x = self.v.release_bond(self.block, self.ts())
+        self.claimed = getattr(self, "claimed", 0) + x
+        return x
+
+
+def conserved(w, name):
+    """Share supply = DEAD + depositors + bank buckets + bond + forfeit pool + shares paid to the curator."""
+    b = w.v.bank
+    held = (R.DEAD + w.depositor + b.cohort_total() + b.maturedPending + b.vestedUnclaimed + b.bondShares +
+            b.forfeitPool + getattr(w, "claimed", 0))
+    check(w.v.S == held, f"share conservation ({name})", (w.v.S, held))
 
 
 # ------------------------------------------------------------------ property checks
@@ -349,8 +366,9 @@ def scenario_base_and_vesting():
     w.poke()
     check(w.v.bank.vestedUnclaimed > 0, "a matured cohort vests at a checkpoint with the gate open")
     check(w.v.live_reads >= 1, "the live leg is read when something is vestable")
-    paid = w.v.claim(w.block, w.ts())
+    paid = w.claim()
     check(paid > 0 and w.v.bank.vestedUnclaimed == 0, "claim pays vested shares")
+    conserved(w, "base and vesting")
     return w
 
 
@@ -439,7 +457,6 @@ def scenario_breach_and_removal():
             check(False, f"pending removal: {name} must revert")
         except R.Revert as ex:
             check(ex.err == "BadMode", f"pending removal: {name} reverts BadMode", ex.err)
-            w.depositor -= 10 ** 18 if name == "deposit" else 0
     check(w.v.bank.d() == snapshot_bank and w.v.hook.pendingBreaches == 1, "the reverted calls leave the breach pending")
     w.poke()
     check(w.v.bank.mode == R.EXITED and w.v.bank.exitBlock == w.block and not w.v.bank.placedByCurator,
@@ -456,8 +473,9 @@ def scenario_breach_and_removal():
         check(ex.err == "BondLocked", "release before the delay reverts BondLocked")
     w.keepalive_run(exit_block + R.V * w.t.EPOCH - w.block)
     bond = w.v.bank.bondShares
-    got = w.v.release_bond(w.block, w.ts())
+    got = w.release()
     check(got == bond and w.v.bank.bondShares == 0, "bond released at exitBlock + V·EPOCH")
+    conserved(w, "breach and removal")
     return w
 
 
@@ -565,9 +583,9 @@ def scenario_actions():
         check(False, "deposit in EXITED reverts")
     except R.Revert as ex:
         check(ex.err == "BadMode", "deposit reverts in EXITED")
-        w.depositor -= 10 ** 18
-    out = w.v.withdraw(w.depositor // 2, w.block, w.ts())
+    out = w.withdraw(w.depositor // 2)
     check(out[0] > 0 and out[1] > 0, "withdraw in kind open in EXITED")
+    conserved(w, "actions")
     del f
 
 
@@ -623,6 +641,7 @@ def scenario_insolvent():
     amt2 = min(w2.v.nav(sqrt_at(T0)) // 100, w2.v.h.idle1)
     bond0 = w2.v.bank.bondShares + w2.v.bank.unvested()
     c, p, burn = w2.v.rebalance_swap(False, amt2, w2.block, w2.ts())
+    conserved(w2, "charge burn")
     check(c > 0 and p == sqrt_at(T0) and w2.v.bank.bondShares + w2.v.bank.unvested() == bond0 - burn,
           "fence swap charged at the reference leg; burn from bank then bond", (c, p))
 
@@ -638,6 +657,231 @@ def scenario_epilogue():
     check(w.v.delta0 == d0, "in-kind flows leave δ0 unchanged")
 
 
+def anchor_split(anchor_tick, live_tick, tier=R.TEST):
+    """A reference whose anchored samples read `anchor_tick` and whose live reads read `live_tick`."""
+    return lambda ts: anchor_tick(ts) if ts % tier.GRID_SEC == 0 else live_tick(ts)
+
+
+def rules_pay():
+    t = R.TEST
+    # deferred base: no fresh cache and an unreadable live reference -> baseOwed; minted at the next priced checkpoint
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.deposit(10 ** 26)
+    w.keepalive_run(40)
+    w.poke()
+    w.keepalive_run(30)
+    start = w.ts()
+    w.ref.fail = lambda end: end > start
+    w.step(3 * t.GRID)
+    m0 = w.v.mint_reads
+    S0 = w.v.S
+    w.poke()
+    check(w.v.mint_reads == m0 + 1, "stale cache: the mint price comes from tryRef")
+    check(w.v.baseOwed > 0 and w.v.S == S0 and "deferred" in w.v.rec(w.block // t.EPOCH)["flags"],
+          "no price: base amount closed into baseOwed, record flagged deferred", w.v.baseOwed)
+    owed = w.v.baseOwed
+    w.ref.fail = set()
+    w.keepalive_run(t.GRID * 3)
+    S1, nav = w.v.S, None
+    w.poke()
+    check(w.v.baseOwed == 0 and w.v.S > S1, "baseOwed minted at the next priced checkpoint")
+    # baseOwed is forfeited by a breach and by retire (checked with no price, so nothing can be minted)
+    start = w.ts()
+    w.ref.fail = lambda end: end > start
+    w.step(3 * t.GRID)
+    w.poke()
+    owed = w.v.baseOwed
+    check(owed > 0, "deferred base available for the forfeiture checks")
+    h = w.v.hook
+    h.pendingBreaches, h.lastPendingBlock, h.tauVAtLastPending = 1, w.block, h.tauV
+    fv0 = w.v.rec(w.block // t.EPOCH)["forfeitValue"]
+    w.step(1)
+    w.poke()
+    check(w.v.baseOwed < owed // 2 and w.v.rec(w.block // t.EPOCH)["forfeitValue"] >= fv0 + owed,
+          "a breach forfeits baseOwed", (w.v.baseOwed, owed))
+    w.v.baseOwed = owed
+    w.step(t.COOLDOWN)
+    w.v.retire(w.block, w.ts())
+    check(w.v.baseOwed == 0, "retire forfeits baseOwed")
+    w.ref.fail = set()
+    # no base in EXITED even while the range stays in range
+    S2 = w.v.S
+    w.keepalive_run(t.EPOCH)
+    w.poke()
+    check(w.v.bank.cohort_total() == 0 and w.v.S <= S2, "no base accrues in EXITED")
+    # fresh cache: base minted at the cached reference, no live read
+    st = {"live": T0}
+    w = World(ref_fn=lambda ts: T0)
+    w.place(T0 - 1000, T0 + 1000)
+    w.deposit(10 ** 26)
+    w.keepalive_run(60)
+    w.poke()
+    w.ref_tick = anchor_split(lambda ts: T0, lambda ts: T0 + 50)
+    w.keepalive_run(40)
+    v = w.v
+    S0, tau0, m0 = v.S, v.tauV0, v.mint_reads
+    w.step(1)
+    o = v.hook.snapshot(w.block, w.ts(), v.pool.s, v.pool.tick)
+    base = R.mul_div(R.mul_div(t.m_perBlock, v.NAV0, R.WAD), v.delta0 * (o["tauV"] - tau0), R.WAD)
+    v._collect_first()
+    navp = v.nav(sqrt_at(T0))
+    v._checkpoint(o, w.block, w.ts())
+    check(v.mint_reads == m0 and v.S - S0 == base * S0 // (navp - base), "fresh cache: mint at the cached reference")
+    del st
+
+
+def rules_gate_leg():
+    """Cache out of range, live reference in range: the cached leg keeps the gate closed."""
+    w = World(ref_fn=lambda ts: T0)
+    w.place(T0 - 1000, T0 + 1000)
+    w.keepalive_run(R.TEST.EPOCH * (2 + R.V))
+    w.poke()
+    w.keepalive_run(R.TEST.EPOCH * (1 + R.V))
+    w.ref_tick = anchor_split(lambda ts: T0 + 1500, lambda ts: T0)
+    w.keepalive_run(R.TEST.GRID)
+    vu, r0 = w.v.bank.vestedUnclaimed, w.v.live_reads
+    w.step(1)
+    w.poke()
+    check(w.v.bank.vestedUnclaimed == vu and w.v.bank.maturedPending > 0 and w.v.live_reads == r0,
+          "cached reference out of range: no vesting and no live read")
+
+
+def rules_clock():
+    t = R.TEST
+
+    def hook(anchor_ticks, streak, out=50):
+        h = R.Hook(t, R.RefSource(lambda ts: anchor_ticks.get(ts // t.GRID_SEC, T0)))
+        h.armed, h.vaultLo, h.vaultHi, h.emptyRange = True, T0 - 1000, T0 + 1000, False
+        h.refTick, h.refGrid, h.refCachedAt, h.lastSnap, h.ring = T0, 100, 2000, 2000, [(2000, T0)]
+        h.resetStreak, h.outBlocks = streak, out
+        return h
+    # streak counts consecutive anchor indices only: skip anchor 101, sample 102 -> streak 1, no reset
+    h = hook({}, 1)
+    h.snapshot(2040, 2040 * t.BLOCKTIME, sqrt_at(T0), T0)
+    check(h.resetStreak == 1 and h.outBlocks == 50, "streak restarts after a skipped anchor", (h.resetStreak, h.outBlocks))
+    h.snapshot(2060, 2060 * t.BLOCKTIME, sqrt_at(T0), T0)
+    check(h.outBlocks == 0 and not h.gapSinceVerify, "RESET_RUN consecutive in-range anchors reset the run")
+    # an out-of-range sample zeroes the streak
+    h = hook({101: T0 + 1500}, 1)
+    h.snapshot(2020, 2020 * t.BLOCKTIME, sqrt_at(T0), T0)
+    check(h.resetStreak == 0, "an out-of-range sample zeroes the streak")
+    h.snapshot(2040, 2040 * t.BLOCKTIME, sqrt_at(T0), T0)
+    check(h.resetStreak == 1 and h.outBlocks > 0, "no reset after out, in", (h.resetStreak, h.outBlocks))
+    # at most one refresh per anchor
+    h = hook({}, 0)
+    h.snapshot(2020, 2020 * t.BLOCKTIME, sqrt_at(T0), T0)
+    n = sum(1 for e in h.events if e[0] == "RefRefreshed")
+    h.refresh_ref(2021, 2021 * t.BLOCKTIME, sqrt_at(T0), T0)
+    h.refresh(2022, 2022 * t.BLOCKTIME)
+    check(sum(1 for e in h.events if e[0] == "RefRefreshed") == n and h.refCachedAt == 2020,
+          "one cache write per anchor")
+    # outBlocks credit truncated at the cache freshness (EMPTY range, long gap)
+    h = R.Hook(t, R.RefSource(lambda ts: T0))
+    h.armed, h.refTick, h.refGrid, h.refCachedAt, h.lastSnap, h.ring = True, T0, 10 ** 9, 1000, 1000, [(1000, T0)]
+    h.snapshot(1000 + 10 * t.GRID, 10 ** 12, sqrt_at(T0), T0)
+    check(h.outBlocks == 2 * t.GRID, "outBlocks credit truncated at the cache freshness", h.outBlocks)
+    # registration after a gap clears it and writes the cache
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.step(10 * t.GRID)
+    w.poke()
+    check(w.v.hook.gapSinceVerify, "gap set")
+    w.keepalive_run(t.COOLDOWN)
+    w.step(3)
+    w.place(T0 - 1010, T0 + 990)
+    h = w.v.hook
+    check(not h.gapSinceVerify and h.refCachedAt == w.block and h.refGrid == w.ts() // t.GRID_SEC and h.refTick == T0,
+          "registration clears the gap and writes the live tick into the cache")
+
+
+def rules_actions():
+    t = R.TEST
+    w = World(seed_amounts=(300_000 * USDC, 20 * ETH), third_L=10 ** 22)
+    w.place(T0, T0 + 2000)  # token0-side edge: token1 stays idle
+    w.deposit(10 ** 26)
+    # deposit amounts round up
+    S, i0, i1 = w.v.S, w.v.h.idle0, w.v.h.idle1
+    sh = 10 ** 25 + 7
+    w.deposit(sh)
+    check(w.v.h.idle0 == i0 + R.ceil_div(i0 * sh, S) and w.v.h.idle1 == i1 + R.ceil_div(i1 * sh, S),
+          "deposit idle slices round up")
+    # NAV cap
+    try:
+        w.deposit(w.v.bank.bondShares * R.WAD // t.BOND_RATIO)
+        check(False, "a deposit past the NAV cap must revert")
+    except R.Revert as ex:
+        check(ex.err == "NavCap", "NAV cap in shares", ex.err)
+    # withdraw epilogue re-base
+    n0, S0 = w.v.NAV0, w.v.S
+    w.withdraw(10 ** 25)
+    check(w.v.NAV0 == R.mul_div(n0, w.v.S, S0), "withdraw epilogue re-bases NAV0")
+    # move to an epoch start so that the swap counters are fresh
+    w.keepalive_run(t.EPOCH - w.block % t.EPOCH + 1)
+    w.poke()
+    nav = w.v.nav(sqrt_at(T0))
+    # MAX_SWAP_ACTION (idle is sufficient, so the cap binds)
+    try:
+        w.v.rebalance_swap(False, nav * 25 // 1000, w.block, w.ts())
+        check(False, "a swap above MAX_SWAP_ACTION must revert")
+    except R.Revert as ex:
+        check(ex.err == "SwapCap" and nav * 25 // 1000 <= w.v.h.idle1, "MAX_SWAP_ACTION", ex.err)
+    # idle check
+    try:
+        w.v.rebalance_swap(True, w.v.h.idle0 + 1, w.block, w.ts())
+        check(False, "a swap above idle must revert")
+    except R.Revert as ex:
+        check(ex.err == "SwapCap", "amountIn above idle reverts SwapCap", ex.err)
+    # epoch cap: 1.9% + 1.9% then 1.9% exceeds 5%
+    for i in range(2):
+        w.v.rebalance_swap(False, nav * 19 // 1000, w.block, w.ts())
+        w.keepalive_run(t.COOLDOWN)
+    check(w.v.epochSwapFrac > 37 * 10 ** 15, "two 1.9% swaps filled", w.v.epochSwapFrac)
+    try:
+        w.v.rebalance_swap(False, nav * 19 // 1000, w.block, w.ts())
+        check(False, "the epoch swap cap must revert")
+    except R.Revert as ex:
+        check(ex.err == "SwapCap", "MAX_SWAP_EPOCH", ex.err)
+    # rebalanceSwap epilogue and collect-again with the vault's own position in range
+    w2 = World()
+    w2.place(T0 - 1000, T0 + 1000)
+    w2.deposit(10 ** 26)
+    w2.keepalive_run(t.COOLDOWN)
+    w2.v.rebalance_swap(True, w2.v.h.idle0 // 2 + 1, w2.block, w2.ts())
+    v = w2.v
+    check(v.pool.collect("vault", v.h.lo, v.h.hi) == (0, 0), "fees collected again after the vault's own swap")
+    check(v.NAV0 == v.nav(sqrt_at(T0)) and v.delta0 == R.delta_of(v.h, sqrt_at(T0)), "rebalanceSwap epilogue re-base")
+    # rebalanceSwap fence
+    v.pool.push_to(sqrt_at(T0 + 61))
+    w2.keepalive_run(t.COOLDOWN)
+    try:
+        v.rebalance_swap(False, 10 ** 15, w2.block, w2.ts())
+        check(False, "rebalanceSwap outside the fence must revert")
+    except R.Revert as ex:
+        check(ex.err == "Fence", "fence on rebalanceSwap", ex.err)
+    # MAX_SWAPS and the counter reset at the epoch roll
+    w3 = World(seed_amounts=(300_000 * USDC, 20 * ETH), third_L=10 ** 21)
+    w3.place(T0, T0 + 2000)
+    w3.keepalive_run(t.EPOCH - w3.block % t.EPOCH + 1)
+    w3.poke()
+    small = w3.v.nav(sqrt_at(T0)) // 1000
+    for i in range(t.MAX_SWAPS):
+        w3.v.rebalance_swap(False, small, w3.block, w3.ts())
+        w3.keepalive_run(t.COOLDOWN)
+    try:
+        w3.v.rebalance_swap(False, small, w3.block, w3.ts())
+        check(False, "MAX_SWAPS must revert")
+    except R.Revert as ex:
+        check(ex.err == "MaxSwaps", "MAX_SWAPS per epoch", ex.err)
+    w3.keepalive_run(t.EPOCH - w3.block % t.EPOCH + 1)
+    w3.poke()
+    try:
+        w3.v.rebalance_swap(False, small, w3.block, w3.ts())
+        check(w3.v.swapCount == 1, "swap counters reset at the epoch roll")
+    except R.Revert as ex:
+        check(False, "swap counters reset at the epoch roll", ex.err)
+
+
 def main():
     rng = random.Random(20261115)
     props_ledger(rng)
@@ -648,6 +892,12 @@ def main():
     props_ladder()
     props_placement(rng)
     props_units()
+    for sc in (rules_pay, rules_gate_leg, rules_clock, rules_actions):
+        try:
+            sc()
+        except Exception as ex:
+            import traceback
+            FAILS.append(f"{sc.__name__} crashed: {ex!r}\n{traceback.format_exc()}")
     for sc in (scenario_base_and_vesting, scenario_live_leg, scenario_no_read_when_not_vestable,
                scenario_breach_and_removal, scenario_reset_and_registration, scenario_gap, scenario_actions,
                scenario_deltamin, scenario_insolvent, scenario_epilogue):

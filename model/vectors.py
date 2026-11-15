@@ -50,11 +50,16 @@ def write(name, conventions, cases):
     return len(cases)
 
 
-def guard(fn, *a):
+UPSTREAM_ERR = {"mulDiv": "", "mulDivRoundingUp": "", "divRoundingUp": "", "ceilDiv": ""}  # empty revert data
+
+
+def guard(key, fn, *a):
+    """out = {key: value}, or {revert: <upstream error name>} ("" = a revert with empty data)."""
     try:
-        return fn(*a)
+        return {key: fn(*a)}
     except MathRevert as ex:
-        return {"revert": str(ex).split(":")[0]}
+        name = str(ex).split(":")[0]
+        return {"revert": UPSTREAM_ERR.get(name, name)}
 
 
 # ======================================================================== math
@@ -85,18 +90,18 @@ def math_cases():
         for L in [1, 10 ** 12, 10 ** 24, (1 << 128) - 1]:
             for up in (False, True):
                 add("SqrtPriceMath.getAmount0Delta", dict(sqrtPriceAX96=sb, sqrtPriceBX96=sa, liquidity=L, roundUp=up),
-                    {"amount": guard(get_amount0_delta, sa, sb, L, up)})
+                    guard("amount", get_amount0_delta, sa, sb, L, up))
                 add("SqrtPriceMath.getAmount1Delta", dict(sqrtPriceAX96=sa, sqrtPriceBX96=sb, liquidity=L, roundUp=up),
-                    {"amount": guard(get_amount1_delta, sa, sb, L, up)})
+                    guard("amount", get_amount1_delta, sa, sb, L, up))
     sa, sb = sqrt_at(T0 - 1000), sqrt_at(T0 + 1000)
     for s in [sa - 1, sa, sqrt_at(T0), sb - 1, sb, sb + 1]:
         for a0, a1 in [(10 ** 12, 5 * 10 ** 20), (0, 10 ** 20), (10 ** 12, 0), (1, 1)]:
             add("LiquidityAmounts.getLiquidityForAmounts",
                 dict(sqrtPriceX96=s, sqrtPriceAX96=sa, sqrtPriceBX96=sb, amount0=a0, amount1=a1),
-                {"liquidity": guard(get_liquidity_for_amounts, s, sa, sb, a0, a1)})
+                guard("liquidity", get_liquidity_for_amounts, s, sa, sb, a0, a1))
     for a, b, d in [(U256, U256, U256), (1, 1, 3), (2 ** 200, 2 ** 100, 2 ** 150 + 7), (7, 11, 13), (U256, 2, 1)]:
-        add("FullMath.mulDiv", dict(a=a, b=b, denominator=d), {"result": guard(mul_div, a, b, d)})
-        add("FullMath.mulDivRoundingUp", dict(a=a, b=b, denominator=d), {"result": guard(mul_div_up, a, b, d)})
+        add("FullMath.mulDiv", dict(a=a, b=b, denominator=d), guard("result", mul_div, a, b, d))
+        add("FullMath.mulDivRoundingUp", dict(a=a, b=b, denominator=d), guard("result", mul_div_up, a, b, d))
     for s in [sqrt_at(T0), sqrt_at(-T0), (1 << 128) - 1, 1 << 128, MAX_SQRT_PRICE - 1, MIN_SQRT_PRICE]:
         for x in [0, 1, 10 ** 12, 10 ** 30]:
             add("LiquidityValue.q", dict(x=x, sqrtPriceX96=s), {"value": R.q(x, s)})
@@ -112,7 +117,14 @@ MATH_CONV = {
     "LiquidityValue.q": "q(x,s) = s <= 2^128-1 ? mulDiv(s*s, x, 2^192) : mulDiv(mulDiv(s,s,2^64), x, 2^128).",
     "LiquidityValue.amounts": "Appendix A at sqrt price s with removal rounding (roundUp = false): s <= sa all token0; "
                               "s >= sb all token1; else getAmount0Delta(s, sb) and getAmount1Delta(sa, s).",
-    "revert": "out = {revert: <error>} when the library function reverts.",
+    "revert": "out = {revert: <error name>} when the upstream function reverts; \"\" means a revert with empty "
+              "data (FullMath). Error names: InvalidTick, InvalidSqrtPrice, InvalidPrice, SafeCastOverflow.",
+    "fields": "TickMath.getSqrtPriceAtTick in {tick} out {sqrtPriceX96}; TickMath.getTickAtSqrtPrice in {sqrtPriceX96} "
+              "out {tick}; SqrtPriceMath.getAmount0Delta/getAmount1Delta in {sqrtPriceAX96, sqrtPriceBX96, liquidity, "
+              "roundUp} out {amount}; LiquidityAmounts.getLiquidityForAmounts in {sqrtPriceX96, sqrtPriceAX96, "
+              "sqrtPriceBX96, amount0, amount1} out {liquidity}; FullMath.mulDiv/mulDivRoundingUp in {a, b, "
+              "denominator} out {result}; LiquidityValue.q in {x, sqrtPriceX96} out {value}; LiquidityValue.amounts "
+              "in {L, lo, hi, sqrtPriceX96} out {amount0, amount1}.",
 }
 
 
@@ -150,7 +162,7 @@ def ledger_cases():
             assert (p == (s_spot if leg == "spot" else s_ref)), (tag, "p*")
             assert (c > rounding(s_spot)) == positive, (tag, "charge", c)
             assert ok == ok_want, (tag, "ok")
-        cases.append(dict(id=f"ledger-{len(cases):03d}-{tag}", fn="ExecLedger.measure", note=note,
+        cases.append(dict(id=f"ledger-{len(cases):03d}-{tag}", fn="ExecLedger.measure",
                           **{"in": dict(before=before.d(), after=after.d(), sqrtSpot=s_spot, sqrtRef=s_ref, S=S_,
                                         unvested=unv_, bond=bond_),
                              "out": dict(charge=c, pStar=p, navAfterPStar=n, burn=b, ok=ok)}))
@@ -287,7 +299,9 @@ LEDGER_CONV = {
     "NAV": "NAV(s) = q(idle0 + x_pos(s), s) + idle1 + y_pos(s); positions per Appendix A with roundUp = false.",
     "value": "ExecLedger.value(h, sqrtP) = (NAV(sqrtP), val(x_pos, y_pos, sqrtP)).",
     "holdings": "Holdings {idle0, idle1, L, lo, hi}; before/after are inputs.",
-    "note": "the `note` field is documentation and is not read by the runner.",
+    "fields": "ExecLedger.measure in {before, after, sqrtSpot, sqrtRef, S, unvested, bond} out {charge, pStar, "
+              "navAfterPStar, burn, ok}; ExecLedger.value in {h, sqrtP} out {nav, posValue}; Holdings = {idle0, idle1, "
+              "L, lo, hi}.",
 }
 
 
@@ -296,39 +310,43 @@ def placement_cases():
     cases = []
     B, W, SP = 60, 2000, 10
 
-    def chk(tag, lo, hi, spot, ref):
+    def chk(tag, lo, hi, spot, ref, expect):
+        assert R.placement_check(lo, hi, spot, ref, B, W, SP) == expect, (tag, "errCode")
         cases.append(dict(id=f"placement-{len(cases):03d}-{tag}", fn="Placement.check",
                           **{"in": dict(lo=lo, hi=hi, tickSpot=spot, refTick=ref, band=B, wTicks=W, spacing=SP),
                              "out": dict(errCode=R.placement_check(lo, hi, spot, ref, B, W, SP))}))
 
-    def size(tag, idle, lo, hi, s_spot, s_ref):
+    def size(tag, idle, lo, hi, s_spot, s_ref, below):
         L, after, d = R.placement_size(idle, lo, hi, s_spot, s_ref)
+        assert (d < R.TEST.DELTA_MIN) == below, (tag, "deltaAfter", d)
         cases.append(dict(id=f"placement-{len(cases):03d}-{tag}", fn="Placement.size",
                           **{"in": dict(idle=idle.d(), lo=lo, hi=hi, sqrtSpot=s_spot, sqrtRef=s_ref),
-                             "out": dict(L=L, after=after.d(), deltaAfter=d,
-                                         belowDeltaMin=d < R.TEST.DELTA_MIN)}))
+                             "out": dict(L=L, after=after.d(), deltaAfter=d)}))
 
-    chk("ok-centred", T0 - 1000, T0 + 1000, T0, T0)
-    chk("ok-edge", T0, T0 + 2000, T0 + 3, T0 + 55)
-    chk("fence", T0 - 1000, T0 + 1000, T0 + 61, T0)
-    chk("fence-exact", T0 - 1000, T0 + 1000, T0 + 60, T0)
-    chk("width", T0 - 1000, T0 + 1010, T0, T0)
-    chk("alignment", T0 - 995, T0 + 1005, T0, T0)
-    chk("alignment-negative", -1005, 995, -2, 0)
-    chk("spot-not-contained", T0 + 10, T0 + 2010, T0 + 5, T0 + 20)
-    chk("spot-at-hi", T0 - 2000, T0, T0, T0 - 30)
-    chk("ref-not-contained", T0, T0 + 2000, T0 + 5, T0 - 20)
-    chk("multi-fail-first", T0 - 995, T0 + 1000, T0 + 200, T0)
+    chk("ok-centred", T0 - 1000, T0 + 1000, T0, T0, 0)
+    chk("ok-edge", T0, T0 + 2000, T0 + 3, T0 + 55, 0)
+    chk("fence", T0 - 1000, T0 + 1000, T0 + 61, T0, 1)
+    chk("fence-exact", T0 - 1000, T0 + 1000, T0 + 60, T0, 0)
+    chk("width", T0 - 1000, T0 + 1010, T0, T0, 2)
+    chk("alignment", T0 - 995, T0 + 1005, T0, T0, 3)
+    chk("alignment-negative", -1005, 995, -2, 0, 3)
+    chk("spot-not-contained", T0 + 10, T0 + 2010, T0 + 5, T0 + 20, 4)
+    chk("spot-at-hi", T0 - 2000, T0, T0, T0 - 30, 4)
+    chk("ref-not-contained", T0, T0 + 2000, T0 + 5, T0 - 20, 5)
+    chk("multi-fail-first", T0 - 995, T0 + 1000, T0 + 200, T0, 1)
     idle = R.Holdings(1_500_000 * USDC, 500 * ETH)
-    size("centred", idle, T0 - 1000, T0 + 1000, sqrt_at(T0), sqrt_at(T0))
-    size("token0-side-edge", R.Holdings(3_000_000 * USDC, 2 * ETH), T0, T0 + 2000, sqrt_at(T0) + 1, sqrt_at(T0 + 20))
-    size("token1-side-edge", R.Holdings(10 * USDC, 1000 * ETH), T0 - 1990, T0 + 10, sqrt_at(T0 + 10) - 1, sqrt_at(T0 - 20))
-    size("below-range", R.Holdings(10 ** 12, 10 ** 20), T0 + 10, T0 + 2010, sqrt_at(T0), sqrt_at(T0))
-    size("above-range", R.Holdings(10 ** 12, 10 ** 20), T0 - 2010, T0 - 10, sqrt_at(T0), sqrt_at(T0))
-    size("dust-deltamin", R.Holdings(1_500_000 * USDC, 500 * ETH), T0, T0 + 2000, sqrt_at(T0) + 1, sqrt_at(T0 + 30))
-    size("empty-idle", R.Holdings(), T0 - 1000, T0 + 1000, sqrt_at(T0), sqrt_at(T0))
-    size("tiny-headroom", R.Holdings(1000, 1000), T0 - 1000, T0 + 1000, sqrt_at(T0), sqrt_at(T0))
-    size("ref-moves-delta", idle, T0 - 1000, T0 + 1000, sqrt_at(T0), sqrt_at(T0 + 60))
+    size("centred", idle, T0 - 1000, T0 + 1000, sqrt_at(T0), sqrt_at(T0), False)
+    size("token0-side-edge", R.Holdings(3_000_000 * USDC, 2 * ETH), T0, T0 + 2000, sqrt_at(T0) + 1, sqrt_at(T0 + 20), False)
+    size("token1-side-edge", R.Holdings(10 * USDC, 1000 * ETH), T0 - 1990, T0 + 10, sqrt_at(T0 + 10) - 1, sqrt_at(T0 - 20), False)
+    size("below-range", R.Holdings(10 ** 12, 10 ** 20), T0 + 10, T0 + 2010, sqrt_at(T0), sqrt_at(T0), False)
+    size("above-range", R.Holdings(10 ** 12, 10 ** 20), T0 - 2010, T0 - 10, sqrt_at(T0), sqrt_at(T0), True)
+    size("edge-balanced", R.Holdings(1_500_000 * USDC, 500 * ETH), T0, T0 + 2000, sqrt_at(T0) + 1, sqrt_at(T0 + 30), False)
+    size("dust-deltamin", R.Holdings(1_000 * USDC, 500 * ETH), T0, T0 + 2000, sqrt_at(T0) + 1, sqrt_at(T0 + 30), True)
+    size("token1-edge-saturated-leg", R.Holdings(500_000 * USDC, 500 * ETH), T0 - 1990, T0 + 10, sqrt_at(T0 + 10) - 1,
+         sqrt_at(T0), False)
+    size("empty-idle", R.Holdings(), T0 - 1000, T0 + 1000, sqrt_at(T0), sqrt_at(T0), True)
+    size("tiny-headroom", R.Holdings(1000, 1000), T0 - 1000, T0 + 1000, sqrt_at(T0), sqrt_at(T0), True)
+    size("ref-moves-delta", idle, T0 - 1000, T0 + 1000, sqrt_at(T0), sqrt_at(T0 + 60), False)
     return cases
 
 
@@ -339,7 +357,10 @@ PLACEMENT_CONV = {
     "size": "L = getLiquidityForAmounts(sqrtSpot, sqrtAt(lo), sqrtAt(hi), idle0, idle1) - (L/1e9 + 1), floored at 0; "
             "after = idle minus the v4 add amounts of L at sqrtSpot (roundUp = true); "
             "deltaAfter = min(WAD, positionValue(sqrtRef)*WAD / NAV(sqrtRef)) of `after` (0 when NAV = 0). "
-            "belowDeltaMin = deltaAfter < DELTA_MIN (0.5 WAD): the vault reverts DeltaMin.",
+            "deltaAfter < DELTA_MIN (0.5 WAD) means the vault reverts DeltaMin. Legs saturate at type(uint128).max "
+            "(spot one unit inside an edge, case token1-edge-saturated-leg).",
+    "fields": "Placement.check in {lo, hi, tickSpot, refTick, band, wTicks, spacing} out {errCode}; Placement.size in "
+              "{idle, lo, hi, sqrtSpot, sqrtRef} out {L, after, deltaAfter}; idle/after are Holdings {idle0, idle1, L, lo, hi}.",
 }
 
 
@@ -365,8 +386,8 @@ def bank_cases():
             out = dict(bank=b.d(), burnShares=r[0], payShares=r[1], a=r[2], b2=r[3])
         except R.Revert as ex:
             out = dict(revert=ex.err)
-        cases.append(dict(id=f"bank-{len(cases):03d}-{tag}", fn="FeeBank.apply", note=note,
-                          **{"in": dict(bank=bin_, op=op, opIndex=R.OPS.index(op), args=args), "out": out}))
+        cases.append(dict(id=f"bank-{len(cases):03d}-{tag}", fn="FeeBank.apply",
+                          **{"in": dict(bank=bin_, op=R.OPS.index(op), args=args), "out": out}))
         return b
 
     k = 10 ** 18
@@ -453,7 +474,11 @@ def bank_cases():
 BANK_CONV = {
     "fn": "FeeBank.apply(Bank storage b, Op op, bytes args) -> (burnShares, payShares, a, b2); in.bank is the state "
           "before, out.bank after; out = {revert: <error>} when apply reverts (state unchanged).",
-    "Op": "enum Op {Accrue, Breach, VestTime, Drip, Charge, Place, Retire, Claim, TopUp, Release}; opIndex = ordinal.",
+    "Op": "enum Op {Accrue, Breach, VestTime, Drip, Charge, Place, Retire, Claim, TopUp, Release}; in.op is the "
+          "ordinal; the case id names the op.",
+    "fields": "in {bank, op, args}; out {bank, burnShares, payShares, a, b2} or {revert}; Bank = {cohorts[5] {epoch, "
+              "shares}, maturedPending, vestedUnclaimed, bondShares, forfeitPool, forfeitTotal, forfeitStart, "
+              "dripBlocks, releaseDelay, breaches, mode, placedByCurator, exitBlock}.",
     "args": "Accrue (epoch, shares, gateOpen); Breach (count, now); VestTime (nowEpoch, gateOpen); Drip (now); "
             "Charge (burn); Place (); Retire (now); Claim (); TopUp (shares); Release (shares, now).",
     "returns": "Charge (bank burned, bond burned); Breach/Retire (forfeited, mode after); VestTime/Accrue (vested, moved "
@@ -462,7 +487,8 @@ BANK_CONV = {
                "restart the drip.",
     "cohorts": "V = 4; ring of V+1 = 5 slots {epoch, shares} at index epoch mod 5; a cohort vests when "
                "nowEpoch >= epoch + 1 + V; Charge burns cohorts youngest (highest epoch) first, then maturedPending, "
-               "then the bond.",
+               "then the bond. A slot emptied by Charge, VestTime, Breach or Retire keeps its epoch (only shares go "
+               "to 0); a slot is occupied iff shares > 0.",
     "mode": "0 NORMAL, 1 BREACHED, 2 EXITED. Release requires EXITED and now >= exitBlock + releaseDelay.",
     "tier": "dripBlocks and releaseDelay are Bank fields written at seed (TEST: 120 and 480; DEMO cases: 3600, 14400).",
 }

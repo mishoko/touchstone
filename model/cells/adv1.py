@@ -9,6 +9,8 @@ Touchstone rules exercised: a placement's width must equal W exactly (`placement
 position, and the base fee scales with δ = deployed value / NAV ≤ 1, not with liquidity.
 
 Per state (in-range and exit states of an edge60-managed path; market = reference = spot):
+The assertions are structural: they hold by construction of the rules (the width code of the placement check, the
+δ ≤ 1 cap) and the cell verifies that the rules reject or bound every needle on real states, not a measured net.
 - Assertion (all three, every row):
   1. every aligned range of width w ∈ {10, 20, 60, 100, 200, 500, 1000, 1990, 2010, 4000} containing spot and the
      reference is rejected with the width error;
@@ -16,10 +18,11 @@ Per state (in-range and exit states of an edge60-managed path; market = referenc
      ≤ m × NAV);
   3. the disclosed exposure of every legal range, β = L / L_centred (L_centred = the centred W range holding the same
      inventory value), is ≤ β_W (the maximum a W-wide range can reach, about 1.07), i.e. the record cannot be levered.
-- Control (the width rule disabled): the best needle's effective exposure over the next hour, β_eff = (L_needle ×
-  in-range minutes) / (L_centred × in-range minutes of the centred range) on a 1-minute GBM continuation, is > 1 with
-  a one-sided 95% CI lower bound > 1 in every σ bucket; under a pay that scales with exposure, the curator's gain
-  (β_eff − 1) × m × NAV × 1 h is then > 0.
+- Control (both defences off: no width rule AND a pay that scales with exposure L × in-range time, the form the
+  needle attacks): a causal needle (20 ticks centred on spot, chosen before the path is seen) held for one hour on a
+  1-minute GBM continuation; its effective exposure β_eff = (L_needle × in-range minutes) / (L_centred × in-range
+  minutes of the centred range) and the curator's net gain (β_eff − 1) × m × NAV × 1 h at m = 1.05%/yr must have
+  mean > 0 and a one-sided 95% CI lower bound > 0 in every σ bucket. The best needle with hindsight is reported only.
 """
 import json
 import math
@@ -107,8 +110,14 @@ def run_path(args):
                 mins = sum(1 for t in mp_ if lo <= t < lo + w)
                 if cen_in:
                     best_eff = max(best_eff, (L * mins) / (lc * cen_in))
+        nlo = floor_sp(r) - 10
+        L_n = l_of(inv, nlo, nlo + 20, s)
+        mins_n = sum(1 for t in mp_ if nlo <= t < nlo + 20)
+        causal = (L_n * mins_n) / (lc * cen_in) if cen_in else 0.0
+        net_ctl = (causal - 1) * 0.0105 * nav / (365 * 24)   # wei over one hour under an exposure-scaled pay
         rows.append(dict(seed=seed, sigma=sigma, state=state, width_rule_ok=width_ok, max_delta=best_delta,
-                         max_beta_W=best_beta, ctl_beta_eff=best_eff, nav=nav))
+                         max_beta_W=best_beta, ctl_beta_eff=best_eff, ctl_beta_causal=causal, ctl_net_wei=net_ctl,
+                         nav=nav))
     return rows
 
 
@@ -121,16 +130,16 @@ def summarize(rows):
     print(f"ADV-1: {len(rows)} states; every non-W width rejected: {ok_w}; max δ_after {md / R.WAD:.6f}; "
           f"max exposure β over legal W ranges {mb:.4f} (bound 1.08)")
     for sg in SIGMAS:
-        best = {}
-        for r in rows:
-            if r["sigma"] == sg:
-                best[r["seed"]] = max(best.get(r["seed"], 0.0), r["ctl_beta_eff"])
-        xs = list(best.values())
-        m, lo, _ = mean_ci(xs)
-        res["control"][str(sg)] = dict(n=len(xs), mean=m, ci_lo=lo, levered=sum(1 for v in xs if v > 1))
-        print(f"  control (width rule off) σ {sg}: β_eff mean {m:.1f}×, CI lo {lo:.1f}×, levered paths "
-              f"{res['control'][str(sg)]['levered']}/{len(xs)}")
-        ok &= lo > 1
+        g = [r for r in rows if r["sigma"] == sg]
+        hind = mean_ci([r["ctl_beta_eff"] for r in g])
+        cb = mean_ci([r["ctl_beta_causal"] for r in g])
+        cn = mean_ci([r["ctl_net_wei"] / 1e18 for r in g])
+        res["control"][str(sg)] = dict(n=len(g), beta_causal_mean=cb[0], beta_causal_ci_lo=cb[1], net_eth_mean=cn[0],
+                                       net_eth_ci_lo=cn[1], beta_hindsight_mean=hind[0])
+        print(f"  control (width rule off + exposure pay; causal 20-tick needle) σ {sg}: β_eff mean {cb[0]:.1f}× "
+              f"(CI lo {cb[1]:.1f}×), net {cn[0]:.4f} ETH per hour (CI lo {cn[1]:.4f}); hindsight best needle "
+              f"{hind[0]:.1f}× (reported)")
+        ok &= cn[1] > 0
     res["ok"] = ok
     print("ADV-1 verdict:", "PASS" if ok else "FAIL")
     return res

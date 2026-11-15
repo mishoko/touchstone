@@ -36,9 +36,9 @@ BAND, SLIP, FEE = 60, 10, 500
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "output", "g0")
 
 
-def with_idle(h, r, frac_wad=2 * 10 ** 16):
-    """Give the vault idle inventory of `frac` of NAV in each token so that both swap directions are legal
-    (a rebalanceSwap runs from idle only)."""
+def with_idle(h, r, frac_wad=25 * 10 ** 15):
+    """Give the vault idle inventory of 2.5% of its NAV in each token, so that a swap of MAX_SWAP_ACTION (2%) of the
+    post-top-up NAV is legal in both directions (a rebalanceSwap runs from idle only)."""
     s = sqrt_at(r)
     nav = R.value(h, s)[0]
     g = h.copy()
@@ -156,6 +156,11 @@ def summarize(rows):
             print(f"  control {name:10s} σ {sg}: n={len(xs)} mean {m:.4f} bp, CI lo {lo:.4f}, profitable {sum(1 for x in xs if x > 0)}")
             if key == "ctl":
                 ok &= lo > 0
+    for keep in (True, False):
+        for frac in FRACS:
+            n_ = sum(1 for r in rows if r["keep"] == keep and r["frac"] == frac)
+            print(f"  rows present: {'rebalanceSwap' if keep else 'pre-swap'} at {frac / 1e16:.1f}% of NAV: {n_}")
+            res[f"rows_{'swap' if keep else 'preswap'}_{frac}"] = n_
     res["ok"] = ok
     print("ADV-3 verdict:", "PASS" if ok else "FAIL")
     return res

@@ -72,6 +72,7 @@ def follow_up(pool, h, r, kind):
         zfo = R.q(h.idle0, sr) >= h.idle1        # the action is fixed by the pre-wash state (wash-independent)
         amt = R.value(h, sr)[0] * 2 // 100
         amt = R.mul_div(amt, 1 << 192, sr * sr) if zfo else amt
+        assert amt <= (hb.idle0 if zfo else hb.idle1), "the swap must fit idle"
         used, out = pool.swap(zfo, amt, sqrt_at(pool.tick - 10 if zfo else pool.tick + 10))
         after = hb.copy()
         if zfo:

@@ -152,16 +152,18 @@ class Sim:
             lo = floor_sp(T0) - W // 2
             self.v.set_positions(lo, lo + W, R.Vault.NO_PRESWAP, self.B0, self.ts())
 
-    def _install_markout(self, sigma, rng_seed, horizon_sec=120, delay_blocks=1, clamp_ticks=40, bond_ratio=6e-4):
+    def _install_markout(self, sigma, rng_seed, horizon_sec=120, delay_blocks=1, reserve_ratio=3e-4, bond_ratio=6e-4):
         """Candidate charge under study (the markout-settled charge): the worse-of legs gain the pre-move spot s0 and
         the markout legs p_mk ± FEE_TICKS, where p_mk is the deep pool's TWAP over a window of `horizon_sec` that
-        starts `delay_blocks` blocks after the action's block, clamped to spot ± clamp_ticks. s0: the honest
+        starts `delay_blocks` blocks after the action's block. The markout's extra over the immediate charge is
+        capped at a fixed reserve of reserve_ratio·NAV held from the action to the settlement. s0: the honest
         curator re-aligns spot to the deep pool's price inside its own transaction, so s0 = the market tick plus the
         deep pool's arbitrage band (uniform ±FEE_TICKS). The post-action error of p_mk is drawn from the sim's seeded
         generator with the variance of the delayed window's average of 12-second increments and of the band; the
-        settlement is applied at the action, and the curator's settlement call is charged as gas. The reserve (the
-        most the markout legs can add over the clamp interval, scanned every 2 ticks) is checked against unvested +
-        bond_ratio·S and failures are counted in `reverts['ReserveGate']` (reported; the action is not reverted)."""
+        settlement is applied at the action, and the curator's settlement call is charged as gas. The action gate
+        (immediate burn + reserve <= unvested + bond_ratio·S) is checked and failures are counted in
+        `reverts['ReserveGate']` (reported; the action is not reverted); truncations by the cap in
+        `reverts['ReserveCap']`."""
         n = horizon_sec / 12
         sd12 = sigma * math.sqrt(12 / (365 * 86400)) / math.log(1.0001)
         sd = math.sqrt(sd12 ** 2 * (delay_blocks + n / 3) + FEE_TICKS ** 2 / (3 * n))
@@ -175,22 +177,23 @@ class Sim:
         def charge(before, s_spot, s_ref, kind):
             m = sim.mkt()
             s0 = sqrt_at(int(round(m + rng.uniform(-FEE_TICKS, FEE_TICKS))))
-            tick_spot = R.get_tick_at_sqrt_price(s_spot)
-            mk = int(round(min(max(m + rng.gauss(0.0, sd), tick_spot - clamp_ticks), tick_spot + clamp_ticks)))
-            loss, p_star, nav_after = 0, s_spot, R.value(v.h, s_spot)[0]
-            imm = 0
-            for i, p in enumerate([s_spot, s_ref, s0, sqrt_at(mk - FEE_TICKS), sqrt_at(mk + FEE_TICKS)]):
+            mk = int(round(m + rng.gauss(0.0, sd)))
+            imm, p_star, nav_after = 0, s_spot, R.value(v.h, s_spot)[0]
+            for p in (s_spot, s_ref, s0):        # first leg (spot) wins ties
                 l, na = loss_at(before, p)
-                if i == 2:
-                    imm = max(0, loss)
-                if l > loss:                     # first leg (spot) wins ties
-                    loss, p_star, nav_after = l, p, na
-            imm = max(imm, loss_at(before, s0)[0], 0)
-            res = max([loss_at(before, sqrt_at(tick_spot + d))[0] for d in
-                       range(-clamp_ticks - FEE_TICKS, clamp_ticks + FEE_TICKS + 1, 2)] + [0]) - imm
-            need = R.ceil_div((imm + max(0, res)) * v.S, max(1, nav_after))
-            if need > v.bank.unvested() + int(bond_ratio * v.S):
+                if l > imm:
+                    imm, p_star, nav_after = l, p, na
+            cap = int(reserve_ratio * R.value(before, s_spot)[0])
+            if R.ceil_div((imm + cap) * v.S, max(1, nav_after)) > v.bank.unvested() + int(bond_ratio * v.S):
                 sim.reverts['ReserveGate'] = sim.reverts.get('ReserveGate', 0) + 1
+            loss = imm
+            for p in (sqrt_at(mk - FEE_TICKS), sqrt_at(mk + FEE_TICKS)):
+                l, na = loss_at(before, p)
+                if l > loss:
+                    loss, p_star, nav_after = l, p, na
+            if loss - imm > cap:
+                sim.reverts['ReserveCap'] = sim.reverts.get('ReserveCap', 0) + 1
+                loss = imm + cap
             burn = 0 if loss == 0 else (R.U256 if nav_after == 0 else R.ceil_div(loss * v.S, nav_after))
             if burn > v.bank.unvested() + v.bank.bondShares:
                 raise R.Revert("Insolvent")

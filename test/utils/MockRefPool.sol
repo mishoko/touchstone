@@ -24,6 +24,9 @@ contract MockRefPool {
     uint24 public immutable fee;
 
     Mode public mode;
+    /// @notice When non-zero, `observe` reverts cheaply if it is called with less gas than this (a reference whose read
+    ///         fails early under low gas, rather than by running out of it: the model a gas guard must defeat).
+    uint256 public gasFloor;
     uint16 public cardinality = 1000;
     uint16 public cardinalityNext = 1000;
 
@@ -42,6 +45,10 @@ contract MockRefPool {
 
     function setMode(Mode m) external {
         mode = m;
+    }
+
+    function setGasFloor(uint256 g) external {
+        gasFloor = g;
     }
 
     function setCardinality(uint16 c) external {
@@ -94,6 +101,7 @@ contract MockRefPool {
         view
         returns (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s)
     {
+        if (gasleft() < gasFloor) revert();
         Mode m = mode;
         if (m == Mode.Old) revert("OLD");
         if (m == Mode.Revert) revert();

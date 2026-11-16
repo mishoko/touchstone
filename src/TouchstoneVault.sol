@@ -57,6 +57,11 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
     uint160 internal immutable REF_SQRT_PRICE;
     uint40 internal immutable DRIP_BLOCKS;
     uint40 internal immutable RELEASE_DELAY;
+    uint256 internal immutable EPOCH;
+    uint256 internal immutable BLOCKTIME;
+    uint256 internal immutable H_MARKOUT;
+    uint256 internal immutable REF_GAS_CAP;
+    int24 internal immutable FEE_TICKS;
     bytes32 public immutable TIER_HASH;
 
     // ------------------------------------------------------------------ storage (spec field widths)
@@ -73,18 +78,25 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
     /// @dev The epoch's swap counters (the curator's swap caps); reset at every epoch roll.
     uint64 internal _epochSwapFrac;
     uint16 internal _swapCount;
-    /// @dev The pending curator action's block timestamp (0 = none); the record itself is added with the actions.
+    /// @dev The pending curator action's block timestamp (0 = none); the rest of its record follows `_bank`.
     uint40 internal _tAction;
     uint128 internal _baseOwed;
     bool internal _seeded;
     address public curator;
     Bank internal _bank;
+    /// @dev The pending action's record (meaningful while `_tAction != 0`): the holdings before and after the action,
+    ///      its immediate charge and its reserve (values in token1 units).
+    Holdings internal _pBefore;
+    Holdings internal _pAfter;
+    uint128 internal _pCharge0;
+    uint128 internal _pReserve;
 
     // ------------------------------------------------------------------ events and errors
     event Deposit(address indexed owner, uint256 assets0, uint256 assets1, uint256 shares);
     event Withdraw(address indexed owner, uint256 shares, uint256 out0, uint256 out1);
     event Checkpoint(uint64 tauV, uint64 tauB, uint256 nav0, uint64 delta, uint256 base, uint128 L, int24 lo, int24 hi);
     event BreachProcessed(uint32 count, uint40 lastBlock, uint256 forfeited);
+    event Settled(uint256 charge0, uint256 extra, int24 tickMk, bool fallbackUsed);
 
     error OnlyFactory();
     error OnlyPoolManager();
@@ -94,6 +106,7 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
     error Slippage();
     error NavCap();
     error BondMin();
+    error RefGas();
 
     constructor() ERC20("Touchstone Vault Share", "TSV") {
         FACTORY = msg.sender;
@@ -113,6 +126,11 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
         REF_SQRT_PRICE = t.REF_SQRT_PRICE;
         DRIP_BLOCKS = t.FORFEIT_DRIP_BLOCKS;
         RELEASE_DELAY = uint40(uint256(V) * t.EPOCH);
+        EPOCH = t.EPOCH;
+        BLOCKTIME = t.GRID_SEC / t.GRID;
+        H_MARKOUT = t.H_MARKOUT;
+        REF_GAS_CAP = t.REF_GAS_CAP;
+        FEE_TICKS = t.FEE_TICKS;
     }
 
     // ------------------------------------------------------------------ entry points
@@ -151,12 +169,19 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
         );
     }
 
+    /// @notice Settles a pending curator action whose markout window has closed (a no-op otherwise), then checkpoints.
+    function settle() external nonReentrant {
+        MANAGER.unlock(abi.encode(Entry.Settle, msg.sender, ""));
+    }
+
     function unlockCallback(bytes calldata data) external returns (bytes memory) {
         // [MU-158] only the PoolManager calls back, and it calls back only the unlocker: this makes `payer` trustworthy
         if (msg.sender != address(MANAGER)) revert OnlyPoolManager();
         (Entry entry, address payer, bytes memory args) = abi.decode(data, (Entry, address, bytes));
         if (entry == Entry.Seed) return _seed(args);
         if (!_seeded) revert NotSeeded();
+        // [MU-185] step 0, before the snapshot and collect-first: the supply and holdings the settlement prices
+        _settle();
         Obs memory o = _prologue();
         // [MU-037] every entry point checkpoints
         _checkpoint(o);
@@ -170,6 +195,8 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
         if (entry == Entry.Deposit) return _deposit(payer, args);
         // [MU-172] an entry this build does not implement never falls through to a flow
         if (entry == Entry.Withdraw) return _withdraw(payer, args);
+        // settle() is the prologue alone
+        if (entry == Entry.Settle) return "";
         revert Ladder.BadMode();
     }
 
@@ -283,6 +310,33 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
 
     // ------------------------------------------------------------------ prologue
 
+    /// @notice Step 0: the markout settlement of a pending action once its window `(tAction + blocktime, tAction +
+    ///         blocktime + H_MARKOUT]` has closed (one more block). The read is guarded by `gasleft() ≥ 2·REF_GAS_CAP`;
+    ///         a failed read burns the whole reserve. Its arithmetic never reverts; its only revert is the gas guard.
+    function _settle() internal {
+        uint256 tA = _tAction;
+        // [MU-188] due only once the delayed window has closed (one more block)
+        if (tA == 0 || block.timestamp < tA + 2 * BLOCKTIME + H_MARKOUT) return;
+        // [MU-186] the caller cannot starve the read into the fallback
+        if (gasleft() < _settleGasMin()) revert RefGas();
+        // [MU-151] the window opens one block after the action's block
+        uint256 a = block.timestamp - tA - BLOCKTIME;
+        (bool ok, int24 tickMk) = HOOK.tryWindow(uint32(a), uint32(a - H_MARKOUT));
+        Bank storage b = _bank;
+        uint256 extra = _pReserve;
+        // [MU-150] a failed read burns the whole reserve
+        uint256 burnS = b.reserveShares;
+        if (ok) {
+            (extra,, burnS) = ExecLedger.settleExtra(
+                _pBefore, _pAfter, tickMk, FEE_TICKS, _pCharge0, extra, _holdings(), totalSupply(), burnS
+            );
+        }
+        _tAction = 0;
+        // [MU-187] the released non-bond reserve enters the current epoch's cohort
+        _burnBank(Op.Settle, abi.encode(burnS, uint32(block.number / EPOCH), uint40(block.number)));
+        emit Settled(_pCharge0, extra, tickMk, !ok);
+    }
+
     /// @dev Snapshot, collect first, checkpoint. The markout settlement (step 0) and the checkpoint body are added with
     ///      the curator actions and the bank; the order below is the binding one.
     function _prologue() internal returns (Obs memory o) {
@@ -374,6 +428,11 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
         (burned,, a,) = FeeBank.bankApply(_bank, op, args);
         // [MU-167] [MU-173] [MU-174] the bank's burn leaves the supply, exactly
         if (burned > 0) _burn(address(this), burned);
+    }
+
+    /// @dev The settlement's gas guard, `2·REF_GAS_CAP` (a seam for the test harness's control).
+    function _settleGasMin() internal view virtual returns (uint256) {
+        return 2 * REF_GAS_CAP;
     }
 
     /// @dev The live reference read of the vest gate (a seam for the scripted test harness).

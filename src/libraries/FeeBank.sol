@@ -189,6 +189,7 @@ library FeeBank {
             } else {
                 Cohort storage s = b.cohorts[e % RING];
                 if (s.shares > 0 && s.epoch != e) {
+                    // [MU-189] an overwritten occupant waits matured; it vests only through the gate
                     b.maturedPending = _sat(uint256(b.maturedPending) + s.shares);
                     s.shares = 0;
                 }

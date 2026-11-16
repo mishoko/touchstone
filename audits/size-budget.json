@@ -116,7 +116,7 @@
    ]
   },
   "TouchstoneVault": {
-   "runtime": 13744,
+   "runtime": 14967,
    "history": [
     {
      "runtime": 14971,
@@ -129,6 +129,10 @@
     {
      "runtime": 13744,
      "note": "s10 size lever (1), views to the Lens: the vault drops every state view (tier, holdings, nav0, bondShares, bank, bankLimits) and the tier's storage copy; it exposes extsload and the TIER_HASH commitment the factory checks (-1,253 B); the factory reads TIER_HASH instead of the tier struct"
+    },
+    {
+     "runtime": 14967,
+     "note": "s10 settlement (prologue step 0): the pending record (before/after holdings, charge0, reserve), the gas guard, the window read, settleExtra, the fallback, Op.Settle, settle() and the Settled event; five tier immutables (+1,223 B)"
     }
    ]
   },

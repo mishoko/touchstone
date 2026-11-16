@@ -1645,33 +1645,33 @@
    "area": "ledger",
    "desc": "a failed window read burns nothing",
    "killer_id": "U-settle",
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "kill": "test_U_settle__failedReadBurnsTheWholeReserve",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        uint256 burnS = b.reserveShares;",
+   "replace": "        uint256 burnS = 0;",
+   "status": "KILLED"
   },
   {
    "id": "MU-151",
    "area": "ledger",
    "desc": "the window not delayed one block, or settled before it closes",
    "killer_id": "U-settle",
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "kill": "test_U_settle__actionBlockExcludedFromTheWindow",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        uint256 a = block.timestamp - tA - BLOCKTIME;",
+   "replace": "        uint256 a = block.timestamp - tA;",
+   "status": "KILLED"
   },
   {
    "id": "MU-152",
    "area": "guards",
    "desc": "deposits allowed while an action is pending",
    "killer_id": "U-settle",
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "kill": "test_U_settle__depositsBlockedWhilePendingThenSettleFirst",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        if (_tAction != 0) revert MarkoutPending();",
+   "replace": "        if (false) revert MarkoutPending();",
+   "status": "KILLED"
   },
   {
    "id": "MU-153",
@@ -2023,6 +2023,61 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "        if (_mulHi(reserveShares, navNow) < S && extra",
    "replace": "        if (_mulHi(reserveShares, navNow) <= S && extra",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-185",
+   "area": "ledger",
+   "desc": "the settlement runs after the snapshot and collect-first (wrong supply or holdings; s09 D9-04)",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__settlesTheDelayedWindowAtTheFirstDueBlock",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        _settle();\n        Obs memory o = _prologue();",
+   "replace": "        Obs memory o = _prologue();\n        _settle();",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-186",
+   "area": "ledger",
+   "desc": "the settlement gas guard removed (s09 D9-03)",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__gasGuardRevertsBelowTwiceTheCap",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        if (gasleft() < _settleGasMin()) revert RefGas();",
+   "replace": "",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-187",
+   "area": "ledger",
+   "desc": "the released non-bond reserve enters the last checkpoint's epoch instead of the current one (s09 D9-04)",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__releaseEntersTheCurrentEpochsCohort",
+   "file": "src/TouchstoneVault.sol",
+   "find": "abi.encode(burnS, uint32(block.number / EPOCH), uint40(block.number))",
+   "replace": "abi.encode(burnS, _epoch, uint40(block.number))",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-188",
+   "area": "ledger",
+   "desc": "settled before the delayed window closes (due at tAction + blocktime + H instead of + 2·blocktime + H; MU-151's second half)",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__notDueBeforeTheWindowCloses",
+   "file": "src/TouchstoneVault.sol",
+   "find": "block.timestamp < tA + 2 * BLOCKTIME + H_MARKOUT",
+   "replace": "block.timestamp < tA + BLOCKTIME + H_MARKOUT",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-189",
+   "area": "bank",
+   "desc": "an Op.Settle overwrite vests its occupant instead of moving it to maturedPending (s09 D9-04)",
+   "killer_id": "U-4",
+   "kill": "test_U_4__bankVectorsBitForBit",
+   "file": "src/libraries/FeeBank.sol",
+   "find": "                    b.maturedPending = _sat(uint256(b.maturedPending) + s.shares);",
+   "replace": "                    b.vestedUnclaimed = _sat(uint256(b.vestedUnclaimed) + s.shares);",
    "status": "KILLED"
   }
  ]

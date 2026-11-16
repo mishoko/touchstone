@@ -133,6 +133,34 @@ contract VaultHarness is TouchstoneVault {
         return "";
     }
 
+    // ------------------------------------------------------------------ pending action seam
+
+    /// @dev The control of the settlement's gas sweep: with the guard off, a starved read takes the fallback.
+    bool public gasGuardOff;
+
+    function setGasGuardOff(bool off) external {
+        gasGuardOff = off;
+    }
+
+    function _settleGasMin() internal view override returns (uint256) {
+        return gasGuardOff ? 0 : super._settleGasMin();
+    }
+
+    /// @notice Writes a pending action's record (the reserve's shares are set through `setBank`).
+    function setPending(uint40 tA, Holdings calldata before, Holdings calldata after_, uint128 charge0, uint128 reserve)
+        external
+    {
+        (_tAction, _pBefore, _pAfter, _pCharge0, _pReserve) = (tA, before, after_, charge0, reserve);
+    }
+
+    function pendingAction()
+        external
+        view
+        returns (uint40 tA, Holdings memory before, Holdings memory after_, uint128 charge0, uint128 reserve)
+    {
+        return (_tAction, _pBefore, _pAfter, _pCharge0, _pReserve);
+    }
+
     // ------------------------------------------------------------------ scripted checkpoint
 
     function checkpoint(Obs calldata o, bool liveOk, int24 liveTick) external returns (bool liveRead, int24 tick) {

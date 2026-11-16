@@ -18,6 +18,7 @@ import {ITouchstoneHook} from "../../../src/interfaces/ITouchstoneHook.sol";
 import {TouchstoneVault} from "../../../src/TouchstoneVault.sol";
 import {Holdings} from "../../../src/types/Holdings.sol";
 import {Bank, Cohort, RING, V} from "../../../src/types/Bank.sol";
+import {ExecLedger} from "../../../src/libraries/ExecLedger.sol";
 
 /// @notice The minimal P2 handler: deposits, withdrawals, time (snapshotted steps and silent jumps), keep-alive
 ///         refreshes, test-only placements, third-party swaps, reference moves and `breakRef` (every failure mode of
@@ -53,6 +54,10 @@ contract VaultHandler is Test {
     string public i2Why;
     uint256 public i10Failures;
     bytes4 public i10Selector;
+    uint256 public pends;
+    uint256 public settledByRead;
+    uint256 public settledByFallback;
+    uint256 public withdrawalsSettling;
 
     constructor(
         IPoolManager m,
@@ -108,7 +113,9 @@ contract VaultHandler is Test {
         // the expectation, from the PoolManager's state in this block (the prologue swaps nothing; collect-first
         // sweeps the fees computed here) and the bank's closed-form drip (the checkpoint burns it before the flow)
         Holdings memory h = hv.holdings();
-        uint256 S = hv.totalSupply() - _dripOwed(hv.bankFull());
+        // settlement step 0 burns first (the drip it may restart owes nothing more in this block), then the drip
+        (uint256 burnS, bool due, bool ok) = _expectedSettleBurn();
+        uint256 S = hv.totalSupply() - burnS - _dripOwed(hv.bankFull());
         (uint256 f0, uint256 f1) = ExpectedFlows.fees(manager, poolId, address(hv), h.lo, h.hi);
         uint128 dL = uint128(FullMath.mulDiv(h.L, s, S));
         (uint256 r0, uint256 r1) = ExpectedFlows.legs(manager, poolId, h.lo, h.hi, dL, false);
@@ -125,6 +132,10 @@ contract VaultHandler is Test {
             (,,,,, uint8 mode,) = hv.bank();
             if (mode == 2) ++exitedWithdrawals;
             if (hv.bankFull().vestedUnclaimed > vestedBefore) ++gateOpenVests;
+            if (due) {
+                ++withdrawalsSettling;
+                _countSettle(ok);
+            }
             if (token0.balanceOf(a) - b0 != e0) _i2("token0 payout");
             if (token1.balanceOf(a) - b1 != e1) _i2("token1 payout");
             (uint128 posAfter,,) = manager.getPositionInfo(poolId, address(hv), h.lo, h.hi, bytes32(0));
@@ -161,6 +172,37 @@ contract VaultHandler is Test {
         b.bondShares -= uint128(amt);
         hv.setBank(b);
         ++bankSeeds;
+    }
+
+    /// @notice A pending curator action at this block (the actions that record one are built later; this writes it
+    ///         through the harness seam): a loss of `d` token0, an immediate charge and a reserve value, with the reserve's
+    ///         shares carved out of the bond, part of them marked as the bond's.
+    function pend(uint256 d, uint256 charge0, uint256 reserve, uint256 shares, uint256 bondPart) external {
+        (uint40 tA,,,,) = hv.pendingAction();
+        Bank memory b = hv.bankFull();
+        if (tA != 0 || b.reserveShares != 0 || b.bondShares < 2000) return;
+        Holdings memory a = hv.holdings();
+        d = bound(d, 0, 1e16);
+        Holdings memory before = Holdings(uint128(a.idle0 + d), a.idle1, a.L, a.lo, a.hi);
+        uint128 rs = uint128(bound(shares, 1, b.bondShares / 1000));
+        b.bondShares -= rs;
+        (b.reserveShares, b.reserveBond, b.reserveForfeit) = (rs, uint128(bound(bondPart, 0, rs)), false);
+        hv.setBank(b);
+        hv.setPending(
+            uint40(vm.getBlockTimestamp()), before, a, uint128(bound(charge0, 0, 1e16)), uint128(bound(reserve, 0, 1e16))
+        );
+        ++pends;
+    }
+
+    /// @notice The open `settle()`; it never reverts with full gas.
+    function settle() external {
+        (, bool due, bool ok) = _expectedSettleBurn();
+        try hv.settle() {
+            if (due) _countSettle(ok);
+        } catch (bytes memory err) {
+            ++i10Failures;
+            i10Selector = bytes4(err);
+        }
     }
 
     function place(uint256 w, uint256 off) external {
@@ -248,6 +290,30 @@ contract VaultHandler is Test {
         uint256 soFar = b.dripBlocks == 0 ? b.forfeitTotal : _min(b.forfeitTotal, uint256(b.forfeitTotal) * el / b.dripBlocks);
         uint256 spent = b.forfeitTotal - b.forfeitPool;
         return soFar > spent ? _min(soFar - spent, b.forfeitPool) : 0;
+    }
+
+    /// @dev The settlement burn prologue step 0 will make in this block, computed from the hook's own window read and
+    ///         `ExecLedger.settleExtra` on the pre-collect holdings and supply (the whole reserve if the read fails).
+    function _expectedSettleBurn() internal view returns (uint256 burnS, bool due, bool ok) {
+        (uint40 tA, Holdings memory b, Holdings memory a, uint128 c0, uint128 r) = hv.pendingAction();
+        uint256 ts = vm.getBlockTimestamp();
+        uint256 H = hv.tier().H_MARKOUT;
+        if (tA == 0 || ts < tA + 2 * blocktime + H) return (0, false, false);
+        due = true;
+        uint256 x = ts - tA - blocktime;
+        int24 tick;
+        (ok, tick) = hook.tryWindow(uint32(x), uint32(x - H));
+        uint256 rs = hv.bankFull().reserveShares;
+        if (!ok) return (rs, true, false);
+        (,, burnS) = ExecLedger.settleExtra(b, a, tick, hv.tier().FEE_TICKS, c0, r, hv.holdings(), hv.totalSupply(), rs);
+        if (burnS > rs) burnS = rs;
+    }
+
+    function _countSettle(bool ok) internal {
+        (uint40 tA,,,,) = hv.pendingAction();
+        if (tA != 0 || hv.bankFull().reserveShares != 0) _i2("a due settlement left the record or the reserve");
+        if (ok) ++settledByRead;
+        else ++settledByFallback;
     }
 
     function _i2(string memory why) internal {

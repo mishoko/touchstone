@@ -100,6 +100,17 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         handler.refresh();
         for (uint256 i; i < 3; ++i) handler.driveBreach();
         handler.withdraw(0, hv.balanceOf(a) / 2);
+        // the markout settlement: a pending action settled by a withdrawal on the read, one by settle() on the
+        // fallback (the reference broken), and one left for a withdrawal under a breach
+        handler.breakRef(0);
+        handler.pend(5e15, 1e15, 1e16, 1e20, 3e19);
+        for (uint256 i; i < 13; ++i) handler.advance(0); // 13 snapshotted blocks: due
+        handler.withdraw(1, 1e20 + 1);
+        handler.pend(1e16, 0, 1e16, 2e20, 0);
+        for (uint256 i; i < 13; ++i) handler.advance(0);
+        handler.breakRef(6);
+        handler.settle();
+        handler.breakRef(0);
         (,,,,, uint8 mode,) = v.bank();
         assertEq(mode, Ladder.EXITED, "EXITED reached");
         assertGt(handler.withdrawalsWithL(), 10, "withdrawals with L > 0");
@@ -107,6 +118,10 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         assertEq(handler.bankSeeds(), 4, "bank seeded");
         assertGt(handler.gateOpenVests(), 0, "a withdrawal vested with the gate open (live leg read and in range)");
         assertGt(handler.exitedWithdrawals(), 0, "a withdrawal in EXITED");
+        assertEq(handler.pends(), 2, "two pending actions");
+        assertEq(handler.withdrawalsSettling(), 1, "a withdrawal settled");
+        assertEq(handler.settledByRead(), 1, "settled on the window read");
+        assertEq(handler.settledByFallback(), 1, "settled by the fallback");
         assertEq(handler.i2Failures(), 0, handler.i2Why());
         assertEq(handler.i10Failures(), 0, "I-10");
     }

@@ -57,11 +57,28 @@ contract HookHarness is TouchstoneHook {
     }
 }
 
-/// @notice The production hook with only the witness range settable, so that tests can exercise tauB on a real pool.
-contract HookWitnessSetter is TouchstoneHook {
+/// @notice The production hook (real pool price) with the witness range settable and the ring and state readable,
+///         for tests on a live PoolManager pool.
+contract HookExposed is TouchstoneHook {
     constructor(HookArgs memory a) TouchstoneHook(a) {}
 
     function setWitnessRange(int24 lo, int24 hi) external {
         (_witLo, _witHi) = (lo, hi);
+    }
+
+    function ringAt(uint256 i) external view returns (uint64) {
+        return _ring[i];
+    }
+
+    function ringHeadCount() external view returns (uint8 head, uint8 count) {
+        return (_head, _count);
+    }
+
+    function witness() external view returns (int24 lo, int24 hi, uint32 epoch, uint128 l, uint128 r0, uint128 r1) {
+        return (_witLo, _witHi, _witEpoch, _witL, _witnessReserve0, _witnessReserve1);
+    }
+
+    function witnessFallback() external view returns (bool) {
+        return _witnessFallback;
     }
 }

@@ -25,3 +25,6 @@ __pycache__/
 node_modules/
 frontend/.next/
 .DS_Store
+
+out-oversized/
+cache-oversized/

@@ -37,6 +37,11 @@
    "row": "errors, events, views",
    "budget": 1000,
    "built": "partial"
+  },
+  {
+   "row": "markout: pending record, settlement step 0, settle(), moveTo",
+   "budget": 700,
+   "built": "partial: the pending record, settlement step 0 and settle(); no moveTo (setPositions)"
   }
  ],
  "contracts": {

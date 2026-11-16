@@ -46,7 +46,8 @@ interface ITouchstoneFactory {
     error BadToken();
     error SeedTransfer();
 
-    event Deployed(address indexed sender, address vault, address hook);
+    /// @notice The tier is emitted because the vault keeps only its hash (`TIER_HASH`): readers take it from here.
+    event Deployed(address indexed sender, address vault, address hook, Tier tier);
 
     function POOL_MANAGER() external view returns (address);
     function VAULT_CODE_HASH() external view returns (bytes32);

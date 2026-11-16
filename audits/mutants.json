@@ -2079,6 +2079,28 @@
    "find": "                    b.maturedPending = _sat(uint256(b.maturedPending) + s.shares);",
    "replace": "                    b.vestedUnclaimed = _sat(uint256(b.vestedUnclaimed) + s.shares);",
    "status": "KILLED"
+  },
+  {
+   "id": "MU-190",
+   "area": "ledger",
+   "desc": "Op.Settle's `now` is the block timestamp instead of the block number (a restarted drip never runs; s10 fix review r1 F11-02)",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__breachLeavesTheReserveToFollowAtSettlement",
+   "file": "src/TouchstoneVault.sol",
+   "find": "abi.encode(burnS, uint32(block.number / EPOCH), uint40(block.number))",
+   "replace": "abi.encode(burnS, uint32(block.number / EPOCH), uint40(block.timestamp))",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-191",
+   "area": "ledger",
+   "desc": "the settlement does not clear the pending record (s10 fix review r1 F11-02)",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__settlesTheDelayedWindowAtTheFirstDueBlock",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        _tAction = 0;\n",
+   "replace": "",
+   "status": "KILLED"
   }
  ]
 }

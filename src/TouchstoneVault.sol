@@ -331,8 +331,10 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
                 _pBefore, _pAfter, tickMk, FEE_TICKS, _pCharge0, extra, _holdings(), totalSupply(), burnS
             );
         }
+        // [MU-191] the record clears (a cleared record never settles twice)
         _tAction = 0;
         // [MU-187] the released non-bond reserve enters the current epoch's cohort
+        // [MU-190] the bank's clock is the block number (the drip it may restart runs in blocks)
         _burnBank(Op.Settle, abi.encode(burnS, uint32(block.number / EPOCH), uint40(block.number)));
         emit Settled(_pCharge0, extra, tickMk, !ok);
     }

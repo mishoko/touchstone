@@ -33,6 +33,13 @@ contract VaultViewTest is HarnessVaultBase {
         (uint128 c, uint128 mp, uint128 vu, uint128 bo, uint128 fp, uint8 m, uint32 br) = tv.bank();
         (uint128 c2, uint128 mp2, uint128 vu2, uint128 bo2, uint128 fp2, uint8 m2, uint32 br2) = hv.bank();
         assertEq(abi.encode(c, mp, vu, bo, fp, m, br), abi.encode(c2, mp2, vu2, bo2, fp2, m2, br2), "bank");
+        hv.setPending(
+            0xABCDEF12, Holdings(101, 103, 107, -109, 113), Holdings(127, 131, 137, -139, 149), 151, 157
+        );
+        (uint40 tA, Holdings memory pb, Holdings memory pa, uint128 c0, uint128 r) = tv.pending();
+        (uint40 tA2, Holdings memory pb2, Holdings memory pa2, uint128 c02, uint128 r2) = hv.pendingAction();
+        assertEq(abi.encode(tA, pb, pa, c0, r), abi.encode(tA2, pb2, pa2, c02, r2), "pending");
+        assertEq(tA, 0xABCDEF12, "tAction decoded");
         (uint40 drip, uint40 rel) = tv.bankLimits();
         assertEq(drip, 31, "dripBlocks");
         assertEq(rel, 37, "releaseDelay");

@@ -87,7 +87,7 @@ contract TouchstoneFactory is ITouchstoneFactory {
         ITouchstoneVaultSeed(vault)
             .seed(seedParams.a0, seedParams.a1, seedParams.curator, seedParams.wit0, seedParams.wit1);
 
-        emit Deployed(msg.sender, vault, hook);
+        emit Deployed(msg.sender, vault, hook, hookArgs.tier);
     }
 
     /// @dev Pulls `amount` from the caller to the vault and checks the vault's balance moved by exactly `amount`.

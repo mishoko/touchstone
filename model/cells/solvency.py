@@ -228,9 +228,13 @@ def main():
         for typ in ("swap", "place"):
             case = res["bands"][band][f"{typ}_case"]
             checks[typ] = dict(passes_at_proposal=gate(case, br),
+                               passes_at_tier=gate(case, R.MAINNET.BOND_RATIO),
                                control_fails_at_half_worst=not gate(case, int(res["bands"][band][typ] / 2 * 1e18)),
                                passes_at_default_5e_4=gate(case, 5 * 10 ** 14))
         res["proposal"][band] = dict(worst=w, two_x=need, BOND_RATIO=prop, checks=checks)
+        if band == 60:  # the deployed tier is valid for REF_BAND <= 60 (spec §3.7): its own ratio must pass, with 2x
+            assert all(c["passes_at_tier"] and c["control_fails_at_half_worst"] for c in checks.values()), checks
+            assert R.MAINNET.BOND_RATIO >= int(need * 1e18), (R.MAINNET.BOND_RATIO, need)
         print(f"band {band}: worst {w:.3e}, 2x = {need:.3e} -> BOND_RATIO {prop:.2e}; checks {checks}")
     out = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "output", "g0")
     os.makedirs(out, exist_ok=True)

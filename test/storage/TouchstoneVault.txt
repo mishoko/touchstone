@@ -36,3 +36,17 @@
   19 11   16 _bank.reserveShares: uint128
   20  0   16 _bank.reserveBond: uint128
   20 16    1 _bank.reserveForfeit: bool
+  21  0   64 _pBefore: struct Holdings
+  21  0   16 _pBefore.idle0: uint128
+  21 16   16 _pBefore.idle1: uint128
+  22  0   16 _pBefore.L: uint128
+  22 16    3 _pBefore.lo: int24
+  22 19    3 _pBefore.hi: int24
+  23  0   64 _pAfter: struct Holdings
+  23  0   16 _pAfter.idle0: uint128
+  23 16   16 _pAfter.idle1: uint128
+  24  0   16 _pAfter.L: uint128
+  24 16    3 _pAfter.lo: int24
+  24 19    3 _pAfter.hi: int24
+  25  0   16 _pCharge0: uint128
+  25 16   16 _pReserve: uint128

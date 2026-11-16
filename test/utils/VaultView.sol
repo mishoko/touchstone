@@ -14,6 +14,8 @@ library VaultView {
     uint256 internal constant SLOT_L = 6; // L (low 128), lo (bits 128..151), hi (bits 152..175)
     uint256 internal constant SLOT_NAV0 = 7; // nav0 (low 128)
     uint256 internal constant SLOT_BANK = 11; // cohorts: 5 slots, then the scalars
+    uint256 internal constant SLOT_TACTION = 8; // tAction u40 at byte offset 19
+    uint256 internal constant SLOT_PENDING = 21; // before (2 slots), after (2 slots), charge0 | reserve << 128
 
     function _ld(TouchstoneVault v, uint256 slot) private view returns (uint256) {
         return uint256(Extsload(address(v)).extsload(bytes32(slot)));
@@ -27,6 +29,26 @@ library VaultView {
         h.L = uint128(b);
         h.lo = int24(uint24(b >> 128));
         h.hi = int24(uint24(b >> 152));
+    }
+
+    function _hold(TouchstoneVault v, uint256 slot) private view returns (Holdings memory h) {
+        uint256 a = _ld(v, slot);
+        uint256 b = _ld(v, slot + 1);
+        (h.idle0, h.idle1, h.L) = (uint128(a), uint128(a >> 128), uint128(b));
+        (h.lo, h.hi) = (int24(uint24(b >> 128)), int24(uint24(b >> 152)));
+    }
+
+    /// @notice The pending action: none iff `tA == 0` (the other fields are left stale once it settles).
+    function pending(TouchstoneVault v)
+        internal
+        view
+        returns (uint40 tA, Holdings memory before, Holdings memory after_, uint128 charge0, uint128 reserve)
+    {
+        tA = uint40(_ld(v, SLOT_TACTION) >> 152);
+        before = _hold(v, SLOT_PENDING);
+        after_ = _hold(v, SLOT_PENDING + 2);
+        uint256 c = _ld(v, SLOT_PENDING + 4);
+        (charge0, reserve) = (uint128(c), uint128(c >> 128));
     }
 
     function nav0(TouchstoneVault v) internal view returns (uint256) {

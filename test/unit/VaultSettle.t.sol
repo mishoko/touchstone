@@ -200,6 +200,14 @@ contract VaultSettleTest is LiquidPoolBase {
         assertEq(b.bondShares, bond + RES_BOND, "the bond part returns");
         assertEq(b.forfeitPool, pool + (RES_SHARES - RES_BOND - burnS), "the non-bond remainder to the drip");
         assertEq(b.reserveShares, 0, "cleared");
+        // the drip restarts at the settlement's block and burns the whole pool over dripBlocks (blocks, not seconds)
+        assertEq(b.forfeitStart, vm.getBlockNumber(), "the drip restarts now, in blocks");
+        uint256 S = hv.totalSupply();
+        uint128 owed = b.forfeitPool;
+        _keepAlive(uint256(b.dripBlocks) + 10);
+        hv.settle(); // a checkpoint drips
+        assertEq(hv.bankFull().forfeitPool, 0, "dripped out");
+        assertEq(hv.totalSupply(), S - owed, "burned to every holder");
     }
 
     /// @notice The released non-bond reserve enters the settlement's epoch, not the last checkpoint's: the action sits
@@ -259,8 +267,9 @@ contract VaultSettleTest is LiquidPoolBase {
 
     /// @notice Across a sweep of gas limits on `settle()` no successful call takes the fallback while a full-gas read
     ///         succeeds. The reference here fails its read early (cheaply) when called with less than its full-read
-    ///         gas: against a pool whose read only runs out of gas, a starved read leaves under REF_GAS_CAP/63 gas and
-    ///         the call cannot complete into the fallback at all. Control: with the guard off some limit starves the
+    ///         gas: against a pool whose read only runs out of gas, a starved read leaves under 2·REF_GAS_CAP/63 gas (the
+    ///         vault's own 1/64 at the hook call plus the hook's at the staticcall), too little for the settlement's
+    ///         stores, the FeeBank call and the burn, so the call cannot complete into the fallback at all. Control: with the guard off some limit starves the
     ///         read into the fallback and the call succeeds.
     function test_U_settle__noGasLimitStarvesTheReadIntoTheFallback() public {
         uint256 snap = vm.snapshotState();

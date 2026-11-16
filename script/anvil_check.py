@@ -25,6 +25,11 @@ def main(argv):
     rpc = argv[argv.index('--rpc-url') + 1] if '--rpc-url' in argv else 'http://127.0.0.1:8545'
     txs = json.load(open(RUN))['transactions']
     created = {t['contractName']: t['contractAddress'] for t in txs if t.get('transactionType') in ('CREATE', 'CREATE2')}
+    # contracts created inside a call (the factory's CREATE2 of the vault and the hook)
+    for t in txs:
+        for a in t.get('additionalContracts') or []:
+            if a.get('contractName') and a.get('transactionType') in ('CREATE', 'CREATE2'):
+                created.setdefault(a['contractName'], a['address'])
     errs = [f'{c}: not deployed' for c in sorted(src_contracts() - set(created))]
     for c in sorted(src_contracts() & set(created)):
         r = subprocess.run(['cast', 'codesize', created[c], '--rpc-url', rpc], capture_output=True, text=True)

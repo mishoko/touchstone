@@ -39,9 +39,14 @@ abstract contract DeployBaseUnplaced is Test {
     HookArgs internal hookArgs;
     bytes32 internal saltH;
 
-    // TODO(P2): return the real vault creation code.
+    // The factory and hook tests use a stub vault; `VaultBase` overrides this with the real vault.
     function _vaultCode() internal pure virtual returns (bytes memory) {
         return type(StubVault).creationCode;
+    }
+
+    /// @dev Test tokens; a suite may substitute a token with transfer callbacks.
+    function _newToken(string memory n, uint8 d) internal virtual returns (MockToken) {
+        return new MockToken(n, d);
     }
 
     function _hookCode() internal pure virtual returns (bytes memory) {
@@ -59,8 +64,8 @@ abstract contract DeployBaseUnplaced is Test {
         vm.warp(1_000_000);
         vm.roll(t.GRID);
         manager = new PoolManager(address(this));
-        MockToken a = new MockToken("WETH", 18);
-        MockToken b = new MockToken("USDC", 6);
+        MockToken a = _newToken("WETH", 18);
+        MockToken b = _newToken("USDC", 6);
         (token0, token1) = address(a) < address(b) ? (a, b) : (b, a);
         refPool = new MockRefPool(address(token0), address(token1), FEE, uint32(block.timestamp - 2 hours), SEED_TICK);
         t.REF_POOL = address(refPool);

@@ -1008,7 +1008,7 @@ MODE_CONV = {
           "Ladder.allowed(uint8 mode, uint8 entry) -> bool, both pure.",
     "encodings": "mode 0 NORMAL, 1 BREACHED, 2 EXITED; ev 0 Breach, 1 Place, 2 Retire; entry = uint8(Entry) with "
                  "Entry {Deposit, Withdraw, SetPositions, RebalanceSwap, Claim, TopUpBond, Retire, ReleaseBond, Poke, "
-                 "ProcessBreach, Seed}.",
+                 "ProcessBreach, Seed, Settle}.",
     "single": "in {mode, breaches, ev, count} -> out {mode, breaches, exited} or {revert: BadMode}. breaches saturate "
               "at type(uint32).max; Breach with count 0 is the identity; exited is true only on a transition from "
               "NORMAL or BREACHED to EXITED; Place and Retire on EXITED revert BadMode.",

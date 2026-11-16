@@ -32,7 +32,7 @@ from v4math import (  # noqa: E402
     get_liquidity_for_amounts, compute_swap_step_exact_in,
 )
 
-SPEC_VERSION = "2.31"
+SPEC_VERSION = "2.32"
 WAD = 10 ** 18
 U32 = (1 << 32) - 1
 U40 = (1 << 40) - 1
@@ -1036,6 +1036,8 @@ class Vault:
 
     # ---- flows
     def seed(self, a0, a1, now, ts):
+        if a0 + a1 == 0:
+            raise Revert("ZeroShares")  # v2.32 §3.2: a valueless seed
         self.h = Holdings(a0, a1)
         self._snapshot(now, ts)
         self.S = S_SEED
@@ -1060,6 +1062,8 @@ class Vault:
 
     def deposit(self, shares, now, ts):
         def f():
+            if shares == 0:
+                raise Revert("ZeroShares")  # v2.32 §3.2: before the prologue
             self.prologue(now, ts)
             self._gate("Deposit")
             if self.pending is not None:
@@ -1083,6 +1087,8 @@ class Vault:
 
     def withdraw(self, shares, now, ts):
         def f():
+            if shares == 0:
+                raise Revert("ZeroShares")  # v2.32 §3.2: before the prologue
             self.prologue(now, ts)
             self._gate("Withdraw")
             S = self.S

@@ -71,19 +71,19 @@ contract TouchstoneFactory is ITouchstoneFactory {
         _pending.key = PoolKey(c0, c1, hookArgs.fee, hookArgs.tickSpacing, IHooks(hookAddr));
         _pending.tier = hookArgs.tier;
 
-        // TODO(P2): the vault constructor reads `pending()` here.
+        // The vault constructor reads `pending()` (hook address, pool key, tier).
         vault = _create2(vaultCreationCode, sv);
         if (keccak256(abi.encode(ITouchstoneVaultSeed(vault).tier())) != keccak256(abi.encode(hookArgs.tier))) {
             revert TierMismatch();
         }
         delete _pending;
 
-        // TODO(P1): the hook constructor checks its address flags and initializes the pool at the seed price.
+        // The hook constructor checks its address flags and initializes the pool at the seed price.
         hook = _create2(hookInit, sh);
 
         _pull(c0, seedParams.a0 + seedParams.wit0, vault);
         _pull(c1, seedParams.a1 + seedParams.wit1, vault);
-        // TODO(P2): the vault's `seed` settles the transferred amounts into the PoolManager.
+        // The vault's `seed` settles the transferred amounts into the PoolManager as claims.
         ITouchstoneVaultSeed(vault)
             .seed(seedParams.a0, seedParams.a1, seedParams.curator, seedParams.wit0, seedParams.wit1);
 

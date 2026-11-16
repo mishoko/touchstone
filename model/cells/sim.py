@@ -145,38 +145,52 @@ class Sim:
         self.action_charges = []
         self.arb_pnl = 0            # the arbitrageur's realised gain (wei, at the market), measurement only
         self.set_pps()
-        if charge_rule == "markout60":
+        if charge_rule == "markout":
             self._install_markout(sigma, rng_seed)
         self.v.seed(a0, a1, now=self.B0, ts=self.ts())
         if place:
             lo = floor_sp(T0) - W // 2
             self.v.set_positions(lo, lo + W, R.Vault.NO_PRESWAP, self.B0, self.ts())
 
-    def _install_markout(self, sigma, rng_seed, horizon_sec=60, clamp_ticks=120):
-        """Candidate charge under study: the worse-of legs gain the pre-move spot s0 and a markout price p_mk.
-        s0: the honest curator re-aligns spot to the deep pool's spot inside its own transaction before the vault reads
-        it, so s0 = the market tick plus the deep pool's arbitrage band (uniform ±FEE_TICKS). p_mk: the deep pool's
-        TWAP over the horizon after the action = the market tick plus a zero-mean error with the variance of a
-        horizon-long average of 12-second increments and of the band; clamped to spot ± clamp_ticks. The settlement
-        is applied at the action (the sim draws the post-action error from its own seeded generator)."""
+    def _install_markout(self, sigma, rng_seed, horizon_sec=120, delay_blocks=1, clamp_ticks=40, bond_ratio=6e-4):
+        """Candidate charge under study (the markout-settled charge): the worse-of legs gain the pre-move spot s0 and
+        the markout legs p_mk ± FEE_TICKS, where p_mk is the deep pool's TWAP over a window of `horizon_sec` that
+        starts `delay_blocks` blocks after the action's block, clamped to spot ± clamp_ticks. s0: the honest
+        curator re-aligns spot to the deep pool's price inside its own transaction, so s0 = the market tick plus the
+        deep pool's arbitrage band (uniform ±FEE_TICKS). The post-action error of p_mk is drawn from the sim's seeded
+        generator with the variance of the delayed window's average of 12-second increments and of the band; the
+        settlement is applied at the action, and the curator's settlement call is charged as gas. The reserve (the
+        most the markout legs can add over the clamp interval, scanned every 2 ticks) is checked against unvested +
+        bond_ratio·S and failures are counted in `reverts['ReserveGate']` (reported; the action is not reverted)."""
         n = horizon_sec / 12
         sd12 = sigma * math.sqrt(12 / (365 * 86400)) / math.log(1.0001)
-        sd = math.sqrt(sd12 ** 2 * n / 3 + FEE_TICKS ** 2 / (3 * n))
+        sd = math.sqrt(sd12 ** 2 * (delay_blocks + n / 3) + FEE_TICKS ** 2 / (3 * n))
         rng = random.Random(rng_seed)
         v, sim = self.v, self
+
+        def loss_at(before, p):
+            na = R.value(v.h, p)[0]
+            return R.value(before, p)[0] - na, na
 
         def charge(before, s_spot, s_ref, kind):
             m = sim.mkt()
             s0 = sqrt_at(int(round(m + rng.uniform(-FEE_TICKS, FEE_TICKS))))
             tick_spot = R.get_tick_at_sqrt_price(s_spot)
-            mk = min(max(m + rng.gauss(0.0, sd), tick_spot - clamp_ticks), tick_spot + clamp_ticks)
-            legs = [s_spot, s_ref, s0, sqrt_at(int(round(mk)))]
+            mk = int(round(min(max(m + rng.gauss(0.0, sd), tick_spot - clamp_ticks), tick_spot + clamp_ticks)))
             loss, p_star, nav_after = 0, s_spot, R.value(v.h, s_spot)[0]
-            for p in legs:                       # first leg (spot) wins ties
-                na = R.value(v.h, p)[0]
-                l = R.value(before, p)[0] - na
-                if l > loss:
+            imm = 0
+            for i, p in enumerate([s_spot, s_ref, s0, sqrt_at(mk - FEE_TICKS), sqrt_at(mk + FEE_TICKS)]):
+                l, na = loss_at(before, p)
+                if i == 2:
+                    imm = max(0, loss)
+                if l > loss:                     # first leg (spot) wins ties
                     loss, p_star, nav_after = l, p, na
+            imm = max(imm, loss_at(before, s0)[0], 0)
+            res = max([loss_at(before, sqrt_at(tick_spot + d))[0] for d in
+                       range(-clamp_ticks - FEE_TICKS, clamp_ticks + FEE_TICKS + 1, 2)] + [0]) - imm
+            need = R.ceil_div((imm + max(0, res)) * v.S, max(1, nav_after))
+            if need > v.bank.unvested() + int(bond_ratio * v.S):
+                sim.reverts['ReserveGate'] = sim.reverts.get('ReserveGate', 0) + 1
             burn = 0 if loss == 0 else (R.U256 if nav_after == 0 else R.ceil_div(loss * v.S, nav_after))
             if burn > v.bank.unvested() + v.bank.bondShares:
                 raise R.Revert("Insolvent")
@@ -187,6 +201,7 @@ class Sim:
             r["bankBurned"] += bank_b
             r["bondBurned"] += bond_b
             v.events.append(("Action", kind, loss, p_star, bank_b, bond_b))
+            sim.gas += gas_eth("poke")           # the curator's settlement call after the window
             return loss, p_star, burn
         v._charge = charge
 

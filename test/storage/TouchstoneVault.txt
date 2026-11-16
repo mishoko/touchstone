@@ -1,0 +1,66 @@
+   0  0   32 _balances: mapping(address => uint256)
+   1  0   32 _allowances: mapping(address => mapping(address => uint256))
+   2  0   32 _totalSupply: uint256
+   3  0   32 _name: string
+   4  0   32 _symbol: string
+   5  0   16 _idle0: uint128
+   5 16   16 _idle1: uint128
+   6  0   16 _L: uint128
+   6 16    3 _lo: int24
+   6 19    3 _hi: int24
+   7  0   16 _nav0: uint128
+   7 16    8 _delta0: uint64
+   7 24    8 _tauV0: uint64
+   8  0    5 _segStart: uint40
+   8  5    4 _epoch: uint32
+   8  9    5 _tAction: uint40
+   8 14   16 _baseOwed: uint128
+   8 30    1 _seeded: bool
+   9  0   20 curator: address
+  10  0  320 _bank: struct Bank
+  10  0  160 _bank.cohorts: struct Cohort[5]
+  15  0   16 _bank.maturedPending: uint128
+  15 16   16 _bank.vestedUnclaimed: uint128
+  16  0   16 _bank.bondShares: uint128
+  16 16   16 _bank.forfeitPool: uint128
+  17  0   16 _bank.forfeitTotal: uint128
+  17 16    5 _bank.forfeitStart: uint40
+  17 21    5 _bank.dripBlocks: uint40
+  17 26    5 _bank.releaseDelay: uint40
+  18  0    4 _bank.breaches: uint32
+  18  4    1 _bank.mode: uint8
+  18  5    1 _bank.placedByCurator: bool
+  18  6    5 _bank.exitBlock: uint40
+  18 11   16 _bank.reserveShares: uint128
+  19  0   16 _bank.reserveBond: uint128
+  19 16    1 _bank.reserveForfeit: bool
+  20  0  224 _tier: struct Tier
+  20  0   20 _tier.REF_POOL: address
+  20 20    4 _tier.REF_WINDOW: uint32
+  20 24    3 _tier.REF_BAND: int24
+  20 27    4 _tier.REF_GAS_CAP: uint32
+  21  0    4 _tier.REFRESH_GAS_MIN: uint32
+  21  4    2 _tier.MIN_CARD: uint16
+  21  6   20 _tier.REF_SQRT_PRICE: uint160
+  21 26    4 _tier.GRID_SEC: uint32
+  22  0    4 _tier.CURE_BLOCKS: uint32
+  22  4    4 _tier.EPOCH: uint32
+  22  8    4 _tier.GRID: uint32
+  22 12    4 _tier.COOLDOWN: uint32
+  22 16    4 _tier.FORFEIT_DRIP_BLOCKS: uint32
+  22 20    8 _tier.m_perBlock: uint64
+  23  0    8 _tier.BOND_RATIO: uint64
+  23  8   16 _tier.BOND_MIN: uint128
+  24  0   16 _tier.NAV_MAX: uint128
+  24 16    8 _tier.RESERVE_RATIO: uint64
+  24 24    4 _tier.H_MARKOUT: uint32
+  25  0    8 _tier.MAX_SWAP_ACTION: uint64
+  25  8    8 _tier.MAX_SWAP_EPOCH: uint64
+  25 16    2 _tier.MAX_SWAPS: uint16
+  25 18    3 _tier.W_TICKS: int24
+  25 21    3 _tier.FEE_TICKS: int24
+  25 24    3 _tier.BAND_SWAP: int24
+  26  0    8 _tier.DELTA_MIN: uint64
+  26  8    4 _tier.EDGE_DELAY: uint32
+  26 12    1 _tier.RESET_RUN: uint8
+  26 13   16 _tier.L_W_TARGET: uint128

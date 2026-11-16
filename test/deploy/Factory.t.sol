@@ -11,6 +11,8 @@ import {ITouchstoneFactory, HookArgs, Pending} from "../../src/interfaces/ITouch
 import {HookMining} from "../../script/Mine.s.sol";
 import {DeployBaseUnplaced} from "../utils/DeployBaseUnplaced.sol";
 import {StubVault, StubVaultBadTier, StubHook} from "../utils/Stubs.sol";
+import {Vm} from "forge-std/Vm.sol";
+import {Tier} from "../../src/types/Tier.sol";
 
 contract FactoryTest is DeployBaseUnplaced {
     using StateLibrary for IPoolManager;
@@ -43,6 +45,28 @@ contract FactoryTest is DeployBaseUnplaced {
         assertEq(token1.balanceOf(vault), seedParams.a1 + seedParams.wit1);
         assertEq(v.seedCalls(), 1);
         assertEq(v.curator(), curator);
+    }
+
+    /// @notice Readers take the tier from `Deployed` (the vault keeps only `TIER_HASH`): the event carries the deployed
+    ///         tier, and it verifies against the vault's commitment.
+    function test_factory_deployedEventCarriesTheTierThatVerifies() public {
+        vm.recordLogs();
+        (vault, hook) = _deploy(deployer, SALT_V);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bytes32 sig = keccak256(
+            "Deployed(address,address,address,(address,uint32,int24,uint32,uint32,uint16,uint160,uint32,uint32,uint32,uint32,uint32,uint32,uint64,uint64,uint128,uint128,uint64,uint32,uint64,uint64,uint16,int24,int24,int24,uint64,uint32,uint8,uint128))"
+        );
+        uint256 found;
+        for (uint256 i; i < logs.length; ++i) {
+            if (logs[i].emitter != address(factory) || logs[i].topics[0] != sig) continue;
+            ++found;
+            (address v, address h, Tier memory t) = abi.decode(logs[i].data, (address, address, Tier));
+            assertEq(v, vault, "vault");
+            assertEq(h, hook, "hook");
+            assertEq(keccak256(abi.encode(t)), keccak256(abi.encode(tier)), "the deployed tier");
+            assertEq(keccak256(abi.encode(t)), StubVault(vault).TIER_HASH(), "verifies against TIER_HASH");
+        }
+        assertEq(found, 1, "one Deployed event");
     }
 
     function test_factory_minedHookHasExactlyTheFlagBits() public {

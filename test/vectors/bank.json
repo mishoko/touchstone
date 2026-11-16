@@ -1,12 +1,12 @@
 {
  "schema": "touchstone-vectors/1",
- "specVersion": "2.29",
+ "specVersion": "2.30",
  "conventions": {
   "fn": "FeeBank.apply(Bank storage b, Op op, bytes args) -> (burnShares, payShares, a, b2); in.bank is the state before, out.bank after; out = {revert: <error>} when apply reverts (state unchanged).",
-  "Op": "enum Op {Accrue, Breach, VestTime, Drip, Charge, Place, Retire, Claim, TopUp, Release}; in.op is the ordinal; the case id names the op.",
-  "fields": "in {bank, op, args}; out {bank, burnShares, payShares, a, b2} or {revert}; Bank = {cohorts[5] {epoch, shares}, maturedPending, vestedUnclaimed, bondShares, forfeitPool, forfeitTotal, forfeitStart, dripBlocks, releaseDelay, breaches, mode, placedByCurator, exitBlock}.",
-  "args": "Accrue (epoch, shares, gateOpen); Breach (count, now); VestTime (nowEpoch, gateOpen); Drip (now); Charge (burn); Place (); Retire (now); Claim (); TopUp (shares); Release (shares, now).",
-  "returns": "Charge (bank burned, bond burned); Breach/Retire (forfeited, mode after); VestTime/Accrue (vested, moved to maturedPending); Drip (burned, 0); Claim/TopUp/Release/Place (shares moved, 0). Breach and Retire first burn the drip owed at `now` (returned as burnShares), then forfeit; an empty forfeit does not restart the drip.",
+  "Op": "enum Op {Accrue, Breach, VestTime, Drip, Charge, Place, Retire, Claim, TopUp, Release, Settle}; in.op is the ordinal; the case id names the op.",
+  "fields": "in {bank, op, args}; out {bank, burnShares, payShares, a, b2} or {revert}; Bank = {cohorts[5] {epoch, shares}, maturedPending, vestedUnclaimed, bondShares, forfeitPool, forfeitTotal, forfeitStart, dripBlocks, releaseDelay, breaches, mode, placedByCurator, exitBlock, reserveShares, reserveBond, reserveForfeit}.",
+  "args": "Accrue (epoch, shares, gateOpen); Breach (count, now); VestTime (nowEpoch, gateOpen); Drip (now); Charge (burn, burnR); Place (); Retire (now); Claim (); TopUp (shares); Release (shares, now); Settle (burnS, epoch, now).",
+  "returns": "Settle (released to the bond, released to the cohort or the drip; burnShares = settlement burn + drip owed); Charge (bank burned, bond burned); Breach/Retire (forfeited, mode after); VestTime/Accrue (vested, moved to maturedPending); Drip (burned, 0); Claim/TopUp/Release/Place (shares moved, 0). Breach and Retire first burn the drip owed at `now` (returned as burnShares), then forfeit; an empty forfeit does not restart the drip.",
   "cohorts": "V = 4; ring of V+1 = 5 slots {epoch, shares} at index epoch mod 5; a cohort vests when nowEpoch >= epoch + 1 + V; Charge burns cohorts youngest (highest epoch) first, then maturedPending, then the bond. A slot emptied by Charge, VestTime, Breach or Retire keeps its epoch (only shares go to 0); a slot is occupied iff shares > 0.",
   "mode": "0 NORMAL, 1 BREACHED, 2 EXITED. Release requires EXITED and now >= exitBlock + releaseDelay.",
   "tier": "dripBlocks and releaseDelay are Bank fields written at seed (TEST: 120 and 480; DEMO cases: 3600, 14400)."
@@ -50,7 +50,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "0",
     "args": {
@@ -94,7 +97,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -140,7 +146,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "0",
     "args": {
@@ -184,7 +193,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -230,7 +242,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "0",
     "args": {
@@ -274,7 +289,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -320,7 +338,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "0",
     "args": {
@@ -364,7 +385,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -410,7 +434,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "0",
     "args": {
@@ -454,7 +481,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -500,7 +530,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "0",
     "args": {
@@ -544,7 +577,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -590,7 +626,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "2",
     "args": {
@@ -633,7 +672,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -679,7 +721,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "2",
     "args": {
@@ -722,7 +767,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -768,7 +816,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "2",
     "args": {
@@ -811,7 +862,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -857,7 +911,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "2",
     "args": {
@@ -900,7 +957,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -946,7 +1006,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "2",
     "args": {
@@ -989,7 +1052,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -1035,11 +1101,15 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "4",
     "args": {
-     "burn": "10000000000000000000"
+     "burn": "10000000000000000000",
+     "burnR": "0"
     }
    },
    "out": {
@@ -1077,7 +1147,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "10000000000000000000",
     "payShares": "0",
@@ -1123,11 +1196,15 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "4",
     "args": {
-     "burn": "5000000000000000000"
+     "burn": "5000000000000000000",
+     "burnR": "0"
     }
    },
    "out": {
@@ -1165,7 +1242,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "5000000000000000000",
     "payShares": "0",
@@ -1211,11 +1291,15 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "4",
     "args": {
-     "burn": "3000000000000000001"
+     "burn": "3000000000000000001",
+     "burnR": "0"
     }
    },
    "out": {
@@ -1253,7 +1337,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "3000000000000000001",
     "payShares": "0",
@@ -1299,11 +1386,15 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "4",
     "args": {
-     "burn": "3000000000000000000"
+     "burn": "3000000000000000000",
+     "burnR": "0"
     }
    },
    "out": {
@@ -1341,7 +1432,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "3000000000000000000",
     "payShares": "0",
@@ -1387,11 +1481,15 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "4",
     "args": {
-     "burn": "3000000000000000001"
+     "burn": "3000000000000000001",
+     "burnR": "0"
     }
    },
    "out": {
@@ -1436,11 +1534,15 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "4",
     "args": {
-     "burn": "0"
+     "burn": "0",
+     "burnR": "0"
     }
    },
    "out": {
@@ -1478,7 +1580,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -1487,7 +1592,1451 @@
    }
   },
   {
-   "id": "bank-017-drip-1000",
+   "id": "bank-017-charge-with-reserve",
+   "fn": "FeeBank.apply",
+   "in": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "7",
+       "shares": "1000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "1000000000000000000",
+     "vestedUnclaimed": "0",
+     "bondShares": "10000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
+    },
+    "op": "4",
+    "args": {
+     "burn": "500000000000000000",
+     "burnR": "2000000000000000000"
+    }
+   },
+   "out": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "7",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "9500000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "2000000000000000000",
+     "reserveBond": "500000000000000000",
+     "reserveForfeit": false
+    },
+    "burnShares": "500000000000000000",
+    "payShares": "0",
+    "a": "500000000000000000",
+    "b2": "0"
+   }
+  },
+  {
+   "id": "bank-018-charge-reserve-insolvent",
+   "fn": "FeeBank.apply",
+   "in": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "7",
+       "shares": "1000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "1000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
+    },
+    "op": "4",
+    "args": {
+     "burn": "1000000000000000000",
+     "burnR": "1000000000000000001"
+    }
+   },
+   "out": {
+    "revert": "Insolvent"
+   }
+  },
+  {
+   "id": "bank-019-settle-burn-nonbond-first",
+   "fn": "FeeBank.apply",
+   "in": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "7",
+       "shares": "1000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "10000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "3000000000000000000",
+     "reserveBond": "1000000000000000000",
+     "reserveForfeit": false
+    },
+    "op": "10",
+    "args": {
+     "burnS": "2000000000000000005",
+     "epoch": "8",
+     "now": "1000"
+    }
+   },
+   "out": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "7",
+       "shares": "1000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "10999999999999999995",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
+    },
+    "burnShares": "2000000000000000005",
+    "payShares": "0",
+    "a": "999999999999999995",
+    "b2": "0"
+   }
+  },
+  {
+   "id": "bank-020-settle-release-to-cohort",
+   "fn": "FeeBank.apply",
+   "in": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "7",
+       "shares": "1000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "10000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "3000000000000000000",
+     "reserveBond": "1000000000000000000",
+     "reserveForfeit": false
+    },
+    "op": "10",
+    "args": {
+     "burnS": "1000000000000000000",
+     "epoch": "8",
+     "now": "1000"
+    }
+   },
+   "out": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "7",
+       "shares": "1000000000000000000"
+      },
+      {
+       "epoch": "8",
+       "shares": "1000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "11000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
+    },
+    "burnShares": "1000000000000000000",
+    "payShares": "0",
+    "a": "1000000000000000000",
+    "b2": "1000000000000000000"
+   }
+  },
+  {
+   "id": "bank-021-settle-release-overwrites-old-slot",
+   "fn": "FeeBank.apply",
+   "in": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "3",
+       "shares": "4000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "1000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "2000000000000000000",
+     "reserveBond": "0",
+     "reserveForfeit": false
+    },
+    "op": "10",
+    "args": {
+     "burnS": "0",
+     "epoch": "8",
+     "now": "1000"
+    }
+   },
+   "out": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "8",
+       "shares": "2000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "4000000000000000000",
+     "vestedUnclaimed": "0",
+     "bondShares": "1000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
+    },
+    "burnShares": "0",
+    "payShares": "0",
+    "a": "0",
+    "b2": "2000000000000000000"
+   }
+  },
+  {
+   "id": "bank-022-settle-burn-capped",
+   "fn": "FeeBank.apply",
+   "in": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "7",
+       "shares": "1000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "10000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "3000000000000000000",
+     "reserveBond": "1000000000000000000",
+     "reserveForfeit": false
+    },
+    "op": "10",
+    "args": {
+     "burnS": "10000000000000000000",
+     "epoch": "8",
+     "now": "1000"
+    }
+   },
+   "out": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "7",
+       "shares": "1000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "10000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
+    },
+    "burnShares": "3000000000000000000",
+    "payShares": "0",
+    "a": "0",
+    "b2": "0"
+   }
+  },
+  {
+   "id": "bank-023-settle-after-breach-to-drip",
+   "fn": "FeeBank.apply",
+   "in": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "7",
+       "shares": "1000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "10000000000000000000",
+     "forfeitPool": "1000000000000000000",
+     "forfeitTotal": "2000000000000000000",
+     "forfeitStart": "940",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "3000000000000000000",
+     "reserveBond": "1000000000000000000",
+     "reserveForfeit": true
+    },
+    "op": "10",
+    "args": {
+     "burnS": "1000000000000000000",
+     "epoch": "8",
+     "now": "1000"
+    }
+   },
+   "out": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "7",
+       "shares": "1000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "11000000000000000000",
+     "forfeitPool": "2000000000000000000",
+     "forfeitTotal": "2000000000000000000",
+     "forfeitStart": "1000",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
+    },
+    "burnShares": "1000000000000000000",
+    "payShares": "0",
+    "a": "1000000000000000000",
+    "b2": "1000000000000000000"
+   }
+  },
+  {
+   "id": "bank-024-breach-keeps-reserve",
+   "fn": "FeeBank.apply",
+   "in": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "7",
+       "shares": "1000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "10000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "3000000000000000000",
+     "reserveBond": "1000000000000000000",
+     "reserveForfeit": false
+    },
+    "op": "1",
+    "args": {
+     "count": "1",
+     "now": "1000"
+    }
+   },
+   "out": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "7",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "10000000000000000000",
+     "forfeitPool": "1000000000000000000",
+     "forfeitTotal": "1000000000000000000",
+     "forfeitStart": "1000",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "1",
+     "mode": "1",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "3000000000000000000",
+     "reserveBond": "1000000000000000000",
+     "reserveForfeit": true
+    },
+    "burnShares": "0",
+    "payShares": "0",
+    "a": "1000000000000000000",
+    "b2": "1"
+   }
+  },
+  {
+   "id": "bank-025-retire-keeps-reserve",
+   "fn": "FeeBank.apply",
+   "in": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "7",
+       "shares": "1000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "10000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "3000000000000000000",
+     "reserveBond": "1000000000000000000",
+     "reserveForfeit": false
+    },
+    "op": "6",
+    "args": {
+     "now": "1000"
+    }
+   },
+   "out": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "7",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "10000000000000000000",
+     "forfeitPool": "1000000000000000000",
+     "forfeitTotal": "1000000000000000000",
+     "forfeitStart": "1000",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "2",
+     "placedByCurator": false,
+     "exitBlock": "1000",
+     "reserveShares": "3000000000000000000",
+     "reserveBond": "1000000000000000000",
+     "reserveForfeit": true
+    },
+    "burnShares": "0",
+    "payShares": "0",
+    "a": "1000000000000000000",
+    "b2": "2"
+   }
+  },
+  {
+   "id": "bank-026-charge-reserve-while-pending",
+   "fn": "FeeBank.apply",
+   "in": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "7",
+       "shares": "1000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "10000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "1000000000000000000",
+     "reserveBond": "0",
+     "reserveForfeit": false
+    },
+    "op": "4",
+    "args": {
+     "burn": "1000000000000000000",
+     "burnR": "1000000000000000000"
+    }
+   },
+   "out": {
+    "revert": "MarkoutPending"
+   }
+  },
+  {
+   "id": "bank-027-charge-no-reserve-while-pending",
+   "fn": "FeeBank.apply",
+   "in": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "7",
+       "shares": "1000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "10000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "1000000000000000000",
+     "reserveBond": "0",
+     "reserveForfeit": false
+    },
+    "op": "4",
+    "args": {
+     "burn": "1000000000000000000",
+     "burnR": "0"
+    }
+   },
+   "out": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "7",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "10000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "1000000000000000000",
+     "reserveBond": "0",
+     "reserveForfeit": false
+    },
+    "burnShares": "1000000000000000000",
+    "payShares": "0",
+    "a": "1000000000000000000",
+    "b2": "0"
+   }
+  },
+  {
+   "id": "bank-028-settle-release-into-same-epoch",
+   "fn": "FeeBank.apply",
+   "in": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "8",
+       "shares": "1000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "2000000000000000000",
+     "vestedUnclaimed": "0",
+     "bondShares": "1000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "3000000000000000000",
+     "reserveBond": "0",
+     "reserveForfeit": false
+    },
+    "op": "10",
+    "args": {
+     "burnS": "0",
+     "epoch": "8",
+     "now": "1000"
+    }
+   },
+   "out": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "8",
+       "shares": "4000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "2000000000000000000",
+     "vestedUnclaimed": "0",
+     "bondShares": "1000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
+    },
+    "burnShares": "0",
+    "payShares": "0",
+    "a": "0",
+    "b2": "3000000000000000000"
+   }
+  },
+  {
+   "id": "bank-029-settle-release-overwrite-adds-to-pending",
+   "fn": "FeeBank.apply",
+   "in": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "3",
+       "shares": "4000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "2000000000000000000",
+     "vestedUnclaimed": "0",
+     "bondShares": "1000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "1000000000000000000",
+     "reserveBond": "0",
+     "reserveForfeit": false
+    },
+    "op": "10",
+    "args": {
+     "burnS": "0",
+     "epoch": "8",
+     "now": "1000"
+    }
+   },
+   "out": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "8",
+       "shares": "1000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "6000000000000000000",
+     "vestedUnclaimed": "0",
+     "bondShares": "1000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
+    },
+    "burnShares": "0",
+    "payShares": "0",
+    "a": "0",
+    "b2": "1000000000000000000"
+   }
+  },
+  {
+   "id": "bank-030-settle-release-one-share-occupant",
+   "fn": "FeeBank.apply",
+   "in": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "3",
+       "shares": "1"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "1000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "1000000000000000000",
+     "reserveBond": "0",
+     "reserveForfeit": false
+    },
+    "op": "10",
+    "args": {
+     "burnS": "0",
+     "epoch": "8",
+     "now": "1000"
+    }
+   },
+   "out": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "8",
+       "shares": "1000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "1",
+     "vestedUnclaimed": "0",
+     "bondShares": "1000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
+    },
+    "burnShares": "0",
+    "payShares": "0",
+    "a": "0",
+    "b2": "1000000000000000000"
+   }
+  },
+  {
+   "id": "bank-031-settle-after-breach-drip-owed",
+   "fn": "FeeBank.apply",
+   "in": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "7",
+       "shares": "1000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "10000000000000000000",
+     "forfeitPool": "1000000000000000000",
+     "forfeitTotal": "2000000000000000000",
+     "forfeitStart": "900",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "3000000000000000000",
+     "reserveBond": "1000000000000000000",
+     "reserveForfeit": true
+    },
+    "op": "10",
+    "args": {
+     "burnS": "1000000000000000000",
+     "epoch": "8",
+     "now": "1000"
+    }
+   },
+   "out": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "7",
+       "shares": "1000000000000000000"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "11000000000000000000",
+     "forfeitPool": "1333333333333333334",
+     "forfeitTotal": "1333333333333333334",
+     "forfeitStart": "1000",
+     "dripBlocks": "120",
+     "releaseDelay": "480",
+     "breaches": "0",
+     "mode": "0",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
+    },
+    "burnShares": "1666666666666666666",
+    "payShares": "0",
+    "a": "1000000000000000000",
+    "b2": "1000000000000000000"
+   }
+  },
+  {
+   "id": "bank-032-release-excludes-reserve",
+   "fn": "FeeBank.apply",
+   "in": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "5000000000000000000",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "0",
+     "breaches": "0",
+     "mode": "2",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "2000000000000000000",
+     "reserveBond": "2000000000000000000",
+     "reserveForfeit": false
+    },
+    "op": "9",
+    "args": {
+     "shares": "10000000000000000000",
+     "now": "1000000"
+    }
+   },
+   "out": {
+    "bank": {
+     "cohorts": [
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      },
+      {
+       "epoch": "0",
+       "shares": "0"
+      }
+     ],
+     "maturedPending": "0",
+     "vestedUnclaimed": "0",
+     "bondShares": "0",
+     "forfeitPool": "0",
+     "forfeitTotal": "0",
+     "forfeitStart": "0",
+     "dripBlocks": "120",
+     "releaseDelay": "0",
+     "breaches": "0",
+     "mode": "2",
+     "placedByCurator": false,
+     "exitBlock": "0",
+     "reserveShares": "2000000000000000000",
+     "reserveBond": "2000000000000000000",
+     "reserveForfeit": false
+    },
+    "burnShares": "0",
+    "payShares": "5000000000000000000",
+    "a": "5000000000000000000",
+    "b2": "0"
+   }
+  },
+  {
+   "id": "bank-033-drip-1000",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -1524,7 +3073,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "3",
     "args": {
@@ -1566,7 +3118,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -1575,7 +3130,7 @@
    }
   },
   {
-   "id": "bank-018-drip-1030",
+   "id": "bank-034-drip-1030",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -1612,7 +3167,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "3",
     "args": {
@@ -1654,7 +3212,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "3000000000000000000",
     "payShares": "0",
@@ -1663,7 +3224,7 @@
    }
   },
   {
-   "id": "bank-019-drip-1060",
+   "id": "bank-035-drip-1060",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -1700,7 +3261,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "3",
     "args": {
@@ -1742,7 +3306,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "6000000000000000000",
     "payShares": "0",
@@ -1751,7 +3318,7 @@
    }
   },
   {
-   "id": "bank-020-drip-1119",
+   "id": "bank-036-drip-1119",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -1788,7 +3355,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "3",
     "args": {
@@ -1830,7 +3400,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "11900000000000000000",
     "payShares": "0",
@@ -1839,7 +3412,7 @@
    }
   },
   {
-   "id": "bank-021-drip-1120",
+   "id": "bank-037-drip-1120",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -1876,7 +3449,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "3",
     "args": {
@@ -1918,7 +3494,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "12000000000000000000",
     "payShares": "0",
@@ -1927,7 +3506,7 @@
    }
   },
   {
-   "id": "bank-022-drip-5000",
+   "id": "bank-038-drip-5000",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -1964,7 +3543,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "3",
     "args": {
@@ -2006,7 +3588,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "12000000000000000000",
     "payShares": "0",
@@ -2015,7 +3600,7 @@
    }
   },
   {
-   "id": "bank-023-drip-partly-burned",
+   "id": "bank-039-drip-partly-burned",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -2052,7 +3637,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "3",
     "args": {
@@ -2094,7 +3682,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "3000000000000000000",
     "payShares": "0",
@@ -2103,7 +3694,7 @@
    }
   },
   {
-   "id": "bank-024-drip-last-share",
+   "id": "bank-040-drip-last-share",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -2140,7 +3731,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "3",
     "args": {
@@ -2182,7 +3776,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "1",
     "payShares": "0",
@@ -2191,7 +3788,7 @@
    }
   },
   {
-   "id": "bank-025-drip-one-share",
+   "id": "bank-041-drip-one-share",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -2228,7 +3825,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "3",
     "args": {
@@ -2270,7 +3870,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "1",
     "payShares": "0",
@@ -2279,7 +3882,7 @@
    }
   },
   {
-   "id": "bank-026-breach-one-share",
+   "id": "bank-042-breach-one-share",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -2316,7 +3919,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "1",
     "args": {
@@ -2359,7 +3965,10 @@
      "breaches": "1",
      "mode": "1",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -2368,7 +3977,7 @@
    }
   },
   {
-   "id": "bank-027-accrue-overwrite-one-share",
+   "id": "bank-043-accrue-overwrite-one-share",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -2405,7 +4014,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "0",
     "args": {
@@ -2449,7 +4061,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -2458,7 +4073,7 @@
    }
   },
   {
-   "id": "bank-028-vest-one-share",
+   "id": "bank-044-vest-one-share",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -2495,7 +4110,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "2",
     "args": {
@@ -2538,7 +4156,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -2547,7 +4168,7 @@
    }
   },
   {
-   "id": "bank-029-drip-zero-length",
+   "id": "bank-045-drip-zero-length",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -2584,7 +4205,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "3",
     "args": {
@@ -2626,7 +4250,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "5000000000000000000",
     "payShares": "0",
@@ -2635,7 +4262,7 @@
    }
   },
   {
-   "id": "bank-030-drip-before-start",
+   "id": "bank-046-drip-before-start",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -2672,7 +4299,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "3",
     "args": {
@@ -2714,7 +4344,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -2723,7 +4356,7 @@
    }
   },
   {
-   "id": "bank-031-breach-normal-1",
+   "id": "bank-047-breach-normal-1",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -2760,7 +4393,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "1",
     "args": {
@@ -2803,7 +4439,10 @@
      "breaches": "1",
      "mode": "1",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -2812,7 +4451,7 @@
    }
   },
   {
-   "id": "bank-032-breach-breached-2-to-3",
+   "id": "bank-048-breach-breached-2-to-3",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -2849,7 +4488,10 @@
      "breaches": "2",
      "mode": "1",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "1",
     "args": {
@@ -2892,7 +4534,10 @@
      "breaches": "3",
      "mode": "2",
      "placedByCurator": false,
-     "exitBlock": "1100"
+     "exitBlock": "1100",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -2901,7 +4546,7 @@
    }
   },
   {
-   "id": "bank-033-breach-two-at-once",
+   "id": "bank-049-breach-two-at-once",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -2938,7 +4583,10 @@
      "breaches": "1",
      "mode": "1",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "1",
     "args": {
@@ -2981,7 +4629,10 @@
      "breaches": "3",
      "mode": "2",
      "placedByCurator": false,
-     "exitBlock": "1100"
+     "exitBlock": "1100",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -2990,7 +4641,7 @@
    }
   },
   {
-   "id": "bank-034-breach-exited-keeps-exitblock",
+   "id": "bank-050-breach-exited-keeps-exitblock",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3027,7 +4678,10 @@
      "breaches": "3",
      "mode": "2",
      "placedByCurator": false,
-     "exitBlock": "700"
+     "exitBlock": "700",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "1",
     "args": {
@@ -3070,7 +4724,10 @@
      "breaches": "4",
      "mode": "2",
      "placedByCurator": false,
-     "exitBlock": "700"
+     "exitBlock": "700",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -3079,7 +4736,7 @@
    }
   },
   {
-   "id": "bank-035-breach-empty-no-restart",
+   "id": "bank-051-breach-empty-no-restart",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3116,7 +4773,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "1",
     "args": {
@@ -3159,7 +4819,10 @@
      "breaches": "1",
      "mode": "1",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -3168,7 +4831,7 @@
    }
   },
   {
-   "id": "bank-036-breach-restart",
+   "id": "bank-052-breach-restart",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3205,7 +4868,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "1",
     "args": {
@@ -3248,7 +4914,10 @@
      "breaches": "1",
      "mode": "1",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "6000000000000000000",
     "payShares": "0",
@@ -3257,7 +4926,7 @@
    }
   },
   {
-   "id": "bank-037-place-normal",
+   "id": "bank-053-place-normal",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3294,7 +4963,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "5",
     "args": {}
@@ -3334,7 +5006,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -3343,7 +5018,7 @@
    }
   },
   {
-   "id": "bank-038-place-breached",
+   "id": "bank-054-place-breached",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3380,7 +5055,10 @@
      "breaches": "2",
      "mode": "1",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "5",
     "args": {}
@@ -3420,7 +5098,10 @@
      "breaches": "2",
      "mode": "0",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -3429,7 +5110,7 @@
    }
   },
   {
-   "id": "bank-039-place-exited",
+   "id": "bank-055-place-exited",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3466,7 +5147,10 @@
      "breaches": "3",
      "mode": "2",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "5",
     "args": {}
@@ -3476,7 +5160,7 @@
    }
   },
   {
-   "id": "bank-040-retire",
+   "id": "bank-056-retire",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3513,7 +5197,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "6",
     "args": {
@@ -3555,7 +5242,10 @@
      "breaches": "0",
      "mode": "2",
      "placedByCurator": false,
-     "exitBlock": "1200"
+     "exitBlock": "1200",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -3564,7 +5254,7 @@
    }
   },
   {
-   "id": "bank-041-retire-empty",
+   "id": "bank-057-retire-empty",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3601,7 +5291,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "6",
     "args": {
@@ -3643,7 +5336,10 @@
      "breaches": "0",
      "mode": "2",
      "placedByCurator": false,
-     "exitBlock": "1130"
+     "exitBlock": "1130",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -3652,7 +5348,7 @@
    }
   },
   {
-   "id": "bank-042-retire-exited",
+   "id": "bank-058-retire-exited",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3689,7 +5385,10 @@
      "breaches": "0",
      "mode": "2",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "6",
     "args": {
@@ -3701,7 +5400,7 @@
    }
   },
   {
-   "id": "bank-043-retire-running-drip",
+   "id": "bank-059-retire-running-drip",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3738,7 +5437,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "6",
     "args": {
@@ -3780,7 +5482,10 @@
      "breaches": "0",
      "mode": "2",
      "placedByCurator": false,
-     "exitBlock": "1060"
+     "exitBlock": "1060",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "6000000000000000000",
     "payShares": "0",
@@ -3789,7 +5494,7 @@
    }
   },
   {
-   "id": "bank-044-claim",
+   "id": "bank-060-claim",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3826,7 +5531,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "7",
     "args": {}
@@ -3866,7 +5574,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "7000000000000000000",
@@ -3875,7 +5586,7 @@
    }
   },
   {
-   "id": "bank-045-claim-exited",
+   "id": "bank-061-claim-exited",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3912,7 +5623,10 @@
      "breaches": "0",
      "mode": "2",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "7",
     "args": {}
@@ -3952,7 +5666,10 @@
      "breaches": "0",
      "mode": "2",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "7000000000000000000",
@@ -3961,7 +5678,7 @@
    }
   },
   {
-   "id": "bank-046-topup",
+   "id": "bank-062-topup",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -3998,7 +5715,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "8",
     "args": {
@@ -4040,7 +5760,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -4049,7 +5772,7 @@
    }
   },
   {
-   "id": "bank-047-release-locked",
+   "id": "bank-063-release-locked",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4086,7 +5809,10 @@
      "breaches": "3",
      "mode": "2",
      "placedByCurator": false,
-     "exitBlock": "1000"
+     "exitBlock": "1000",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "9",
     "args": {
@@ -4099,7 +5825,7 @@
    }
   },
   {
-   "id": "bank-048-release-at-delay",
+   "id": "bank-064-release-at-delay",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4136,7 +5862,10 @@
      "breaches": "3",
      "mode": "2",
      "placedByCurator": false,
-     "exitBlock": "1000"
+     "exitBlock": "1000",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "9",
     "args": {
@@ -4179,7 +5908,10 @@
      "breaches": "3",
      "mode": "2",
      "placedByCurator": false,
-     "exitBlock": "1000"
+     "exitBlock": "1000",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "9000000000000000000",
@@ -4188,7 +5920,7 @@
    }
   },
   {
-   "id": "bank-049-release-partial",
+   "id": "bank-065-release-partial",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4225,7 +5957,10 @@
      "breaches": "3",
      "mode": "2",
      "placedByCurator": false,
-     "exitBlock": "1000"
+     "exitBlock": "1000",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "9",
     "args": {
@@ -4268,7 +6003,10 @@
      "breaches": "3",
      "mode": "2",
      "placedByCurator": false,
-     "exitBlock": "1000"
+     "exitBlock": "1000",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "4000000000000000000",
@@ -4277,7 +6015,7 @@
    }
   },
   {
-   "id": "bank-050-release-above-bond",
+   "id": "bank-066-release-above-bond",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4314,7 +6052,10 @@
      "breaches": "3",
      "mode": "2",
      "placedByCurator": false,
-     "exitBlock": "1000"
+     "exitBlock": "1000",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "9",
     "args": {
@@ -4357,7 +6098,10 @@
      "breaches": "3",
      "mode": "2",
      "placedByCurator": false,
-     "exitBlock": "1000"
+     "exitBlock": "1000",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "9000000000000000000",
@@ -4366,7 +6110,7 @@
    }
   },
   {
-   "id": "bank-051-release-normal",
+   "id": "bank-067-release-normal",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4403,7 +6147,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "9",
     "args": {
@@ -4416,7 +6163,7 @@
    }
   },
   {
-   "id": "bank-052-release-demo-minus-1",
+   "id": "bank-068-release-demo-minus-1",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4453,7 +6200,10 @@
      "breaches": "3",
      "mode": "2",
      "placedByCurator": false,
-     "exitBlock": "10000"
+     "exitBlock": "10000",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "9",
     "args": {
@@ -4466,7 +6216,7 @@
    }
   },
   {
-   "id": "bank-053-release-demo-at",
+   "id": "bank-069-release-demo-at",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4503,7 +6253,10 @@
      "breaches": "3",
      "mode": "2",
      "placedByCurator": false,
-     "exitBlock": "10000"
+     "exitBlock": "10000",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "9",
     "args": {
@@ -4546,7 +6299,10 @@
      "breaches": "3",
      "mode": "2",
      "placedByCurator": false,
-     "exitBlock": "10000"
+     "exitBlock": "10000",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "9000000000000000000",
@@ -4555,7 +6311,7 @@
    }
   },
   {
-   "id": "bank-054-release-after-post-exit-breach",
+   "id": "bank-070-release-after-post-exit-breach",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4592,7 +6348,10 @@
      "breaches": "4",
      "mode": "2",
      "placedByCurator": false,
-     "exitBlock": "1000"
+     "exitBlock": "1000",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "9",
     "args": {
@@ -4635,7 +6394,10 @@
      "breaches": "4",
      "mode": "2",
      "placedByCurator": false,
-     "exitBlock": "1000"
+     "exitBlock": "1000",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "9000000000000000000",
@@ -4644,7 +6406,7 @@
    }
   },
   {
-   "id": "bank-055-sat-accrue-slot",
+   "id": "bank-071-sat-accrue-slot",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4681,7 +6443,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "0",
     "args": {
@@ -4725,7 +6490,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -4734,7 +6502,7 @@
    }
   },
   {
-   "id": "bank-056-sat-accrue-vested",
+   "id": "bank-072-sat-accrue-vested",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4771,7 +6539,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "0",
     "args": {
@@ -4815,7 +6586,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -4824,7 +6598,7 @@
    }
   },
   {
-   "id": "bank-057-sat-accrue-pending",
+   "id": "bank-073-sat-accrue-pending",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4861,7 +6635,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "0",
     "args": {
@@ -4905,7 +6682,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -4914,7 +6694,7 @@
    }
   },
   {
-   "id": "bank-058-sat-vest-closed-pending",
+   "id": "bank-074-sat-vest-closed-pending",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -4951,7 +6731,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "2",
     "args": {
@@ -4994,7 +6777,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -5003,7 +6789,7 @@
    }
   },
   {
-   "id": "bank-059-sat-forfeit-pool",
+   "id": "bank-075-sat-forfeit-pool",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -5040,7 +6826,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "1",
     "args": {
@@ -5083,7 +6872,10 @@
      "breaches": "1",
      "mode": "1",
      "placedByCurator": false,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -5092,7 +6884,7 @@
    }
   },
   {
-   "id": "bank-060-seq-accrue-0",
+   "id": "bank-076-seq-accrue-0",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -5129,7 +6921,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "0",
     "args": {
@@ -5173,7 +6968,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -5182,7 +6980,7 @@
    }
   },
   {
-   "id": "bank-061-seq-accrue-1",
+   "id": "bank-077-seq-accrue-1",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -5219,7 +7017,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "0",
     "args": {
@@ -5263,7 +7064,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -5272,7 +7076,7 @@
    }
   },
   {
-   "id": "bank-062-seq-accrue-2",
+   "id": "bank-078-seq-accrue-2",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -5309,7 +7113,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "0",
     "args": {
@@ -5353,7 +7160,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -5362,7 +7172,7 @@
    }
   },
   {
-   "id": "bank-063-seq-accrue-3",
+   "id": "bank-079-seq-accrue-3",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -5399,7 +7209,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "0",
     "args": {
@@ -5443,7 +7256,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -5452,7 +7268,7 @@
    }
   },
   {
-   "id": "bank-064-seq-accrue-4",
+   "id": "bank-080-seq-accrue-4",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -5489,7 +7305,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "0",
     "args": {
@@ -5533,7 +7352,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -5542,7 +7364,7 @@
    }
   },
   {
-   "id": "bank-065-seq-accrue-5",
+   "id": "bank-081-seq-accrue-5",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -5579,7 +7401,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "0",
     "args": {
@@ -5623,7 +7448,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -5632,7 +7460,7 @@
    }
   },
   {
-   "id": "bank-066-seq-vest-open",
+   "id": "bank-082-seq-vest-open",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -5669,7 +7497,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "2",
     "args": {
@@ -5712,7 +7543,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -5721,7 +7555,7 @@
    }
   },
   {
-   "id": "bank-067-seq-breach",
+   "id": "bank-083-seq-breach",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -5758,7 +7592,10 @@
      "breaches": "0",
      "mode": "0",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "1",
     "args": {
@@ -5801,7 +7638,10 @@
      "breaches": "1",
      "mode": "1",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "0",
     "payShares": "0",
@@ -5810,7 +7650,7 @@
    }
   },
   {
-   "id": "bank-068-seq-drip-half",
+   "id": "bank-084-seq-drip-half",
    "fn": "FeeBank.apply",
    "in": {
     "bank": {
@@ -5847,7 +7687,10 @@
      "breaches": "1",
      "mode": "1",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "op": "3",
     "args": {
@@ -5889,7 +7732,10 @@
      "breaches": "1",
      "mode": "1",
      "placedByCurator": true,
-     "exitBlock": "0"
+     "exitBlock": "0",
+     "reserveShares": "0",
+     "reserveBond": "0",
+     "reserveForfeit": false
     },
     "burnShares": "9000000000000000000",
     "payShares": "0",

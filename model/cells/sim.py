@@ -15,7 +15,14 @@ trapezoid average of the path over [e − 600 s, e] (the 10-minute TWAP). Every 
 is also a reference anchor (GRID_SEC = 3,600 s, GRID = 300 blocks of 12 s).
 
 The vault, hook, pool, placement and charge logic are the reference model's (`model/reference.py`); nothing is
-re-implemented here. Pay is valued with a measurement wrapper around `fee_bank_apply` that records, in a dict
+re-implemented here. The charge is the specification's markout-settled charge (the pre-move spot leg, the fixed
+reserve, settlement against the reference pool's TWAP over the window after the action): the reference pool's
+closing tick per 12-second block follows the market inside its arbitrage band (u_k = clip(u_{k-1}, m_k ± FEE_TICKS),
+the market between the 5-minute path points a seeded Brownian bridge, the action block's close uniform in the band),
+and the markout read is the floor of the mean close over the window. The curator's bundler re-aligns spot to the
+reference pool's price before each action (s0 ≈ that price) and calls `settle()` once the window has closed (its
+gas is charged). The bond is `BOND_RATIO`·S from seed and erodes with every bond burn; the solvency gate is
+enforced (an `Insolvent` action reverts and is counted). Pay is valued with a measurement wrapper around `fee_bank_apply` that records, in a dict
 carried on the Bank (so a reverted call rolls it back), the value of shares when they vest, are forfeited or are
 burned from the bond, at the vault's share price at the market price just before the call.
 """
@@ -33,7 +40,8 @@ STEP_SEC = 300                     # market path resolution (5 minutes)
 STEPS_PER_HOUR = 12
 REF_WINDOW = 600
 GAS_GWEI = 5                       # assumed p50 base fee (the replay window's p50 replaces it in Track B)
-GAS = dict(poke=150_000, ping=100_000, place=450_000, move=120_000, swap=300_000, arb=120_000, park=90_000)
+GAS = dict(poke=150_000, ping=100_000, place=450_000, move=120_000, swap=300_000, arb=120_000, park=90_000, settle=150_000)
+BLOCK_SEC = 12
 YEAR_H = 365 * 24
 FEE = 500
 FEE_TICKS = 5
@@ -76,12 +84,34 @@ def twap_tick(path, i, step_sec=STEP_SEC):
     return math.floor(avg)
 
 
+def path_at(path, x):
+    """The path at a fractional index (linear between the 5-minute points)."""
+    i = int(math.floor(x))
+    f = x - i
+    return path[i] if f == 0 else path[i] * (1 - f) + path[i + 1] * f
+
+
+def twap_frac(path, x, step_sec=STEP_SEC):
+    """Floor of the 10-minute TWAP ending at fractional index x (exact integral of the linear interpolant)."""
+    if x == int(x):
+        return twap_tick(path, int(x), step_sec)
+    a = x - REF_WINDOW / step_sec
+    pts = [a] + list(range(int(math.floor(a)) + 1, int(math.ceil(x)))) + [x]
+    area = sum((pts[j + 1] - pts[j]) * (path_at(path, pts[j]) + path_at(path, pts[j + 1])) / 2 for j in range(len(pts) - 1))
+    return math.floor(area / (REF_WINDOW / step_sec))
+
+
 # ----------------------------------------------------------------------------- value shadow (measurement only)
 _ORIG_APPLY = R.fee_bank_apply
 CUR = {"pps": 0.0}
+SETTLE_SPLIT = [0, 0, False]
 
 
 def _shadowed_apply(b, op, args):
+    if op == "Settle":   # the settlement burn's split (pay first, then bond) before the call clears the reserve
+        x = min(args["burnS"], b.reserveShares)
+        nb = min(x, b.reserveShares - b.reserveBond)
+        SETTLE_SPLIT[:] = [nb, x - nb, b.reserveForfeit]
     r = _ORIG_APPLY(b, op, args)
     sh = b.__dict__.setdefault("shadow", dict(vested=0.0, bond=0.0, forfeit=0.0, minted=0.0, bank=0.0))
     if op in ("Accrue", "VestTime"):
@@ -91,6 +121,11 @@ def _shadowed_apply(b, op, args):
     elif op == "Charge":
         sh["bank"] += r[2] * CUR["pps"]
         sh["bond"] += r[3] * CUR["pps"]
+    elif op == "Settle":
+        sh["bank"] += SETTLE_SPLIT[0] * CUR["pps"]
+        sh["bond"] += SETTLE_SPLIT[1] * CUR["pps"]
+        if SETTLE_SPLIT[2]:
+            sh["forfeit"] += r[3] * CUR["pps"]
     elif op in ("Breach", "Retire"):
         sh["forfeit"] += r[2] * CUR["pps"]
     return r
@@ -121,13 +156,15 @@ def tier_with_m(m_year, base=R.MAINNET):
 class Sim:
     B0 = 50400 * 10          # epoch-aligned start block (a multiple of GRID)
 
-    def __init__(self, path, m_year, nav_eth=1000, observer=False, place=True, tier=None, charge_rule="sq",
-                 sigma=None, rng_seed=0):
+    def __init__(self, path, m_year, nav_eth=1000, observer=False, place=True, tier=None, charge_rule="spec",
+                 sigma=None, rng_seed=0, bond_ratio=None):
         self.t = tier or tier_with_m(m_year)
         self.charge_rule = charge_rule
         self.path = path
         self.ts0 = self.B0 * self.t.BLOCKTIME
-        self.ref = R.RefSource(self._ref_at)
+        self.ref = R.RefSource(self._ref_at, window=self._window_at)
+        self.sigma = sigma
+        self.wrng = random.Random(rng_seed * 1_000_003 + 17)
         pool = R.Pool(sqrt_at(T0), FEE)
         self.v = R.Vault(self.t, self.ref, pool, sqrt_ref_price=sqrt_at(T0))
         s = sqrt_at(T0)
@@ -138,75 +175,90 @@ class Sim:
         self.last_obs = self.B0
         self.gas = 0.0
         self.trade = 0.0            # the curator's own trading P&L (spot moves), valued at the market
-        self.counts = dict(actions=0, pokes=0, pings=0, moves=0, reverts=0, arbs=0)
+        self.counts = dict(actions=0, pokes=0, pings=0, moves=0, reverts=0, arbs=0, settles=0, fallbacks=0)
+        self.extras = []            # markout extras at settlement (fraction of NAV), measurement only
         self.reverts = {}
         self.in_actual = 0
         self.hours = 0
         self.action_charges = []
         self.arb_pnl = 0            # the arbitrageur's realised gain (wei, at the market), measurement only
         self.set_pps()
-        if charge_rule == "markout":
-            self._install_markout(sigma, rng_seed)
+        assert charge_rule in ("spec", "sq"), charge_rule
+        if charge_rule == "sq":     # the status-quo control: worse of {spot, reference}, no reserve, no markout
+            self._install_sq()
         self.v.seed(a0, a1, now=self.B0, ts=self.ts())
+        br = self.t.BOND_RATIO if bond_ratio is None else bond_ratio
+        self.v.bank.bondShares = R.mul_div(self.v.S, br, R.WAD)   # the bond at BOND_RATIO·S; depositors hold the rest
         if place:
             lo = floor_sp(T0) - W // 2
             self.v.set_positions(lo, lo + W, R.Vault.NO_PRESWAP, self.B0, self.ts())
+            self.settle_pending()
 
-    def _install_markout(self, sigma, rng_seed, horizon_sec=120, delay_blocks=1, reserve_ratio=3e-4, bond_ratio=6e-4):
-        """Candidate charge under study (the markout-settled charge): the worse-of legs gain the pre-move spot s0 and
-        the markout legs p_mk ± FEE_TICKS, where p_mk is the deep pool's TWAP over a window of `horizon_sec` that
-        starts `delay_blocks` blocks after the action's block. The markout's extra over the immediate charge is
-        capped at a fixed reserve of reserve_ratio·NAV held from the action to the settlement. s0: the honest
-        curator re-aligns spot to the deep pool's price inside its own transaction, so s0 = the market tick plus the
-        deep pool's arbitrage band (uniform ±FEE_TICKS). The post-action error of p_mk is drawn from the sim's seeded
-        generator with the variance of the delayed window's average of 12-second increments and of the band; the
-        settlement is applied at the action, and the curator's settlement call is charged as gas. The action gate
-        (immediate burn + reserve <= unvested + bond_ratio·S) is checked and failures are counted in
-        `reverts['ReserveGate']` (reported; the action is not reverted); truncations by the cap in
-        `reverts['ReserveCap']`."""
-        n = horizon_sec / 12
-        sd12 = sigma * math.sqrt(12 / (365 * 86400)) / math.log(1.0001)
-        sd = math.sqrt(sd12 ** 2 * (delay_blocks + n / 3) + FEE_TICKS ** 2 / (3 * n))
-        rng = random.Random(rng_seed)
-        v, sim = self.v, self
+    def _install_sq(self):
+        """The status-quo charge (control only): the worse of {spot, reference}, burned at once; no s0 leg, no
+        reserve, no pending markout."""
+        v = self.v
 
-        def loss_at(before, p):
-            na = R.value(v.h, p)[0]
-            return R.value(before, p)[0] - na, na
-
-        def charge(before, s_spot, s_ref, kind):
-            m = sim.mkt()
-            s0 = sqrt_at(int(round(m + rng.uniform(-FEE_TICKS, FEE_TICKS))))
-            mk = int(round(m + rng.gauss(0.0, sd)))
-            imm, p_star, nav_after = 0, s_spot, R.value(v.h, s_spot)[0]
-            for p in (s_spot, s_ref, s0):        # first leg (spot) wins ties
-                l, na = loss_at(before, p)
-                if l > imm:
-                    imm, p_star, nav_after = l, p, na
-            cap = int(reserve_ratio * R.value(before, s_spot)[0])
-            if R.ceil_div((imm + cap) * v.S, max(1, nav_after)) > v.bank.unvested() + int(bond_ratio * v.S):
-                sim.reverts['ReserveGate'] = sim.reverts.get('ReserveGate', 0) + 1
-            loss = imm
-            for p in (sqrt_at(mk - FEE_TICKS), sqrt_at(mk + FEE_TICKS)):
-                l, na = loss_at(before, p)
-                if l > loss:
-                    loss, p_star, nav_after = l, p, na
-            if loss - imm > cap:
-                sim.reverts['ReserveCap'] = sim.reverts.get('ReserveCap', 0) + 1
-                loss = imm + cap
-            burn = 0 if loss == 0 else (R.U256 if nav_after == 0 else R.ceil_div(loss * v.S, nav_after))
-            if burn > v.bank.unvested() + v.bank.bondShares:
+        def charge(before, s0, s_spot, s_ref, kind, max_charge, ts):
+            c, p_star, nav_after, burn, ok = R.measure(before, v.h, s_spot, s_ref, v.S, v.bank.unvested(), v.bank.bondShares)
+            if not ok:
                 raise R.Revert("Insolvent")
-            bb, _, bank_b, bond_b = R.fee_bank_apply(v.bank, "Charge", dict(burn=burn))
+            bb, _, bank_b, bond_b = R.fee_bank_apply(v.bank, "Charge", dict(burn=burn, burnR=0))
             v.S -= bb
             r = v.rec(v.epoch)
-            r["charge"] += loss
-            r["bankBurned"] += bank_b
-            r["bondBurned"] += bond_b
-            v.events.append(("Action", kind, loss, p_star, bank_b, bond_b))
-            sim.gas += gas_eth("poke")           # the curator's settlement call after the window
-            return loss, p_star, burn
+            r["charge"] += c
+            v.events.append(("Action", kind, c, p_star, bank_b, bond_b))
+            return c, p_star, burn
         v._charge = charge
+
+    def _window_at(self, start, end):
+        """The reference pool's TWAP over (start, end] (the markout read): the mean closing tick of the 12-second
+        blocks starting at `start`, floored. Closes follow the market inside the arbitrage band from a close at the
+        action block uniform in the band; the market between path points is a seeded Brownian bridge."""
+        n = int(round((end - start) / BLOCK_SEC))
+        t_a = start - BLOCK_SEC
+        sd12 = (self.sigma or 0.6) * math.sqrt(BLOCK_SEC / (365 * 86400)) / math.log(1.0001)
+        rng = random.Random(self.wrng.random())
+        # market at 12-second steps from t_a, bridged between the 5-minute path points
+        ts = [t_a + BLOCK_SEC * k for k in range(n + 1)]
+        m = []
+        seg = None
+        for tk in ts:
+            x = (tk - self.ts0) / STEP_SEC + 2
+            i0 = int(math.floor(x))
+            if seg is None or seg[0] != i0:
+                k_steps = STEP_SEC // BLOCK_SEC
+                w = [0.0]
+                for _ in range(k_steps):
+                    w.append(w[-1] + rng.gauss(0.0, sd12))
+                bridge = [w[q] - (q / k_steps) * w[-1] for q in range(k_steps + 1)]
+                seg = (i0, bridge)
+            q = int(round((x - i0) * (STEP_SEC // BLOCK_SEC)))
+            m.append(path_at(self.path, x) + seg[1][q])
+        u = m[0] + rng.uniform(-FEE_TICKS, FEE_TICKS)
+        closes = []
+        for k in range(1, n + 1):
+            u = min(max(u, m[k] - FEE_TICKS), m[k] + FEE_TICKS)
+            closes.append(u)
+        return math.floor(sum(closes) / n)
+
+    def settle_pending(self):
+        """The curator's bundler calls settle() once the markout window has closed (gas charged)."""
+        v = self.v
+        if v.pending is None:
+            return
+        due = v.pending["tAction"] + 2 * self.t.BLOCKTIME + self.t.H_MARKOUT
+        self.now = max(self.now, -(-due // self.t.BLOCKTIME))
+        nav = v.nav(self.mkt_sqrt())
+        ev0 = len(v.events)
+        ok, _ = self.vcall("settle", gas="settle")
+        if ok:
+            self.counts["settles"] += 1
+            for e in v.events[ev0:]:
+                if e[0] == "Settled":
+                    self.extras.append(e[2] / max(1, nav))
+                    if e[4]:
+                        self.counts["fallbacks"] += 1
 
     # time and prices
     def ts(self, b=None):
@@ -214,14 +266,13 @@ class Sim:
 
     def idx(self, ts):
         d = ts - self.ts0
-        assert d % STEP_SEC == 0, "reads are aligned to the path grid"
-        return d // STEP_SEC + 2
+        return d // STEP_SEC + 2 if d % STEP_SEC == 0 else d / STEP_SEC + 2
 
     def _ref_at(self, end):
-        return twap_tick(self.path, self.idx(end))
+        return twap_frac(self.path, self.idx(end))
 
     def mkt(self):
-        return self.path[self.idx(self.ts())]
+        return path_at(self.path, self.idx(self.ts()))
 
     def mkt_sqrt(self):
         return sqrt_at(int(round(self.mkt())))
@@ -236,11 +287,11 @@ class Sim:
         return t if ok else None
 
     # calls
-    def vcall(self, name, *a, gas=None):
+    def vcall(self, name, *a, gas=None, **kw):
         self.set_pps()
         try:
             r = getattr(self.v, name)(*a, now=self.now, ts=self.ts()) if name != "set_positions" else \
-                self.v.set_positions(*a, self.now, self.ts())
+                self.v.set_positions(*a, self.now, self.ts(), **kw)
             return True, r
         except (R.Revert, R.MathRevert) as e:
             err = getattr(e, "err", str(e))
@@ -250,6 +301,27 @@ class Sim:
         finally:
             if gas:
                 self.gas += gas_eth(gas)
+
+    def deep_tick(self):
+        """The reference pool's current price as the bundler reads it: the market within its arbitrage band."""
+        return int(round(self.mkt() + self.wrng.uniform(-FEE_TICKS, FEE_TICKS)))
+
+    def align(self):
+        """The bundler re-aligns spot to the reference pool's price inside the action's transaction (s0 ≈ market)."""
+        self.move_spot(sqrt_at(self.deep_tick()))
+
+    def align_outside(self):
+        """Align only through a region without vault liquidity (in range, the arbitrage already holds spot at the
+        market within its band). Returns True if spot moved."""
+        h, pool = self.v.h, self.v.pool
+        u = self.deep_tick()
+        su = sqrt_at(u)
+        if h.L > 0 and not (su <= sqrt_at(h.lo) and pool.s <= sqrt_at(h.lo) or su >= sqrt_at(h.hi) and pool.s >= sqrt_at(h.hi)):
+            return False
+        if su == pool.s:
+            return False
+        self.move_spot(su)
+        return True
 
     def poke(self):
         self.counts["pokes"] += 1
@@ -344,8 +416,9 @@ class Sim:
             if h.L > 0 and self.v.bank.placedByCurator and h.lo <= self.mkt() < h.hi:
                 self.in_actual += 1
             self.hours += 1
+            self.settle_pending()      # after the hour's bookkeeping (the settlement block is 12 blocks later)
         # settlement: one final poke at the horizon for every bot (identical treatment)
-        self.now += G
+        self.now = self.B0 + (hours + 1) * G
         self.poke()
         return self.result(policy)
 
@@ -362,5 +435,6 @@ class Sim:
                     bank_burn=sh.get("bank", 0.0), forfeit=sh.get("forfeit", 0.0), minted=sh.get("minted", 0.0),
                     gas=self.gas, trade=self.trade, charges=charges, fees=v.pool.__dict__.get("fees_val", 0.0), unvested_end=unvested_end,
                     net_incl_unvested=net + unvested_end, f=v.hook.tauV / elapsed, f_actual=self.in_actual / self.hours,
-                    breaches=b.breaches, mode=b.mode, action_charges=self.action_charges, nav_end=v.nav(self.mkt_sqrt()) / ETH, **self.counts,
+                    breaches=b.breaches, mode=b.mode, action_charges=self.action_charges, nav_end=v.nav(self.mkt_sqrt()) / ETH,
+                    extras=self.extras, **self.counts,
                     revert_kinds=dict(self.reverts))

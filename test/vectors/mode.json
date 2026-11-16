@@ -1,6 +1,6 @@
 {
  "schema": "touchstone-vectors/1",
- "specVersion": "2.29",
+ "specVersion": "2.30",
  "conventions": {
   "fn": "Ladder.next(uint8 mode, uint32 breaches, uint8 ev, uint32 count) -> (mode, breaches, exited) and Ladder.allowed(uint8 mode, uint8 entry) -> bool, both pure.",
   "encodings": "mode 0 NORMAL, 1 BREACHED, 2 EXITED; ev 0 Breach, 1 Place, 2 Retire; entry = uint8(Entry) with Entry {Deposit, Withdraw, SetPositions, RebalanceSwap, Claim, TopUpBond, Retire, ReleaseBond, Poke, ProcessBreach, Seed}.",
@@ -1772,7 +1772,18 @@
    }
   },
   {
-   "id": "mode-122-allowed-m1-Deposit",
+   "id": "mode-122-allowed-m0-Settle",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "0",
+    "entry": "11"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-123-allowed-m1-Deposit",
    "fn": "Ladder.allowed",
    "in": {
     "mode": "1",
@@ -1783,7 +1794,7 @@
    }
   },
   {
-   "id": "mode-123-allowed-m1-Withdraw",
+   "id": "mode-124-allowed-m1-Withdraw",
    "fn": "Ladder.allowed",
    "in": {
     "mode": "1",
@@ -1794,7 +1805,7 @@
    }
   },
   {
-   "id": "mode-124-allowed-m1-SetPositions",
+   "id": "mode-125-allowed-m1-SetPositions",
    "fn": "Ladder.allowed",
    "in": {
     "mode": "1",
@@ -1805,7 +1816,7 @@
    }
   },
   {
-   "id": "mode-125-allowed-m1-RebalanceSwap",
+   "id": "mode-126-allowed-m1-RebalanceSwap",
    "fn": "Ladder.allowed",
    "in": {
     "mode": "1",
@@ -1816,7 +1827,7 @@
    }
   },
   {
-   "id": "mode-126-allowed-m1-Claim",
+   "id": "mode-127-allowed-m1-Claim",
    "fn": "Ladder.allowed",
    "in": {
     "mode": "1",
@@ -1827,7 +1838,7 @@
    }
   },
   {
-   "id": "mode-127-allowed-m1-TopUpBond",
+   "id": "mode-128-allowed-m1-TopUpBond",
    "fn": "Ladder.allowed",
    "in": {
     "mode": "1",
@@ -1838,7 +1849,7 @@
    }
   },
   {
-   "id": "mode-128-allowed-m1-Retire",
+   "id": "mode-129-allowed-m1-Retire",
    "fn": "Ladder.allowed",
    "in": {
     "mode": "1",
@@ -1849,7 +1860,7 @@
    }
   },
   {
-   "id": "mode-129-allowed-m1-ReleaseBond",
+   "id": "mode-130-allowed-m1-ReleaseBond",
    "fn": "Ladder.allowed",
    "in": {
     "mode": "1",
@@ -1860,7 +1871,7 @@
    }
   },
   {
-   "id": "mode-130-allowed-m1-Poke",
+   "id": "mode-131-allowed-m1-Poke",
    "fn": "Ladder.allowed",
    "in": {
     "mode": "1",
@@ -1871,7 +1882,7 @@
    }
   },
   {
-   "id": "mode-131-allowed-m1-ProcessBreach",
+   "id": "mode-132-allowed-m1-ProcessBreach",
    "fn": "Ladder.allowed",
    "in": {
     "mode": "1",
@@ -1882,7 +1893,7 @@
    }
   },
   {
-   "id": "mode-132-allowed-m1-Seed",
+   "id": "mode-133-allowed-m1-Seed",
    "fn": "Ladder.allowed",
    "in": {
     "mode": "1",
@@ -1893,7 +1904,18 @@
    }
   },
   {
-   "id": "mode-133-allowed-m2-Deposit",
+   "id": "mode-134-allowed-m1-Settle",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "1",
+    "entry": "11"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-135-allowed-m2-Deposit",
    "fn": "Ladder.allowed",
    "in": {
     "mode": "2",
@@ -1904,7 +1926,7 @@
    }
   },
   {
-   "id": "mode-134-allowed-m2-Withdraw",
+   "id": "mode-136-allowed-m2-Withdraw",
    "fn": "Ladder.allowed",
    "in": {
     "mode": "2",
@@ -1915,7 +1937,7 @@
    }
   },
   {
-   "id": "mode-135-allowed-m2-SetPositions",
+   "id": "mode-137-allowed-m2-SetPositions",
    "fn": "Ladder.allowed",
    "in": {
     "mode": "2",
@@ -1926,7 +1948,7 @@
    }
   },
   {
-   "id": "mode-136-allowed-m2-RebalanceSwap",
+   "id": "mode-138-allowed-m2-RebalanceSwap",
    "fn": "Ladder.allowed",
    "in": {
     "mode": "2",
@@ -1937,7 +1959,7 @@
    }
   },
   {
-   "id": "mode-137-allowed-m2-Claim",
+   "id": "mode-139-allowed-m2-Claim",
    "fn": "Ladder.allowed",
    "in": {
     "mode": "2",
@@ -1948,7 +1970,7 @@
    }
   },
   {
-   "id": "mode-138-allowed-m2-TopUpBond",
+   "id": "mode-140-allowed-m2-TopUpBond",
    "fn": "Ladder.allowed",
    "in": {
     "mode": "2",
@@ -1959,7 +1981,7 @@
    }
   },
   {
-   "id": "mode-139-allowed-m2-Retire",
+   "id": "mode-141-allowed-m2-Retire",
    "fn": "Ladder.allowed",
    "in": {
     "mode": "2",
@@ -1970,7 +1992,7 @@
    }
   },
   {
-   "id": "mode-140-allowed-m2-ReleaseBond",
+   "id": "mode-142-allowed-m2-ReleaseBond",
    "fn": "Ladder.allowed",
    "in": {
     "mode": "2",
@@ -1981,7 +2003,7 @@
    }
   },
   {
-   "id": "mode-141-allowed-m2-Poke",
+   "id": "mode-143-allowed-m2-Poke",
    "fn": "Ladder.allowed",
    "in": {
     "mode": "2",
@@ -1992,7 +2014,7 @@
    }
   },
   {
-   "id": "mode-142-allowed-m2-ProcessBreach",
+   "id": "mode-144-allowed-m2-ProcessBreach",
    "fn": "Ladder.allowed",
    "in": {
     "mode": "2",
@@ -2003,7 +2025,7 @@
    }
   },
   {
-   "id": "mode-143-allowed-m2-Seed",
+   "id": "mode-145-allowed-m2-Seed",
    "fn": "Ladder.allowed",
    "in": {
     "mode": "2",
@@ -2014,7 +2036,18 @@
    }
   },
   {
-   "id": "mode-144-seq-three-single-breaches",
+   "id": "mode-146-allowed-m2-Settle",
+   "fn": "Ladder.allowed",
+   "in": {
+    "mode": "2",
+    "entry": "11"
+   },
+   "out": {
+    "allowed": true
+   }
+  },
+  {
+   "id": "mode-147-seq-three-single-breaches",
    "fn": "Ladder.next",
    "in": {
     "mode": "0",
@@ -2064,7 +2097,7 @@
    }
   },
   {
-   "id": "mode-145-seq-place-does-not-reset-breaches",
+   "id": "mode-148-seq-place-does-not-reset-breaches",
    "fn": "Ladder.next",
    "in": {
     "mode": "0",
@@ -2130,7 +2163,7 @@
    }
   },
   {
-   "id": "mode-146-seq-three-at-once",
+   "id": "mode-149-seq-three-at-once",
    "fn": "Ladder.next",
    "in": {
     "mode": "0",
@@ -2169,7 +2202,7 @@
    }
   },
   {
-   "id": "mode-147-seq-retire-then-breach",
+   "id": "mode-150-seq-retire-then-breach",
    "fn": "Ladder.next",
    "in": {
     "mode": "0",
@@ -2217,7 +2250,7 @@
    }
   },
   {
-   "id": "mode-148-seq-zero-count-identity",
+   "id": "mode-151-seq-zero-count-identity",
    "fn": "Ladder.next",
    "in": {
     "mode": "0",

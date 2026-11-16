@@ -34,11 +34,13 @@ NAV = 1000.0                   # ETH; = BOND_MIN / BOND_RATIO, the NAV cap of a 
 ETH_USD = 3000.0               # tier A at T0
 O_USD = 20_000.0               # operations, $/yr (spec default)
 R_CARRY = 0.05                 # bond carry rate
-BOND_ETH = 0.6                 # BOND_MIN
+BOND_ETH = 1.72                # BOND_MIN (owner, 2026-11-16)
 SIGMAS = (0.40, 0.60, 1.20)
 KINDS = [("gbm", s) for s in SIGMAS] + [("hover", 0.60)]
 OUT = os.path.join(os.path.dirname(os.path.dirname(HERE)), "output", "g0")
 YEARS = DAYS / 365.0
+MIMIC = "edge60"               # the mimic of the gate; the repair re-gate (L3) pins edge-6h (set by the caller)
+HOVER_CONTROL_REPORTED = False  # owner decision 2026-11-16: the m = 0 control is reported (not gated) on the hover path
 
 
 def bucket(kind, sigma):
@@ -50,7 +52,7 @@ def paired(ix, b, s, bot, m, env=False, key="net"):
     and the gate use the no-observer environment (§10); lazy-under-ladder exists only with an observer."""
     if bot == "lazy-under-ladder":
         env = True
-    return ix[(b, s, bot, m)][env][key], ix[(b, s, "edge60", m)][env][key]
+    return ix[(b, s, bot, m)][env][key], ix[(b, s, MIMIC, m)][env][key]
 
 
 def run_job(args):
@@ -174,7 +176,7 @@ def gate(rows, m):
         for env, ename in ENVS:
             mim = [paired(ix, b, s, "lazy" if env is False else "lazy-under-ladder", m, env)[1] for s in seeds]
             row = dict(mimic_mean=sum(mim) / len(mim), mimic_p5=pctl(mim, 0.05), mimic_p50=pctl(mim, 0.50), cmp={})
-            for bot in B.GATED + B.REPORTED:
+            for bot in B.GATED + tuple(x for x in B.REPORTED + ("edge60",) if x != MIMIC):
                 if (b, seeds[0], bot, m) not in ix or env not in ix[(b, seeds[0], bot, m)] or \
                         (bot == "lazy-under-ladder") != env:
                     continue
@@ -184,7 +186,7 @@ def gate(rows, m):
             lz0 = "lazy" if not env else "lazy-under-ladder"
             d0 = [a - c for a, c in (paired(ix, b, s, lz0, 0.0, env) for s in seeds)]
             row["control_m0"] = mean_ci(d0)
-            e = [ix[(b, s, "edge60", m)][env] for s in seeds]
+            e = [ix[(b, s, MIMIC, m)][env] for s in seeds]
             row["f_mimic"] = sum(x["f"] for x in e) / len(e)
             row["f_actual_mimic"] = sum(x["f_actual"] for x in e) / len(e)
             row["actions_yr"] = sum(x["actions"] for x in e) / len(e) / YEARS
@@ -215,7 +217,7 @@ def verdict(res, m):
         c = g["cmp"]["delayed-24h"]
         if c["diff"] < -2 * c["se"]:
             fails.append(f"{b}: delayed-24h > mimic + 2 SE")
-        if g["control_m0"][1] <= 0:
+        if g["control_m0"][1] <= 0 and not (HOVER_CONTROL_REPORTED and b.startswith("hover")):
             fails.append(f"{b}: control m = 0 (lazy ≥ mimic) CI lo {g['control_m0'][1]:.4f} <= 0")
     return not fails, fails
 

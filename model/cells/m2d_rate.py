@@ -41,7 +41,9 @@ over exit and in-range lanes. Swap lanes: (a) 2.6 NAV/yr × the best D's per-uni
 net (the colluder spends its swap budget on its best opportunities). Total = placements + max(a, b).
 
 Bound: ≤ 0.1% of NAV per year at σ 60% and ≤ 0.6% at σ 120%; the Student-t3 stress ≤ 2× the bound.
-Fit seeds only (0–99). Usage: python3 model/cells/m2d_rate.py [n_seeds] [procs] [cap (default 6e-4)] [clamp (diagnostic; default none)]
+Fit seeds 0–99: python3 model/cells/m2d_rate.py [n_seeds] [procs] [cap (default 6e-4)] [clamp (diagnostic; default none)].
+Re-gate (held-out seeds, the shipped parameters only): python3 model/cells/m2d_rate.py --seeds FIRST:END [procs]
+(writes output/s5/m2d_rate_<FIRST>-<END>.json/.txt; seeds 300–499 are judged, 100–299 reported).
 """
 import json
 import math
@@ -312,8 +314,9 @@ def swap_lane_a(sigma, etas, cap=CAP, clamp=None):
 
 def run(args):
     seed, sigma, cap, clamp = args
-    assert seed < 100, "fit seeds only"
-    etas = {"gbm": eta_sample(sigma, "gbm"), "t3": eta_sample(sigma, "t3")}
+    assert seed < 100 or (cap == CAP and clamp is None), "held-out seeds run the shipped parameters only"
+    es = seed if seed >= 100 else 0       # held-out seeds draw their own η sample (fit seeds reuse sample 0)
+    etas = {"gbm": eta_sample(sigma, "gbm", seed=es), "t3": eta_sample(sigma, "t3", seed=es)}
     rng = random.Random(seed * 7919 + int(sigma * 100))
     rows = []
     for variant in ("exit", "in"):
@@ -378,6 +381,28 @@ def summarise(rows, cap=CAP, clamp=None):
                      f"(bound {BOUND[sg] * 100:.1f}); C120 t3 {tot_t * 100:.3f}%/yr (bound {2 * BOUND[sg] * 100:.1f})")
     return "\n".join(lines)
 
+
+if __name__ == "__main__" and len(sys.argv) > 2 and sys.argv[1] == "--seeds":
+    first, end = (int(x) for x in sys.argv[2].split(":"))
+    procs = int(sys.argv[3]) if len(sys.argv) > 3 else 9
+    jobs = [(s, sg, CAP, None) for sg in (0.6, 1.2) for s in range(first, end)]
+    t0 = time.time()
+    rows = []
+    with mp.Pool(procs) as pool:
+        for i, rr in enumerate(pool.imap_unordered(run, jobs)):
+            rows.extend(rr)
+            if (i + 1) % 20 == 0:
+                print(f"{i + 1}/{len(jobs)} {time.time() - t0:.0f}s", flush=True, file=sys.stderr)
+    out = os.path.join(ROOT, "output", "s5")
+    os.makedirs(out, exist_ok=True)
+    with open(os.path.join(out, f"m2d_rate_{first}-{end - 1}.json"), "w") as fh:
+        json.dump(rows, fh, default=str)
+    s = (f"m2d_rate re-gate, reserve {CAP:g}·NAV (seeds {first}–{end - 1}, {len(rows)} cycles, {time.time() - t0:.0f} s)"
+         + summarise(rows, CAP, None))
+    print(s)
+    with open(os.path.join(out, f"m2d_rate_{first}-{end - 1}.txt"), "w") as fh:
+        fh.write(s + "\n")
+    sys.exit(0)
 
 if __name__ == "__main__":
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 100

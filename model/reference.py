@@ -14,7 +14,10 @@ only (never from the Solidity). It covers:
 - the hook: the snapshot procedure, the reference module and cache, the breach clock and
   latch, the pending-breach queue, registration and arming;
 - the vault: the breach-first checkpoint with the vest gate and its live leg, base accrual and
-  deferred minting, epilogue re-bases, curator actions, deposits, withdrawals and seed.
+  deferred minting, epilogue re-bases, curator actions, deposits, withdrawals and seed;
+- repair C (the markout-settled charge): the pre-move spot leg s0, the vault's own move to `moveTo`,
+  `maxCharge`, the fixed reserve and its encumbrance in the bank, the pending record, settlement as
+  prologue step 0 with the hook's window read, and the markout legs p_mk ± FEE_TICKS.
 
 Run `python3 model/reference.py --selfcheck` for the property checks and `--vectors` to emit the golden
 vectors into `test/vectors/`.
@@ -29,7 +32,7 @@ from v4math import (  # noqa: E402
     get_liquidity_for_amounts, compute_swap_step_exact_in,
 )
 
-SPEC_VERSION = "2.29"
+SPEC_VERSION = "2.30"
 WAD = 10 ** 18
 U32 = (1 << 32) - 1
 U40 = (1 << 40) - 1
@@ -45,9 +48,9 @@ N_SNAP = 32
 NORMAL, BREACHED, EXITED = 0, 1, 2
 EV_BREACH, EV_PLACE, EV_RETIRE = 0, 1, 2
 ENTRY = ["Deposit", "Withdraw", "SetPositions", "RebalanceSwap", "Claim", "TopUpBond", "Retire",
-         "ReleaseBond", "Poke", "ProcessBreach", "Seed"]
+         "ReleaseBond", "Poke", "ProcessBreach", "Seed", "Settle"]
 E = {n: i for i, n in enumerate(ENTRY)}
-OPS = ["Accrue", "Breach", "VestTime", "Drip", "Charge", "Place", "Retire", "Claim", "TopUp", "Release"]
+OPS = ["Accrue", "Breach", "VestTime", "Drip", "Charge", "Place", "Retire", "Claim", "TopUp", "Release", "Settle"]
 
 
 class Revert(Exception):
@@ -71,7 +74,8 @@ class Tier:
     def __init__(self, **kw):
         self.__dict__.update(kw)
         if not (self.EPOCH % self.GRID == 0 and self.GRID * self.BLOCKTIME == self.GRID_SEC and self.RESET_RUN >= 2 and
-                self.CURE_BLOCKS >= self.EDGE_DELAY + 2 * self.GRID + self.REF_WINDOW // self.BLOCKTIME + self.GRID):
+                self.CURE_BLOCKS >= self.EDGE_DELAY + 2 * self.GRID + self.REF_WINDOW // self.BLOCKTIME + self.GRID and
+                self.COOLDOWN * self.BLOCKTIME >= self.H_MARKOUT + 2 * self.BLOCKTIME):
             raise TierInvalid(self.__dict__.get("NAME"))
 
 
@@ -81,13 +85,13 @@ def _m_per_block(blocktime, m_year_wad=10 ** 16):
 
 _COMMON = dict(FEE=500, SPACING=10, FEE_TICKS=5, W_TICKS=2000, BAND_SWAP=5, REF_BAND=60,
                DELTA_MIN=WAD // 2, MAX_SWAP_ACTION=2 * 10 ** 16, MAX_SWAP_EPOCH=5 * 10 ** 16, MAX_SWAPS=20,
-               RESET_RUN=2, BOND_RATIO=6 * 10 ** 14, L_W_TARGET=1000)
-TEST = Tier(NAME="TEST", BOND_MIN=0, BLOCKTIME=12, GRID=20, GRID_SEC=240, EPOCH=120, CURE_BLOCKS=200, COOLDOWN=5,
-            REF_WINDOW=600, EDGE_DELAY=20, m_perBlock=_m_per_block(12), **_COMMON)
-DEMO = Tier(NAME="DEMO", BOND_MIN=6 * 10 ** 17, BLOCKTIME=1, GRID=300, GRID_SEC=300, EPOCH=3600, CURE_BLOCKS=1800, COOLDOWN=30,
-            REF_WINDOW=300, EDGE_DELAY=300, m_perBlock=_m_per_block(1), **_COMMON)
-MAINNET = Tier(NAME="MAINNET", BOND_MIN=6 * 10 ** 17, BLOCKTIME=12, GRID=300, GRID_SEC=3600, EPOCH=50400, CURE_BLOCKS=7200, COOLDOWN=30,
-               REF_WINDOW=600, EDGE_DELAY=300, m_perBlock=_m_per_block(12), **_COMMON)
+               RESET_RUN=2, BOND_RATIO=172 * 10 ** 13, RESERVE_RATIO=6 * 10 ** 14, L_W_TARGET=1000)
+TEST = Tier(NAME="TEST", BOND_MIN=0, BLOCKTIME=12, GRID=20, GRID_SEC=240, EPOCH=120, CURE_BLOCKS=200, COOLDOWN=14,
+            REF_WINDOW=600, EDGE_DELAY=20, H_MARKOUT=120, NAV_MAX=U128, m_perBlock=_m_per_block(12), **_COMMON)
+DEMO = Tier(NAME="DEMO", BOND_MIN=172 * 10 ** 16, BLOCKTIME=1, GRID=300, GRID_SEC=300, EPOCH=3600, CURE_BLOCKS=1800, COOLDOWN=30,
+            REF_WINDOW=300, EDGE_DELAY=300, H_MARKOUT=20, NAV_MAX=1850 * 10 ** 18, m_perBlock=_m_per_block(1), **_COMMON)
+MAINNET = Tier(NAME="MAINNET", BOND_MIN=172 * 10 ** 16, BLOCKTIME=12, GRID=300, GRID_SEC=3600, EPOCH=50400, CURE_BLOCKS=7200, COOLDOWN=30,
+               REF_WINDOW=600, EDGE_DELAY=1800, H_MARKOUT=120, NAV_MAX=1850 * 10 ** 18, m_perBlock=_m_per_block(12), **_COMMON)
 for _t in (TEST, DEMO, MAINNET):
     _t.FORFEIT_DRIP_BLOCKS = _t.EPOCH
 
@@ -143,28 +147,54 @@ def delta_of(h, sqrt_p):
 
 
 # ================================================================ ExecLedger.measure
-def measure(before, after, sqrt_spot, sqrt_ref, S, unvested, bond):
-    """-> (charge, pStar, navAfterPStar, burn, ok).
-    loss_p = NAV_before(p) − NAV_after(p) for p in (spot, ref); charge = max(0, max loss); p* is the argmax,
-    and sqrtSpot on a tie (including charge = 0); burn = ceilDiv(charge·S, NAV_after(p*)); ok iff
-    burn ≤ unvested + bond. A positive charge against NAV_after(p*) = 0 cannot be priced in shares:
-    burn saturates at type(uint256).max and ok = false."""
-    na_s = value(after, sqrt_spot)[0]
-    na_r = value(after, sqrt_ref)[0]
-    loss_s = value(before, sqrt_spot)[0] - na_s
-    loss_r = value(before, sqrt_ref)[0] - na_r
-    if loss_r > loss_s:  # p* = sqrtSpot on a tie
-        loss, p_star, nav_after = loss_r, sqrt_ref, na_r
-    else:
-        loss, p_star, nav_after = loss_s, sqrt_spot, na_s
+def measure_c(before, after, sqrt_s0, sqrt_spot, sqrt_ref, reserve, S, unvested, bond):
+    """ExecLedger.measure (repair C) -> (charge, pStar, navAfterPStar, burn, burnR, ok).
+    loss_p = NAV_before(p) − NAV_after(p) over the legs in the order spot, s0, ref (a later leg replaces only on a
+    strictly larger loss, so p* = sqrtSpot on ties, incl. charge = 0); charge = max(0, max loss);
+    burn = ceilDiv(charge·S, NAV_after(p*)); burnR = ceilDiv((charge + reserve)·S, NAV_after(p*)) − burn; ok iff
+    burn + burnR ≤ unvested + bond. A positive amount against NAV_after(p*) = 0 saturates at type(uint256).max."""
+    legs = [(value(before, p)[0] - value(after, p)[0], p, value(after, p)[0]) for p in (sqrt_spot, sqrt_s0, sqrt_ref)]
+    loss, p_star, nav_after = legs[0]
+    for leg in legs[1:]:
+        if leg[0] > loss:
+            loss, p_star, nav_after = leg
     charge = loss if loss > 0 else 0
-    if charge == 0:
-        burn = 0
-    elif nav_after == 0:
-        burn = U256
-    else:
-        burn = ceil_div(charge * S, nav_after)
-    return charge, p_star, nav_after, burn, burn <= unvested + bond
+
+    def shares(x):
+        if not x:
+            return 0
+        return ceil_div(x * S, nav_after) if nav_after else U256
+    burn = shares(charge)
+    tot = shares(charge + reserve)
+    burn_r = tot - burn if tot != U256 else U256
+    ok = burn + burn_r <= unvested + bond     # a saturated amount exceeds any cover (unvested and bond are uint128)
+    return charge, p_star, nav_after, burn, burn_r, ok
+
+
+def measure(before, after, sqrt_spot, sqrt_ref, S, unvested, bond):
+    """The two-leg form (s0 = spot, no reserve) used by the G0 cells and the status-quo controls -> (charge, pStar,
+    navAfterPStar, burn, ok). Identical to `measure_c` with sqrtS0 = sqrtSpot and reserve 0."""
+    c, p, n, b, _, ok = measure_c(before, after, sqrt_spot, sqrt_spot, sqrt_ref, 0, S, unvested, bond)
+    return c, p, n, b, ok
+
+
+def settle_extra(before, after, tick_mk, fee_ticks, charge0, reserve, now_h, S, reserve_shares):
+    """ExecLedger.settleExtra (repair C settlement with a successful window read) -> (extra, pMk, burnS).
+    Legs sqrtAt(tick_mk − fee_ticks) then sqrtAt(tick_mk + fee_ticks) (the later replaces only on a strictly larger
+    loss); extra = min(reserve, max(0, loss_mk − charge0)); burnS = min(reserveShares, ceilDiv(extra·S,
+    NAV_now(pMk))) at the holdings now; reserveShares if NAV_now(pMk) = 0 and extra > 0; 0 if extra = 0."""
+    p_lo = get_sqrt_price_at_tick(max(MIN_TICK, min(MAX_TICK, tick_mk - fee_ticks)))
+    p_hi = get_sqrt_price_at_tick(max(MIN_TICK, min(MAX_TICK, tick_mk + fee_ticks)))
+    l_lo = value(before, p_lo)[0] - value(after, p_lo)[0]
+    l_hi = value(before, p_hi)[0] - value(after, p_hi)[0]
+    loss_mk, p_mk = (l_hi, p_hi) if l_hi > l_lo else (l_lo, p_lo)
+    extra = min(reserve, max(0, loss_mk - charge0))
+    if not extra:
+        return 0, p_mk, 0
+    nav_now = value(now_h, p_mk)[0]
+    if not nav_now:
+        return extra, p_mk, reserve_shares
+    return extra, p_mk, min(reserve_shares, ceil_div(extra * S, nav_now))
 
 
 # ================================================================ Placement
@@ -259,7 +289,7 @@ def ladder_next(mode, breaches, ev, count):
 _ALLOWED = {  # entry-point table; Seed is gated by onlyFactory/once and never by this table
     "Deposit": (1, 1, 0), "Withdraw": (1, 1, 1), "SetPositions": (1, 1, 0), "RebalanceSwap": (1, 1, 0),
     "Claim": (1, 1, 1), "TopUpBond": (1, 1, 0), "Retire": (1, 1, 0), "ReleaseBond": (0, 0, 1),
-    "Poke": (1, 1, 1), "ProcessBreach": (1, 1, 1), "Seed": (0, 0, 0),
+    "Poke": (1, 1, 1), "ProcessBreach": (1, 1, 1), "Seed": (0, 0, 0), "Settle": (1, 1, 1),
 }
 
 
@@ -270,7 +300,8 @@ def ladder_allowed(mode, entry):
 # ================================================================ FeeBank
 class Bank:
     FIELDS = ("maturedPending", "vestedUnclaimed", "bondShares", "forfeitPool", "forfeitTotal", "forfeitStart",
-              "dripBlocks", "releaseDelay", "breaches", "mode", "placedByCurator", "exitBlock")
+              "dripBlocks", "releaseDelay", "breaches", "mode", "placedByCurator", "exitBlock",
+              "reserveShares", "reserveBond", "reserveForfeit")
 
     def __init__(self):
         self.cohorts = [[0, 0] for _ in range(RING)]  # [epoch, shares] keyed by epoch mod (V+1)
@@ -281,6 +312,8 @@ class Bank:
         self.mode = NORMAL
         self.placedByCurator = False
         self.exitBlock = 0
+        self.reserveShares = self.reserveBond = 0   # repair C: the encumbered reserve (outside every bucket)
+        self.reserveForfeit = False
 
     def d(self):
         out = {"cohorts": [{"epoch": e, "shares": s} for e, s in self.cohorts]}
@@ -326,6 +359,24 @@ def _forfeit_all(b, now):
     return new
 
 
+def _take(b, need):
+    """Take `need` shares youngest cohort first, then maturedPending, then the bond. Returns (from bank, from bond)."""
+    bank = 0
+    for c in sorted(b.cohorts, key=lambda c: -c[0]):  # youngest first
+        if need == 0:
+            break
+        x = min(need, c[1])
+        c[1] -= x
+        need -= x
+        bank += x
+    x = min(need, b.maturedPending)
+    b.maturedPending -= x
+    need -= x
+    bank += x
+    b.bondShares -= need
+    return bank, need
+
+
 def fee_bank_apply(b, op, args):
     """FeeBank.apply(Bank storage, Op, args) -> (burnShares, payShares, a, b2). Mutates `b`; raises Revert.
     Per-op return slots: Charge → (bank burned, bond burned); Breach/Retire → (forfeited, mode after);
@@ -352,6 +403,8 @@ def fee_bank_apply(b, op, args):
         count, now = args["count"], args["now"]
         burned = _drip_now(b, now)
         forfeited = _forfeit_all(b, now)
+        if b.reserveShares:
+            b.reserveForfeit = True
         mode, br, exited = ladder_next(b.mode, b.breaches, EV_BREACH, count)
         b.mode, b.breaches = mode, br
         if exited:
@@ -379,24 +432,41 @@ def fee_bank_apply(b, op, args):
         burned = _drip_now(b, args["now"])
         return burned, 0, burned, 0
     if op == "Charge":
-        burn = args["burn"]
-        if burn > b.unvested() + b.bondShares:
+        burn, burn_r = args["burn"], args.get("burnR", 0)
+        if burn + burn_r > b.unvested() + b.bondShares:
             raise Revert("Insolvent")
-        need = burn
-        bank_burn = 0
-        for c in sorted(b.cohorts, key=lambda c: -c[0]):  # youngest first
-            if need == 0:
-                break
-            x = min(need, c[1])
-            c[1] -= x
-            need -= x
-            bank_burn += x
-        x = min(need, b.maturedPending)
-        b.maturedPending -= x
-        need -= x
-        bank_burn += x
-        b.bondShares -= need
-        return burn, 0, bank_burn, need
+        bank_burn, bond_burn = _take(b, burn)
+        if burn_r:
+            if b.reserveShares:
+                raise Revert("MarkoutPending")   # at most one reserve (unreachable through the vault: COOLDOWN)
+            _, from_bond = _take(b, burn_r)
+            b.reserveShares, b.reserveBond, b.reserveForfeit = burn_r, from_bond, False
+        return burn, 0, bank_burn, bond_burn
+    if op == "Settle":
+        burn_s, e, now = args["burnS"], args["epoch"], args["now"]
+        x = min(burn_s, b.reserveShares)
+        nonbond = b.reserveShares - b.reserveBond
+        from_nb = min(x, nonbond)
+        rel_bond = b.reserveBond - (x - from_nb)
+        rel_nb = nonbond - from_nb
+        b.bondShares = sat(b.bondShares + rel_bond, U128)
+        dripped = 0
+        if rel_nb:
+            if b.reserveForfeit:
+                dripped = _drip_now(b, now)
+                b.forfeitPool = sat(b.forfeitPool + rel_nb, U128)
+                b.forfeitTotal = b.forfeitPool
+                b.forfeitStart = now
+            else:
+                slot = b.cohorts[e % RING]
+                if slot[1] > 0 and slot[0] != e:
+                    b.maturedPending = sat(b.maturedPending + slot[1], U128)
+                    slot[1] = 0
+                slot[0] = e
+                slot[1] = sat(slot[1] + rel_nb, U128)
+        b.reserveShares = b.reserveBond = 0
+        b.reserveForfeit = False
+        return x + dripped, 0, rel_bond, rel_nb
     if op == "Place":
         mode, br, _ = ladder_next(b.mode, b.breaches, EV_PLACE, 0)
         b.mode, b.breaches = mode, br
@@ -407,6 +477,8 @@ def fee_bank_apply(b, op, args):
         mode, br, exited = ladder_next(b.mode, b.breaches, EV_RETIRE, 0)  # reverts BadMode in EXITED
         burned = _drip_now(b, now)
         forfeited = _forfeit_all(b, now)
+        if b.reserveShares:
+            b.reserveForfeit = True
         b.mode, b.breaches = mode, br
         if exited:
             b.exitBlock = now
@@ -436,9 +508,11 @@ class RefSource:
     """The reference pool's 10-minute TWAP as a function of time: `tick_at(ts)` gives the TWAP ending at ts.
     `fail` is a set of end-timestamps (or a callable) for which `observe` fails."""
 
-    def __init__(self, tick_at, fail=None):
+    def __init__(self, tick_at, fail=None, window=None, fail_window=None):
         self.tick_at = tick_at
         self.fail = fail if fail is not None else set()
+        self.window = window            # (start, end) -> TWAP tick over (start, end]; default: tick_at(end)
+        self.fail_window = fail_window  # (start, end) -> True when observe fails (e.g. older than the history)
 
     def read(self, ts, seconds_ago):
         if seconds_ago == 0:
@@ -448,6 +522,16 @@ class RefSource:
         if failed:
             return False, 0
         return True, max(MIN_TICK, min(MAX_TICK, self.tick_at(end)))
+
+    def read_window(self, ts, a, b):
+        """tryWindow(a, b) at time ts: the TWAP over (ts − a, ts − b], floor; fail-soft."""
+        start, end = ts - a, ts - b
+        if self.fail_window is not None and self.fail_window(start, end):
+            return False, 0
+        t = self.window(start, end) if self.window is not None else self.tick_at(end)
+        if t is None:
+            return False, 0
+        return True, max(MIN_TICK, min(MAX_TICK, t))
 
 
 def in_rng(lo, hi, t):
@@ -495,6 +579,9 @@ class Hook:
 
     def try_ref(self, ts):
         return self.ref.read(ts, 0)
+
+    def try_window(self, ts, a, b):
+        return self.ref.read_window(ts, a, b)
 
     def live_ref(self, ts):
         ok, t = self.ref.read(ts, 0)
@@ -797,6 +884,7 @@ class Vault:
         self.REF_SQRT_PRICE = sqrt_ref_price
         self.live_reads = 0
         self.mint_reads = 0
+        self.pending = None   # repair C: {tAction, before, after, charge0, reserve}
 
     # ---- atomic call wrapper
     def call(self, fn, *a, **kw):
@@ -913,7 +1001,31 @@ class Vault:
             self.swapCount = 0
         return live_read, live_tick
 
+    def _settle(self, now, ts):
+        """Prologue step 0 (repair C): settle a due pending action against the markout window. Never reverts."""
+        pd = self.pending
+        t = self.t
+        if pd is None:
+            return None
+        if ts < pd["tAction"] + 2 * t.BLOCKTIME + t.H_MARKOUT:
+            return None
+        a = ts - pd["tAction"] - t.BLOCKTIME
+        ok, tick = self.hook.try_window(ts, a, a - t.H_MARKOUT)
+        b = self.bank
+        if ok:
+            extra, p_mk, burn_s = settle_extra(pd["before"], pd["after"], tick, t.FEE_TICKS, pd["charge0"], pd["reserve"],
+                                               self.h, self.S, b.reserveShares)
+        else:
+            extra, burn_s = pd["reserve"], b.reserveShares
+        burned, _, rel_bond, rel_nb = fee_bank_apply(b, "Settle", dict(burnS=burn_s, epoch=now // t.EPOCH, now=now))
+        self.S -= burned
+        self.rec(now // t.EPOCH)["charge"] += extra
+        self.pending = None
+        self.events.append(("Settled", pd["charge0"], extra, tick if ok else 0, not ok))
+        return extra, burn_s, ok
+
     def prologue(self, now, ts):
+        self._settle(now, ts)
         o = self._snapshot(now, ts)
         self._collect_first()
         return o, self._checkpoint(o, now, ts)
@@ -950,6 +1062,8 @@ class Vault:
         def f():
             self.prologue(now, ts)
             self._gate("Deposit")
+            if self.pending is not None:
+                raise Revert("MarkoutPending")
             S = self.S
             d0, d1, dL = ceil_div(self.h.idle0 * shares, S), ceil_div(self.h.idle1 * shares, S), ceil_div(self.h.L * shares, S)
             p0 = p1 = 0
@@ -962,6 +1076,8 @@ class Vault:
             if self.S * self.t.BOND_RATIO > self.bank.bondShares * WAD:
                 raise Revert("NavCap")
             self._rebase_flow(S)
+            if self.NAV0 > self.t.NAV_MAX:
+                raise Revert("NavCap")
             return d0 + p0, d1 + p1
         return self.call(f)
 
@@ -983,16 +1099,51 @@ class Vault:
             return o0 + r0, o1 + r1
         return self.call(f)
 
-    def _action_common(self, entry, now, ts):
+    def _move(self, move_to):
+        """The vault's own spot move (repair C): an exact-output swap from idle toward `move_to` with price limit
+        `move_to`; the input is paid from idle (SwapCap if short); slot0 must equal `move_to` afterwards."""
+        pool = self.pool
+        if pool.s != move_to:
+            ain, aout, zfo = pool.push_to(move_to)
+            if ain > (self.h.idle0 if zfo else self.h.idle1):
+                raise Revert("SwapCap")
+            if zfo:
+                self.h.idle0 -= ain
+                self.h.idle1 += aout
+            else:
+                self.h.idle1 -= ain
+                self.h.idle0 += aout
+        if pool.s != move_to:
+            raise Revert("Move")
+
+    def _remove_old(self):
+        if self.h.L > 0:
+            a0, a1, _, _ = self.pool.modify(self.KEY, self.h.lo, self.h.hi, -self.h.L)
+            self.h.idle0 -= a0
+            self.h.idle1 -= a1
+            self.h.L = 0
+
+    def _action_common(self, entry, now, ts, move_to=None, remove=False):
+        """Prologue, mode gate, s0, (setPositions) removal of the old position and the optional move, s_spot, the
+        live reference, fence and cooldown. Returns (obs, tick_spot, s_spot, ref, s0, before) with `before` the
+        holdings before the removal and the move."""
         o, (lr, lt) = self.prologue(now, ts)
         self._gate(entry)
+        s0 = self.pool.s
+        before = self.h.copy()
+        if remove:
+            self._remove_old()
+        if move_to:
+            self._move(move_to)
         tick_spot, s_spot = self.pool.tick, self.pool.s
         ref = lt if lr else self.hook.live_ref(ts)
         if abs(tick_spot - ref) > self.t.REF_BAND:
             raise Revert("Fence")
         if self.lastAction and now - self.lastAction < self.t.COOLDOWN:
             raise Revert("Cooldown")
-        return o, tick_spot, s_spot, ref
+        if self.pending is not None:
+            raise Revert("MarkoutPending")   # unreachable under the tier's COOLDOWN assertion (defensive)
+        return o, tick_spot, s_spot, ref, s0, before
 
     def _swap_from_idle(self, zfo, amount_in, tick_spot, s_ref, nav_ref):
         """Shared by rebalanceSwap and the setPositions pre-swap: caps on the requested amount, the price
@@ -1019,38 +1170,39 @@ class Vault:
         self.swapCount += 1
         self._collect_first()
 
-    def _charge(self, before, s_spot, s_ref, kind):
-        charge, p_star, nav_after, burn, ok = measure(before, self.h, s_spot, s_ref, self.S,
-                                                      self.bank.unvested(), self.bank.bondShares)
+    def _charge(self, before, s0, s_spot, s_ref, kind, max_charge, ts):
+        """Immediate charge over {s_spot, s0, s_ref}, the fixed reserve, maxCharge, the gate, the burn, the reserve
+        move and the pending record (repair C, §3.4 steps 7–9)."""
+        reserve = mul_div(self.t.RESERVE_RATIO, value(before, s_spot)[0], WAD)
+        charge, p_star, nav_after, burn, burn_r, ok = measure_c(before, self.h, s0, s_spot, s_ref, reserve, self.S,
+                                                                self.bank.unvested(), self.bank.bondShares)
         if not ok:
             raise Revert("Insolvent")
-        bb, _, bank_b, bond_b = fee_bank_apply(self.bank, "Charge", dict(burn=burn))
+        if charge + reserve > max_charge:
+            raise Revert("MaxCharge")
+        bb, _, bank_b, bond_b = fee_bank_apply(self.bank, "Charge", dict(burn=burn, burnR=burn_r))
         self.S -= bb
         r = self.rec(self.epoch)
         r["charge"] += charge
         r["bankBurned"] += bank_b
         r["bondBurned"] += bond_b
         self.events.append(("Action", kind, charge, p_star, bank_b, bond_b))
+        self.pending = dict(tAction=ts, before=before.copy(), after=self.h.copy(), charge0=charge, reserve=reserve)
         return charge, p_star, burn
 
     NO_PRESWAP = {"active": False, "zeroForOne": False, "amountIn": 0}
 
-    def set_positions(self, lo, hi, pre, now, ts):
-        """setPositions(lo, hi, PreSwap): prologue, guards, remove, optional pre-swap, add, charge, register. Returns (charge, pStar, burn, deltaAfter)."""
+    def set_positions(self, lo, hi, pre, now, ts, move_to=None, max_charge=U256):
+        """setPositions(lo, hi, PreSwap, moveTo, maxCharge): prologue, s0, the vault's own move, guards, remove,
+        optional pre-swap, add, charge and reserve, register. Returns (charge, pStar, burn, deltaAfter)."""
         def f():
-            o, tick_spot, s_spot, ref = self._action_common("SetPositions", now, ts)
+            o, tick_spot, s_spot, ref, s0, before = self._action_common("SetPositions", now, ts, move_to, remove=True)
             t = self.t
             code = placement_check(lo, hi, tick_spot, ref, t.REF_BAND, t.W_TICKS, t.SPACING)
             if code:
                 raise Revert(PLACEMENT_ERR[code])
             s_ref = get_sqrt_price_at_tick(ref)
-            before = self.h.copy()
-            nav_ref = self.nav(s_ref)
-            if self.h.L > 0:
-                a0, a1, _, _ = self.pool.modify(self.KEY, self.h.lo, self.h.hi, -self.h.L)
-                self.h.idle0 -= a0
-                self.h.idle1 -= a1
-                self.h.L = 0
+            nav_ref = value(before, s_ref)[0]
             if pre["active"]:
                 self._swap_from_idle(pre["zeroForOne"], pre["amountIn"], tick_spot, s_ref, nav_ref)
             L, after, d_after = placement_size(self.h, lo, hi, self.pool.s, s_ref)
@@ -1058,7 +1210,7 @@ class Vault:
                 a0, a1, _, _ = self.pool.modify(self.KEY, lo, hi, L)
                 after = Holdings(self.h.idle0 - a0, self.h.idle1 - a1, L, lo, hi)
             self.h = after
-            charge, p_star, burn = self._charge(before, s_spot, s_ref, "setPositions")
+            charge, p_star, burn = self._charge(before, s0, s_spot, s_ref, "setPositions", max_charge, ts)
             if d_after < t.DELTA_MIN:
                 raise Revert("DeltaMin")
             self.hook.set_vault_range(lo, hi, ref, now, ts)
@@ -1068,13 +1220,12 @@ class Vault:
             return charge, p_star, burn, d_after
         return self.call(f)
 
-    def rebalance_swap(self, zfo, amount_in, now, ts):
+    def rebalance_swap(self, zfo, amount_in, now, ts, max_charge=U256):
         def f():
-            o, tick_spot, s_spot, ref = self._action_common("RebalanceSwap", now, ts)
+            o, tick_spot, s_spot, ref, s0, before = self._action_common("RebalanceSwap", now, ts)
             s_ref = get_sqrt_price_at_tick(ref)
-            before = self.h.copy()
             self._swap_from_idle(zfo, amount_in, tick_spot, s_ref, self.nav(s_ref))
-            charge, p_star, burn = self._charge(before, s_spot, s_ref, "rebalanceSwap")
+            charge, p_star, burn = self._charge(before, s0, s_spot, s_ref, "rebalanceSwap", max_charge, ts)
             self.lastAction = now
             self.NAV0, self.delta0 = self.nav(s_ref), delta_of(self.h, s_ref)
             return charge, p_star, burn
@@ -1082,6 +1233,10 @@ class Vault:
 
     def poke(self, now, ts):
         return self.call(lambda: (self.prologue(now, ts), self._gate("Poke")))
+
+    def settle(self, now, ts):
+        """settle(): open; the prologue only (settlement step 0, then the checkpoint)."""
+        return self.call(lambda: (self.prologue(now, ts), self._gate("Settle")))
 
     def process_breach(self, now, ts):
         return self.call(lambda: (self.prologue(now, ts), self._gate("ProcessBreach")))

@@ -93,42 +93,51 @@ def can_act(sim):
 
 
 def edge_placement(sim, ref):
-    """edge60's placement. Returns True on success."""
+    """The reference policy's placement (edge60's range rule; edge-6h is the same with a 6-hour wait). The curator's
+    bundler first re-aligns spot to the reference pool's price inside the action's transaction (so the pre-move spot
+    s0 is the market within the reference pool's band); then the policy places in place (the range on the inventory
+    side containing spot and the reference) or at the edge through the vault's own move, whichever gives the larger
+    δ_after (the edge on ties). Returns True on success."""
     v = sim.v
     if not can_act(sim):
         return False
     pool = v.pool
+    sim.align()
     inv = _inventory_after_removal(sim)
     sref = sqrt_at(ref)
     spot = pool.tick
     band = sim.t.REF_BAND
     mostly0 = R.q(inv.idle0, sref) >= inv.idle1
     if mostly0:
-        lo2 = floor_sp(min(ref, spot))
+        lo_in = floor_sp(min(ref, spot))
     else:
-        lo2 = floor_sp(max(ref, spot)) + SPACING - W
-    in_place = (abs(spot - ref) <= band and _legal(lo2, spot, ref, band)
-                and _delta_at(inv, lo2, lo2 + W, pool.s, sref) >= DMIN + DMIN // 1000)
-    if not in_place:
-        c = floor_sp(ref)
-        if mostly0:
-            lo2, target = c, sqrt_at(c) + 1
-        else:
-            lo2, target = c + SPACING - W, sqrt_at(c + SPACING) - 1
-        tgt_tick = R.get_tick_at_sqrt_price(target)
-        if _delta_at(inv, lo2, lo2 + W, target, sref) >= DMIN + DMIN // 1000:
-            sim.move_spot(target)
-            assert pool.tick == tgt_tick
-        else:
-            lo_b = best_delta_range(sim, ref, "max")
-            if lo_b is None:
-                sim.counts["reverts"] += 1
-                sim.reverts["NoLegalPlacement"] = sim.reverts.get("NoLegalPlacement", 0) + 1
-                return False
-            lo2 = lo_b
-    ok, _ = sim.vcall("set_positions", lo2, lo2 + W, R.Vault.NO_PRESWAP, gas="place")
+        lo_in = floor_sp(max(ref, spot)) + SPACING - W
+    d_in = _delta_at(inv, lo_in, lo_in + W, pool.s, sref) \
+        if abs(spot - ref) <= band and _legal(lo_in, spot, ref, band) else 0
+    c = floor_sp(ref)
+    if mostly0:
+        lo_e, target = c, sqrt_at(c) + 1
+    else:
+        lo_e, target = c + SPACING - W, sqrt_at(c + SPACING) - 1
+    d_e = _delta_at(inv, lo_e, lo_e + W, target, sref)
+    need = DMIN + DMIN // 1000
+    move_to = 0
+    if d_e >= need and d_e >= d_in:
+        lo2, move_to = lo_e, target          # the vault's own move (the s0 leg prices it)
+    elif d_in >= need:
+        lo2 = lo_in
+    else:
+        lo_b = best_delta_range(sim, ref, "max")
+        if lo_b is None:
+            sim.counts["reverts"] += 1
+            sim.reverts["NoLegalPlacement"] = sim.reverts.get("NoLegalPlacement", 0) + 1
+            return False
+        lo2 = lo_b
+    ok, _ = sim.vcall("set_positions", lo2, lo2 + W, R.Vault.NO_PRESWAP, gas="place", move_to=move_to)
     if ok:
         sim.counts["actions"] += 1
+        if move_to:
+            assert pool.s == move_to
     return ok
 
 

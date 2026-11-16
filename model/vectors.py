@@ -156,17 +156,25 @@ def ledger_cases():
     cases = []
     S, unv, bond = 10 ** 24, 4 * 10 ** 20, 5 * 10 ** 20
 
-    def add(tag, before, after, s_spot, s_ref, S_=S, unv_=unv, bond_=bond, note="", expect=None):
-        c, p, n, b, ok = R.measure(before, after, s_spot, s_ref, S_, unv_, bond_)
+    def add(tag, before, after, s_spot, s_ref, S_=S, unv_=unv, bond_=bond, note="", expect=None, s0=None, reserve=0):
+        s0 = s_spot if s0 is None else s0
+        c, p, n, b, br, ok = R.measure_c(before, after, s0, s_spot, s_ref, reserve, S_, unv_, bond_)
         if expect:  # the generator asserts that each vector shows what its name says
             leg, positive, ok_want = expect
-            assert (p == (s_spot if leg == "spot" else s_ref)), (tag, "p*")
+            assert (p == {"spot": s_spot, "ref": s_ref, "s0": s0}[leg]), (tag, "p*")
             assert (c > rounding(s_spot)) == positive, (tag, "charge", c)
             assert ok == ok_want, (tag, "ok")
         cases.append(dict(id=f"ledger-{len(cases):03d}-{tag}", fn="ExecLedger.measure",
-                          **{"in": dict(before=before.d(), after=after.d(), sqrtSpot=s_spot, sqrtRef=s_ref, S=S_,
-                                        unvested=unv_, bond=bond_),
-                             "out": dict(charge=c, pStar=p, navAfterPStar=n, burn=b, ok=ok)}))
+                          **{"in": dict(before=before.d(), after=after.d(), sqrtS0=s0, sqrtSpot=s_spot, sqrtRef=s_ref,
+                                        reserve=reserve, S=S_, unvested=unv_, bond=bond_),
+                             "out": dict(charge=c, pStar=p, navAfterPStar=n, burn=b, burnR=br, ok=ok)}))
+
+    def adds(tag, before, after, tick_mk, charge0, reserve, now_h, S_, rshares, note=""):
+        ex, pm, bs = R.settle_extra(before, after, tick_mk, 5, charge0, reserve, now_h, S_, rshares)
+        cases.append(dict(id=f"ledger-{len(cases):03d}-{tag}", fn="ExecLedger.settleExtra",
+                          **{"in": dict(before=before.d(), after=after.d(), tickMk=tick_mk, feeTicks=5, charge0=charge0,
+                                        reserve=reserve, now=now_h.d(), S=S_, reserveShares=rshares),
+                             "out": dict(extra=ex, pMk=pm, burnS=bs)}))
 
     def addv(tag, h, s):
         try:
@@ -294,6 +302,35 @@ def ledger_cases():
     h0, _ = _place(pool, idle, T0 + 500, T0 + 2500, sqrt_at(T0))
     add("out-of-range-noop", h0, h0.copy(), sqrt_at(T0), sqrt_at(T0 + 60), note="position above spot; no-op",
         expect=("spot", False, True))
+    # repair C: the pre-move spot leg s0, the reserve in the gate, and the settlement's markout legs
+    pool = _pool_with(third_L=10 ** 17)
+    pool.push_to(sqrt_at(T0 + 60))
+    g0 = R.Holdings(20_000 * USDC, 600 * ETH)
+    g1, _ = _place(pool, g0, T0 + 70 - 2000, T0 + 70, sqrt_at(T0 + 40))
+    add("s0-leg-wins", g0, g1, pool.s, sqrt_at(T0 + 40), s0=sqrt_at(T0 - 30), note="the pre-move spot prices the action",
+        expect=("s0", True, True))
+    add("s0-equal-spot-tie", R.Holdings(10 ** 21, 10 ** 21), R.Holdings(10 ** 21, 10 ** 21 - 10 ** 15), sqrt_at(T0), sqrt_at(T0), s0=sqrt_at(T0), note="spot, s0 and ref tie: p* = sqrtSpot",
+        expect=("spot", True, True))
+    c_, p_, n_, b_, br_, _ = R.measure_c(g0, g1, sqrt_at(T0 - 30), pool.s, sqrt_at(T0 + 40), 10 ** 17, S, 0, 0)
+    add("reserve-gate-exact", g0, g1, pool.s, sqrt_at(T0 + 40), s0=sqrt_at(T0 - 30), reserve=10 ** 17, unv_=0,
+        bond_=b_ + br_, note="burn + burnR == unvested + bond -> ok", expect=("s0", True, True))
+    add("reserve-gate-revert", g0, g1, pool.s, sqrt_at(T0 + 40), s0=sqrt_at(T0 - 30), reserve=10 ** 17, unv_=0,
+        bond_=b_ + br_ - 1, note="the reserve's shares fail the gate (Insolvent)", expect=("s0", True, False))
+    add("reserve-charge-zero", R.Holdings(10 ** 21, 10 ** 21), R.Holdings(10 ** 21, 10 ** 21), sqrt_at(T0), sqrt_at(T0), reserve=6 * 10 ** 17,
+        note="charge 0: burn 0, burnR = ceilDiv(reserve·S, NAV')", expect=("spot", False, True))
+    add("reserve-nav-zero", R.Holdings(10, 10), R.Holdings(), sqrt_at(T0), sqrt_at(T0), reserve=1,
+        note="NAV' = 0: burn and burnR saturate; ok = false")
+    for tk, cg, res, tag in ((T0 + 40, 0, 10 ** 30, "markout-uncapped"), (T0 + 40, 0, 10 ** 15, "markout-capped"),
+                             (T0 - 200, 0, 10 ** 30, "markout-other-side"), (T0 + 40, 10 ** 30, 10 ** 30, "markout-below-charge0")):
+        adds(tag, g0, g1, tk, cg, res, g1, S, 10 ** 20)
+    adds("markout-burn-capped-by-reserve-shares", g0, g1, T0 + 40, 0, 10 ** 30, g1, S, 1)
+    adds("markout-nav-now-zero", g0, g1, T0 + 40, 0, 10 ** 30, R.Holdings(), S, 7, note="NAV_now = 0: burn every reserve share")
+    adds("markout-zero-extra-nav-zero", g0, g1, T0 + 40, 10 ** 30, 10 ** 30, R.Holdings(), S, 7, note="extra 0: burn nothing even at NAV_now = 0")
+    adds("markout-reserve-one-wei", g0, g1, T0 + 40, 0, 1, g1, S, 10 ** 20, note="extra capped at 1 wei: one share-rounded burn")
+    sold = R.Holdings(g0.idle0 - 10 ** 9, g0.idle1 + 3 * 10 ** 15)
+    adds("markout-upper-leg", g0, sold, T0 + 40, 0, 10 ** 30, sold, S, 10 ** 20, note="the vault sold token0: the upper leg is worse")
+    adds("markout-tie-lower-leg", g0, g0.copy(), T0 + 40, 0, 10 ** 30, g0, S, 10 ** 20, note="equal legs: pMk = the lower leg")
+    add("charge-zero-nav-zero", R.Holdings(), R.Holdings(), sqrt_at(T0), sqrt_at(T0), note="no loss and no NAV: burn 0, ok")
     # ExecLedger.value
     for s in [sqrt_at(T0), sqrt_at(T0 + 500), sqrt_at(T0 + 2500), sqrt_at(T0 + 3000)]:
         addv("value", h0, s)
@@ -303,15 +340,20 @@ def ledger_cases():
 
 
 LEDGER_CONV = {
-    "measure": "loss_p = NAV_before(p) - NAV_after(p) for p in (sqrtSpot, sqrtRef); charge = max(0, max loss); "
-               "pStar = argmax, sqrtSpot on a tie (incl. charge 0); navAfterPStar = NAV_after(pStar); "
-               "burn = ceilDiv(charge*S, navAfterPStar) (0 when charge = 0; type(uint256).max when "
-               "navAfterPStar = 0 and charge > 0); ok = burn <= unvested + bond.",
+    "measure": "loss_p = NAV_before(p) - NAV_after(p) for p in (sqrtSpot, sqrtS0, sqrtRef), a later leg replacing only on a "
+               "strictly larger loss; charge = max(0, max loss); pStar = argmax (sqrtSpot on a tie, incl. charge 0); "
+               "navAfterPStar = NAV_after(pStar); burn = ceilDiv(charge*S, navAfterPStar) (0 when charge = 0; "
+               "type(uint256).max when navAfterPStar = 0 and charge > 0); burnR = ceilDiv((charge + reserve)*S, "
+               "navAfterPStar) - burn (type(uint256).max when saturated); ok = burn + burnR <= unvested + bond.",
+    "settleExtra": "legs sqrtAt(tickMk - feeTicks) then sqrtAt(tickMk + feeTicks) (later replaces only if strictly larger); "
+                   "extra = min(reserve, max(0, loss_mk - charge0)); burnS = 0 if extra = 0, reserveShares if "
+                   "NAV(now, pMk) = 0, else min(reserveShares, ceilDiv(extra*S, NAV(now, pMk))).",
     "NAV": "NAV(s) = q(idle0 + x_pos(s), s) + idle1 + y_pos(s); positions per Appendix A with roundUp = false.",
     "value": "ExecLedger.value(h, sqrtP) = (NAV(sqrtP), val(x_pos, y_pos, sqrtP)).",
     "holdings": "Holdings {idle0, idle1, L, lo, hi}; before/after are inputs.",
-    "fields": "ExecLedger.measure in {before, after, sqrtSpot, sqrtRef, S, unvested, bond} out {charge, pStar, "
-              "navAfterPStar, burn, ok}; ExecLedger.value in {h, sqrtP} out {nav, posValue}; Holdings = {idle0, idle1, "
+    "fields": "ExecLedger.measure in {before, after, sqrtS0, sqrtSpot, sqrtRef, reserve, S, unvested, bond} out {charge, "
+              "pStar, navAfterPStar, burn, burnR, ok}; ExecLedger.settleExtra in {before, after, tickMk, feeTicks, charge0, "
+              "reserve, now, S, reserveShares} out {extra, pMk, burnS}; ExecLedger.value in {h, sqrtP} out {nav, posValue}; Holdings = {idle0, idle1, "
               "L, lo, hi}.",
 }
 
@@ -407,6 +449,8 @@ def bank_cases():
         return b
 
     def add(tag, b, op, args, note=""):
+        if op == "Charge":
+            args = {**args, "burnR": args.get("burnR", 0)}
         bin_ = b.d()
         try:
             r = R.fee_bank_apply(b, op, args)
@@ -447,6 +491,39 @@ def bank_cases():
     add("charge-exact-total", st(cohorts=[(7, k)], maturedPending=k, bondShares=k), "Charge", dict(burn=3 * k))
     add("charge-insolvent", st(cohorts=[(7, k)], maturedPending=k, bondShares=k), "Charge", dict(burn=3 * k + 1))
     add("charge-zero", st(cohorts=[(7, k)], bondShares=k), "Charge", dict(burn=0))
+    # repair C: the reserve (Charge with burnR, Settle; breach and retire leave it in place)
+    add("charge-with-reserve", st(cohorts=[(7, k)], maturedPending=k, bondShares=10 * k), "Charge", dict(burn=k // 2, burnR=2 * k),
+        note="burn youngest first, then the reserve in the same order; reserveBond = the part from the bond")
+    add("charge-reserve-insolvent", st(cohorts=[(7, k)], bondShares=k), "Charge", dict(burn=k, burnR=k + 1),
+        note="burn + burnR above the cover reverts Insolvent")
+    rs = dict(cohorts=[(7, k)], bondShares=10 * k, reserveShares=3 * k, reserveBond=k)
+    add("settle-burn-nonbond-first", st(**rs), "Settle", dict(burnS=2 * k + 5, epoch=8, now=1000),
+        note="the non-bond part burns first; the bond part's remainder returns to the bond")
+    add("settle-release-to-cohort", st(**rs), "Settle", dict(burnS=k, epoch=8, now=1000), note="the rest joins epoch 8's cohort")
+    add("settle-release-overwrites-old-slot", st(cohorts=[(3, 4 * k)], bondShares=k, reserveShares=2 * k), "Settle",
+        dict(burnS=0, epoch=8, now=1000), note="slot 8 mod 5 holds epoch 3: its occupant moves to maturedPending")
+    add("settle-burn-capped", st(**rs), "Settle", dict(burnS=10 * k, epoch=8, now=1000), note="burnS above the reserve burns all of it")
+    add("settle-after-breach-to-drip", st(**rs, reserveForfeit=True, forfeitPool=k, forfeitTotal=2 * k, forfeitStart=940,
+                                           dripBlocks=120), "Settle", dict(burnS=k, epoch=8, now=1000),
+        note="reserveForfeit: drip owed burns first, then the released part restarts the drip")
+    add("breach-keeps-reserve", st(**rs), "Breach", dict(count=1, now=1000), note="the reserve stays; reserveForfeit set")
+    add("retire-keeps-reserve", st(**rs), "Retire", dict(now=1000), note="the reserve stays; reserveForfeit set")
+    add("charge-reserve-while-pending", st(cohorts=[(7, k)], bondShares=10 * k, reserveShares=k), "Charge", dict(burn=k, burnR=k),
+        note="a second reserve while one is pending reverts MarkoutPending")
+    add("charge-no-reserve-while-pending", st(cohorts=[(7, k)], bondShares=10 * k, reserveShares=k), "Charge", dict(burn=k, burnR=0),
+        note="a charge without a reserve leaves the pending reserve alone")
+    add("settle-release-into-same-epoch", st(cohorts=[(8, k)], maturedPending=2 * k, bondShares=k, reserveShares=3 * k), "Settle",
+        dict(burnS=0, epoch=8, now=1000), note="the released part adds to epoch 8's cohort")
+    add("settle-release-overwrite-adds-to-pending", st(cohorts=[(3, 4 * k)], maturedPending=2 * k, bondShares=k, reserveShares=k),
+        "Settle", dict(burnS=0, epoch=8, now=1000), note="the matured occupant adds to maturedPending")
+    add("settle-release-one-share-occupant", st(cohorts=[(3, 1)], bondShares=k, reserveShares=k), "Settle",
+        dict(burnS=0, epoch=8, now=1000), note="an occupant of exactly one share moves to maturedPending")
+    add("settle-after-breach-drip-owed", st(**rs, reserveForfeit=True, forfeitPool=k, forfeitTotal=2 * k, forfeitStart=900,
+                                             dripBlocks=120), "Settle", dict(burnS=k, epoch=8, now=1000),
+        note="the drip owed at now burns first and is returned in burnShares")
+    add("release-excludes-reserve", st(bondShares=5 * k, reserveShares=2 * k, reserveBond=2 * k, mode=R.EXITED, exitBlock=0,
+                                       releaseDelay=0), "Release", dict(shares=10 * k, now=10 ** 6),
+        note="releaseBond releases bondShares only")
     # Drip
     pool = dict(forfeitPool=12 * k, forfeitTotal=12 * k, forfeitStart=1000)
     for now in (1000, 1030, 1060, 1119, 1120, 5000):
@@ -522,14 +599,14 @@ def bank_cases():
 BANK_CONV = {
     "fn": "FeeBank.apply(Bank storage b, Op op, bytes args) -> (burnShares, payShares, a, b2); in.bank is the state "
           "before, out.bank after; out = {revert: <error>} when apply reverts (state unchanged).",
-    "Op": "enum Op {Accrue, Breach, VestTime, Drip, Charge, Place, Retire, Claim, TopUp, Release}; in.op is the "
+    "Op": "enum Op {Accrue, Breach, VestTime, Drip, Charge, Place, Retire, Claim, TopUp, Release, Settle}; in.op is the "
           "ordinal; the case id names the op.",
     "fields": "in {bank, op, args}; out {bank, burnShares, payShares, a, b2} or {revert}; Bank = {cohorts[5] {epoch, "
               "shares}, maturedPending, vestedUnclaimed, bondShares, forfeitPool, forfeitTotal, forfeitStart, "
-              "dripBlocks, releaseDelay, breaches, mode, placedByCurator, exitBlock}.",
+              "dripBlocks, releaseDelay, breaches, mode, placedByCurator, exitBlock, reserveShares, reserveBond, reserveForfeit}.",
     "args": "Accrue (epoch, shares, gateOpen); Breach (count, now); VestTime (nowEpoch, gateOpen); Drip (now); "
-            "Charge (burn); Place (); Retire (now); Claim (); TopUp (shares); Release (shares, now).",
-    "returns": "Charge (bank burned, bond burned); Breach/Retire (forfeited, mode after); VestTime/Accrue (vested, moved "
+            "Charge (burn, burnR); Place (); Retire (now); Claim (); TopUp (shares); Release (shares, now); Settle (burnS, epoch, now).",
+    "returns": "Settle (released to the bond, released to the cohort or the drip; burnShares = settlement burn + drip owed); Charge (bank burned, bond burned); Breach/Retire (forfeited, mode after); VestTime/Accrue (vested, moved "
                "to maturedPending); Drip (burned, 0); Claim/TopUp/Release/Place (shares moved, 0). Breach and Retire "
                "first burn the drip owed at `now` (returned as burnShares), then forfeit; an empty forfeit does not "
                "restart the drip.",

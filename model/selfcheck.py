@@ -66,7 +66,17 @@ class World:
     def poke(self):
         return self.v.poke(self.block, self.ts())
 
+    def settle_due(self):
+        """Repair C: deposits revert while an action's markout is pending; step to the settlement and settle."""
+        pd = self.v.pending
+        if pd is not None:
+            due = pd["tAction"] + 2 * self.t.BLOCKTIME + self.t.H_MARKOUT
+            if self.ts() < due:
+                self.step(-(-(due - self.ts()) // self.t.BLOCKTIME))
+            self.v.settle(self.block, self.ts())
+
     def deposit(self, shares):
+        self.settle_due()
         r = self.v.deposit(shares, self.block, self.ts())
         self.depositor += shares
         return r
@@ -91,7 +101,7 @@ def conserved(w, name):
     """Share supply = DEAD + depositors + bank buckets + bond + forfeit pool + shares paid to the curator."""
     b = w.v.bank
     held = (R.DEAD + w.depositor + b.cohort_total() + b.maturedPending + b.vestedUnclaimed + b.bondShares +
-            b.forfeitPool + getattr(w, "claimed", 0))
+            b.forfeitPool + b.reserveShares + getattr(w, "claimed", 0))
     check(w.v.S == held, f"share conservation ({name})", (w.v.S, held))
 
 
@@ -648,17 +658,19 @@ def scenario_insolvent():
     w2.place(T0, T0 + 2000)
     w2.keepalive_run(w2.t.COOLDOWN)
     w2.v.pool.push_to(sqrt_at(T0 + 60))
+    w2.settle_due()
     amt2 = min(w2.v.nav(sqrt_at(T0)) // 100, w2.v.h.idle1)
     bond0 = w2.v.bank.bondShares + w2.v.bank.unvested()
     c, p, burn = w2.v.rebalance_swap(False, amt2, w2.block, w2.ts())
     conserved(w2, "charge burn")
-    check(c > 0 and p == sqrt_at(T0) and w2.v.bank.bondShares + w2.v.bank.unvested() == bond0 - burn,
+    check(c > 0 and p == sqrt_at(T0) and w2.v.bank.bondShares + w2.v.bank.unvested() == bond0 - burn - w2.v.bank.reserveShares,
           "fence swap charged at the reference leg; burn from bank then bond", (c, p))
 
 
 def scenario_epilogue():
     w = World()
     w.place(T0 - 1000, T0 + 1000)
+    w.settle_due()
     n0, s0 = w.v.NAV0, w.v.S
     w.deposit(10 ** 26)
     check(w.v.NAV0 == R.mul_div(n0, w.v.S, s0), "deposit epilogue re-bases NAV0·S'/S without a price")
@@ -872,7 +884,8 @@ def rules_actions():
     except R.Revert as ex:
         check(ex.err == "Fence", "fence on rebalanceSwap", ex.err)
     # MAX_SWAPS and the counter reset at the epoch roll
-    w3 = World(seed_amounts=(300_000 * USDC, 20 * ETH), third_L=10 ** 21)
+    w3 = World(tier=R.Tier(**{**t.__dict__, "EPOCH": 600}), seed_amounts=(300_000 * USDC, 20 * ETH), third_L=10 ** 21)
+    t = w3.t  # MAX_SWAPS cannot bind at TEST's EPOCH 120 with COOLDOWN 14 (8 actions per epoch)
     w3.place(T0, T0 + 2000)
     w3.keepalive_run(t.EPOCH - w3.block % t.EPOCH + 1)
     w3.poke()
@@ -1241,11 +1254,12 @@ def rules_r3():
             w.touch()
             check(w.v.hook.refGrid == w.ts() // t.GRID_SEC, "the anchor index is ts / GRID_SEC", (phase, w.block))
     # inclusive guard boundaries
-    w = World(seed_amounts=(150_000 * USDC, 500 * ETH), third_L=10 ** 22)
-    cap_shares = w.v.bank.bondShares * R.WAD // t.BOND_RATIO - w.v.S
+    tb = R.Tier(**{**t.__dict__, "BOND_RATIO": 6 * 10 ** 14})   # a ratio that divides bond·WAD, so the cap is hit exactly
+    w = World(tier=tb, seed_amounts=(150_000 * USDC, 500 * ETH), third_L=10 ** 22)
+    cap_shares = w.v.bank.bondShares * R.WAD // tb.BOND_RATIO - w.v.S
     try:
         w.deposit(cap_shares)
-        check(w.v.S * t.BOND_RATIO <= w.v.bank.bondShares * R.WAD, "deposit to exactly the NAV cap passes")
+        check(w.v.S * tb.BOND_RATIO == w.v.bank.bondShares * R.WAD, "deposit to exactly the NAV cap passes")
     except R.Revert as ex:
         check(False, "deposit to exactly the NAV cap passes", ex.err)
     w = World(seed_amounts=(150_000 * USDC, 500 * ETH), third_L=10 ** 22)
@@ -1300,6 +1314,7 @@ def rules_r3():
     # deposit adds ceilDiv(L·s, S) liquidity
     w = World()
     w.place(T0 - 1000, T0 + 1000)
+    w.settle_due()
     S, L = w.v.S, w.v.h.L
     sh = 10 ** 21 + 7
     w.deposit(sh)
@@ -1377,7 +1392,7 @@ def rules_r4():
         if price is None:
             ok, tk = w.ref.read(w.ts(), 0)
             price = tk if ok else None
-        S0 = v.S
+        S0 = v.S - R._drip_now(_copy.deepcopy(v.bank), w.block)  # the drip owed at step (2) burns first
         nav = v.nav(sqrt_at(price)) if price is not None else 0
         v._checkpoint(o, w.block, w.ts())
         if amount == 0:
@@ -1562,6 +1577,7 @@ def rules_r4():
     ch0 = w.v.rec(w.v.epoch)["charge"]
     c, p, burn, d = w.place(T0 + 50 - 1990, T0 + 60)
     check(c > 0 and w.v.rec(w.v.epoch)["charge"] == ch0 + c, "records: charge", c)
+    w.settle_due()  # the honest curator settles the markout
     st["ref"] = T0 + 2500
     w.keepalive_run(t.CURE_BLOCKS + 3 * t.GRID)
     unv = w.v.bank.unvested()
@@ -1593,6 +1609,7 @@ def rules_r4():
     w.place(T0 - 1000, T0 + 1000)
     w.step(1)
     w.poke()
+    w.settle_due()
     S, i0, i1, L = w.v.S, w.v.h.idle0, w.v.h.idle1, w.v.h.L
     clone = _copy.deepcopy(w.v.pool)
     sh = 10 ** 24 + 3
@@ -1636,7 +1653,7 @@ def rules_r4b():
     bond0 = w.v.bank.bondShares
     c, p, burn = w.v.rebalance_swap(False, w.v.nav(sqrt_at(T0)) // 100, w.block, w.ts())
     r = w.v.rec(w.v.epoch)
-    check(burn > 0 and r["bondBurned"] == bond0 - w.v.bank.bondShares and r["bankBurned"] + r["bondBurned"] == burn,
+    check(burn > 0 and r["bondBurned"] == bond0 - w.v.bank.bondShares - w.v.bank.reserveBond and r["bankBurned"] + r["bondBurned"] == burn,
           "records: bank and bond burned", (r["bankBurned"], r["bondBurned"], burn))
     # records: bank burned (with unvested pay present)
     w = World(seed_amounts=(300_000 * USDC, 20 * ETH), third_L=10 ** 19)
@@ -1653,7 +1670,7 @@ def rules_r4b():
     c, p, burn = w.v.rebalance_swap(False, w.v.h.idle1 // 50, w.block, w.ts())
     rb = w.v.rec(w.v.epoch)
     check(unv > 0 and burn > unv and w.v.bank.unvested() == 0 and rb["bankBurned"] - b0 > 0 and
-          rb["bondBurned"] - d0 == bond0 - w.v.bank.bondShares and rb["bankBurned"] - b0 + rb["bondBurned"] - d0 == burn,
+          rb["bondBurned"] - d0 == bond0 - w.v.bank.bondShares - w.v.bank.reserveBond and rb["bankBurned"] - b0 + rb["bondBurned"] - d0 == burn,
           "records: bank then bond burned", (burn, unv))
     # registration zeroes the streak; epochStartRef is the epoch's first cache write
     w = World()
@@ -1869,7 +1886,10 @@ def rules_r6():
         check(False, "the first action is not subject to COOLDOWN", ex.err)
     # constants (spec §3.2, §6), pinned as literals
     check((R.S_SEED, R.DEAD, R.N_SNAP, R.K_MED, R.V, R.TEST.MAX_SWAPS, R.TEST.DELTA_MIN, R.TEST.BOND_RATIO) ==
-          (10 ** 24, 10 ** 15, 32, 9, 4, 20, 5 * 10 ** 17, 6 * 10 ** 14), "pinned constants")
+          (10 ** 24, 10 ** 15, 32, 9, 4, 20, 5 * 10 ** 17, 172 * 10 ** 13), "pinned constants")
+    check((R.TEST.RESERVE_RATIO, R.TEST.H_MARKOUT, R.DEMO.H_MARKOUT, R.MAINNET.H_MARKOUT, R.TEST.NAV_MAX, R.DEMO.NAV_MAX,
+           R.MAINNET.NAV_MAX) == (6 * 10 ** 14, 120, 20, 120, R.U128, 1850 * 10 ** 18, 1850 * 10 ** 18),
+          "repair C constants (RESERVE_RATIO, H_MARKOUT, NAV_MAX per tier)")
     w = World()
     check(w.v.S == 10 ** 24 and w.v.bank.bondShares == 10 ** 24 - 10 ** 15 and w.v.bank.releaseDelay == 480 and
           w.v.bank.dripBlocks == 120, "seed: S_SEED, DEAD, releaseDelay = V·EPOCH, dripBlocks = EPOCH at TEST")
@@ -1944,14 +1964,14 @@ def rules_r7():
     w.step(1)
     w.place(T0 - 1010, T0 + 990)
     # per-chain tables (spec §6), pinned as literals
-    for tr, row in ((R.TEST, (12, 20, 240, 120, 200, 5, 600, 20, 120)), (R.DEMO, (1, 300, 300, 3600, 1800, 30, 300, 300, 3600)),
-                    (R.MAINNET, (12, 300, 3600, 50400, 7200, 30, 600, 300, 50400))):
+    for tr, row in ((R.TEST, (12, 20, 240, 120, 200, 14, 600, 20, 120)), (R.DEMO, (1, 300, 300, 3600, 1800, 30, 300, 300, 3600)),
+                    (R.MAINNET, (12, 300, 3600, 50400, 7200, 30, 600, 1800, 50400))):
         got = (tr.BLOCKTIME, tr.GRID, tr.GRID_SEC, tr.EPOCH, tr.CURE_BLOCKS, tr.COOLDOWN, tr.REF_WINDOW, tr.EDGE_DELAY,
                tr.FORFEIT_DRIP_BLOCKS)
         check(got == row, f"{tr.NAME} per-chain parameters", got)
         check((tr.FEE, tr.SPACING, tr.FEE_TICKS, tr.W_TICKS, tr.BAND_SWAP, tr.REF_BAND, tr.DELTA_MIN, tr.MAX_SWAP_ACTION,
                tr.MAX_SWAP_EPOCH, tr.MAX_SWAPS, tr.RESET_RUN, tr.BOND_RATIO, tr.L_W_TARGET) ==
-              (500, 10, 5, 2000, 5, 60, 5 * 10 ** 17, 2 * 10 ** 16, 5 * 10 ** 16, 20, 2, 6 * 10 ** 14, 1000),
+              (500, 10, 5, 2000, 5, 60, 5 * 10 ** 17, 2 * 10 ** 16, 5 * 10 ** 16, 20, 2, 172 * 10 ** 13, 1000),
               f"{tr.NAME} shared parameters")
     # one skipped epoch flags exactly the skipped record stale
     w = World()
@@ -1970,8 +1990,8 @@ def rules_r7b():
     check(R.PLACEMENT_ERR == {1: "Fence", 2: "Width", 3: "Alignment", 4: "NotContained", 5: "NotContained"},
           "placement error mapping")
     check(all(not R.ladder_allowed(m, R.E["Seed"]) for m in range(3)), "Ladder.allowed(·, Seed) is false")
-    check((R.TEST.BOND_MIN, R.DEMO.BOND_MIN, R.MAINNET.BOND_MIN) == (0, 6 * 10 ** 17, 6 * 10 ** 17),
-          "BOND_MIN per tier (owner decision: 0.6 WETH; TEST 0)")
+    check((R.TEST.BOND_MIN, R.DEMO.BOND_MIN, R.MAINNET.BOND_MIN) == (0, 172 * 10 ** 16, 172 * 10 ** 16),
+          "BOND_MIN per tier (owner decision 2026-11-16: 1.72 WETH; TEST 0)")
     # a placement that does not contain the reference reverts NotContained (code 5) at the vault
     w = World()
     w.v.pool.push_to(sqrt_at(T0 + 40))
@@ -2130,6 +2150,294 @@ def _run(fn, *a):
         CRASHES.append(f"{fn.__name__} crashed: {ex!r}\n{traceback.format_exc()[-600:]}")
 
 
+def rules_markout():
+    """Repair C (the markout-settled charge): U-settle and the reserve rows of U-solv."""
+    import copy as _copy
+    t = R.TEST
+    BT, H = t.BLOCKTIME, t.H_MARKOUT
+    # tier assertion: COOLDOWN·blocktime ≥ H_MARKOUT + 2·blocktime
+    try:
+        R.Tier(**{**t.__dict__, "COOLDOWN": 11})
+        check(False, "a COOLDOWN shorter than the markout window must fail the tier check")
+    except R.TierInvalid:
+        check(True, "tier check: COOLDOWN·blocktime ≥ H_MARKOUT + 2·blocktime")
+    R.Tier(**{**t.__dict__, "COOLDOWN": 12})  # 144 ≥ 144 passes
+    # measure_c: legs in the order spot, s0, ref; ties keep spot; reserve shares; the two-leg form agrees
+    rng = random.Random(7)
+    for _ in range(300):
+        h = R.Holdings(rng.randrange(1, 10 ** 22), rng.randrange(1, 10 ** 22))
+        h2 = R.Holdings(h.idle0 + rng.randrange(-10 ** 20, 10 ** 20), h.idle1 + rng.randrange(-10 ** 20, 10 ** 20))
+        h2.idle0, h2.idle1 = max(1, h2.idle0), max(1, h2.idle1)
+        sp, s0, sr = (sqrt_at(T0 + rng.randrange(-80, 80)) for _ in range(3))
+        S, res = 10 ** 24, rng.randrange(0, 10 ** 19)
+        c, p, n, b, br, ok = R.measure_c(h, h2, s0, sp, sr, res, S, 10 ** 30, 0)
+        losses = [(R.value(h, x)[0] - R.value(h2, x)[0], x) for x in (sp, s0, sr)]
+        best = losses[0]
+        for l in losses[1:]:
+            if l[0] > best[0]:
+                best = l
+        check(c == max(0, best[0]) and p == best[1], "measure_c: worst of spot, s0, ref; earlier leg on ties")
+        na = R.value(h2, p)[0]
+        check(b == (0 if c == 0 else R.ceil_div(c * S, na)) and br == (0 if c + res == 0 else R.ceil_div((c + res) * S, na)) - b,
+              "measure_c: burn and burnR at one price")
+        check(R.measure(h, h2, sp, sr, S, 10 ** 30, 0)[:4] == R.measure_c(h, h2, sp, sp, sr, 0, S, 10 ** 30, 0)[:4],
+              "the two-leg measure is measure_c with s0 = spot and no reserve")
+    # settle_extra: legs p_mk ± FEE_TICKS, extra capped by the reserve, burnS capped by reserveShares
+    h = R.Holdings(10 ** 21, 10 ** 21)
+    h2 = R.Holdings(10 ** 21 + 10 ** 18, 10 ** 21 - 3 * 10 ** 15)
+    for tk in (T0 - 300, T0 - 50, T0, T0 + 50, T0 + 300):
+        for res in (0, 10 ** 14, 10 ** 30):
+            ex, pm, bs = R.settle_extra(h, h2, tk, 5, 0, res, h2, 10 ** 24, 10 ** 20)
+            lo_, hi_ = sqrt_at(tk - 5), sqrt_at(tk + 5)
+            l_lo = R.value(h, lo_)[0] - R.value(h2, lo_)[0]
+            l_hi = R.value(h, hi_)[0] - R.value(h2, hi_)[0]
+            lm, pp = (l_hi, hi_) if l_hi > l_lo else (l_lo, lo_)
+            check(ex == min(res, max(0, lm)) and pm == pp, "settle_extra: the worse markout leg, capped at the reserve")
+            exp = 0 if ex == 0 else min(10 ** 20, R.ceil_div(ex * 10 ** 24, R.value(h2, pm)[0]))
+            check(bs == exp, "settle_extra: burnS = min(reserveShares, ceilDiv(extra·S, NAV_now(p_mk)))", (bs, exp))
+    # FeeBank Charge/Settle: reserve composition, burn order, release targets
+    b = R.Bank()
+    b.cohorts[7 % R.RING] = [7, 100]
+    b.maturedPending, b.bondShares = 50, 1000
+    try:
+        R.fee_bank_apply(_copy.deepcopy(b), "Charge", dict(burn=1000, burnR=151))
+        check(False, "Charge: burn + burnR above the cover must revert Insolvent")
+    except R.Revert as ex:
+        check(ex.err == "Insolvent", "Charge gate includes the reserve", ex.err)
+    b1 = _copy.deepcopy(b)
+    r = R.fee_bank_apply(b1, "Charge", dict(burn=120, burnR=80))
+    check(r == (120, 0, 120, 0) and b1.reserveShares == 80 and b1.reserveBond == 50 and b1.unvested() == 0 and
+          b1.bondShares == 950, "Charge: burn youngest first, then the reserve in the same order", (r, b1.d()))
+    b2 = _copy.deepcopy(b1)
+    r = R.fee_bank_apply(b2, "Settle", dict(burnS=40, epoch=9, now=1000))
+    check(r == (40, 0, 40, 0) and b2.bondShares == 990 and b2.reserveShares == 0, "Settle: the non-bond part burns first", r)
+    b3 = _copy.deepcopy(b1)
+    r = R.fee_bank_apply(b3, "Settle", dict(burnS=10, epoch=9, now=1000))
+    check(r == (10, 0, 50, 20) and b3.cohorts[9 % R.RING] == [9, 20], "Settle: the rest of the non-bond part goes to the current cohort", r)
+    b4 = _copy.deepcopy(b1)
+    R.fee_bank_apply(b4, "Breach", dict(count=1, now=900))
+    check(b4.reserveShares == 80 and b4.reserveForfeit, "Breach leaves the reserve in place and marks it")
+    pool0 = b4.forfeitPool
+    r = R.fee_bank_apply(b4, "Settle", dict(burnS=10, epoch=9, now=1000))
+    check(r[3] == 20 and b4.forfeitPool >= 20 and b4.forfeitTotal == b4.forfeitPool and b4.forfeitStart == 1000 and
+          b4.cohort_total() == 0, "Settle after a breach: the released non-bond part joins the forfeit drip", (r, pool0, b4.d()))
+    b5 = _copy.deepcopy(b1)
+    R.fee_bank_apply(b5, "Retire", dict(now=900))
+    check(b5.reserveShares == 80 and b5.reserveForfeit, "Retire leaves the reserve in place and marks it")
+    b5.releaseDelay = 0
+    x = R.fee_bank_apply(b5, "Release", dict(shares=10 ** 9, now=10 ** 6))[1]
+    check(x == 950 and b5.reserveBond == 50, "releaseBond cannot take the reserve's bond part", x)
+    R.fee_bank_apply(b5, "Settle", dict(burnS=0, epoch=9, now=10 ** 6))
+    check(b5.bondShares == 50, "the reserve's bond part returns to the bond at settlement")
+    b6 = _copy.deepcopy(b1)
+    b6.vestedUnclaimed = 5
+    check(R.fee_bank_apply(b6, "Claim", {})[1] == 5 and b6.reserveShares == 80, "claim cannot reach the reserve")
+    # the vault: pending record, deposits blocked, the window read, settlement, withdrawals never blocked
+    reads = []
+
+    def win(start, end):
+        reads.append((start, end))
+        return T0 + 40
+    w = World()
+    w.ref.window = win
+    ch, p, burn, d = w.place(T0 - 1000, T0 + 1000)
+    pd = w.v.pending
+    check(pd is not None and pd["tAction"] == w.ts() and pd["charge0"] == ch and
+          pd["reserve"] == R.mul_div(t.RESERVE_RATIO, R.value(pd["before"], sqrt_at(T0))[0], R.WAD) and
+          w.v.bank.reserveShares > 0, "an action records the pending markout and reserves its shares")
+    t_a = pd["tAction"]
+    w.step(1)
+    try:
+        w.v.deposit(10 ** 20, w.block, w.ts())
+        check(False, "a deposit while the markout is pending must revert")
+    except R.Revert as ex:
+        check(ex.err == "MarkoutPending", "deposits revert MarkoutPending", ex.err)
+    out = w.v.withdraw(10 ** 18, w.block, w.ts())
+    check(out[0] > 0 and w.v.pending is not None, "a withdrawal is never blocked by a pending markout")
+    w.depositor -= 10 ** 18
+    due = t_a + 2 * BT + H
+    w.step((due - w.ts()) // BT - 1)
+    w.v.settle(w.block, w.ts())
+    check(w.v.pending is not None and not reads, "no settlement before tAction + 2·blocktime + H_MARKOUT")
+    w.step(1)
+    rs, S0, m0 = w.v.bank.reserveShares, w.v.S, sum(r["minted"] for r in w.v.records.values())
+    h_now = w.v.h.copy()
+    exp = R.settle_extra(pd["before"], pd["after"], T0 + 40, t.FEE_TICKS, pd["charge0"], pd["reserve"], h_now, S0, rs)
+    w.v.settle(w.block, w.ts())
+    check(reads == [(t_a + BT, t_a + BT + H)], "the window is (tAction + blocktime, tAction + blocktime + H_MARKOUT]", reads)
+    minted = sum(r["minted"] for r in w.v.records.values()) - m0
+    check(w.v.pending is None and w.v.bank.reserveShares == 0 and w.v.S == S0 - exp[2] + minted and
+          ("Settled", pd["charge0"], exp[0], T0 + 40, False) in w.v.events, "settlement burns burnS and releases the rest",
+          (S0 - w.v.S, exp))
+    conserved(w, "after settlement")
+    # an unreadable window burns the whole reserve, and the withdrawal in that call succeeds
+    w = World()
+    w.ref.fail_window = lambda a, b: True
+    w.place(T0 - 1000, T0 + 1000)
+    rs, S0, res = w.v.bank.reserveShares, w.v.S, w.v.pending["reserve"]
+    m0 = sum(r["minted"] for r in w.v.records.values())
+    w.step(13)
+    out = w.v.withdraw(10 ** 18, w.block, w.ts())
+    w.depositor -= 10 ** 18
+    minted = sum(r["minted"] for r in w.v.records.values()) - m0
+    check(out[0] > 0 and w.v.pending is None and w.v.S == S0 - rs - 10 ** 18 + minted and
+          ("Settled", w.v.events[-1][1] if w.v.events else None) and any(e[0] == "Settled" and e[4] for e in w.v.events),
+          "a failed window read burns the whole reserve; the withdrawal succeeds", (S0 - w.v.S, rs))
+    conserved(w, "fallback settlement")
+    # a breach while pending: the reserve follows at settlement into the forfeit drip
+    st = {"ref": T0}
+    w = World(ref_fn=lambda ts: st["ref"])
+    w.place(T0 - 1000, T0 + 1000)
+    st["ref"] = T0 + 2500
+    w.keepalive_run(t.CURE_BLOCKS + 3 * t.GRID)
+    check(w.v.pending is not None, "still pending (no vault call)")
+    w.v.hook.pendingBreaches, rs = w.v.hook.pendingBreaches, w.v.bank.reserveShares
+    w.poke()
+    check(w.v.pending is None and w.v.bank.reserveShares == 0 and w.v.bank.mode == R.BREACHED,
+          "a breach processed after settlement; nothing escapes")
+    conserved(w, "breach after a pending action")
+    # a new action settles the pending one first; NAV_MAX caps deposits at the re-based NAV0
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.keepalive_run(t.COOLDOWN)
+    w.v.rebalance_swap(False, 10 ** 15, w.block, w.ts())
+    check(any(e[0] == "Settled" for e in w.v.events) and w.v.pending is not None, "a new action settles the pending one first")
+    tier = R.Tier(**{**t.__dict__, "NAV_MAX": 0})
+    w = World(tier=tier)
+    try:
+        w.deposit(10 ** 18)
+        check(False, "a deposit above NAV_MAX must revert")
+    except R.Revert as ex:
+        check(ex.err == "NavCap", "NAV_MAX caps deposits", ex.err)
+    # maxCharge and the vault's own move
+    w = World()
+    try:
+        w.v.set_positions(T0 - 1000, T0 + 1000, R.Vault.NO_PRESWAP, w.block, w.ts(), max_charge=0)
+        check(False, "charge0 + reserve above maxCharge must revert")
+    except R.Revert as ex:
+        check(ex.err == "MaxCharge", "maxCharge", ex.err)
+    w = World(third_L=0)
+    s_t = sqrt_at(T0 + 30) + 7
+    ch, p, burn, d = w.v.set_positions(T0 - 1000, T0 + 1000, R.Vault.NO_PRESWAP, w.block, w.ts(), move_to=s_t)
+    check(w.v.pending["before"].d() == R.Holdings(150_000 * USDC, 50 * ETH).d() and w.v.h.lo == T0 - 1000,
+          "the move in an empty region is free; NAV_before uses the holdings before the move")
+    w = World(third_L=10 ** 19)
+    try:
+        w.v.set_positions(T0 - 1000, T0 + 1000, R.Vault.NO_PRESWAP, w.block, w.ts(), move_to=sqrt_at(T0 + 4000))
+        check(False, "a move the idle cannot pay for must revert")
+    except R.Revert as ex:
+        check(ex.err in ("SwapCap", "Fence"), "an unpayable or out-of-fence move reverts", ex.err)
+    # the s0 leg: a pre-move spot away from the reference prices the action
+    w = World(third_L=10 ** 17)
+    w.v.pool.push_to(sqrt_at(T0 - 40))
+    w.step(1)
+    before = w.v.h.copy()
+    ch, p, burn, d = w.v.set_positions(T0 - 1000, T0 + 1000, R.Vault.NO_PRESWAP, w.block, w.ts(), move_to=sqrt_at(T0))
+    check(w.v.pending["before"].d() == before.d(), "the pending record keeps the holdings before the move")
+    after, s0p, ssp = w.v.pending["after"], sqrt_at(T0 - 40), w.v.pool.s
+    legs = [R.value(before, x)[0] - R.value(after, x)[0] for x in (s0p, sqrt_at(T0))]
+    check(ch >= max(0, legs[0]) and ch == max([0] + legs + [R.value(before, R.get_sqrt_price_at_tick(T0))[0] -
+                                                              R.value(after, R.get_sqrt_price_at_tick(T0))[0]]) or ch >= legs[0],
+          "the pre-move spot s0 is a charge leg", (ch, legs))
+
+    # --- mutation ratchets (repair C) ---
+    # the move through third-party liquidity pays from idle: holdings after the move = before − in + out
+    w = World(third_L=10 ** 17)
+    clone = _copy.deepcopy(w.v.pool)
+    ain, aout, zfo = clone.push_to(sqrt_at(T0 + 30))
+    i0, i1 = w.v.h.idle0, w.v.h.idle1
+    try:
+        w.v.set_positions(T0 - 1000, T0 + 1000, R.Vault.NO_PRESWAP, w.block, w.ts(), move_to=sqrt_at(T0 + 30))
+    except R.Revert:
+        pass
+    v2 = World(third_L=10 ** 17).v
+    v2._remove_old()
+    v2._move(sqrt_at(T0 + 30))
+    check(not zfo and ain > 0 and aout > 0 and (v2.h.idle0, v2.h.idle1) == (i0 + aout, i1 - ain),
+          "the vault's move pays the input from idle and receives the output", (ain, aout))
+    v3 = World(third_L=10 ** 17).v
+    c3 = _copy.deepcopy(v3.pool)
+    a3, o3, z3 = c3.push_to(sqrt_at(T0 - 30))
+    v3._move(sqrt_at(T0 - 30))
+    check(z3 and (v3.h.idle0, v3.h.idle1) == (i0 - a3, i1 + o3), "a downward move pays token0 from idle")
+    # SwapCap at the exact idle boundary, both directions
+    for target, side in ((sqrt_at(T0 + 30), 1), (sqrt_at(T0 - 30), 0)):
+        for short, want in ((0, None), (1, "SwapCap")):
+            vv = World(third_L=10 ** 17).v
+            cc = _copy.deepcopy(vv.pool)
+            need = cc.push_to(target)[0]
+            if side:
+                vv.h.idle1 = need - short
+            else:
+                vv.h.idle0 = need - short
+            try:
+                vv._move(target)
+                got = None
+            except R.Revert as ex:
+                got = ex.err
+            check(got == want, "the move's idle check is exact on the paying side", (side, short, got))
+    # maxCharge at its exact boundary and between charge0 and charge0 + reserve
+    w = World(third_L=10 ** 17)
+    w.v.pool.push_to(sqrt_at(T0 - 40))
+    w.step(1)
+    probe = _copy.deepcopy(w.v)
+    probe.set_positions(T0 - 1000, T0 + 1000, R.Vault.NO_PRESWAP, w.block, w.ts(), move_to=sqrt_at(T0))
+    c0, res = probe.pending["charge0"], probe.pending["reserve"]
+    check(c0 > 0 and res > 0, "probe: a charged action with a reserve", (c0, res))
+    for mc, want in ((c0 + res, None), (c0 + res - 1, "MaxCharge"), (c0 + res // 2, "MaxCharge")):
+        vv = _copy.deepcopy(w.v)
+        try:
+            vv.set_positions(T0 - 1000, T0 + 1000, R.Vault.NO_PRESWAP, w.block, w.ts(), move_to=sqrt_at(T0), max_charge=mc)
+            got = None
+        except R.Revert as ex:
+            got = ex.err
+        check(got == want, "maxCharge bounds charge0 + reserve exactly", (mc - c0 - res, got))
+    # settlement: the record's charge gains the extra; the released reserve enters the current epoch's cohort
+    def win_hi(start, end):
+        return T0 + 40
+    w = World(tier=R.Tier(**{**t.__dict__, "m_perBlock": 0}))   # no base, so the cohort holds only the released shares
+    w.ref.window = win_hi
+    e_a = w.block // t.EPOCH
+    w.v.bank.cohorts[e_a % R.RING] = [e_a, 10 ** 22]   # unvested pay, so the reserve is taken from the bank
+    w.v.bank.bondShares -= 10 ** 22                     # (moved from the bond: supply unchanged)
+    w.place(T0 - 1000, T0 + 1000)
+    w.step(13)
+    e_now = w.block // t.EPOCH
+    w.v.bank.cohorts = [[e_now - 9, 0] for _ in range(R.RING)]   # isolate the released shares (stale epochs, empty)
+    ch_before = w.v.rec(e_now)["charge"]
+    rs, rb, S0 = w.v.bank.reserveShares, w.v.bank.reserveBond, w.v.S
+    w.v.settle(w.block, w.ts())
+    ev = [e for e in w.v.events if e[0] == "Settled"][-1]
+    x = S0 - w.v.S
+    rel = (rs - rb) - min(x, rs - rb)
+    check(w.v.rec(e_now)["charge"] == ch_before + ev[2], "the settlement's extra is recorded in the epoch's charge")
+    slot = w.v.bank.cohorts[e_now % R.RING]
+    check(rs - rb > 0 and rel > 0 and slot == [e_now, rel] and sum(c[1] for c in w.v.bank.cohorts) == rel,
+          "the released reserve enters the current epoch's cohort", (slot, e_now, rel, ev))
+    # the fallback event carries (charge0, reserve, 0, True)
+    w = World()
+    w.ref.fail_window = lambda a, b: True
+    w.place(T0 - 1000, T0 + 1000)
+    pd = w.v.pending
+    w.step(13)
+    w.v.settle(w.block, w.ts())
+    check(("Settled", pd["charge0"], pd["reserve"], 0, True) in w.v.events, "the fallback settlement event is exact")
+    # NAV_MAX at its exact boundary (NAV0 after the re-base equal to the cap passes; one wei lower reverts)
+    w = World()
+    probe = _copy.deepcopy(w.v)
+    probe.deposit(10 ** 22, w.block, w.ts())
+    cap = probe.NAV0
+    for nm, want in ((cap, None), (cap - 1, "NavCap")):
+        vv = _copy.deepcopy(w.v)
+        vv.t = R.Tier(**{**t.__dict__, "NAV_MAX": nm})
+        try:
+            vv.deposit(10 ** 22, w.block, w.ts())
+            got = None
+        except R.Revert as ex:
+            got = ex.err
+        check(got == want, "NAV_MAX is inclusive", (nm - cap, got))
+
+
 def main():
     rng = random.Random(20261115)
     for fn in (props_ledger, props_mint, props_bank, props_drip, headroom_exact, props_placement):
@@ -2137,7 +2445,7 @@ def main():
     for fn in (rules_med9, props_saturation, props_ladder, props_units, rules_pay, rules_gate_leg, rules_clock, rules_actions,
                rules_r2, rules_r3, rules_r4, rules_r4b, rules_r5, rules_r6, rules_r7, rules_r7b, rules_r7c, rules_r7d, rules_r8, scenario_base_and_vesting, scenario_live_leg, scenario_no_read_when_not_vestable,
                scenario_breach_and_removal, scenario_reset_and_registration, scenario_gap, scenario_actions,
-               scenario_deltamin, scenario_insolvent, scenario_epilogue):
+               scenario_deltamin, scenario_insolvent, scenario_epilogue, rules_markout):
         _run(fn)
     print(f"SUMMARY named_failures={len(FAILS)} crashes={len(CRASHES)} checks={N_CHECKS[0]}")
     if FAILS or CRASHES:

@@ -123,14 +123,15 @@ contract TouchstoneHook is BaseHook, Extsload, ITouchstoneHook {
         if (t.REF_WINDOW == 0 || t.GRID == 0 || t.EPOCH % t.GRID != 0) revert BadTier();
         // [MU-141] the tier's clock invariants hold on chain, not only in the deploy script: whole-second blocks on
         // the grid and a reset that needs at least two consecutive in-range anchors
+        // [MU-143] whole-second blocks on the grid
         if (t.GRID_SEC == 0 || t.GRID_SEC % t.GRID != 0 || t.RESET_RUN < 2) revert BadTier();
         // [MU-142] the cure window covers the edge wait, two grids of freshness, the reference window and a grid
         if (
             uint256(t.CURE_BLOCKS)
                 < uint256(t.EDGE_DELAY) + 3 * uint256(t.GRID) + t.REF_WINDOW / (t.GRID_SEC / t.GRID)
         ) revert BadTier();
-        // the witness range [c - W/2, c + W/2) is aligned to the pool's tick spacing
-        if (t.W_TICKS <= 0 || (t.W_TICKS / 2) % a.tickSpacing != 0) revert BadTier();
+        // [MU-144] the witness range [c - W/2, c + W/2) is W wide and aligned to the pool's tick spacing
+        if (t.W_TICKS <= 0 || t.W_TICKS % (2 * a.tickSpacing) != 0) revert BadTier();
         IUniswapV3PoolOracle r = IUniswapV3PoolOracle(t.REF_POOL);
         // [MU-114] the reference prices the same pair in the same orientation
         if (r.token0() != Currency.unwrap(a.currency0) || r.token1() != Currency.unwrap(a.currency1)) revert BadRef();

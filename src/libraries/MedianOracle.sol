@@ -32,6 +32,7 @@ library MedianOracle {
                 }
                 a[j] = x;
             }
+            // [MU-145] the lower median of the newest min(count, 9) entries
             return a[(n - 1) / 2];
         }
     }

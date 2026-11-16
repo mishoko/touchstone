@@ -1438,8 +1438,8 @@
    "killer_id": "F-4",
    "kill": "test_F_4__failedRollIsFailSoft",
    "file": "src/TouchstoneHook.sol",
-   "find": "try this.witnessStep(epoch) returns (uint256 a, uint256 b, uint128 l) {\n            (fg0, fg1, lw) = (a, b, l);\n        } catch {}",
-   "replace": "(fg0, fg1, lw) = this.witnessStep(epoch);",
+   "find": "try this.witnessStep(epoch) returns (uint256 a, uint256 b, uint128 l) {\n            (fg0, fg1, lw) = (a, b, l);\n            // the flag describes the live witness: a failed roll leaves both unchanged\n            _witnessFallback = fallbackUsed;\n        } catch {}",
+   "replace": "(fg0, fg1, lw) = this.witnessStep(epoch);\n        _witnessFallback = fallbackUsed;",
    "status": "pending"
   },
   {
@@ -1561,6 +1561,39 @@
    "file": "src/TouchstoneHook.sol",
    "find": "< uint256(t.EDGE_DELAY) + 3 * uint256(t.GRID) + t.REF_WINDOW / (t.GRID_SEC / t.GRID)",
    "replace": "< 0",
+   "status": "pending"
+  },
+  {
+   "id": "MU-143",
+   "area": "guards",
+   "desc": "the constructor accepts a GRID_SEC that is not a whole number of blocks of the grid",
+   "killer_id": "U-clock",
+   "kill": "test_U_clock__constructorRejectsTiersThatBreakTheClock",
+   "file": "src/TouchstoneHook.sol",
+   "find": "t.GRID_SEC == 0 || t.GRID_SEC % t.GRID != 0 ||",
+   "replace": "t.GRID_SEC == 0 ||",
+   "status": "pending"
+  },
+  {
+   "id": "MU-144",
+   "area": "witness",
+   "desc": "the constructor accepts a W_TICKS that is not a multiple of twice the tick spacing (misaligned or narrower witness)",
+   "killer_id": "U-clock",
+   "kill": "test_U_clock__constructorRejectsTiersThatBreakTheClock",
+   "file": "src/TouchstoneHook.sol",
+   "find": "t.W_TICKS <= 0 || t.W_TICKS % (2 * a.tickSpacing) != 0",
+   "replace": "t.W_TICKS <= 0",
+   "status": "pending"
+  },
+  {
+   "id": "MU-145",
+   "area": "additional",
+   "desc": "med9 returns the upper median for an even count",
+   "killer_id": "F-2",
+   "kill": "test_F_2__ringMed9EqualsSortOfTheLastNine",
+   "file": "src/libraries/MedianOracle.sol",
+   "find": "// [MU-145] the lower median of the newest min(count, 9) entries\n            return a[(n - 1) / 2];",
+   "replace": "// [MU-145] the lower median of the newest min(count, 9) entries\n            return a[n / 2];",
    "status": "pending"
   }
  ]

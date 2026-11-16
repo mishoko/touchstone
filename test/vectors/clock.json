@@ -1,6 +1,6 @@
 {
  "schema": "touchstone-vectors/1",
- "specVersion": "2.30",
+ "specVersion": "2.31",
  "conventions": {
   "fn": "HookHarness.events: the hook (TouchstoneHook with an internal virtual _slot0() seam and a scripted MockRefPool) is constructed fresh per case; in.witness sets witLo/witHi by a harness setter; then each event of in.events runs in order at vm.roll(block) / vm.warp(ts) with the pool slot0 = (sqrtPrice, tick).",
   "events": "each event is {op: {block, ts, sqrtPrice, tick, ref, ...}}; op \u2208 snapshot (snapshotIfNewBlock), refreshRef, refresh (the internal _refresh: steps 1 and 5 only, exposed by the harness), arm (armAtSeed; the vault's seed snapshot is a separate preceding event), setVaultRange {lo, hi, liveTick} (called as the vault), ackBreaches {n} (called as the vault). `ref` is what every MockRefPool observe returns during that event: a TWAP tick, or \"fail\" (the call reverts inside the mock).",
@@ -15,9 +15,10 @@
    "clock-012-park-lo-plus1": "\u03c4_v needs the pool sqrtPrice strictly inside (sqrtAt(lo), sqrtAt(hi))",
    "clock-013-park-hi-exact": "\u03c4_v needs the pool sqrtPrice strictly inside (sqrtAt(lo), sqrtAt(hi))",
    "clock-014-park-hi-minus1": "\u03c4_v needs the pool sqrtPrice strictly inside (sqrtAt(lo), sqrtAt(hi))",
-   "clock-024-demo-anchor-phase0": "anchor k = floor(ts / GRID_SEC); one read per anchor",
-   "clock-025-demo-anchor-phase150": "anchor k = floor(ts / GRID_SEC); one read per anchor",
-   "clock-026-demo-anchor-phase299": "anchor k = floor(ts / GRID_SEC); one read per anchor"
+   "clock-015-park-hi-exact-downcross": "slot0 (sqrtAt(hi), hi - 1): the price is on the edge, not inside",
+   "clock-025-demo-anchor-phase0": "anchor k = floor(ts / GRID_SEC); one read per anchor",
+   "clock-026-demo-anchor-phase150": "anchor k = floor(ts / GRID_SEC); one read per anchor",
+   "clock-027-demo-anchor-phase299": "anchor k = floor(ts / GRID_SEC); one read per anchor"
   }
  },
  "cases": [
@@ -7236,7 +7237,374 @@
    }
   },
   {
-   "id": "clock-015-dodge-pool-push",
+   "id": "clock-015-park-hi-exact-downcross",
+   "fn": "HookHarness.events",
+   "in": {
+    "tier": "TEST",
+    "witness": {
+     "lo": "0",
+     "hi": "0"
+    },
+    "events": [
+     {
+      "snapshot": {
+       "block": "8000",
+       "ts": "96000",
+       "sqrtPrice": "1446042728370400211848465323367120",
+       "tick": "196250",
+       "ref": "196250"
+      }
+     },
+     {
+      "arm": {
+       "block": "8000",
+       "ts": "96000",
+       "sqrtPrice": "1446042728370400211848465323367120",
+       "tick": "196250",
+       "ref": "196250"
+      }
+     },
+     {
+      "setVaultRange": {
+       "block": "8000",
+       "ts": "96000",
+       "sqrtPrice": "1446042728370400211848465323367120",
+       "tick": "196250",
+       "ref": "196250",
+       "lo": "195250",
+       "hi": "197250",
+       "liveTick": "196250"
+      }
+     },
+     {
+      "snapshot": {
+       "block": "8001",
+       "ts": "96012",
+       "sqrtPrice": "1520179124261311355963149899201854",
+       "tick": "197249",
+       "ref": "196250"
+      }
+     },
+     {
+      "refreshRef": {
+       "block": "8020",
+       "ts": "96240",
+       "sqrtPrice": "1520179124261311355963149899201854",
+       "tick": "197249",
+       "ref": "196250"
+      }
+     },
+     {
+      "refreshRef": {
+       "block": "8040",
+       "ts": "96480",
+       "sqrtPrice": "1520179124261311355963149899201854",
+       "tick": "197249",
+       "ref": "196250"
+      }
+     },
+     {
+      "refreshRef": {
+       "block": "8060",
+       "ts": "96720",
+       "sqrtPrice": "1520179124261311355963149899201854",
+       "tick": "197249",
+       "ref": "196250"
+      }
+     }
+    ]
+   },
+   "out": {
+    "steps": [
+     {
+      "obs": {
+       "med9": "196250",
+       "tickSpot": "196250",
+       "refTick": "0",
+       "refCachedAt": "0",
+       "refFresh": false,
+       "resetStreak": "0",
+       "gapSinceVerify": false,
+       "emptyRange": true,
+       "tauV": "0",
+       "tauB": "0",
+       "outBlocks": "0",
+       "breachSeq": "0",
+       "pendingBreaches": "0",
+       "lastPendingBlock": "0",
+       "tauVAtLastPending": "0",
+       "gridIndex": "400",
+       "epoch": "66"
+      },
+      "state": {
+       "refGrid": "0",
+       "lastSnap": "8000",
+       "armed": false,
+       "vaultLo": "0",
+       "vaultHi": "0",
+       "epochStartRef": "0"
+      },
+      "frozen": [],
+      "emitted": []
+     },
+     {
+      "obs": {
+       "med9": "196250",
+       "tickSpot": "196250",
+       "refTick": "196250",
+       "refCachedAt": "8000",
+       "refFresh": true,
+       "resetStreak": "0",
+       "gapSinceVerify": false,
+       "emptyRange": true,
+       "tauV": "0",
+       "tauB": "0",
+       "outBlocks": "0",
+       "breachSeq": "0",
+       "pendingBreaches": "0",
+       "lastPendingBlock": "0",
+       "tauVAtLastPending": "0",
+       "gridIndex": "400",
+       "epoch": "66"
+      },
+      "state": {
+       "refGrid": "400",
+       "lastSnap": "8000",
+       "armed": true,
+       "vaultLo": "0",
+       "vaultHi": "0",
+       "epochStartRef": "196250"
+      },
+      "frozen": [],
+      "emitted": [
+       {
+        "RefRefreshed": {
+         "grid": "400",
+         "tick": "196250"
+        }
+       }
+      ]
+     },
+     {
+      "obs": {
+       "med9": "196250",
+       "tickSpot": "196250",
+       "refTick": "196250",
+       "refCachedAt": "8000",
+       "refFresh": true,
+       "resetStreak": "0",
+       "gapSinceVerify": false,
+       "emptyRange": false,
+       "tauV": "0",
+       "tauB": "0",
+       "outBlocks": "0",
+       "breachSeq": "0",
+       "pendingBreaches": "0",
+       "lastPendingBlock": "0",
+       "tauVAtLastPending": "0",
+       "gridIndex": "400",
+       "epoch": "66"
+      },
+      "state": {
+       "refGrid": "400",
+       "lastSnap": "8000",
+       "armed": true,
+       "vaultLo": "195250",
+       "vaultHi": "197250",
+       "epochStartRef": "196250"
+      },
+      "frozen": [],
+      "emitted": [
+       {
+        "GapCleared": {
+         "kind": "0"
+        }
+       },
+       {
+        "RangeRegistered": {
+         "lo": "195250",
+         "hi": "197250",
+         "liveTick": "196250"
+        }
+       }
+      ]
+     },
+     {
+      "obs": {
+       "med9": "196250",
+       "tickSpot": "197249",
+       "refTick": "196250",
+       "refCachedAt": "8000",
+       "refFresh": true,
+       "resetStreak": "0",
+       "gapSinceVerify": false,
+       "emptyRange": false,
+       "tauV": "0",
+       "tauB": "0",
+       "outBlocks": "0",
+       "breachSeq": "0",
+       "pendingBreaches": "0",
+       "lastPendingBlock": "0",
+       "tauVAtLastPending": "0",
+       "gridIndex": "400",
+       "epoch": "66"
+      },
+      "state": {
+       "refGrid": "400",
+       "lastSnap": "8001",
+       "armed": true,
+       "vaultLo": "195250",
+       "vaultHi": "197250",
+       "epochStartRef": "196250"
+      },
+      "frozen": [],
+      "emitted": []
+     },
+     {
+      "obs": {
+       "med9": "197249",
+       "tickSpot": "197249",
+       "refTick": "196250",
+       "refCachedAt": "8020",
+       "refFresh": true,
+       "resetStreak": "1",
+       "gapSinceVerify": false,
+       "emptyRange": false,
+       "tauV": "0",
+       "tauB": "0",
+       "outBlocks": "0",
+       "breachSeq": "0",
+       "pendingBreaches": "0",
+       "lastPendingBlock": "0",
+       "tauVAtLastPending": "0",
+       "gridIndex": "401",
+       "epoch": "66"
+      },
+      "state": {
+       "refGrid": "401",
+       "lastSnap": "8020",
+       "armed": true,
+       "vaultLo": "195250",
+       "vaultHi": "197250",
+       "epochStartRef": "196250"
+      },
+      "frozen": [
+       {
+        "gridIndex": "401",
+        "med9": "196250",
+        "tauV": "0",
+        "tauB": "0"
+       }
+      ],
+      "emitted": [
+       {
+        "RefRefreshed": {
+         "grid": "401",
+         "tick": "196250"
+        }
+       }
+      ]
+     },
+     {
+      "obs": {
+       "med9": "197249",
+       "tickSpot": "197249",
+       "refTick": "196250",
+       "refCachedAt": "8040",
+       "refFresh": true,
+       "resetStreak": "0",
+       "gapSinceVerify": false,
+       "emptyRange": false,
+       "tauV": "0",
+       "tauB": "0",
+       "outBlocks": "0",
+       "breachSeq": "0",
+       "pendingBreaches": "0",
+       "lastPendingBlock": "0",
+       "tauVAtLastPending": "0",
+       "gridIndex": "402",
+       "epoch": "67"
+      },
+      "state": {
+       "refGrid": "402",
+       "lastSnap": "8040",
+       "armed": true,
+       "vaultLo": "195250",
+       "vaultHi": "197250",
+       "epochStartRef": "196250"
+      },
+      "frozen": [
+       {
+        "gridIndex": "402",
+        "med9": "197249",
+        "tauV": "0",
+        "tauB": "0"
+       }
+      ],
+      "emitted": [
+       {
+        "RefRefreshed": {
+         "grid": "402",
+         "tick": "196250"
+        }
+       },
+       {
+        "GapCleared": {
+         "kind": "1"
+        }
+       }
+      ]
+     },
+     {
+      "obs": {
+       "med9": "197249",
+       "tickSpot": "197249",
+       "refTick": "196250",
+       "refCachedAt": "8060",
+       "refFresh": true,
+       "resetStreak": "1",
+       "gapSinceVerify": false,
+       "emptyRange": false,
+       "tauV": "0",
+       "tauB": "0",
+       "outBlocks": "0",
+       "breachSeq": "0",
+       "pendingBreaches": "0",
+       "lastPendingBlock": "0",
+       "tauVAtLastPending": "0",
+       "gridIndex": "403",
+       "epoch": "67"
+      },
+      "state": {
+       "refGrid": "403",
+       "lastSnap": "8060",
+       "armed": true,
+       "vaultLo": "195250",
+       "vaultHi": "197250",
+       "epochStartRef": "196250"
+      },
+      "frozen": [
+       {
+        "gridIndex": "403",
+        "med9": "197249",
+        "tauV": "0",
+        "tauB": "0"
+       }
+      ],
+      "emitted": [
+       {
+        "RefRefreshed": {
+         "grid": "403",
+         "tick": "196250"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "clock-016-dodge-pool-push",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -7996,7 +8364,7 @@
    }
   },
   {
-   "id": "clock-016-grief-pool-held-off",
+   "id": "clock-017-grief-pool-held-off",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -8834,7 +9202,7 @@
    }
   },
   {
-   "id": "clock-017-unarmed-ring-only",
+   "id": "clock-018-unarmed-ring-only",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -9011,7 +9379,7 @@
    }
   },
   {
-   "id": "clock-018-ring-wrap-med9",
+   "id": "clock-019-ring-wrap-med9",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -10743,7 +11111,7 @@
    }
   },
   {
-   "id": "clock-019-witness-taub",
+   "id": "clock-020-witness-taub",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -11296,7 +11664,7 @@
    }
   },
   {
-   "id": "clock-020-frozen-last-eight",
+   "id": "clock-021-frozen-last-eight",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -11557,7 +11925,7 @@
    }
   },
   {
-   "id": "clock-021-register-keeps-pending",
+   "id": "clock-022-register-keeps-pending",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -12456,7 +12824,7 @@
    }
   },
   {
-   "id": "clock-022-latch-block-and-tauv",
+   "id": "clock-023-latch-block-and-tauv",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -13496,7 +13864,7 @@
    }
   },
   {
-   "id": "clock-023-epoch-start-ref",
+   "id": "clock-024-epoch-start-ref",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -14032,7 +14400,7 @@
    }
   },
   {
-   "id": "clock-024-demo-anchor-phase0",
+   "id": "clock-025-demo-anchor-phase0",
    "fn": "HookHarness.events",
    "in": {
     "tier": "DEMO",
@@ -14345,7 +14713,7 @@
    }
   },
   {
-   "id": "clock-025-demo-anchor-phase150",
+   "id": "clock-026-demo-anchor-phase150",
    "fn": "HookHarness.events",
    "in": {
     "tier": "DEMO",
@@ -14658,7 +15026,7 @@
    }
   },
   {
-   "id": "clock-026-demo-anchor-phase299",
+   "id": "clock-027-demo-anchor-phase299",
    "fn": "HookHarness.events",
    "in": {
     "tier": "DEMO",
@@ -14971,7 +15339,7 @@
    }
   },
   {
-   "id": "clock-027-test-anchor-phase150",
+   "id": "clock-028-test-anchor-phase150",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -15357,7 +15725,7 @@
    }
   },
   {
-   "id": "clock-028-refresh-after-failed-snapshot-read",
+   "id": "clock-029-refresh-after-failed-snapshot-read",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -15617,7 +15985,7 @@
    }
   },
   {
-   "id": "clock-029-random-00",
+   "id": "clock-030-random-00",
    "fn": "HookHarness.events",
    "in": {
     "tier": "DEMO",
@@ -16565,7 +16933,7 @@
    }
   },
   {
-   "id": "clock-030-random-01",
+   "id": "clock-031-random-01",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -18279,7 +18647,7 @@
    }
   },
   {
-   "id": "clock-031-random-02",
+   "id": "clock-032-random-02",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -19567,7 +19935,7 @@
    }
   },
   {
-   "id": "clock-032-random-03",
+   "id": "clock-033-random-03",
    "fn": "HookHarness.events",
    "in": {
     "tier": "DEMO",
@@ -21315,7 +21683,7 @@
    }
   },
   {
-   "id": "clock-033-random-04",
+   "id": "clock-034-random-04",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -23038,7 +23406,7 @@
    }
   },
   {
-   "id": "clock-034-random-05",
+   "id": "clock-035-random-05",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -24254,7 +24622,7 @@
    }
   },
   {
-   "id": "clock-035-random-06",
+   "id": "clock-036-random-06",
    "fn": "HookHarness.events",
    "in": {
     "tier": "DEMO",
@@ -26188,7 +26556,7 @@
    }
   },
   {
-   "id": "clock-036-random-07",
+   "id": "clock-037-random-07",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -27588,7 +27956,7 @@
    }
   },
   {
-   "id": "clock-037-random-08",
+   "id": "clock-038-random-08",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -28892,7 +29260,7 @@
    }
   },
   {
-   "id": "clock-038-random-09",
+   "id": "clock-039-random-09",
    "fn": "HookHarness.events",
    "in": {
     "tier": "DEMO",
@@ -30633,7 +31001,7 @@
    }
   },
   {
-   "id": "clock-039-random-10",
+   "id": "clock-040-random-10",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -32199,7 +32567,7 @@
    }
   },
   {
-   "id": "clock-040-random-11",
+   "id": "clock-041-random-11",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -33690,7 +34058,7 @@
    }
   },
   {
-   "id": "clock-041-random-12",
+   "id": "clock-042-random-12",
    "fn": "HookHarness.events",
    "in": {
     "tier": "DEMO",
@@ -35585,7 +35953,7 @@
    }
   },
   {
-   "id": "clock-042-random-13",
+   "id": "clock-043-random-13",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -36908,7 +37276,7 @@
    }
   },
   {
-   "id": "clock-043-random-14",
+   "id": "clock-044-random-14",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -38064,7 +38432,7 @@
    }
   },
   {
-   "id": "clock-044-random-15",
+   "id": "clock-045-random-15",
    "fn": "HookHarness.events",
    "in": {
     "tier": "DEMO",
@@ -39583,7 +39951,7 @@
    }
   },
   {
-   "id": "clock-045-random-16",
+   "id": "clock-046-random-16",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -41120,7 +41488,7 @@
    }
   },
   {
-   "id": "clock-046-random-17",
+   "id": "clock-047-random-17",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -42720,7 +43088,7 @@
    }
   },
   {
-   "id": "clock-047-random-18",
+   "id": "clock-048-random-18",
    "fn": "HookHarness.events",
    "in": {
     "tier": "DEMO",
@@ -44279,7 +44647,7 @@
    }
   },
   {
-   "id": "clock-048-random-19",
+   "id": "clock-049-random-19",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -45952,7 +46320,7 @@
    }
   },
   {
-   "id": "clock-049-random-20",
+   "id": "clock-050-random-20",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -47805,7 +48173,7 @@
    }
   },
   {
-   "id": "clock-050-random-21",
+   "id": "clock-051-random-21",
    "fn": "HookHarness.events",
    "in": {
     "tier": "DEMO",
@@ -49686,7 +50054,7 @@
    }
   },
   {
-   "id": "clock-051-random-22",
+   "id": "clock-052-random-22",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -51401,7 +51769,7 @@
    }
   },
   {
-   "id": "clock-052-random-23",
+   "id": "clock-053-random-23",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -53280,7 +53648,7 @@
    }
   },
   {
-   "id": "clock-053-random-24",
+   "id": "clock-054-random-24",
    "fn": "HookHarness.events",
    "in": {
     "tier": "DEMO",
@@ -54379,7 +54747,7 @@
    }
   },
   {
-   "id": "clock-054-random-25",
+   "id": "clock-055-random-25",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -56001,7 +56369,7 @@
    }
   },
   {
-   "id": "clock-055-random-26",
+   "id": "clock-056-random-26",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -57065,7 +57433,7 @@
    }
   },
   {
-   "id": "clock-056-random-27",
+   "id": "clock-057-random-27",
    "fn": "HookHarness.events",
    "in": {
     "tier": "DEMO",
@@ -58492,7 +58860,7 @@
    }
   },
   {
-   "id": "clock-057-random-28",
+   "id": "clock-058-random-28",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",
@@ -60064,7 +60432,7 @@
    }
   },
   {
-   "id": "clock-058-random-29",
+   "id": "clock-059-random-29",
    "fn": "HookHarness.events",
    "in": {
     "tier": "TEST",

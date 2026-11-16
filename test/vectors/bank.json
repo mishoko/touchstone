@@ -1,6 +1,6 @@
 {
  "schema": "touchstone-vectors/1",
- "specVersion": "2.30",
+ "specVersion": "2.31",
  "conventions": {
   "fn": "FeeBank.apply(Bank storage b, Op op, bytes args) -> (burnShares, payShares, a, b2); in.bank is the state before, out.bank after; out = {revert: <error>} when apply reverts (state unchanged).",
   "Op": "enum Op {Accrue, Breach, VestTime, Drip, Charge, Place, Retire, Claim, TopUp, Release, Settle}; in.op is the ordinal; the case id names the op.",

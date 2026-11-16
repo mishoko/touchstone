@@ -112,44 +112,53 @@ contract HookGasForkTest is Test {
         assertGt(oldestTarget, uint32(next), "both ends lie inside the ring");
     }
 
-    function _measure(uint16 n, string memory label) internal {
-        // an anchor boundary 300 s ago; the ring's newest observation 1 s ago
+    /// @dev Measures, on a full ring of `n` observations, the cold gas of the reference reads at three windows: a
+    ///      typical one, the anchored read that `script/oracle_worst_window.py` finds worst (`sWorst` seconds into the
+    ///      anchor; it is also the read of the refresh block measured below) and the worst markout read `(mA, mB]`
+    ///      (`tryWindow` at a late settlement). Asserts REF_GAS_CAP >= 1.5x the largest and the refresh block's bound.
+    function _measure(uint16 n, uint32 sWorst, uint32 mA, uint32 mB, string memory label) internal {
         uint256 tk = (vm.getBlockTimestamp() / tier.GRID_SEC + 1) * tier.GRID_SEC;
-        vm.warp(tk + 300);
+        vm.warp(tk + sWorst); // the refresh block reads the TWAP ending at the anchor, sWorst seconds ago
         vm.roll(vm.getBlockNumber() + tier.GRID);
         uint32 nowTs = uint32(vm.getBlockTimestamp());
-        // the worst single read: a window with both ends inside the ring (the anchored read and tryWindow)
-        uint32[] memory ago = new uint32[](2);
-        (ago[0], ago[1]) = (tier.REF_WINDOW + 120, 120);
-        uint32[] memory targets = new uint32[](4);
-        (targets[0], targets[1]) = (nowTs - ago[0], nowTs - ago[1]);
-        (targets[2], targets[3]) = (uint32(tk - tier.REF_WINDOW), uint32(tk));
+        uint32[2][3] memory w = [[tier.REF_WINDOW + 120, uint32(120)], [sWorst + tier.REF_WINDOW, sWorst], [mA, mB]];
+        uint32[] memory targets = new uint32[](6);
+        for (uint256 i; i < 3; ++i) {
+            (targets[2 * i], targets[2 * i + 1]) = (nowTs - w[i][0], nowTs - w[i][1]);
+        }
         _fillRing(n, nowTs - 1, targets);
-        _assertWorstPath(n, nowTs - ago[0], nowTs - ago[1]);
-        vm.cool(address(refPool));
-        uint256 g = gasleft();
-        refPool.observe(ago);
-        uint256 read = g - gasleft();
-        vm.cool(address(refPool));
-        (bool ok,) = hook.tryWindow(ago[0], ago[1]);
-        assertTrue(ok, "the capped read succeeds");
-        // the refresh block: the snapshot reads the TWAP ending at the anchor (300 s ago, inside the ring)
-        _assertWorstPath(n, uint32(tk - tier.REF_WINDOW), uint32(tk));
+        uint256 worst;
+        uint32[] memory ago = new uint32[](2);
+        for (uint256 i; i < 3; ++i) {
+            (ago[0], ago[1]) = (w[i][0], w[i][1]);
+            _assertWorstPath(n, nowTs - ago[0], nowTs - ago[1]);
+            vm.cool(address(refPool));
+            uint256 g = gasleft();
+            refPool.observe(ago);
+            uint256 read = g - gasleft();
+            console.log(label, ago[0], ago[1], read);
+            if (read > worst) worst = read;
+            vm.cool(address(refPool));
+            (bool ok,) = hook.tryWindow(ago[0], ago[1]);
+            assertTrue(ok, "the capped read succeeds");
+        }
         vm.cool(address(refPool));
         vm.cool(address(hook));
-        g = gasleft();
+        uint256 g0 = gasleft();
         hook.refreshRef();
-        uint256 refreshBlock = g - gasleft();
-        console.log(label, read, refreshBlock);
+        uint256 refreshBlock = g0 - gasleft();
+        console.log(label, "worst read, refresh block", worst, refreshBlock);
         assertEq(hook.obs().refCachedAt, vm.getBlockNumber());
-        assertLe(read * 3 / 2, tier.REF_GAS_CAP, "REF_GAS_CAP is at least 1.5x the worst read");
+        assertLe(worst * 3 / 2, tier.REF_GAS_CAP, "REF_GAS_CAP is at least 1.5x the worst read");
         assertLe(refreshBlock, uint256(tier.REFRESH_GAS_MIN) + 20_000);
     }
 
     function test_G_1b__refreshBlockGasOnMainnetFork() public {
         if (!_setUpFork()) return;
         (,,, uint16 card,,,) = refPool.slot0();
-        _measure(card, "observed cardinality, full ring: worst read, refresh block");
-        _measure(65_535, "cardinality 65535, full ring: worst read, refresh block");
+        // windows from `python3 script/oracle_worst_window.py <n>` (mainnet tier); 723 is the cardinality observed
+        // when they were computed (other cardinalities still measure valid, possibly milder, windows)
+        _measure(card, 2124, 4416, 4296, "observed cardinality, full ring:");
+        _measure(65_535, 3048, 393_312, 393_192, "cardinality 65535, full ring:");
     }
 }

@@ -491,7 +491,7 @@ contract HookTest is HookBase {
         uint256 bt = tier.GRID_SEC / tier.GRID;
         uint32 cureMin = uint32(tier.EDGE_DELAY + 3 * tier.GRID + tier.REF_WINDOW / bt);
         Tier memory t;
-        for (uint256 i; i < 9; ++i) {
+        for (uint256 i; i < 10; ++i) {
             t = tier;
             if (i == 0) t.CURE_BLOCKS = 0;
             if (i == 1) t.CURE_BLOCKS = cureMin - 1;
@@ -502,6 +502,7 @@ contract HookTest is HookBase {
             if (i == 6) t.W_TICKS = 0;
             if (i == 7) t.W_TICKS = 2 * (10 * 100 + 5); // W/2 not a multiple of the tick spacing
             if (i == 8) t.W_TICKS = -2000;
+            if (i == 9) t.W_TICKS = 2001; // odd: W/2 is aligned but the witness would be 2,000 wide, not W
             bytes memory init = abi.encodePacked(type(TouchstoneHook).creationCode, abi.encode(_args(t, VAULT)));
             (bytes32 salt,) = d.mine(init);
             vm.expectRevert(ITouchstoneHook.BadTier.selector);

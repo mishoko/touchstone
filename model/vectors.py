@@ -695,9 +695,11 @@ class ClockSeq:
     def ts(self, b):
         return b * self.t.BLOCKTIME + self.phase
 
-    def set_price(self, tick=None, sqrt=None):
+    def set_price(self, tick=None, sqrt=None, pool_tick=None):
+        """The pool's slot0. `pool_tick` overrides the tick derived from the price: a v4 swap that stops exactly on
+        an initialized tick from above stores that tick minus one (the edge's other representation)."""
         self.sqrt = sqrt if sqrt is not None else sqrt_at(tick)
-        self.tick = get_tick_at_sqrt_price(self.sqrt)
+        self.tick = pool_tick if pool_tick is not None else get_tick_at_sqrt_price(self.sqrt)
 
     def add(self, op, b, ref=T0, **kw):
         self.ev.append({op: dict(block=b, ts=self.ts(b), sqrtPrice=self.sqrt, tick=self.tick, ref=ref, **kw)})
@@ -807,6 +809,14 @@ def clock_cases():
         s.touches(8000 + G, 3, G)
         st = add(tag, s, note="τ_v needs the pool sqrtPrice strictly inside (sqrtAt(lo), sqrtAt(hi))")
         assert (st[-1]["obs"]["tauV"] > 0) == tag.endswith(("plus1", "minus1"))
+    # 8b. the upper edge reached from above: v4 stores tick hi - 1 with sqrtPrice = sqrtAt(hi); no τ_v (s06 R1-01)
+    s = ClockSeq().arm(8000)
+    s.add("setVaultRange", 8000, lo=LO, hi=HI, liveTick=T0)
+    s.set_price(sqrt=sqrt_at(HI), pool_tick=HI - 1)
+    s.add("snapshot", 8001)
+    s.touches(8000 + G, 3, G)
+    st = add("park-hi-exact-downcross", s, note="slot0 (sqrtAt(hi), hi - 1): the price is on the edge, not inside")
+    assert st[-1]["obs"]["tauV"] == 0 and st[-1]["obs"]["tickSpot"] == HI - 1
     # 9. dodge: the pool price pushed inside does not stop the clock while the reference is out
     s = ClockSeq().arm(9000)
     s.add("setVaultRange", 9000, lo=LO, hi=HI, liveTick=T0)

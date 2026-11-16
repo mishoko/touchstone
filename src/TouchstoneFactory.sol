@@ -58,6 +58,7 @@ contract TouchstoneFactory is ITouchstoneFactory {
         // ERC-20 only: the zero currency (native ETH) is rejected.
         if (c0.isAddressZero() || c1.isAddressZero()) revert BadToken();
 
+        // [MU-135] salts are bound to the caller
         bytes32 sv = keccak256(abi.encode(msg.sender, saltV));
         bytes32 sh = keccak256(abi.encode(msg.sender, saltH));
         bytes memory hookInit = abi.encodePacked(hookCreationCode, abi.encode(hookArgs));

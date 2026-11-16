@@ -48,6 +48,7 @@ contract VaultHandler is Test {
     uint256 public breachesDriven;
     uint256 public exitedWithdrawals;
     uint256 public bankSeeds;
+    uint256 public gateOpenVests;
     uint256 public i2Failures;
     string public i2Why;
     uint256 public i10Failures;
@@ -116,12 +117,14 @@ contract VaultHandler is Test {
         uint256 b0 = token0.balanceOf(a);
         uint256 b1 = token1.balanceOf(a);
         (uint128 posBefore,,) = manager.getPositionInfo(poolId, address(hv), h.lo, h.hi, bytes32(0));
+        uint256 vestedBefore = hv.bankFull().vestedUnclaimed;
         vm.prank(a);
         try hv.withdraw(s, 0, 0, a) {
             ++withdrawals;
             if (h.L > 0) ++withdrawalsWithL;
             (,,,,, uint8 mode,) = hv.bank();
             if (mode == 2) ++exitedWithdrawals;
+            if (hv.bankFull().vestedUnclaimed > vestedBefore) ++gateOpenVests;
             if (token0.balanceOf(a) - b0 != e0) _i2("token0 payout");
             if (token1.balanceOf(a) - b1 != e1) _i2("token1 payout");
             (uint128 posAfter,,) = manager.getPositionInfo(poolId, address(hv), h.lo, h.hi, bytes32(0));
@@ -248,8 +251,8 @@ contract VaultHandler is Test {
     }
 
     function _i2(string memory why) internal {
-        ++i2Failures;
-        i2Why = why;
+        // keep the first reason: later checks of the same call may only echo it
+        if (i2Failures++ == 0) i2Why = why;
     }
 
     function _roll(uint256 n) internal {

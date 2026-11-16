@@ -369,7 +369,7 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
     function _burnBank(Op op, bytes memory args) internal returns (uint256 a) {
         uint256 burned;
         (burned,, a,) = FeeBank.bankApply(_bank, op, args);
-        // [MU-167] [MU-173] the bank's burn leaves the supply, exactly
+        // [MU-167] [MU-173] [MU-174] the bank's burn leaves the supply, exactly
         if (burned > 0) _burn(address(this), burned);
     }
 

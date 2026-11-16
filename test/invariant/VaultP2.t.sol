@@ -51,6 +51,15 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         assertGe(v.balanceOf(vault), sum, "vault-held shares >= bank");
     }
 
+    /// @notice F-3, exact in the handler's domain (no unsolicited share transfers): the vault holds exactly the
+    ///         shares its bank accounts for, so a checkpoint burn can be neither short nor long.
+    function invariant_F_3__vaultHeldSharesEqualTheBankWithoutGifts() public view {
+        Bank memory b = hv.bankFull();
+        uint256 sum = uint256(b.maturedPending) + b.vestedUnclaimed + b.bondShares + b.forfeitPool + b.reserveShares;
+        for (uint256 k; k < RING; ++k) sum += b.cohorts[k].shares;
+        assertEq(v.balanceOf(vault), sum, "vault-held shares == bank");
+    }
+
     function invariant_I_2__withdrawPaysTheExactProRataShare() public view {
         assertEq(handler.i2Failures(), 0, handler.i2Why());
     }
@@ -80,6 +89,10 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         }
         assertTrue(_obs().gapSinceVerify, "a silent jump left a gap");
         handler.breakRef(0);
+        handler.place(10, 3); // a registration clears the gap
+        handler.seedBank(1, 1e20); // maturedPending: vestable now
+        handler.refresh();
+        handler.withdraw(2, 1e21 + 5); // the gate reads the live leg and opens
         handler.refresh();
         for (uint256 i; i < 3; ++i) handler.driveBreach();
         handler.withdraw(0, hv.balanceOf(a) / 2);
@@ -87,7 +100,8 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         assertEq(mode, Ladder.EXITED, "EXITED reached");
         assertGt(handler.withdrawalsWithL(), 10, "withdrawals with L > 0");
         assertGe(handler.breachesDriven(), 3, "three breaches driven");
-        assertEq(handler.bankSeeds(), 3, "bank seeded");
+        assertEq(handler.bankSeeds(), 4, "bank seeded");
+        assertGt(handler.gateOpenVests(), 0, "a withdrawal vested with the gate open (live leg read and in range)");
         assertGt(handler.exitedWithdrawals(), 0, "a withdrawal in EXITED");
         assertEq(handler.i2Failures(), 0, handler.i2Why());
         assertEq(handler.i10Failures(), 0, "I-10");

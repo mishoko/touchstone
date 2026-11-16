@@ -1903,6 +1903,17 @@
    "find": "        if (burned > 0) _burn(address(this), burned);",
    "replace": "        if (burned > 0) _burn(address(this), burned + 1);",
    "status": "KILLED"
+  },
+  {
+   "id": "MU-174",
+   "area": "additional",
+   "desc": "the checkpoint burns less than the bank owes (s08 fix review r2 F3-02)",
+   "killer_id": "U-forfeit",
+   "kill": "test_U_forfeit__dripBurnsHalfAtHalfTheDripLength",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        if (burned > 0) _burn(address(this), burned);",
+   "replace": "        if (burned > 0) _burn(address(this), burned - 1);",
+   "status": "KILLED"
   }
  ]
 }

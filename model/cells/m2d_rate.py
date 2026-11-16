@@ -215,7 +215,9 @@ def sweep(h, r, ref, etas, cap=CAP, clamp=None):
     out = dict(sq=0, c=0.0, c_t3=0.0, c_lucky=0, sq_b=0, c_b=0.0, c_b_t3=0.0, n_att=0, n_pos_sq=0, n_pos_sq_b=0,
                bind_sum=0.0, bind_n=0, bind_b_sum=0.0, bind_b_n=0)
     nav_r = R.value(h, sqrt_at(r))[0]
-    for d in DS:
+    ds = sorted(set(DS) | set(range(130, BAND + abs(r - ref) + 10, 10)))   # every legal push: up to the fence beyond the lag
+    assert max(ds) >= BAND + abs(r - ref), "the push grid must reach the guard"
+    for d in ds:
         for sg in (1, -1):
             if abs(r + sg * d - ref) > BAND:
                 continue

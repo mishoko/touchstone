@@ -41,7 +41,11 @@ def flatten(layout):
 
 
 def inspect(c):
-    r = subprocess.run(['forge', 'inspect', c, 'storageLayout', '--json'], cwd=ROOT, capture_output=True, text=True)
+    cmd = ['forge', 'inspect', c, 'storageLayout', '--json']
+    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
+    if r.returncode != 0 and 'storage layout missing from artifact' in r.stderr:
+        # a build without the storage-layout output (e.g. the test build) left a stale artifact: rebuild once
+        r = subprocess.run(cmd + ['--force'], cwd=ROOT, capture_output=True, text=True)
     if r.returncode != 0:
         raise SystemExit(f'storage layout: forge inspect {c} failed:\n{r.stderr[-1500:]}')
     return flatten(json.loads(r.stdout))

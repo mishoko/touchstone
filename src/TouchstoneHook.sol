@@ -259,11 +259,11 @@ contract TouchstoneHook is BaseHook, Extsload, ITouchstoneHook {
         _vaultHi = hi;
         _emptyRange = false;
         // [MU-099] the cache takes the live tick
-        _writeCache(liveTick, uint32(block.timestamp / GRID_SEC));
+        _writeCache(liveTick, _anchor());
         // [MU-081] registration clears the gap
         _gapSinceVerify = false;
         emit GapCleared(0);
-        // [MU-043] registration starts a run
+        // [MU-043] [MU-090] registration starts a run; pending breaches are kept
         _resetStreak = 0;
         _outBlocks = 0;
         emit RangeRegistered(lo, hi, liveTick);
@@ -369,13 +369,12 @@ contract TouchstoneHook is BaseHook, Extsload, ITouchstoneHook {
             return;
         }
         // 1. Read: the TWAP ending at the anchor, if this anchor is not cached yet. No state is written.
-        // [MU-111] [MU-105] the sample is anchored on the timestamp grid
-        uint32 k = uint32(block.timestamp / GRID_SEC);
+        uint32 k = _anchor();
         bool read = k > _refGrid;
         bool ok;
         int24 t;
         // [MU-113] the snapshot-path read is fail-soft
-        if (read) (ok, t) = _readRef(block.timestamp - uint256(k) * GRID_SEC);
+        if (read) (ok, t) = _readAnchor(k);
 
         // 2-3. Close the span [last, now) at the block-start price, crediting only the cache's freshness window.
         int24 lo = _vaultLo;
@@ -441,10 +440,10 @@ contract TouchstoneHook is BaseHook, Extsload, ITouchstoneHook {
     function _refresh() internal {
         // [MU-100] a refresh never runs gas-starved
         if (gasleft() < REFRESH_GAS_MIN) revert RefGas();
-        uint32 k = uint32(block.timestamp / GRID_SEC);
+        uint32 k = _anchor();
         // [MU-110] at most one sample per anchor
         if (k > _refGrid) {
-            (bool ok, int24 t) = _readRef(block.timestamp - uint256(k) * GRID_SEC);
+            (bool ok, int24 t) = _readAnchor(k);
             _commit(ok, t, k);
         }
     }
@@ -456,6 +455,7 @@ contract TouchstoneHook is BaseHook, Extsload, ITouchstoneHook {
             return;
         }
         uint256 streak;
+        // [MU-087] an in-range sample alone does not clear the gap
         if (_vaultLo <= t && t < _vaultHi) {
             // [MU-116] the streak counts consecutive anchors only
             streak = _refGrid + 1 == k ? _resetStreak + 1 : 1;
@@ -507,6 +507,18 @@ contract TouchstoneHook is BaseHook, Extsload, ITouchstoneHook {
     }
 
     // ------------------------------------------------------------------ the reference reads
+
+    /// @dev The anchor index of the current timestamp.
+    function _anchor() internal view returns (uint32) {
+        // [MU-105] samples are gated on the timestamp grid
+        return uint32(block.timestamp / GRID_SEC);
+    }
+
+    /// @dev The TWAP ending at the anchor's boundary `k * GRID_SEC`.
+    function _readAnchor(uint32 k) internal view returns (bool, int24) {
+        // [MU-111] boundary-anchored
+        return _readRef(block.timestamp - uint256(k) * GRID_SEC);
+    }
 
     /// @dev The TWAP of the reference over [now - secondsAgo - REF_WINDOW, now - secondsAgo].
     function _readRef(uint256 secondsAgo) internal view returns (bool, int24) {

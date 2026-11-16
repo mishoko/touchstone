@@ -133,6 +133,9 @@ contract HookTest is HookBase {
             touch();
         }
         assertEq(h.obs().pendingBreaches, 1);
+        advance(3 * G); // a silence: the gap is set
+        touch();
+        assertTrue(h.obs().gapSinceVerify);
         advance(3);
         vm.recordLogs();
         register(LO, HI, 7);
@@ -181,6 +184,31 @@ contract HookTest is HookBase {
         assertEq(o.resetStreak, 0);
         assertEq(o.outBlocks, 0);
         assertFalse(o.gapSinceVerify);
+    }
+
+    /// An out-of-range sample zeroes the streak: in, out, in over consecutive anchors does not reset.
+    function test_U_clock__outOfRangeSampleZeroesTheStreak() public {
+        arm();
+        register(LO, HI, 0);
+        refConst(5000);
+        advance(G);
+        touch();
+        advance(G);
+        touch(); // outBlocks > 0
+        refConst(0);
+        advance(G);
+        touch();
+        assertEq(h.obs().resetStreak, 1);
+        refConst(5000);
+        advance(G);
+        touch();
+        assertEq(h.obs().resetStreak, 0);
+        refConst(0);
+        advance(G);
+        touch();
+        Obs memory o = h.obs();
+        assertEq(o.resetStreak, 1);
+        assertGt(o.outBlocks, 0);
     }
 
     /// The span is closed with the cache that held over it; the new sample is committed after.
@@ -457,6 +485,7 @@ contract HookTest is HookBase {
         Obs memory o = h.obs();
         assertEq(o.outBlocks, 10 * G);
         assertEq(o.breachSeq, 1);
+        assertEq(o.tauV, G); // only the first span, closed with the in-range cache of the registration
         assertTrue(o.med9 >= LO && o.med9 < HI); // control
     }
 
@@ -609,6 +638,18 @@ contract HookTest is HookBase {
         assertEq(TouchstoneHook(hk).REF_POOL(), address(ref));
     }
 
+    // ================================================================== D-3b: immutable addresses
+
+    /// The vault and the reference are immutables: no storage word of the hook holds either address.
+    function test_D_3b__vaultAndReferenceAreNotInStorage() public view {
+        for (uint256 i; i < 64; ++i) {
+            address w = address(uint160(uint256(vm.load(address(h), bytes32(i)))));
+            assertTrue(w != address(ref) && w != VAULT, "address in storage");
+        }
+        assertEq(h.REF_POOL(), address(ref));
+        assertEq(h.VAULT(), VAULT);
+    }
+
     // ------------------------------------------------------------------ helpers
 
     function _sortedAt(int24[] memory a, uint256 i) internal pure returns (int24) {
@@ -704,6 +745,7 @@ contract HookAnchorTest is HookBase {
         vm.warp(b0 - 100 + 150); // ts = b0 + 50: anchor b0/300, block grid b0/300 - 1
         vm.recordLogs();
         h.refreshRef();
+        assertEq(h.obs().refCachedAt, b0 - 100); // the anchor is new at this block
         vm.roll(b0 + 100);
         vm.warp(b0 + 100 + 150); // ts = b0 + 250: same anchor, block grid b0/300
         h.refreshRef();

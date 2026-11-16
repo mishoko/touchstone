@@ -11,7 +11,8 @@ import {Tier} from "../../src/types/Tier.sol";
 import {Tiers} from "../../script/Tiers.sol";
 import {HookMining} from "../../script/Mine.s.sol";
 import {MockRefPool} from "./MockRefPool.sol";
-import {StubVault, StubHook, MockToken} from "./Stubs.sol";
+import {StubVault, MockToken} from "./Stubs.sol";
+import {TouchstoneHook} from "../../src/TouchstoneHook.sol";
 
 /// @notice Test base: a local PoolManager, two mock tokens, a scripted reference pool, the factory, and one vault and
 ///         hook deployed through `factory.deploy` at the TEST tier with no range placed (the EMPTY variant).
@@ -38,13 +39,13 @@ abstract contract DeployBaseUnplaced is Test {
     HookArgs internal hookArgs;
     bytes32 internal saltH;
 
-    // TODO(P1/P2): return the real vault and hook creation codes.
+    // TODO(P2): return the real vault creation code.
     function _vaultCode() internal pure virtual returns (bytes memory) {
         return type(StubVault).creationCode;
     }
 
     function _hookCode() internal pure virtual returns (bytes memory) {
-        return type(StubHook).creationCode;
+        return type(TouchstoneHook).creationCode;
     }
 
     function setUp() public virtual {

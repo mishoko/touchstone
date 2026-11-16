@@ -24,7 +24,7 @@ def src_contracts():
 def main(argv):
     rpc = argv[argv.index('--rpc-url') + 1] if '--rpc-url' in argv else 'http://127.0.0.1:8545'
     txs = json.load(open(RUN))['transactions']
-    created = {t['contractName']: t['contractAddress'] for t in txs if t.get('transactionType') == 'CREATE'}
+    created = {t['contractName']: t['contractAddress'] for t in txs if t.get('transactionType') in ('CREATE', 'CREATE2')}
     errs = [f'{c}: not deployed' for c in sorted(src_contracts() - set(created))]
     for c in sorted(src_contracts() & set(created)):
         r = subprocess.run(['cast', 'codesize', created[c], '--rpc-url', rpc], capture_output=True, text=True)

@@ -60,33 +60,38 @@ contract TouchstoneHook is BaseHook, Extsload, ITouchstoneHook {
     Currency internal immutable CURRENCY1;
 
     // ------------------------------------------------------------------ storage
+    // Packed so that a swap's snapshot touches three slots (the hot slot, the counters, one ring slot).
+    // hot slot: the snapshot's own state and the reference cache
     uint40 internal _lastSnapBlock;
     uint8 internal _head;
     uint8 internal _count;
+    bool internal _armed;
+    bool internal _emptyRange = true;
     int24 internal _vaultLo;
     int24 internal _vaultHi;
-    bool internal _emptyRange = true;
-    bool internal _armed;
-    uint32 internal _breachSeq;
-    uint32 internal _pendingBreaches;
-    uint40 internal _lastPendingBlock;
-    uint8 internal _resetStreak;
-    bool internal _gapSinceVerify;
-    bool internal _witnessFallback;
-
     int24 internal _refTick;
     uint32 internal _refGrid;
     uint40 internal _refCachedAt;
-    int24 internal _epochStartRef;
-    uint32 internal _epochStartRefEpoch;
-    uint64 internal _tauVAtLastPending;
+    uint8 internal _resetStreak;
+    bool internal _gapSinceVerify;
 
+    // counters and the witness range they are credited against
     uint64 internal _tauV;
     uint64 internal _tauB;
     uint64 internal _outBlocks;
-
     int24 internal _witLo;
     int24 internal _witHi;
+
+    // the latch and the epoch's reference
+    uint32 internal _breachSeq;
+    uint32 internal _pendingBreaches;
+    uint40 internal _lastPendingBlock;
+    uint64 internal _tauVAtLastPending;
+    int24 internal _epochStartRef;
+    uint32 internal _epochStartRefEpoch;
+    bool internal _witnessFallback;
+
+    // the witness position
     uint32 internal _witEpoch;
     uint128 internal _witL;
 
@@ -386,9 +391,10 @@ contract TouchstoneHook is BaseHook, Extsload, ITouchstoneHook {
         uint64 newOut = oldOut;
         // [MU-040] [MU-077] the clock runs on the cached reference; EMPTY (lo = hi = 0) is out of range
         bool refIn = lo <= ref && ref < hi;
-        // [MU-092] [MU-035] tauV needs the pool price strictly inside the range and the cached reference in range
-        bool creditV = refIn && !_emptyRange && TickMath.getSqrtPriceAtTick(lo) < sqrtP
-            && sqrtP < TickMath.getSqrtPriceAtTick(hi);
+        // [MU-092] [MU-035] tauV needs the pool price strictly inside the range and the cached reference in range.
+        // The pool keeps sqrtAt(tick) <= sqrtP <= sqrtAt(tick + 1), so only a tick on an edge needs the sqrt test.
+        bool creditV = refIn && !_emptyRange && (tick > lo || (tick == lo && sqrtP > TickMath.getSqrtPriceAtTick(lo)))
+            && (tick < hi - 1 || (tick == hi - 1 && sqrtP < TickMath.getSqrtPriceAtTick(hi)));
         bool creditB = _witLo <= tick && tick < _witHi;
         if (creditV) _tauV = _satAdd(tauV0, trunc);
         if (creditB) _tauB = _satAdd(tauB0, trunc);

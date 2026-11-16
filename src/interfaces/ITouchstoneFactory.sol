@@ -35,7 +35,7 @@ struct Pending {
 
 /// @notice The part of the vault the factory calls.
 interface ITouchstoneVaultSeed {
-    function tier() external view returns (Tier memory);
+    function TIER_HASH() external view returns (bytes32);
     function seed(uint256 a0, uint256 a1, address curator, uint256 wit0, uint256 wit1) external;
 }
 

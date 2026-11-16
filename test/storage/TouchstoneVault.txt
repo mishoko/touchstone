@@ -36,33 +36,3 @@
   19 11   16 _bank.reserveShares: uint128
   20  0   16 _bank.reserveBond: uint128
   20 16    1 _bank.reserveForfeit: bool
-  21  0  224 _tier: struct Tier
-  21  0   20 _tier.REF_POOL: address
-  21 20    4 _tier.REF_WINDOW: uint32
-  21 24    3 _tier.REF_BAND: int24
-  21 27    4 _tier.REF_GAS_CAP: uint32
-  22  0    4 _tier.REFRESH_GAS_MIN: uint32
-  22  4    2 _tier.MIN_CARD: uint16
-  22  6   20 _tier.REF_SQRT_PRICE: uint160
-  22 26    4 _tier.GRID_SEC: uint32
-  23  0    4 _tier.CURE_BLOCKS: uint32
-  23  4    4 _tier.EPOCH: uint32
-  23  8    4 _tier.GRID: uint32
-  23 12    4 _tier.COOLDOWN: uint32
-  23 16    4 _tier.FORFEIT_DRIP_BLOCKS: uint32
-  23 20    8 _tier.m_perBlock: uint64
-  24  0    8 _tier.BOND_RATIO: uint64
-  24  8   16 _tier.BOND_MIN: uint128
-  25  0   16 _tier.NAV_MAX: uint128
-  25 16    8 _tier.RESERVE_RATIO: uint64
-  25 24    4 _tier.H_MARKOUT: uint32
-  26  0    8 _tier.MAX_SWAP_ACTION: uint64
-  26  8    8 _tier.MAX_SWAP_EPOCH: uint64
-  26 16    2 _tier.MAX_SWAPS: uint16
-  26 18    3 _tier.W_TICKS: int24
-  26 21    3 _tier.FEE_TICKS: int24
-  26 24    3 _tier.BAND_SWAP: int24
-  27  0    8 _tier.DELTA_MIN: uint64
-  27  8    4 _tier.EDGE_DELAY: uint32
-  27 12    1 _tier.RESET_RUN: uint8
-  27 13   16 _tier.L_W_TARGET: uint128

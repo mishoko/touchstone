@@ -8,6 +8,10 @@ import {Bank, Cohort} from "../../src/types/Bank.sol";
 import {Ladder} from "../../src/libraries/Ladder.sol";
 import {Entry} from "../../src/types/Entry.sol";
 import {MockRefPool} from "../utils/MockRefPool.sol";
+import {TouchstoneVault} from "../../src/TouchstoneVault.sol";
+import {VaultView} from "../utils/VaultView.sol";
+
+using VaultView for TouchstoneVault;
 
 /// @notice The checkpoint in the real flow (factory deployment, real hook, scripted reference pool): breaches latched
 ///         by an unplaced vault are processed by any entry point; the mode gate runs after the prologue; the vest

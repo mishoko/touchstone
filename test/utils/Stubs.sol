@@ -27,8 +27,12 @@ contract StubVault {
         _tier = p.tier;
     }
 
-    function tier() external view virtual returns (Tier memory) {
+    function tier() external view returns (Tier memory) {
         return _tier;
+    }
+
+    function TIER_HASH() external view virtual returns (bytes32) {
+        return keccak256(abi.encode(_tier));
     }
 
     function key() external view returns (PoolKey memory) {
@@ -45,9 +49,10 @@ contract StubVault {
 
 /// @notice A vault whose reported tier differs from the one it was handed.
 contract StubVaultBadTier is StubVault {
-    function tier() external view override returns (Tier memory t) {
-        t = _tier;
+    function TIER_HASH() external view override returns (bytes32) {
+        Tier memory t = _tier;
         t.CURE_BLOCKS += 1;
+        return keccak256(abi.encode(t));
     }
 }
 

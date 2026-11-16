@@ -73,7 +73,7 @@ contract TouchstoneFactory is ITouchstoneFactory {
 
         // The vault constructor reads `pending()` (hook address, pool key, tier).
         vault = _create2(vaultCreationCode, sv);
-        if (keccak256(abi.encode(ITouchstoneVaultSeed(vault).tier())) != keccak256(abi.encode(hookArgs.tier))) {
+        if (ITouchstoneVaultSeed(vault).TIER_HASH() != keccak256(abi.encode(hookArgs.tier))) {
             revert TierMismatch();
         }
         delete _pending;

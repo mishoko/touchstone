@@ -9,6 +9,10 @@ import {Holdings} from "../../src/types/Holdings.sol";
 import {Ladder} from "../../src/libraries/Ladder.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
+import {TouchstoneVault} from "../../src/TouchstoneVault.sol";
+import {VaultView} from "../utils/VaultView.sol";
+
+using VaultView for TouchstoneVault;
 
 /// @notice Pro-rata flows with a live position (L > 0, placed through the test-only seam), checked against the
 ///         PoolManager's own state and math: collect-first, the L leg rounded up on deposit and down on withdrawal,

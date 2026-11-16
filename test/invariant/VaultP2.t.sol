@@ -8,6 +8,10 @@ import {VaultHandler} from "./handlers/VaultHandler.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
 import {Ladder} from "../../src/libraries/Ladder.sol";
 import {Bank, RING} from "../../src/types/Bank.sol";
+import {TouchstoneVault} from "../../src/TouchstoneVault.sol";
+import {VaultView} from "../utils/VaultView.sol";
+
+using VaultView for TouchstoneVault;
 
 /// @notice The P2 invariants on the minimal handler with a live position (L > 0 from the start):
 ///         I-1 the vault's ERC-6909 claims and position cover its ledger, and the hook's claims cover its witness

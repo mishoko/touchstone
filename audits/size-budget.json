@@ -41,7 +41,7 @@
  ],
  "contracts": {
   "ExecLedger": {
-   "runtime": 4977,
+   "runtime": 5109,
    "history": [
     {
      "runtime": 1936,
@@ -50,6 +50,10 @@
     {
      "runtime": 4977,
      "note": "s9: ExecLedger gains measure (three legs, reserve, gate), settleExtra (clamped legs, upper leg rounded up) and placementSize (the Placement library behind the coarse link, spec lever D9-05); linked library outside the vault; Placement is an internal library (57 B stub)"
+    },
+    {
+     "runtime": 5109,
+     "note": "s10 size lever (1), views to the Lens: the vault drops every state view (tier, holdings, nav0, bondShares, bank, bankLimits) and the tier's storage copy; it exposes extsload and the TIER_HASH commitment the factory checks (-1,253 B); the factory reads TIER_HASH instead of the tier struct"
     }
    ]
   },
@@ -90,11 +94,15 @@
    ]
   },
   "TouchstoneFactory": {
-   "runtime": 6709,
+   "runtime": 5993,
    "history": [
     {
      "runtime": 6709,
      "note": "s08 baseline: P2 with the checkpoint (steps 1-6, accrual inert), the swap counters and the dispatch/_tryRef seams"
+    },
+    {
+     "runtime": 5993,
+     "note": "s10 size lever (1), views to the Lens: the vault drops every state view (tier, holdings, nav0, bondShares, bank, bankLimits) and the tier's storage copy; it exposes extsload and the TIER_HASH commitment the factory checks (-1,253 B); the factory reads TIER_HASH instead of the tier struct"
     }
    ]
   },
@@ -108,7 +116,7 @@
    ]
   },
   "TouchstoneVault": {
-   "runtime": 14997,
+   "runtime": 13744,
    "history": [
     {
      "runtime": 14971,
@@ -117,6 +125,10 @@
     {
      "runtime": 14997,
      "note": "s9: ExecLedger gains measure (three legs, reserve, gate), settleExtra (clamped legs, upper leg rounded up) and placementSize (the Placement library behind the coarse link, spec lever D9-05); linked library outside the vault; Placement is an internal library (57 B stub)"
+    },
+    {
+     "runtime": 13744,
+     "note": "s10 size lever (1), views to the Lens: the vault drops every state view (tier, holdings, nav0, bondShares, bank, bankLimits) and the tier's storage copy; it exposes extsload and the TIER_HASH commitment the factory checks (-1,253 B); the factory reads TIER_HASH instead of the tier struct"
     }
    ]
   },

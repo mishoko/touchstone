@@ -2,6 +2,7 @@
 pragma solidity 0.8.26;
 
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
+import {Extsload} from "@uniswap/v4-core/src/Extsload.sol";
 import {IUnlockCallback} from "@uniswap/v4-core/src/interfaces/callback/IUnlockCallback.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
@@ -33,8 +34,9 @@ import {FeeBank} from "./libraries/FeeBank.sol";
 ///         never read. Every entry point runs inside the vault's own `unlock`: the prologue snapshots the hook's
 ///         clock, collects the position's fees into idle, then checkpoints; the mode gate runs after the prologue.
 /// @dev This build carries seed, deposit and withdraw; the checkpoint body, the curator actions and the bank entry
-///      points are added in later builds.
-contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
+///      points are added in later builds. The vault has no state views: every field is read through `extsload` at
+///      the slots of its storage-layout snapshot (the Lens decodes them), and the tier through `TIER_HASH`.
+contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
 
     uint256 internal constant WAD = 1e18;
@@ -55,6 +57,7 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
     uint160 internal immutable REF_SQRT_PRICE;
     uint40 internal immutable DRIP_BLOCKS;
     uint40 internal immutable RELEASE_DELAY;
+    bytes32 public immutable TIER_HASH;
 
     // ------------------------------------------------------------------ storage (spec field widths)
     uint128 internal _idle0;
@@ -76,7 +79,6 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
     bool internal _seeded;
     address public curator;
     Bank internal _bank;
-    Tier internal _tier;
 
     // ------------------------------------------------------------------ events and errors
     event Deposit(address indexed owner, uint256 assets0, uint256 assets1, uint256 shares);
@@ -103,7 +105,8 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
         FEE = p.key.fee;
         SPACING = p.key.tickSpacing;
         Tier memory t = p.tier;
-        _tier = t;
+        // the factory checks this commitment; off-chain readers (the Lens) verify a tier against it
+        TIER_HASH = keccak256(abi.encode(t));
         BOND_RATIO = t.BOND_RATIO;
         BOND_MIN = t.BOND_MIN;
         NAV_MAX = t.NAV_MAX;
@@ -417,45 +420,4 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
         return x > type(uint128).max ? type(uint128).max : uint128(x);
     }
 
-    // ------------------------------------------------------------------ views
-
-    function tier() external view returns (Tier memory) {
-        return _tier;
-    }
-
-    function holdings() external view returns (Holdings memory) {
-        return _holdings();
-    }
-
-    function nav0() external view returns (uint256) {
-        return _nav0;
-    }
-
-    function bondShares() external view returns (uint256) {
-        return _bank.bondShares;
-    }
-
-    function bank()
-        external
-        view
-        returns (
-            uint128 cohortShares,
-            uint128 maturedPending,
-            uint128 vestedUnclaimed,
-            uint128 bond,
-            uint128 forfeitPool,
-            uint8 mode,
-            uint32 breaches
-        )
-    {
-        Bank storage b = _bank;
-        for (uint256 k; k < b.cohorts.length; ++k) {
-            cohortShares += b.cohorts[k].shares;
-        }
-        return (cohortShares, b.maturedPending, b.vestedUnclaimed, b.bondShares, b.forfeitPool, b.mode, b.breaches);
-    }
-
-    function bankLimits() external view returns (uint40 dripBlocks, uint40 releaseDelay) {
-        return (_bank.dripBlocks, _bank.releaseDelay);
-    }
 }

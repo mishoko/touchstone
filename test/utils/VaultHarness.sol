@@ -13,6 +13,8 @@ import {Entry} from "../../src/types/Entry.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
 import {Bank, Op, RING} from "../../src/types/Bank.sol";
 import {FeeBank} from "../../src/libraries/FeeBank.sol";
+import {Tier} from "../../src/types/Tier.sol";
+import {ITouchstoneFactory} from "../../src/interfaces/ITouchstoneFactory.sol";
 
 /// @notice Test-only extension of the vault; it never ships. One contract, two deployments:
 ///         - scripted (behind `MockVaultFactory`, whose hook is `AckRecorder`): `checkpoint(o, liveOk, liveTick)` runs the
@@ -54,6 +56,36 @@ contract VaultHarness is TouchstoneVault {
     bool internal _liveOk;
     int24 internal _liveTick;
     uint256 public liveReads;
+    /// @dev The harness keeps its own copy of the tier (the production vault keeps only `TIER_HASH`).
+    Tier internal _tierCopy;
+
+    constructor() {
+        _tierCopy = ITouchstoneFactory(msg.sender).pending().tier;
+    }
+
+    function tier() external view returns (Tier memory) {
+        return _tierCopy;
+    }
+
+    function holdings() external view returns (Holdings memory) {
+        return _holdings();
+    }
+
+    function nav0() external view returns (uint256) {
+        return _nav0;
+    }
+
+    function bondShares() external view returns (uint256) {
+        return _bank.bondShares;
+    }
+
+    function bank() external view returns (uint128 cohortShares, uint128 mp, uint128 vu, uint128 bond, uint128 pool, uint8 mode, uint32 breaches) {
+        Bank storage b = _bank;
+        for (uint256 k; k < RING; ++k) {
+            cohortShares += b.cohorts[k].shares;
+        }
+        return (cohortShares, b.maturedPending, b.vestedUnclaimed, b.bondShares, b.forfeitPool, b.mode, b.breaches);
+    }
 
     // ------------------------------------------------------------------ placement seam (factory deployment)
 

@@ -12,7 +12,10 @@ import {MockToken} from "../utils/Stubs.sol";
 import {TouchstoneVault} from "../../src/TouchstoneVault.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
 import {Entry} from "../../src/types/Entry.sol";
+import {VaultView} from "../utils/VaultView.sol";
 
+
+using VaultView for TouchstoneVault;
 /// @notice A token that calls an arbitrary target on every balance update while armed (an ERC-777-style hook), and
 ///         bubbles the target's revert.
 contract CallbackToken is MockToken {

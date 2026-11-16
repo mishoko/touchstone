@@ -7,7 +7,10 @@ import {Holdings} from "../../src/types/Holdings.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {LiquidityValue} from "../../src/libraries/LiquidityValue.sol";
+import {VaultView} from "../utils/VaultView.sol";
 
+
+using VaultView for TouchstoneVault;
 /// @notice ShareMath, seed and the NAV caps on the real vault (EMPTY range, TEST tier).
 contract VaultSharesTest is VaultBase {
     // ------------------------------------------------------------------ U-5: ShareMath

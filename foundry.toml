@@ -4,13 +4,19 @@ test = "test"
 script = "script"
 out = "out"
 libs = ["lib"]
+skip = ["test/fixtures/**"]
 solc_version = "0.8.26"
 evm_version = "cancun"
 via_ir = true
 optimizer = true
 optimizer_runs = 200
 fs_permissions = [{ access = "read", path = "./test/vectors" }, { access = "read", path = "./eval/data" }]
+# The size gate (runtime <= 22,000 B) is script/size_gate.py over `forge build --sizes --json` plus an anvil deploy.
 # Note: `forge test` does not enforce EIP-170; the size gate is `forge build --sizes` + an anvil deploy (CI).
+
+[lint]
+# Field names of the parameter structs follow the specification's parameter names.
+lint_on_build = false
 
 [profile.invariant.invariant]
 runs = 256
@@ -23,3 +29,12 @@ invariant = { runs = 16, depth = 32 }
 
 [profile.fork]
 # fork tests read UNICHAIN_SEPOLIA_RPC_URL / MAINNET_RPC_URL from the environment
+
+[profile.oversized]
+# Builds only the size-gate fixture (expected to be rejected by script/size_gate.py).
+src = "test/fixtures"
+test = "test/fixtures"
+script = "test/fixtures"
+skip = []
+out = "out-oversized"
+cache_path = "cache-oversized"

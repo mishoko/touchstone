@@ -3,9 +3,10 @@ pragma solidity 0.8.26;
 
 /// @notice Per-tier, per-chain parameters. The vault reads them from `factory.pending()` in its constructor and the
 ///         hook receives them in its constructor arguments; both store them as immutables.
-/// @dev Units: seconds for *_SEC and REF_WINDOW; blocks for CURE_BLOCKS, EPOCH, GRID, COOLDOWN, FORFEIT_DRIP_BLOCKS,
-///      EDGE_DELAY; ticks for REF_BAND, W_TICKS, FEE_TICKS, BAND_SWAP; WAD (1e18) fractions for m_perBlock, BOND_RATIO,
-///      MAX_SWAP_ACTION, MAX_SWAP_EPOCH, DELTA_MIN; token1 units for BOND_MIN; liquidity units for L_W_TARGET.
+/// @dev Units: seconds for *_SEC, REF_WINDOW and H_MARKOUT; blocks for CURE_BLOCKS, EPOCH, GRID, COOLDOWN,
+///      FORFEIT_DRIP_BLOCKS, EDGE_DELAY; ticks for REF_BAND, W_TICKS, FEE_TICKS, BAND_SWAP; WAD (1e18) fractions for
+///      m_perBlock, BOND_RATIO, RESERVE_RATIO, MAX_SWAP_ACTION, MAX_SWAP_EPOCH, DELTA_MIN; token1 units for BOND_MIN and
+///      NAV_MAX; liquidity units for L_W_TARGET.
 struct Tier {
     address REF_POOL;
     uint32 REF_WINDOW;
@@ -23,6 +24,9 @@ struct Tier {
     uint64 m_perBlock;
     uint64 BOND_RATIO;
     uint128 BOND_MIN;
+    uint128 NAV_MAX;
+    uint64 RESERVE_RATIO;
+    uint32 H_MARKOUT;
     uint64 MAX_SWAP_ACTION;
     uint64 MAX_SWAP_EPOCH;
     uint16 MAX_SWAPS;

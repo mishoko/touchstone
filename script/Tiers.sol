@@ -33,8 +33,10 @@ library Tiers {
         t.GRID = 300;
         t.COOLDOWN = 30;
         t.FORFEIT_DRIP_BLOCKS = 50_400;
-        t.BOND_MIN = 6e17;
-        t.EDGE_DELAY = 300;
+        t.BOND_MIN = 1.72e18; // 1.72 WETH
+        t.NAV_MAX = 1850e18; // 1,850 WETH
+        t.H_MARKOUT = 120;
+        t.EDGE_DELAY = 1800; // 6 grids: the reference policy waits six hours
     }
 
     function demo() internal pure returns (Tier memory t, uint256 blocktime) {
@@ -50,7 +52,9 @@ library Tiers {
         t.GRID = 300;
         t.COOLDOWN = 30;
         t.FORFEIT_DRIP_BLOCKS = 3600;
-        t.BOND_MIN = 6e17;
+        t.BOND_MIN = 1.72e18;
+        t.NAV_MAX = 1850e18;
+        t.H_MARKOUT = 20;
         t.EDGE_DELAY = 300;
     }
 
@@ -65,9 +69,11 @@ library Tiers {
         t.CURE_BLOCKS = 200;
         t.EPOCH = 120;
         t.GRID = 20;
-        t.COOLDOWN = 5;
+        t.COOLDOWN = 14;
         t.FORFEIT_DRIP_BLOCKS = 120;
         t.BOND_MIN = 0;
+        t.NAV_MAX = type(uint128).max;
+        t.H_MARKOUT = 120;
         t.EDGE_DELAY = 20;
     }
 
@@ -76,7 +82,8 @@ library Tiers {
         t.REF_GAS_CAP = REF_GAS_CAP_PROVISIONAL;
         t.REFRESH_GAS_MIN = uint32(uint256(REF_GAS_CAP_PROVISIONAL) * 64 / 63 + 30_000);
         t.m_perBlock = uint64(M_YEAR_WAD_PROVISIONAL * blocktime / 365 days);
-        t.BOND_RATIO = 6e14; // 6e-4
+        t.BOND_RATIO = 1.72e15; // 1.72e-3
+        t.RESERVE_RATIO = 6e14; // 6e-4 of NAV: the markout settlement's reserve
         t.MAX_SWAP_ACTION = 2e16; // 2% of NAV
         t.MAX_SWAP_EPOCH = 5e16; // 5% of NAV
         t.MAX_SWAPS = 20;
@@ -90,7 +97,8 @@ library Tiers {
 
     /// @notice The configuration checks: the breach clock's cure window covers the edge bot's wait, two grids of
     ///         cache freshness, the reference window and one grid; a reset needs at least two anchors; the block grid
-    ///         and the timestamp grid agree; an epoch is a whole number of grids.
+    ///         and the timestamp grid agree; an epoch is a whole number of grids; the cooldown outlasts the markout
+    ///         window plus two blocks, so a curator action never meets an unsettled window.
     function check(Tier memory t, uint256 blocktime) internal pure {
         if (blocktime == 0 || t.GRID == 0 || t.REF_WINDOW == 0) revert TierInvalid("zero");
         if (uint256(t.CURE_BLOCKS) < uint256(t.EDGE_DELAY) + 2 * uint256(t.GRID) + t.REF_WINDOW / blocktime + t.GRID) {
@@ -99,5 +107,6 @@ library Tiers {
         if (t.RESET_RUN < 2) revert TierInvalid("RESET_RUN");
         if (uint256(t.GRID) * blocktime != t.GRID_SEC) revert TierInvalid("GRID_SEC");
         if (t.EPOCH % t.GRID != 0) revert TierInvalid("EPOCH");
+        if (uint256(t.COOLDOWN) * blocktime < uint256(t.H_MARKOUT) + 2 * blocktime) revert TierInvalid("COOLDOWN");
     }
 }

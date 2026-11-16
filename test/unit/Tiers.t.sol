@@ -53,6 +53,35 @@ contract TiersTest is Test {
         h.check(t, bt);
     }
 
+    function test_tiers_cooldownOutlastsMarkoutWindow() public {
+        // TEST: COOLDOWN 12 blocks of 12 s = 144 s = H_MARKOUT 120 s + 2 blocks passes; 11 fails.
+        (Tier memory t, uint256 bt) = Tiers.testing();
+        t.COOLDOWN = 12;
+        h.check(t, bt);
+        t.COOLDOWN = 11;
+        vm.expectRevert(abi.encodeWithSelector(Tiers.TierInvalid.selector, "COOLDOWN"));
+        h.check(t, bt);
+    }
+
+    function test_tiers_markoutParameters() public pure {
+        (Tier memory m,) = Tiers.mainnet();
+        (Tier memory d,) = Tiers.demo();
+        (Tier memory t,) = Tiers.testing();
+        assertEq(m.BOND_RATIO, 1.72e15);
+        assertEq(m.RESERVE_RATIO, 6e14);
+        assertEq(m.BOND_MIN, 1.72e18);
+        assertEq(d.BOND_MIN, 1.72e18);
+        assertEq(t.BOND_MIN, 0);
+        assertEq(m.NAV_MAX, 1850e18);
+        assertEq(d.NAV_MAX, 1850e18);
+        assertEq(t.NAV_MAX, type(uint128).max);
+        assertEq(m.H_MARKOUT, 120);
+        assertEq(d.H_MARKOUT, 20);
+        assertEq(t.H_MARKOUT, 120);
+        assertEq(m.EDGE_DELAY, 1800);
+        assertEq(t.COOLDOWN, 14);
+    }
+
     function test_tiers_matchParameterTable() public pure {
         (Tier memory m,) = Tiers.mainnet();
         (Tier memory d,) = Tiers.demo();

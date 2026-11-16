@@ -1,0 +1,35 @@
+   0  0  320 _pending: struct Pending
+   0  0   20 _pending.hook: address
+   1  0   96 _pending.key: struct PoolKey
+   1  0   20 _pending.key.currency0: Currency
+   2  0   20 _pending.key.currency1: Currency
+   2 20    3 _pending.key.fee: uint24
+   2 23    3 _pending.key.tickSpacing: int24
+   3  0   20 _pending.key.hooks: contract IHooks
+   4  0  192 _pending.tier: struct Tier
+   4  0   20 _pending.tier.REF_POOL: address
+   4 20    4 _pending.tier.REF_WINDOW: uint32
+   4 24    3 _pending.tier.REF_BAND: int24
+   4 27    4 _pending.tier.REF_GAS_CAP: uint32
+   5  0    4 _pending.tier.REFRESH_GAS_MIN: uint32
+   5  4    2 _pending.tier.MIN_CARD: uint16
+   5  6   20 _pending.tier.REF_SQRT_PRICE: uint160
+   5 26    4 _pending.tier.GRID_SEC: uint32
+   6  0    4 _pending.tier.CURE_BLOCKS: uint32
+   6  4    4 _pending.tier.EPOCH: uint32
+   6  8    4 _pending.tier.GRID: uint32
+   6 12    4 _pending.tier.COOLDOWN: uint32
+   6 16    4 _pending.tier.FORFEIT_DRIP_BLOCKS: uint32
+   6 20    8 _pending.tier.m_perBlock: uint64
+   7  0    8 _pending.tier.BOND_RATIO: uint64
+   7  8   16 _pending.tier.BOND_MIN: uint128
+   7 24    8 _pending.tier.MAX_SWAP_ACTION: uint64
+   8  0    8 _pending.tier.MAX_SWAP_EPOCH: uint64
+   8  8    2 _pending.tier.MAX_SWAPS: uint16
+   8 10    3 _pending.tier.W_TICKS: int24
+   8 13    3 _pending.tier.FEE_TICKS: int24
+   8 16    3 _pending.tier.BAND_SWAP: int24
+   8 19    8 _pending.tier.DELTA_MIN: uint64
+   8 27    4 _pending.tier.EDGE_DELAY: uint32
+   8 31    1 _pending.tier.RESET_RUN: uint8
+   9  0   16 _pending.tier.L_W_TARGET: uint128

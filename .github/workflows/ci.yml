@@ -1,21 +1,65 @@
 name: ci
 on: [push, pull_request]
+
+env:
+  FOUNDRY_VERSION: v1.5.0
+  CLAIMS_PHASE: P0
+  ANVIL_PK: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" # anvil's default account 0
+
 jobs:
   build-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with: { submodules: recursive }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
       - uses: foundry-rs/foundry-toolchain@v1
-      - name: Build + size gate (runtime <= 22,000 B)
+        with: { version: "${{ env.FOUNDRY_VERSION }}" }
+
+      - name: Toolchain version
+        run: forge --version | head -1 | grep -q "forge Version: ${FOUNDRY_VERSION#v}"
+
+      - name: Size gate (every src/ runtime <= 22,000 B; strict parse)
+        run: python3 script/size_gate.py
+
+      - name: Size gate rejects the oversized fixture
         run: |
-          forge build --sizes --json > sizes.json || true
-          python3 - <<'PY'
-          import json,sys
-          try: d=json.load(open('sizes.json'))
-          except Exception: sys.exit(0)  # no contracts yet
-          bad={k:v['runtime_size'] for k,v in d.items() if isinstance(v,dict) and v.get('runtime_size',0)>22000 and not k.endswith('Test')}
-          print('over 22,000 B:',bad) if bad else print('size gate OK'); sys.exit(1 if bad else 0)
-          PY
+          set +e
+          out=$(FOUNDRY_PROFILE=oversized python3 script/size_gate.py --scope test/fixtures 2>&1); rc=$?
+          set -e
+          echo "$out"
+          [ "$rc" -ne 0 ] && echo "$out" | grep -q "Oversized: runtime .* > 22000 B"
+
+      - name: Anvil deploy of every src/ contract
+        run: |
+          anvil --port 8545 --silent &
+          for _ in $(seq 1 50); do cast chain-id --rpc-url http://127.0.0.1:8545 >/dev/null 2>&1 && break; sleep 0.2; done
+          forge script script/AnvilDeploy.s.sol --rpc-url http://127.0.0.1:8545 --broadcast --private-key "$ANVIL_PK"
+          python3 script/anvil_check.py --rpc-url http://127.0.0.1:8545
+
       - name: Tests
         run: forge test -vv
+
+      - name: Golden vectors are reproducible
+        run: |
+          python3 model/reference.py --vectors
+          git diff --exit-code -- test/vectors
+          test -z "$(git status --porcelain -- test/vectors)"
+
+      - name: Claims coverage
+        run: |
+          python3 script/claims.py --selftest
+          python3 script/claims.py
+
+      - name: Static tests
+        run: python3 test/static/test_static.py
+
+      - name: Storage-layout snapshots
+        run: python3 script/storage_layout.py
+
+      - name: Mutation tags
+        run: python3 script/mutate.py --audit
+
+      - name: No mutation markers
+        run: python3 script/markers.py

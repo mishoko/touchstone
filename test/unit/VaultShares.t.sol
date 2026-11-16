@@ -177,9 +177,9 @@ contract VaultSeedTest is VaultBase {
         tier.BOND_RATIO = 0;
         _deployWith();
         _fundUser(alice, 1e30);
-        uint256 overCap = v.bondShares() * 1e18 / 1.73e15 - v.totalSupply() + 1; // TEST tier ratio 1.73e-3
+        uint256 overCap = v.bondShares() * 1e18 / 1.74e15 - v.totalSupply() + 1; // TEST tier ratio 1.74e-3
         _deposit(alice, overCap);
-        assertGt(v.totalSupply() * 1.73e15, v.bondShares() * 1e18, "over the TEST tier's cap");
+        assertGt(v.totalSupply() * 1.74e15, v.bondShares() * 1e18, "over the TEST tier's cap");
     }
 
     /// @notice Custody buckets never saturate: a deposit that would take a bucket past 2^128 - 1 reverts. (Unreachable

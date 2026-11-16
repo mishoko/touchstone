@@ -2002,6 +2002,28 @@
    "find": "        if (_mulHi(reserveShares, navNow) < S && extra > FullMath.mulDiv(reserveShares, navNow, S)) {",
    "replace": "        if (extra > FullMath.mulDiv(reserveShares, navNow, S)) {",
    "status": "KILLED"
+  },
+  {
+   "id": "MU-183",
+   "area": "ledger",
+   "desc": "the burn price omits the spot leg (s09 fix review r2 F10-01)",
+   "killer_id": "U-3",
+   "kill": "test_U_3__ledgerMeasureVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        navBurn = na;\n",
+   "replace": "        navBurn = type(uint256).max;\n",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-184",
+   "area": "ledger",
+   "desc": "the settlement cap's fit check at `<=` (s09 fix review r2 F10-02)",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__burnCapAtFitBoundary",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        if (_mulHi(reserveShares, navNow) < S && extra",
+   "replace": "        if (_mulHi(reserveShares, navNow) <= S && extra",
+   "status": "KILLED"
   }
  ]
 }

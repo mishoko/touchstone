@@ -65,9 +65,9 @@ contract LedgerVectorsTest is VectorBase {
         );
     }
 
-    /// @notice Every `measure` case: charge, p*, NAV_after(p*), burn, burnR and the gate, bit for bit (incl. a zero
+    /// @notice Every `measure` case: charge, p*, navBurn (the smallest NAV_after), burn, burnR and the gate, bit for bit (incl. a zero
     ///         action, a pushed spot, a lagging reference, the 0 floor, the s0 leg, ties at distinct prices, the reserve
-    ///         at the gate's edge and both amounts saturated against NAV_after(p*) = 0).
+    ///         at the gate's edge and both amounts saturated against navBurn = 0).
     function test_U_3__ledgerMeasureVectorsBitForBit() public {
         string[] memory cs = _cases("ledger");
         uint256 n;
@@ -175,6 +175,17 @@ contract LedgerVectorsTest is VectorBase {
         assertEq(burnS, 1, "one share at supply 1");
     }
 
+    /// @notice The share cap's fit check at equality (fix review r2 F10-02): with `S` equal to the high word of
+    ///         `reserveShares·NAV_now`, the cap's division would overflow, so it is skipped and one share is burned.
+    function test_U_settle__burnCapAtFitBoundary() public pure {
+        Holdings memory b = Holdings(1e21, 1e21, 0, 0, 0);
+        Holdings memory a = Holdings(1e21 - 1e18, 1e21 + 1e17, 0, 0, 0);
+        (uint256 extra,, uint256 burnS) =
+            ExecLedger.settleExtra(b, a, 500000, 1, 0, 1e18, a, 15186, type(uint128).max);
+        assertEq(extra, 1e18, "extra capped at the reserve");
+        assertEq(burnS, 1, "the cap cannot bind; one share");
+    }
+
     /// @notice F9-02 (owner): when every leg is a gain, the burns are priced at the smallest NAV_after over the legs,
     ///         not at the least-gain leg's NAV_after, which the curator could place at a high-NAV' `s0`.
     function test_U_3__allGainBurnsAtTheSmallestNavAfter() public pure {
@@ -194,7 +205,7 @@ contract LedgerVectorsTest is VectorBase {
         assertGt(burnR, FullMath.mulDivRoundingUp(1e18, 1e24, navAtS0), "more reserve shares than at p*'s NAV_after");
     }
 
-    /// @notice `ok` is computed without overflow when both amounts saturate (NAV_after(p*) = 0, charge and reserve > 0).
+    /// @notice `ok` is computed without overflow when both amounts saturate (navBurn = 0, charge and reserve > 0).
     function test_U_3__gateDoesNotOverflowOnSaturatedAmounts() public pure {
         Holdings memory b = Holdings(10, 10, 0, 0, 0);
         Holdings memory a = Holdings(0, 0, 0, 0, 0);

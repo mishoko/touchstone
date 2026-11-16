@@ -35,7 +35,7 @@ library Tiers {
         t.GRID = 300;
         t.COOLDOWN = 30;
         t.FORFEIT_DRIP_BLOCKS = 50_400;
-        t.BOND_MIN = 1.73e18; // 1.73 WETH
+        t.BOND_MIN = 1.74e18; // 1.74 WETH
         t.NAV_MAX = 1850e18; // 1,850 WETH
         t.H_MARKOUT = 120;
         t.EDGE_DELAY = 1800; // 6 grids: the reference policy waits six hours
@@ -54,7 +54,7 @@ library Tiers {
         t.GRID = 300;
         t.COOLDOWN = 30;
         t.FORFEIT_DRIP_BLOCKS = 3600;
-        t.BOND_MIN = 1.73e18;
+        t.BOND_MIN = 1.74e18;
         t.NAV_MAX = 1850e18;
         t.H_MARKOUT = 20;
         t.EDGE_DELAY = 300;
@@ -84,7 +84,7 @@ library Tiers {
         t.REF_GAS_CAP = REF_GAS_CAP_PROVISIONAL;
         t.REFRESH_GAS_MIN = uint32(uint256(REF_GAS_CAP_PROVISIONAL) * 64 / 63 + 30_000);
         t.m_perBlock = uint64(M_YEAR_WAD_PROVISIONAL * blocktime / 365 days);
-        t.BOND_RATIO = 1.73e15; // 1.73e-3
+        t.BOND_RATIO = 1.74e15; // 1.74e-3
         t.RESERVE_RATIO = 6e14; // 6e-4 of NAV: the markout settlement's reserve
         t.MAX_SWAP_ACTION = 2e16; // 2% of NAV
         t.MAX_SWAP_EPOCH = 5e16; // 5% of NAV

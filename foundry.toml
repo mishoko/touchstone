@@ -18,7 +18,8 @@ fs_permissions = [{ access = "read", path = "./test/vectors" }, { access = "read
 
 [profile.default.fuzz]
 # A fixed seed keeps `forge test` and CI deterministic (a fuzz result never depends on the run). Explore new inputs with
-# `FOUNDRY_PROFILE=explore forge test --mt testFuzz` (random seed, 20,000 runs) and pin every counterexample as a unit test.
+# `script/explore.sh` (20,000 runs under a fresh random seed it prints; profiles inherit this seed, so the script
+# overrides it) and pin every counterexample as a unit test.
 seed = "0x5309"
 
 [profile.explore.fuzz]

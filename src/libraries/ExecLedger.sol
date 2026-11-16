@@ -38,6 +38,7 @@ library ExecLedger {
         // [MU-001] [MU-002] [MU-125] [MU-146] [MU-178] the worse of the three legs; ties keep the spot leg
         (uint256 nb, uint256 na) = _legs(before, after_, sqrtSpot);
         pStar = sqrtSpot;
+        // [MU-183] the spot leg is a candidate for the burn price too
         navBurn = na;
         (uint256 nb2, uint256 na2) = _legs(before, after_, sqrtS0);
         if (_worse(nb2, na2, nb, na)) (nb, na, pStar) = (nb2, na2, sqrtS0);
@@ -91,7 +92,7 @@ library ExecLedger {
         // floor exceeds 2^256 the cap cannot bind, and then extra·S/navNow < 1 for uint128 extra and reserveShares (the
         // two quotients multiply to extra·reserveShares < 2^256), so the rounded-up division below never overflows.
         if (S == 0) return (extra, pMk, 0);
-        // [MU-182] the cap's division is taken only when it fits
+        // [MU-182] [MU-184] the cap's division is taken only when it fits (strictly: equality overflows)
         if (_mulHi(reserveShares, navNow) < S && extra > FullMath.mulDiv(reserveShares, navNow, S)) {
             return (extra, pMk, reserveShares);
         }

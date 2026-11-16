@@ -4,8 +4,8 @@
 Part A (adversarial worst case). The coalition chooses the state and the action: inventory mix, old
 position, spot pushed anywhere within REF_BAND of the reference, the range (any legal aligned W-wide range
 containing spot and the reference, with spot optionally moved one unit inside an edge), and for swaps JIT
-liquidity at the slippage limit. Measured: charge / NAV_after(p*), the ratio the gate compares with the bond
-fraction (burn = ceilDiv(charge·S, NAV') <= bond = BOND_RATIO·S at the NAV cap).
+liquidity at the slippage limit. Measured: (charge + reserve) / navBurn, the ratio the gate compares with the bond
+fraction (burn + burnR = ceilDiv((charge + reserve)·S, navBurn) <= bond = BOND_RATIO·S at the NAV cap; spec v2.36).
 
 Part B (distribution). Per σ bucket, 200 test paths: the edge60 action from a path state with spot pushed
 adversarially to the fence. Reports p50 / p99 / max (Q = the p99 single-action charge, an input of m_PC).
@@ -70,8 +70,11 @@ def jit_fill(zfo, amount, spot_tick, lim_tick, own=None, jit=10 ** 24):
 
 
 def ratio(before, after, s_spot, s_ref):
-    c, p, n, burn, ok = R.measure(before, after, s_spot, s_ref, 10 ** 24, 0, 10 ** 24)
-    return (c / n if n else 0.0), c, n, p
+    """The gate's own quantity (spec v2.36, s09 F10-03): (charge + reserve) / navBurn, with the reserve at
+    RESERVE_RATIO·NAV_before(s_spot) as the vault computes it and navBurn the smallest NAV_after over the legs."""
+    res = R.mul_div(R.MAINNET.RESERVE_RATIO, R.value(before, s_spot)[0], R.WAD)
+    c, p, n, burn, burn_r, ok = R.measure_c(before, after, s_spot, s_spot, s_ref, res, 10 ** 24, 0, 10 ** 24)
+    return ((c + res) / n if n else 0.0), c, n, p
 
 
 def swap_cap_amount(h, zfo, s_ref):
@@ -164,7 +167,8 @@ def gate(case, bond_ratio):
     b = R.Holdings(**case["before"])
     a = R.Holdings(**case["after"])
     bond = S * bond_ratio // R.WAD
-    return R.measure(b, a, case["sqrtSpot"], case["sqrtRef"], S, 0, bond)[4]
+    res = R.mul_div(R.MAINNET.RESERVE_RATIO, R.value(b, case["sqrtSpot"])[0], R.WAD)   # the reserve is in the gate (v2.36)
+    return R.measure_c(b, a, case["sqrtSpot"], case["sqrtSpot"], case["sqrtRef"], res, S, 0, bond)[5]
 
 
 def distribution(band=60):

@@ -324,6 +324,8 @@ def ledger_cases():
         note="every leg a gain; pStar = s0 (highest price) but the burns use NAV_after at ref (the smallest)",
         expect=("s0", False, True))
     assert R.measure_c(ga, gs, sqrt_at(5000), sqrt_at(0), sqrt_at(-2232), 10 ** 18, S, unv, bond)[2] == R.value(gs, sqrt_at(-2232))[0]
+    add("all-gain-spot-min", ga, gs, sqrt_at(-2232), sqrt_at(5000), s0=sqrt_at(0), reserve=10 ** 18,
+        note="every leg a gain; the spot leg is the unique smallest NAV_after (fix review r2 F10-01)", expect=("ref", False, True))
     add("reserve-gate-exact", g0, g1, pool.s, sqrt_at(T0 + 40), s0=sqrt_at(T0 - 30), reserve=10 ** 17, unv_=0,
         bond_=b_ + br_, note="burn + burnR == unvested + bond -> ok", expect=("s0", True, True))
     add("reserve-gate-revert", g0, g1, pool.s, sqrt_at(T0 + 40), s0=sqrt_at(T0 - 30), reserve=10 ** 17, unv_=0,
@@ -348,6 +350,25 @@ def ledger_cases():
     adds("markout-clamp-min-tick", g0, sold, R.MIN_TICK, 0, 10 ** 30, sold, S, 10 ** 20, note="tickMk at MIN_TICK: the lower leg clamped")
     adds("markout-upper-leg-rounded-up", g0, sold, T0 - 6, 0, 10 ** 30, sold, S, 10 ** 20, note="the upper leg sits at tickMk + FEE_TICKS + 1")
     add("charge-zero-nav-zero", R.Holdings(), R.Holdings(), sqrt_at(T0), sqrt_at(T0), note="no loss and no NAV: burn 0, ok")
+    add("spot-unique-max-loss", ga, gs, sqrt_at(8000), sqrt_at(2000), s0=sqrt_at(0), reserve=10 ** 18,
+        note="a token0 sale priced highest at spot: the spot leg is the unique largest loss (and the gate fails)", expect=("spot", True, False))
+    # standing check (F10-01): for the burn price (min NAV_after) and the charge leg (max loss), each leg is the unique
+    # extremum in at least one measure case
+    mins, maxs = set(), set()
+    for c_ in cases:
+        if c_["fn"] != "ExecLedger.measure":
+            continue
+        i_ = c_["in"]
+        b_, a_ = R.Holdings(**i_["before"]), R.Holdings(**i_["after"])
+        legs = {"spot": i_["sqrtSpot"], "s0": i_["sqrtS0"], "ref": i_["sqrtRef"]}
+        na_ = {k: R.value(a_, p_)[0] for k, p_ in legs.items()}
+        ls_ = {k: R.value(b_, p_)[0] - na_[k] for k, p_ in legs.items()}
+        for d_, acc, f in ((na_, mins, min), (ls_, maxs, max)):
+            e_ = f(d_.values())
+            k_ = [k for k, v in d_.items() if v == e_]
+            if len(k_) == 1:
+                acc.add(k_[0])
+    assert mins == maxs == {"spot", "s0", "ref"}, ("each leg must be the unique extremum somewhere", mins, maxs)
     # ExecLedger.value
     for s in [sqrt_at(T0), sqrt_at(T0 + 500), sqrt_at(T0 + 2500), sqrt_at(T0 + 3000)]:
         addv("value", h0, s)

@@ -32,7 +32,7 @@ from v4math import (  # noqa: E402
     get_liquidity_for_amounts, compute_swap_step_exact_in,
 )
 
-SPEC_VERSION = "2.35"
+SPEC_VERSION = "2.36"
 WAD = 10 ** 18
 U32 = (1 << 32) - 1
 U40 = (1 << 40) - 1
@@ -85,12 +85,12 @@ def _m_per_block(blocktime, m_year_wad=10 ** 16):
 
 _COMMON = dict(FEE=500, SPACING=10, FEE_TICKS=5, W_TICKS=2000, BAND_SWAP=5, REF_BAND=60,
                DELTA_MIN=WAD // 2, MAX_SWAP_ACTION=2 * 10 ** 16, MAX_SWAP_EPOCH=5 * 10 ** 16, MAX_SWAPS=20,
-               RESET_RUN=2, BOND_RATIO=173 * 10 ** 13, RESERVE_RATIO=6 * 10 ** 14, L_W_TARGET=1000)
+               RESET_RUN=2, BOND_RATIO=174 * 10 ** 13, RESERVE_RATIO=6 * 10 ** 14, L_W_TARGET=1000)
 TEST = Tier(NAME="TEST", BOND_MIN=0, BLOCKTIME=12, GRID=20, GRID_SEC=240, EPOCH=120, CURE_BLOCKS=200, COOLDOWN=14,
             REF_WINDOW=600, EDGE_DELAY=20, H_MARKOUT=120, NAV_MAX=U128, m_perBlock=_m_per_block(12), **_COMMON)
-DEMO = Tier(NAME="DEMO", BOND_MIN=173 * 10 ** 16, BLOCKTIME=1, GRID=300, GRID_SEC=300, EPOCH=3600, CURE_BLOCKS=1800, COOLDOWN=30,
+DEMO = Tier(NAME="DEMO", BOND_MIN=174 * 10 ** 16, BLOCKTIME=1, GRID=300, GRID_SEC=300, EPOCH=3600, CURE_BLOCKS=1800, COOLDOWN=30,
             REF_WINDOW=300, EDGE_DELAY=300, H_MARKOUT=20, NAV_MAX=1850 * 10 ** 18, m_perBlock=_m_per_block(1), **_COMMON)
-MAINNET = Tier(NAME="MAINNET", BOND_MIN=173 * 10 ** 16, BLOCKTIME=12, GRID=300, GRID_SEC=3600, EPOCH=50400, CURE_BLOCKS=7200, COOLDOWN=30,
+MAINNET = Tier(NAME="MAINNET", BOND_MIN=174 * 10 ** 16, BLOCKTIME=12, GRID=300, GRID_SEC=3600, EPOCH=50400, CURE_BLOCKS=7200, COOLDOWN=30,
                REF_WINDOW=600, EDGE_DELAY=1800, H_MARKOUT=120, NAV_MAX=1850 * 10 ** 18, m_perBlock=_m_per_block(12), **_COMMON)
 for _t in (TEST, DEMO, MAINNET):
     _t.FORFEIT_DRIP_BLOCKS = _t.EPOCH
@@ -148,7 +148,7 @@ def delta_of(h, sqrt_p):
 
 # ================================================================ ExecLedger.measure
 def measure_c(before, after, sqrt_s0, sqrt_spot, sqrt_ref, reserve, S, unvested, bond):
-    """ExecLedger.measure (repair C) -> (charge, pStar, navAfterPStar, burn, burnR, ok).
+    """ExecLedger.measure (repair C) -> (charge, pStar, navBurn, burn, burnR, ok).
     loss_p = NAV_before(p) − NAV_after(p) over the legs in the order spot, s0, ref (a later leg replaces only on a
     strictly larger loss, so p* = sqrtSpot on ties, incl. charge = 0); charge = max(0, max loss);
     NAV' = navBurn = the smallest NAV_after over the three legs (v2.34, owner F9-02: no curator-chosen leg lowers the

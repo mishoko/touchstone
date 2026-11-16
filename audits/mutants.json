@@ -1529,6 +1529,39 @@
    "find": "// [MU-139] the markout read covers exactly (now - a, now - b]\n        return _window(a, b);",
    "replace": "// [MU-139] the markout read covers exactly (now - a, now - b]\n        return _readRef(b);",
    "status": "pending"
+  },
+  {
+   "id": "MU-140",
+   "area": "ladder",
+   "desc": "τ_v counts a price stopped exactly on the upper edge from above (tick hi − 1, sqrtP = sqrtAt(hi))",
+   "killer_id": "U-clock-park",
+   "kill": "test_U_clock_park__upperEdgeReachedFromAboveEarnsNothing",
+   "file": "src/TouchstoneHook.sol",
+   "find": "&& (tick < hi - 1 || (tick == hi - 1",
+   "replace": "&& (tick < hi || (tick == hi - 1",
+   "status": "pending"
+  },
+  {
+   "id": "MU-141",
+   "area": "guards",
+   "desc": "the constructor accepts RESET_RUN < 2 (a run reset by any sample)",
+   "killer_id": "U-clock",
+   "kill": "test_U_clock__constructorRejectsTiersThatBreakTheClock",
+   "file": "src/TouchstoneHook.sol",
+   "find": "|| t.RESET_RUN < 2) revert BadTier();",
+   "replace": ") revert BadTier();",
+   "status": "pending"
+  },
+  {
+   "id": "MU-142",
+   "area": "guards",
+   "desc": "the constructor accepts a cure window below EDGE_DELAY + 3·GRID + REF_WINDOW/blocktime (incl. CURE_BLOCKS = 0, which bricks snapshots)",
+   "killer_id": "U-clock",
+   "kill": "test_U_clock__constructorRejectsTiersThatBreakTheClock",
+   "file": "src/TouchstoneHook.sol",
+   "find": "< uint256(t.EDGE_DELAY) + 3 * uint256(t.GRID) + t.REF_WINDOW / (t.GRID_SEC / t.GRID)",
+   "replace": "< 0",
+   "status": "pending"
   }
  ]
 }

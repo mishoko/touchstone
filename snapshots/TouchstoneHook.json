@@ -1,5 +1,6 @@
 {
   "G-1 first swap per block": "26742",
-  "G-1b refresh block (MockRefPool)": "96785",
+  "G-1 grid-boundary block without a read": "28679",
+  "G-1b refresh block (MockRefPool)": "92878",
   "G-2 later swap in the block": "4862"
 }

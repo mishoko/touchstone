@@ -56,6 +56,25 @@ contract HookGasTest is RealPoolBase {
         assertLe(used, G1_MAX);
     }
 
+    /// The other first-swap class: a block-grid boundary inside an anchor that is already cached (block grids and
+    /// timestamp anchors drift apart when slots are missed). It freezes one boundary (the median of nine and one
+    /// record write) and reads nothing. Steady state: every frozen slot has been written once before (the first
+    /// write of each of the eight slots happens once in the hook's life).
+    function test_G_1__gridBoundaryBlockWithoutReadExtraGas() public {
+        for (uint256 i; i < 9; ++i) {
+            advance(tier.GRID);
+            hook.refreshRef();
+        }
+        vm.roll(vm.getBlockNumber() + tier.GRID); // the next block grid
+        vm.warp(vm.getBlockTimestamp() + 1); // the same timestamp anchor
+        uint256 used = _callbackGas();
+        _record("G-1 grid-boundary block without a read", used);
+        assertTrue(hook.obs().refCachedAt != vm.getBlockNumber(), "no reference read in this class");
+        (,,, bool frozenNow) = hook.frozen(uint32(vm.getBlockNumber() / tier.GRID));
+        assertTrue(frozenNow, "the boundary was frozen");
+        assertLe(used, G1_MAX);
+    }
+
     function test_G_1b__refreshBlockExtraGas() public {
         advance(tier.GRID); // the next anchor's first block: reads the reference and freezes one boundary
         uint256 used = _callbackGas();

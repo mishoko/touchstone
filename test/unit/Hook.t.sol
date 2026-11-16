@@ -463,6 +463,59 @@ contract HookTest is HookBase {
         assertEq(h.obs().outBlocks, 0);
     }
 
+    /// The upper edge in v4's other representation: a price that falls to exactly sqrtAt(hi) stores tick hi - 1
+    /// (the swap stops on the boundary from above). It earns no tauV; one unit below it earns (control).
+    function test_U_clock_park__upperEdgeReachedFromAboveEarnsNothing() public {
+        arm();
+        register(LO, HI, 0);
+        h.setSlot0(TickMath.getSqrtPriceAtTick(HI), HI - 1);
+        for (uint256 i; i < 5; ++i) {
+            advance(G);
+            touch();
+        }
+        Obs memory o = h.obs();
+        assertEq(o.tauV, 0);
+        assertEq(o.tickSpot, HI - 1); // control: a tick-based rule would earn here
+        assertEq(o.outBlocks, 0); // the clock runs on the cached reference, which is in range
+        h.setSlot0(TickMath.getSqrtPriceAtTick(HI) - 1, HI - 1);
+        advance(G);
+        touch();
+        assertEq(h.obs().tauV, G);
+    }
+
+    /// The constructor rejects a tier that would brick snapshots (CURE_BLOCKS = 0 divides by zero in the latch) or
+    /// switch the clock off (RESET_RUN < 2 resets on any sample), or that breaks the grid or the witness alignment.
+    /// Control: the boundary values deploy.
+    function test_U_clock__constructorRejectsTiersThatBreakTheClock() public {
+        Create2Deployer d = new Create2Deployer();
+        uint256 bt = tier.GRID_SEC / tier.GRID;
+        uint32 cureMin = uint32(tier.EDGE_DELAY + 3 * tier.GRID + tier.REF_WINDOW / bt);
+        Tier memory t;
+        for (uint256 i; i < 9; ++i) {
+            t = tier;
+            if (i == 0) t.CURE_BLOCKS = 0;
+            if (i == 1) t.CURE_BLOCKS = cureMin - 1;
+            if (i == 2) t.RESET_RUN = 0;
+            if (i == 3) t.RESET_RUN = 1;
+            if (i == 4) t.GRID_SEC = 0;
+            if (i == 5) t.GRID_SEC = t.GRID * uint32(bt) + 1;
+            if (i == 6) t.W_TICKS = 0;
+            if (i == 7) t.W_TICKS = 2 * (10 * 100 + 5); // W/2 not a multiple of the tick spacing
+            if (i == 8) t.W_TICKS = -2000;
+            bytes memory init = abi.encodePacked(type(TouchstoneHook).creationCode, abi.encode(_args(t, VAULT)));
+            (bytes32 salt,) = d.mine(init);
+            vm.expectRevert(ITouchstoneHook.BadTier.selector);
+            d.deploy(init, salt);
+        }
+        // control: the smallest valid cure window and RESET_RUN = 2 deploy
+        t = tier;
+        t.CURE_BLOCKS = cureMin;
+        t.RESET_RUN = 2;
+        bytes memory ok = abi.encodePacked(type(TouchstoneHook).creationCode, abi.encode(_args(t, VAULT)));
+        (bytes32 s0,) = d.mine(ok);
+        assertTrue(d.deploy(ok, s0) != address(0));
+    }
+
     function test_U_clock_park__parkedPriceDoesNotStopTheClock() public {
         arm();
         register(LO, HI, 0);
@@ -508,6 +561,9 @@ contract HookTest is HookBase {
         for (uint256 i; i < 50; ++i) {
             advance(G);
             touch();
+            // checked at every touch: in-range reference anchors reset a run every RESET_RUN anchors, so a clock
+            // on the pool tick would show here as out-of-range blocks between resets
+            assertEq(h.obs().outBlocks, 0);
         }
         Obs memory o = h.obs();
         assertEq(o.outBlocks, 0);

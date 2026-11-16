@@ -121,6 +121,16 @@ contract TouchstoneHook is BaseHook, Extsload, ITouchstoneHook {
     constructor(HookArgs memory a) BaseHook(IPoolManager(a.poolManager)) {
         Tier memory t = a.tier;
         if (t.REF_WINDOW == 0 || t.GRID == 0 || t.EPOCH % t.GRID != 0) revert BadTier();
+        // [MU-141] the tier's clock invariants hold on chain, not only in the deploy script: whole-second blocks on
+        // the grid and a reset that needs at least two consecutive in-range anchors
+        if (t.GRID_SEC == 0 || t.GRID_SEC % t.GRID != 0 || t.RESET_RUN < 2) revert BadTier();
+        // [MU-142] the cure window covers the edge wait, two grids of freshness, the reference window and a grid
+        if (
+            uint256(t.CURE_BLOCKS)
+                < uint256(t.EDGE_DELAY) + 3 * uint256(t.GRID) + t.REF_WINDOW / (t.GRID_SEC / t.GRID)
+        ) revert BadTier();
+        // the witness range [c - W/2, c + W/2) is aligned to the pool's tick spacing
+        if (t.W_TICKS <= 0 || (t.W_TICKS / 2) % a.tickSpacing != 0) revert BadTier();
         IUniswapV3PoolOracle r = IUniswapV3PoolOracle(t.REF_POOL);
         // [MU-114] the reference prices the same pair in the same orientation
         if (r.token0() != Currency.unwrap(a.currency0) || r.token1() != Currency.unwrap(a.currency1)) revert BadRef();
@@ -288,6 +298,7 @@ contract TouchstoneHook is BaseHook, Extsload, ITouchstoneHook {
 
     /// @notice Records witness funding: the vault has transferred `a0`/`a1` of ERC-6909 claims to the hook.
     function fundWitness(uint256 a0, uint256 a1) external onlyVault {
+        if (a0 > type(uint128).max || a1 > type(uint128).max) revert Overflow();
         _witnessReserve0 += uint128(a0);
         _witnessReserve1 += uint128(a1);
     }
@@ -309,14 +320,15 @@ contract TouchstoneHook is BaseHook, Extsload, ITouchstoneHook {
         // [MU-131] the roll is fail-soft
         try this.witnessStep(epoch) returns (uint256 a, uint256 b, uint128 l) {
             (fg0, fg1, lw) = (a, b, l);
+            // the flag describes the live witness: a failed roll leaves both unchanged
+            _witnessFallback = fallbackUsed;
         } catch {}
-        _witnessFallback = fallbackUsed;
         emit WitnessRolled(epoch, fg0, fg1, lw);
     }
 
     /// @notice The witness roll body; callable by the hook itself only (so that `rollWitness` can catch a failure).
     function witnessStep(uint32 epoch) external returns (uint256 fg0, uint256 fg1, uint128 lw) {
-        if (msg.sender != address(this)) revert OnlyVault();
+        if (msg.sender != address(this)) revert OnlySelf();
         PoolKey memory key = PoolKey(CURRENCY0, CURRENCY1, FEE, TICK_SPACING, IHooks(address(this)));
         uint128 oldL = _witL;
         if (oldL != 0) {
@@ -393,6 +405,7 @@ contract TouchstoneHook is BaseHook, Extsload, ITouchstoneHook {
         bool refIn = lo <= ref && ref < hi;
         // [MU-092] [MU-035] tauV needs the pool price strictly inside the range and the cached reference in range.
         // The pool keeps sqrtAt(tick) <= sqrtP <= sqrtAt(tick + 1), so only a tick on an edge needs the sqrt test.
+        // [MU-140] the upper edge: a price stopped exactly at sqrtAt(hi) from above has tick hi - 1
         bool creditV = refIn && !_emptyRange && (tick > lo || (tick == lo && sqrtP > TickMath.getSqrtPriceAtTick(lo)))
             && (tick < hi - 1 || (tick == hi - 1 && sqrtP < TickMath.getSqrtPriceAtTick(hi)));
         bool creditB = _witLo <= tick && tick < _witHi;

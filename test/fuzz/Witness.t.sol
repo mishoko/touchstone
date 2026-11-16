@@ -87,16 +87,23 @@ contract WitnessFuzzTest is RealPoolBase {
         uint32 e1 = _toEpochStart();
         vault.roll(e1);
         (int24 lo, int24 hi, uint32 we, uint128 l,,) = hook.witness();
-        uint32 e2 = _toEpochStart();
+        bool fbBefore = hook.witnessFallback(); // e1 had a refresh: not a fallback
+        // the next epoch without a refresh: its roll would be a fallback
+        uint256 b = vm.getBlockNumber();
+        advance((b / tier.EPOCH + 1) * tier.EPOCH - b);
+        uint32 e2 = uint32(vm.getBlockNumber() / tier.EPOCH);
         vm.prank(address(vault));
-        (uint256 fg0, uint256 fg1, uint128 lw,) = hook.rollWitness(e2);
+        (uint256 fg0, uint256 fg1, uint128 lw, bool fbReturned) = hook.rollWitness(e2);
         assertEq(fg0 + fg1 + lw, 0);
         (int24 lo2, int24 hi2, uint32 we2, uint128 l2,,) = hook.witness();
         assertEq(abi.encode(lo2, hi2, we2, l2), abi.encode(lo, hi, we, l));
+        // the fallback flag still describes the unchanged witness (the failed roll would have set it differently)
+        assertTrue(fbReturned != fbBefore, "control: the failed roll's own fallback differs from the live one");
+        assertEq(hook.witnessFallback(), fbBefore);
         // only the vault rolls, and only the hook runs the roll body
         vm.expectRevert(ITouchstoneHook.OnlyVault.selector);
         hook.rollWitness(e2 + 1);
-        vm.expectRevert(ITouchstoneHook.OnlyVault.selector);
+        vm.expectRevert(ITouchstoneHook.OnlySelf.selector);
         hook.witnessStep(e2 + 1);
     }
 }

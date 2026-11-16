@@ -82,9 +82,13 @@ contract HookDeployTest is DeployBaseUnplaced {
         hk.fundWitness(1, 1);
         vm.expectRevert(ITouchstoneHook.OnlyVault.selector);
         hk.rollWitness(100);
-        vm.expectRevert(ITouchstoneHook.OnlyVault.selector);
+        vm.expectRevert(ITouchstoneHook.OnlySelf.selector);
         TouchstoneHook(hook).witnessStep(100);
         vm.stopPrank();
+        // the vault's funding must fit the 128-bit reserve (no silent truncation)
+        vm.prank(vault);
+        vm.expectRevert(ITouchstoneHook.Overflow.selector);
+        hk.fundWitness(uint256(type(uint128).max) + 1, 0);
         assertTrue(hk.obs().emptyRange);
         // the vault itself can register
         hk.snapshotIfNewBlock();

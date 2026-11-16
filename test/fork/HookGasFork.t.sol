@@ -14,7 +14,8 @@ import {Addresses} from "../../script/Addresses.sol";
 
 /// @notice G-1b on a mainnet fork: the gas of the reference read against USDC/WETH 0.05% and of a snapshot that
 ///         refreshes, at the pool's observed cardinality and with the cardinality forced to 65,535.
-///         Runs with `FOUNDRY_PROFILE=fork forge test --mp test/fork`; skips when MAINNET_RPC_URL is unset.
+///         Runs with `FOUNDRY_PROFILE=fork forge test --mp test/fork` (optionally `FORK_BLOCK=<n>`); skips when
+///         MAINNET_RPC_URL is unset.
 contract HookGasForkTest is Test {
     uint160 internal constant FLAGS = Hooks.BEFORE_INITIALIZE_FLAG | Hooks.BEFORE_SWAP_FLAG | Hooks.BEFORE_DONATE_FLAG;
     address internal constant VAULT = address(0x5A17);
@@ -29,7 +30,10 @@ contract HookGasForkTest is Test {
             vm.skip(true);
             return false;
         }
-        vm.createSelectFork(url);
+        // FORK_BLOCK pins the fork so that Foundry's RPC cache serves repeated runs (public RPCs rate-limit)
+        uint256 fb = vm.envOr("FORK_BLOCK", uint256(0));
+        if (fb == 0) vm.createSelectFork(url);
+        else vm.createSelectFork(url, fb);
         (Tier memory t,) = Tiers.mainnet();
         tier = t;
         (uint160 sqrtRef,,,,,,) = refPool.slot0();
@@ -52,23 +56,85 @@ contract HookGasForkTest is Test {
         return true;
     }
 
-    function _forceCardinality(uint16 c) internal {
-        bytes32 s0 = vm.load(address(refPool), 0);
-        uint256 v = uint256(s0);
-        v &= ~(uint256(0xffff) << 200); // observationCardinality: bits 200..215
-        v |= uint256(c) << 200;
-        vm.store(address(refPool), 0, bytes32(v));
+    uint16 internal _n;
+    uint32 internal _newestTs;
+    int24 internal _tick;
+
+    /// @dev Observation `j` of a full synthetic ring of `_n` observations, 12 s apart, the newest (j = n - 1) at
+    ///      `_newestTs`, at the pool's current tick, initialized.
+    function _obsWord(uint256 j) internal view returns (bytes32) {
+        uint32 ts = uint32(_newestTs - (_n - 1 - j) * 12);
+        int56 cum = int56(int256(uint256(ts))) * int56(_tick);
+        return bytes32(uint256(ts) | (uint256(uint56(cum)) << 32) | (uint256(1) << 248));
     }
 
-    function _measure(string memory label) internal {
+    function _put(uint256 j) internal {
+        vm.store(address(refPool), bytes32(uint256(8) + j), _obsWord(j));
+    }
+
+    /// @dev Makes the reference's oracle a full ring of `n` observations (index = n - 1, cardinality = n) as far as
+    ///      any read of `targets` can see: it writes the newest and oldest slots and every slot v3's binary search
+    ///      visits for each target (the search is replayed here on the same synthetic timestamps). The gas of a read
+    ///      is then that of a full ring (the worst case: anyone can raise the cardinality and ordinary swaps fill it),
+    ///      without writing 65,535 slots through the fork's RPC.
+    function _fillRing(uint16 n, uint32 newestTs, uint32[] memory targets) internal {
+        uint256 s0 = uint256(vm.load(address(refPool), 0));
+        (_n, _newestTs, _tick) = (n, newestTs, int24(uint24(s0 >> 160)));
+        s0 &= ~(uint256(0xffffffffffff) << 184); // observationIndex, observationCardinality, observationCardinalityNext
+        s0 |= (uint256(n - 1) << 184) | (uint256(n) << 200) | (uint256(n) << 216);
+        vm.store(address(refPool), 0, bytes32(s0));
+        _put(n - 1);
+        _put(0);
+        for (uint256 t; t < targets.length; ++t) {
+            uint256 l; // the oldest is (index + 1) % n = 0
+            uint256 r = n - 1;
+            while (true) {
+                uint256 i = (l + r) / 2;
+                _put(i % n);
+                _put((i + 1) % n);
+                uint32 before = uint32(uint256(_obsWord(i % n)));
+                uint32 after_ = uint32(uint256(_obsWord((i + 1) % n)));
+                bool atOrAfter = before <= targets[t];
+                if (atOrAfter && targets[t] <= after_) break;
+                if (!atOrAfter) r = i - 1;
+                else l = i + 1;
+            }
+        }
+    }
+
+    /// @dev The ring is full (the slot after the newest is initialized) and `oldestTarget` lies inside it, before the
+    ///      newest observation, so both ends of a read take the binary search.
+    function _assertWorstPath(uint16 n, uint32 oldestTarget, uint32 newestTarget) internal view {
+        uint256 newest = uint256(vm.load(address(refPool), bytes32(uint256(8) + n - 1)));
+        uint256 next = uint256(vm.load(address(refPool), bytes32(uint256(8) + (uint256(n - 1) + 1) % n)));
+        assertTrue(next >> 248 == 1, "ring full: the slot after the newest is initialized");
+        assertLt(newestTarget, uint32(newest), "both ends precede the newest observation");
+        assertGt(oldestTarget, uint32(next), "both ends lie inside the ring");
+    }
+
+    function _measure(uint16 n, string memory label) internal {
+        // an anchor boundary 300 s ago; the ring's newest observation 1 s ago
+        uint256 tk = (vm.getBlockTimestamp() / tier.GRID_SEC + 1) * tier.GRID_SEC;
+        vm.warp(tk + 300);
+        vm.roll(vm.getBlockNumber() + tier.GRID);
+        uint32 nowTs = uint32(vm.getBlockTimestamp());
+        // the worst single read: a window with both ends inside the ring (the anchored read and tryWindow)
+        uint32[] memory ago = new uint32[](2);
+        (ago[0], ago[1]) = (tier.REF_WINDOW + 120, 120);
+        uint32[] memory targets = new uint32[](4);
+        (targets[0], targets[1]) = (nowTs - ago[0], nowTs - ago[1]);
+        (targets[2], targets[3]) = (uint32(tk - tier.REF_WINDOW), uint32(tk));
+        _fillRing(n, nowTs - 1, targets);
+        _assertWorstPath(n, nowTs - ago[0], nowTs - ago[1]);
         vm.cool(address(refPool));
         uint256 g = gasleft();
-        (bool ok,) = hook.tryRef();
+        refPool.observe(ago);
         uint256 read = g - gasleft();
-        assertTrue(ok, "reference readable");
-        // the next anchor's first block: the snapshot reads the anchored TWAP
-        vm.roll(vm.getBlockNumber() + tier.GRID);
-        vm.warp(vm.getBlockTimestamp() + tier.GRID_SEC);
+        vm.cool(address(refPool));
+        (bool ok,) = hook.tryWindow(ago[0], ago[1]);
+        assertTrue(ok, "the capped read succeeds");
+        // the refresh block: the snapshot reads the TWAP ending at the anchor (300 s ago, inside the ring)
+        _assertWorstPath(n, uint32(tk - tier.REF_WINDOW), uint32(tk));
         vm.cool(address(refPool));
         vm.cool(address(hook));
         g = gasleft();
@@ -76,14 +142,14 @@ contract HookGasForkTest is Test {
         uint256 refreshBlock = g - gasleft();
         console.log(label, read, refreshBlock);
         assertEq(hook.obs().refCachedAt, vm.getBlockNumber());
-        assertLe(read * 3 / 2, tier.REF_GAS_CAP, "REF_GAS_CAP is at least 1.5x the read");
+        assertLe(read * 3 / 2, tier.REF_GAS_CAP, "REF_GAS_CAP is at least 1.5x the worst read");
         assertLe(refreshBlock, uint256(tier.REFRESH_GAS_MIN) + 20_000);
     }
 
     function test_G_1b__refreshBlockGasOnMainnetFork() public {
         if (!_setUpFork()) return;
-        _measure("observed cardinality: read, refresh block");
-        _forceCardinality(65_535);
-        _measure("cardinality 65535: read, refresh block");
+        (,,, uint16 card,,,) = refPool.slot0();
+        _measure(card, "observed cardinality, full ring: worst read, refresh block");
+        _measure(65_535, "cardinality 65535, full ring: worst read, refresh block");
     }
 }

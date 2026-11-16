@@ -11,12 +11,13 @@ import {Addresses} from "./Addresses.sol";
 ///         - TEST: the forge tier (12 s blocks, short epochs) so that epochs, vesting, breaches and removal are reached
 ///           within a test run; REF_POOL is the test's MockRefPool.
 ///         Values marked provisional are fixed at the parameter freeze: `m_perBlock` (here 1%/yr scaled per block),
-///         `REF_GAS_CAP` (estimate; sized on a mainnet fork) and REFRESH_GAS_MIN derived from it, and the mainnet
+///         `REF_GAS_CAP` (1.5x the worst read measured on a mainnet fork: a full ring at cardinality 65,535 with
+///         both window ends inside it, about 135k gas; test G-1b) and REFRESH_GAS_MIN derived from it, and the mainnet
 ///         REF_SQRT_PRICE.
 library Tiers {
     uint256 internal constant WAD = 1e18;
     uint256 internal constant M_YEAR_WAD_PROVISIONAL = 1e16;
-    uint32 internal constant REF_GAS_CAP_PROVISIONAL = 200_000;
+    uint32 internal constant REF_GAS_CAP_PROVISIONAL = 210_000;
 
     error TierInvalid(string reason);
 

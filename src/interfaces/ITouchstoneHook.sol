@@ -23,6 +23,10 @@ interface ITouchstoneHook {
     error BadRef();
     /// @notice `armAtSeed` was already called.
     error Armed();
+    /// @notice `witnessStep` is callable by the hook itself only.
+    error OnlySelf();
+    /// @notice A witness funding amount does not fit the 128-bit reserve.
+    error Overflow();
 
     function snapshotIfNewBlock() external returns (Obs memory);
     function obs() external view returns (Obs memory);

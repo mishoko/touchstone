@@ -16,14 +16,24 @@ library MedianOracle {
     }
 
     /// @notice The median of the last min(count, 9) entries; the lower median for an even count; 0 when empty.
+    ///         Insertion sort into a fixed 9-slot memory array as the entries are read (newest first).
     function med9(uint64[32] storage ring, uint256 head, uint256 count) internal view returns (int24) {
-        uint256 n = count < K_MED ? count : K_MED;
-        if (n == 0) return 0;
-        int24[] memory a = new int24[](n);
-        for (uint256 i; i < n; ++i) {
-            a[i] = tickOf(ring[(head + N_SNAP - 1 - i) % N_SNAP]);
+        unchecked {
+            uint256 n = count < K_MED ? count : K_MED;
+            if (n == 0) return 0;
+            int24[9] memory a;
+            uint256 newest = head + N_SNAP - 1;
+            for (uint256 i; i < n; ++i) {
+                int24 x = tickOf(ring[(newest - i) % N_SNAP]);
+                uint256 j = i;
+                while (j != 0 && a[j - 1] > x) {
+                    a[j] = a[j - 1];
+                    --j;
+                }
+                a[j] = x;
+            }
+            return a[(n - 1) / 2];
         }
-        return median(a);
     }
 
     /// @notice Insertion sort, then the element at index (n - 1) / 2. `a` is sorted in place.

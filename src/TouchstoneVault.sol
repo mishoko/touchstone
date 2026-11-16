@@ -21,9 +21,10 @@ import {Tier} from "./types/Tier.sol";
 import {Obs} from "./types/Obs.sol";
 import {Entry} from "./types/Entry.sol";
 import {Holdings} from "./types/Holdings.sol";
-import {Bank, V} from "./types/Bank.sol";
+import {Bank, Op, RING, V} from "./types/Bank.sol";
 import {Ladder} from "./libraries/Ladder.sol";
 import {ExecLedger} from "./libraries/ExecLedger.sol";
+import {FeeBank} from "./libraries/FeeBank.sol";
 
 /// @title TouchstoneVault
 /// @notice A single-position Uniswap v4 vault whose curator is paid from a bank of deferred shares. Shares are pro
@@ -66,6 +67,9 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
     uint64 internal _tauV0;
     uint40 internal _segStart;
     uint32 internal _epoch;
+    /// @dev The epoch's swap counters (the curator's swap caps); reset at every epoch roll.
+    uint64 internal _epochSwapFrac;
+    uint16 internal _swapCount;
     /// @dev The pending curator action's block timestamp (0 = none); the record itself is added with the actions.
     uint40 internal _tAction;
     uint128 internal _baseOwed;
@@ -77,6 +81,8 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
     // ------------------------------------------------------------------ events and errors
     event Deposit(address indexed owner, uint256 assets0, uint256 assets1, uint256 shares);
     event Withdraw(address indexed owner, uint256 shares, uint256 out0, uint256 out1);
+    event Checkpoint(uint64 tauV, uint64 tauB, uint256 nav0, uint64 delta, uint256 base, uint128 L, int24 lo, int24 hi);
+    event BreachProcessed(uint32 count, uint40 lastBlock, uint256 forfeited);
 
     error OnlyFactory();
     error OnlyPoolManager();
@@ -148,8 +154,16 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
         (Entry entry, address payer, bytes memory args) = abi.decode(data, (Entry, address, bytes));
         if (entry == Entry.Seed) return _seed(args);
         if (!_seeded) revert NotSeeded();
-        _prologue();
+        Obs memory o = _prologue();
+        // [MU-037] every entry point checkpoints
+        _checkpoint(o);
+        // [MU-073] the mode gate runs after the prologue checkpoint, which may have moved the mode to EXITED
         if (!Ladder.allowed(_bank.mode, uint8(entry))) revert Ladder.BadMode();
+        return _dispatch(entry, payer, args);
+    }
+
+    /// @dev The entry points of this build. A test harness extends it; every other entry is unreachable here.
+    function _dispatch(Entry entry, address payer, bytes memory args) internal virtual returns (bytes memory) {
         if (entry == Entry.Deposit) return _deposit(payer, args);
         return _withdraw(payer, args);
     }
@@ -201,6 +215,7 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
         // [MU-016] [MU-134] every bucket is charged rounded up (>= 1 wei when non-zero)
         uint256 d0 = FullMath.mulDivRoundingUp(_idle0, s, S);
         uint256 d1 = FullMath.mulDivRoundingUp(_idle1, s, S);
+        // [MU-162] the L leg too
         uint256 dL = FullMath.mulDivRoundingUp(_L, s, S);
         uint256 p0;
         uint256 p1;
@@ -237,6 +252,7 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
         uint256 S = totalSupply();
         uint256 o0 = FullMath.mulDiv(_idle0, s, S);
         uint256 o1 = FullMath.mulDiv(_idle1, s, S);
+        // [MU-163] the L leg rounds down like the idle legs
         uint256 dL = FullMath.mulDiv(_L, s, S);
         _burn(owner, s);
         uint256 r0;
@@ -264,9 +280,9 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
 
     /// @dev Snapshot, collect first, checkpoint. The markout settlement (step 0) and the checkpoint body are added with
     ///      the curator actions and the bank; the order below is the binding one.
-    function _prologue() internal {
+    function _prologue() internal returns (Obs memory o) {
         // [MU-027] the hook's span is closed in this block before anything reads or registers a range
-        HOOK.snapshotIfNewBlock();
+        o = HOOK.snapshotIfNewBlock();
         // [MU-008] collect first: v4 pays all accrued fees on any modify, so sweep them into idle before pricing
         if (_L > 0) {
             BalanceDelta d = _modify(0);
@@ -277,6 +293,82 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
             _idle0 = SafeCast.toUint128(_idle0 + f0);
             _idle1 = SafeCast.toUint128(_idle1 + f1);
         }
+    }
+
+    // ------------------------------------------------------------------ checkpoint
+
+    /// @notice The breach-first checkpoint: (1) the vest gate, (2) the forfeit drip, (3) pending breaches, (4) the
+    ///         segment (base accrual is added with the curator actions; until then no base exists), (5) vesting,
+    ///         (6) the epoch roll (counters; the epoch records are added with the records). Returns the live reference
+    ///         read, if the gate made one and it succeeded, so an action in the same call can reuse it.
+    function _checkpoint(Obs memory o) internal returns (bool liveRead, int24 liveTick) {
+        if (totalSupply() == 0) return (false, 0);
+        Bank storage b = _bank;
+        uint40 now_ = uint40(block.number);
+        uint32 ne = o.epoch;
+        int24 lo = _lo;
+        int24 hi = _hi;
+        // (1) the vest gate, evaluated once: the cache legs, then the live leg only when something is vestable
+        bool vestable = _vestable(b, ne);
+        bool gateOpen;
+        // [MU-069] [MU-093] [MU-106] a fresh, gap-free cached reference inside the registered range
+        if (o.refFresh && !o.emptyRange && !o.gapSinceVerify && lo <= o.refTick && o.refTick < hi && vestable) {
+            (liveRead, liveTick) = _tryRef();
+            // [MU-070] and the live reference inside the range (a failed read never opens the gate)
+            gateOpen = liveRead && lo <= liveTick && liveTick < hi;
+        }
+        // (2) the forfeit drip up to now
+        if (b.forfeitPool > 0) _burnBank(Op.Drip, abi.encode(now_));
+        // (3) pending breaches, before any accrual or vesting
+        uint32 n = o.pendingBreaches;
+        // [MU-049] every checkpoint processes pending breaches
+        if (n > 0) {
+            _baseOwed = 0;
+            // [MU-123] every pending breach is counted and acknowledged
+            uint256 forfeited = _burnBank(Op.Breach, abi.encode(n, now_));
+            HOOK.ackBreaches(n);
+            emit BreachProcessed(n, o.lastPendingBlock, forfeited);
+            // [MU-050] the breach cutoff, then the segment below closes at now
+            _tauV0 = o.tauVAtLastPending;
+            _segStart = o.lastPendingBlock;
+        }
+        // (4) the segment [segStart, now): no base accrues before the curator can place
+        _tauV0 = o.tauV;
+        _segStart = now_;
+        emit Checkpoint(o.tauV, o.tauB, _nav0, _delta0, 0, _L, lo, hi);
+        // (5) [MU-030] vest after breach processing: vested with the gate open, else held in maturedPending
+        if (vestable) FeeBank.bankApply(b, Op.VestTime, abi.encode(ne, gateOpen));
+        // (6) the epoch roll
+        if (ne > _epoch) {
+            _epoch = ne;
+            // [MU-132] the swap counters restart every epoch
+            _epochSwapFrac = 0;
+            _swapCount = 0;
+        }
+    }
+
+    /// @dev Some cohort is due (`vestBlock = (e + 1 + V)·EPOCH ≤ now`) or `maturedPending > 0`.
+    function _vestable(Bank storage b, uint32 ne) internal view returns (bool) {
+        // [MU-078] maturedPending alone makes the live leg due
+        if (b.maturedPending > 0) return true;
+        for (uint256 k; k < RING; ++k) {
+            if (b.cohorts[k].shares > 0 && uint256(ne) >= uint256(b.cohorts[k].epoch) + 1 + V) return true;
+        }
+        return false;
+    }
+
+    /// @dev Applies a bank op whose first return is a share burn, burns it from the vault's held shares, and returns
+    ///      the op's third return (the forfeited or burned amount).
+    function _burnBank(Op op, bytes memory args) internal returns (uint256 a) {
+        uint256 burned;
+        (burned,, a,) = FeeBank.bankApply(_bank, op, args);
+        if (burned > 0) _burn(address(this), burned);
+    }
+
+    /// @dev The live reference read of the vest gate (a seam for the scripted test harness).
+    function _tryRef() internal virtual returns (bool ok, int24 tick) {
+        // [MU-076] the gate reads the live reference, never the cache
+        return HOOK.tryRef();
     }
 
     // ------------------------------------------------------------------ internals

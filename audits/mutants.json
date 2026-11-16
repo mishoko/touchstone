@@ -82,12 +82,12 @@
    "id": "MU-008",
    "area": "ledger",
    "desc": "collect-first removed",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "I-2",
+   "kill": "test_I_2__withdrawPaysTheExactShareOfEveryBucketAfterFees",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        if (_L > 0) {\n            BalanceDelta d = _modify(0);",
+   "replace": "        if (false) {\n            BalanceDelta d = _modify(0);",
+   "status": "KILLED"
   },
   {
    "id": "MU-009",
@@ -294,8 +294,8 @@
    "killer_id": "U-1b",
    "kill": "test_U_1b__depositAndWithdrawSnapshotTheHookFirst",
    "file": "src/TouchstoneVault.sol",
-   "find": "        HOOK.snapshotIfNewBlock();\n        // [MU-008]",
-   "replace": "        // [MU-008]",
+   "find": "        o = HOOK.snapshotIfNewBlock();\n        // [MU-008]",
+   "replace": "        o = HOOK.obs();\n        // [MU-008]",
    "status": "KILLED"
   },
   {
@@ -324,12 +324,12 @@
    "id": "MU-030",
    "area": "bank",
    "desc": "vest before breach processing",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "U-forfeit",
+   "kill": "test_U_forfeit__aPendingBreachForfeitsBeforeTheVest",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        // (3) pending breaches, before any accrual or vesting\n",
+   "replace": "        if (vestable) FeeBank.bankApply(b, Op.VestTime, abi.encode(ne, gateOpen));\n        // (3) pending breaches, before any accrual or vesting\n",
+   "status": "KILLED"
   },
   {
    "id": "MU-031",
@@ -401,12 +401,12 @@
    "id": "MU-037",
    "area": "bank",
    "desc": "no checkpoint on deposit",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "U-breach",
+   "kill": "test_U_breach__anEmptyVaultBreachIsProcessedByADeposit",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        _checkpoint(o);\n        // [MU-073]",
+   "replace": "        if (entry != Entry.Deposit) _checkpoint(o);\n        // [MU-073]",
+   "status": "KILLED"
   },
   {
    "id": "MU-038",
@@ -533,23 +533,23 @@
    "id": "MU-049",
    "area": "ladder",
    "desc": "breaches processed only by `poke`",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "U-breach",
+   "kill": "test_U_breach__anEmptyVaultBreachIsProcessedByAWithdrawal",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        if (n > 0) {\n            _baseOwed = 0;",
+   "replace": "        if (n > 0 && false) {\n            _baseOwed = 0;",
+   "status": "KILLED"
   },
   {
    "id": "MU-050",
    "area": "ladder",
    "desc": "pending breaches processed after accrual",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "U-forfeit",
+   "kill": "test_U_forfeit__breachThenSegmentEndsAtTheCheckpoint",
+   "file": "src/TouchstoneVault.sol",
+   "find": "            _tauV0 = o.tauVAtLastPending;\n            _segStart = o.lastPendingBlock;\n        }\n        // (4) the segment [segStart, now): no base accrues before the curator can place\n        _tauV0 = o.tauV;\n        _segStart = now_;",
+   "replace": "        }\n        _tauV0 = o.tauV;\n        _segStart = now_;\n        if (n > 0) {\n            _tauV0 = o.tauVAtLastPending;\n            _segStart = o.lastPendingBlock;\n        }",
+   "status": "KILLED"
   },
   {
    "id": "MU-051",
@@ -754,22 +754,22 @@
    "area": "additional",
    "desc": "gate ignores `gapSinceVerify`",
    "killer_id": "U-vest-gate",
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "kill": "test_U_vest_gate__gapBlocksTheVestWithoutReading",
+   "file": "src/TouchstoneVault.sol",
+   "find": "!o.gapSinceVerify && ",
+   "replace": "",
+   "status": "KILLED"
   },
   {
    "id": "MU-070",
    "area": "additional",
    "desc": "gate ignores `liveIn`",
    "killer_id": "U-vest-gate",
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "kill": "test_U_vest_gate__liveReferenceOutBlocksTheVest",
+   "file": "src/TouchstoneVault.sol",
+   "find": "gateOpen = liveRead && lo <= liveTick && liveTick < hi;",
+   "replace": "gateOpen = true;",
+   "status": "KILLED"
   },
   {
    "id": "MU-071",
@@ -798,11 +798,11 @@
    "area": "additional",
    "desc": "mode gate before the prologue only",
    "killer_id": "U-mode",
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "kill": "test_U_mode__pendingRemovalRevertsADepositAfterThePrologue",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        Obs memory o = _prologue();\n        // [MU-037] every entry point checkpoints\n        _checkpoint(o);\n        // [MU-073] the mode gate runs after the prologue checkpoint, which may have moved the mode to EXITED\n        if (!Ladder.allowed(_bank.mode, uint8(entry))) revert Ladder.BadMode();",
+   "replace": "        if (!Ladder.allowed(_bank.mode, uint8(entry))) revert Ladder.BadMode();\n        Obs memory o = _prologue();\n        _checkpoint(o);",
+   "status": "KILLED"
   },
   {
    "id": "MU-074",
@@ -831,11 +831,11 @@
    "area": "additional",
    "desc": "`_tryRef` returns the cache instead of reading",
    "killer_id": "U-vest-gate",
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "kill": "test_U_vest_gate__realVaultReadsTheLiveReferenceThroughTheHook",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        return HOOK.tryRef();",
+   "replace": "        return (true, HOOK.obs().refTick);",
+   "status": "KILLED"
   },
   {
    "id": "MU-077",
@@ -853,11 +853,11 @@
    "area": "additional",
    "desc": "vestable ignores `maturedPending`",
    "killer_id": "U-vest-gate",
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "kill": "test_U_vest_gate__onlyMaturedPendingReadsTheLiveLegAndVests",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        if (b.maturedPending > 0) return true;\n",
+   "replace": "",
+   "status": "KILLED"
   },
   {
    "id": "MU-079",
@@ -1017,12 +1017,12 @@
    "id": "MU-093",
    "area": "additional",
    "desc": "vest on a stale cache",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "U-vest-gate",
+   "kill": "test_U_vest_gate__staleCacheBlocksTheVest",
+   "file": "src/TouchstoneVault.sol",
+   "find": "o.refFresh && !o.emptyRange",
+   "replace": "!o.emptyRange",
+   "status": "KILLED"
   },
   {
    "id": "MU-094",
@@ -1160,12 +1160,12 @@
    "id": "MU-106",
    "area": "additional",
    "desc": "vest with the cache out of range",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "U-vest-gate",
+   "kill": "test_U_vest_gate__cacheOutOfRangeBlocksTheVest",
+   "file": "src/TouchstoneVault.sol",
+   "find": "lo <= o.refTick && o.refTick < hi && vestable",
+   "replace": "vestable",
+   "status": "KILLED"
   },
   {
    "id": "MU-107",
@@ -1347,12 +1347,12 @@
    "id": "MU-123",
    "area": "additional",
    "desc": "a single breach counted when two are pending",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "U-forfeit",
+   "kill": "test_U_forfeit__everyPendingBreachIsCountedAndAcknowledged",
+   "file": "src/TouchstoneVault.sol",
+   "find": "_burnBank(Op.Breach, abi.encode(n, now_))",
+   "replace": "_burnBank(Op.Breach, abi.encode(uint32(1), now_))",
+   "status": "KILLED"
   },
   {
    "id": "MU-124",
@@ -1446,12 +1446,12 @@
    "id": "MU-132",
    "area": "additional",
    "desc": "swap counters not reset at the epoch roll",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "U-vest-gate",
+   "kill": "test_U_vest_gate__epochRollResetsTheSwapCounters",
+   "file": "src/TouchstoneVault.sol",
+   "find": "            _epochSwapFrac = 0;\n            _swapCount = 0;\n",
+   "replace": "",
+   "status": "KILLED"
   },
   {
    "id": "MU-133",
@@ -1770,6 +1770,28 @@
    "file": "src/TouchstoneVault.sol",
    "find": "if (FullMath.mulDiv(navRef, S_SEED - DEAD, S_SEED) < BOND_MIN) revert BondMin();",
    "replace": "if (FullMath.mulDiv(navRef, S_SEED - DEAD, S_SEED) <= BOND_MIN) revert BondMin();",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-162",
+   "area": "guards",
+   "desc": "the deposit L leg rounded down instead of up (s08, fix review r1 note)",
+   "killer_id": "U-5",
+   "kill": "test_U_5__depositChargesTheLLegRoundedUp",
+   "file": "src/TouchstoneVault.sol",
+   "find": "uint256 dL = FullMath.mulDivRoundingUp(_L, s, S);",
+   "replace": "uint256 dL = FullMath.mulDiv(_L, s, S);",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-163",
+   "area": "guards",
+   "desc": "the withdraw L leg rounded up instead of down (s08; the I-2 L-leg control)",
+   "killer_id": "I-2",
+   "kill": "test_I_2__withdrawPaysTheExactShareOfEveryBucketAfterFees",
+   "file": "src/TouchstoneVault.sol",
+   "find": "uint256 dL = FullMath.mulDiv(_L, s, S);",
+   "replace": "uint256 dL = FullMath.mulDivRoundingUp(_L, s, S);",
    "status": "KILLED"
   }
  ]

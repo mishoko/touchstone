@@ -16,6 +16,12 @@ fs_permissions = [{ access = "read", path = "./test/vectors" }, { access = "read
 # The size gate (runtime <= 22,000 B) is script/size_gate.py over `forge build --sizes --json` plus an anvil deploy.
 # Note: `forge test` does not enforce EIP-170; the size gate is `forge build --sizes` + an anvil deploy (CI).
 
+[profile.default.invariant]
+# The P2 invariants (spec: 256 x 128 locally; nightly 2000 x 256 with a printed seed).
+runs = 256
+depth = 128
+fail_on_revert = false
+
 [lint]
 # Field names of the parameter structs follow the specification's parameter names.
 lint_on_build = false

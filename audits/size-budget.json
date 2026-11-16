@@ -1,0 +1,116 @@
+{
+ "description": "Accepted runtime sizes (bytes) of every contract and linked library under src/. CI (script/size_budget.py) fails when a runtime grows more than growth_limit bytes over its accepted size until the record is updated with a note. vault_rows lists the module rows of the vault size table that the current build implements (some only in part), with their budgets; the check reports the measured vault against their sum plus the unattributed allowance. The hard gate (every runtime <= 22,000 B plus an anvil deploy) is script/size_gate.py.",
+ "growth_limit": 256,
+ "vault_unattributed": 1500,
+ "vault_rows": [
+  {
+   "row": "ERC-20 shares",
+   "budget": 2000,
+   "built": "full"
+  },
+  {
+   "row": "unlock dispatch, 6909 settlement, hook-call glue",
+   "budget": 1500,
+   "built": "full"
+  },
+  {
+   "row": "ShareMath + deposit / withdraw / seed",
+   "budget": 4000,
+   "built": "full"
+  },
+  {
+   "row": "checkpoint orchestration + records + epilogue",
+   "budget": 3000,
+   "built": "partial: steps 1-6 and the flow epilogue; no records"
+  },
+  {
+   "row": "deferral, maturedPending, gap flag, tryRef calls",
+   "budget": 450,
+   "built": "partial: the gate and maturedPending; no deferral"
+  },
+  {
+   "row": "Ladder + mode machine",
+   "budget": 1000,
+   "built": "partial: the allowed table and breach processing; no retire or releaseBond"
+  },
+  {
+   "row": "errors, events, views",
+   "budget": 1000,
+   "built": "partial"
+  }
+ ],
+ "contracts": {
+  "ExecLedger": {
+   "runtime": 1936,
+   "history": [
+    {
+     "runtime": 1936,
+     "note": "s08 baseline: P2 with the checkpoint (steps 1-6, accrual inert), the swap counters and the dispatch/_tryRef seams"
+    }
+   ]
+  },
+  "FeeBank": {
+   "runtime": 4394,
+   "history": [
+    {
+     "runtime": 4394,
+     "note": "s08 baseline: P2 with the checkpoint (steps 1-6, accrual inert), the swap counters and the dispatch/_tryRef seams"
+    }
+   ]
+  },
+  "Ladder": {
+   "runtime": 57,
+   "history": [
+    {
+     "runtime": 57,
+     "note": "s08 baseline: P2 with the checkpoint (steps 1-6, accrual inert), the swap counters and the dispatch/_tryRef seams"
+    }
+   ]
+  },
+  "LiquidityValue": {
+   "runtime": 57,
+   "history": [
+    {
+     "runtime": 57,
+     "note": "s08 baseline: P2 with the checkpoint (steps 1-6, accrual inert), the swap counters and the dispatch/_tryRef seams"
+    }
+   ]
+  },
+  "MedianOracle": {
+   "runtime": 57,
+   "history": [
+    {
+     "runtime": 57,
+     "note": "s08 baseline: P2 with the checkpoint (steps 1-6, accrual inert), the swap counters and the dispatch/_tryRef seams"
+    }
+   ]
+  },
+  "TouchstoneFactory": {
+   "runtime": 6709,
+   "history": [
+    {
+     "runtime": 6709,
+     "note": "s08 baseline: P2 with the checkpoint (steps 1-6, accrual inert), the swap counters and the dispatch/_tryRef seams"
+    }
+   ]
+  },
+  "TouchstoneHook": {
+   "runtime": 14310,
+   "history": [
+    {
+     "runtime": 14310,
+     "note": "s08 baseline: P2 with the checkpoint (steps 1-6, accrual inert), the swap counters and the dispatch/_tryRef seams"
+    }
+   ]
+  },
+  "TouchstoneVault": {
+   "runtime": 14971,
+   "history": [
+    {
+     "runtime": 14971,
+     "note": "s08 baseline: P2 with the checkpoint (steps 1-6, accrual inert), the swap counters and the dispatch/_tryRef seams"
+    }
+   ]
+  }
+ }
+}

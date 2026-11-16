@@ -39,6 +39,20 @@ abstract contract DeployBaseUnplaced is Test {
     HookArgs internal hookArgs;
     bytes32 internal saltH;
 
+    /// @dev The pool's seed tick and the reference's starting tick.
+    function _seedTick() internal view virtual returns (int24) {
+        return SEED_TICK;
+    }
+
+    /// @dev If non-zero, token0 is the token with these decimals (e.g. 6 for a USDC/WETH-ordered pool).
+    function _token0Decimals() internal view virtual returns (uint8) {
+        return 0;
+    }
+
+    function _seedParams() internal view virtual returns (SeedParams memory) {
+        return SeedParams({a0: 1e18, a1: 1e18, curator: curator, wit0: 1e9, wit1: 1e9});
+    }
+
     // The factory and hook tests use a stub vault; `VaultBase` overrides this with the real vault.
     function _vaultCode() internal pure virtual returns (bytes memory) {
         return type(StubVault).creationCode;
@@ -67,14 +81,20 @@ abstract contract DeployBaseUnplaced is Test {
         MockToken a = _newToken("WETH", 18);
         MockToken b = _newToken("USDC", 6);
         (token0, token1) = address(a) < address(b) ? (a, b) : (b, a);
-        refPool = new MockRefPool(address(token0), address(token1), FEE, uint32(block.timestamp - 2 hours), SEED_TICK);
+        for (uint8 want = _token0Decimals(); want != 0 && token0.decimals() != want;) {
+            // token0 is the other token here: redeploy the wanted one until its address sorts first
+            MockToken w = _newToken(want == 6 ? "USDC" : "WETH", want);
+            MockToken other = token0;
+            (token0, token1) = address(w) < address(other) ? (w, other) : (other, w);
+        }
+        refPool = new MockRefPool(address(token0), address(token1), FEE, uint32(block.timestamp - 2 hours), _seedTick());
         t.REF_POOL = address(refPool);
-        t.REF_SQRT_PRICE = TickMath.getSqrtPriceAtTick(SEED_TICK);
+        t.REF_SQRT_PRICE = TickMath.getSqrtPriceAtTick(_seedTick());
         Tiers.check(t, bt);
         tier = t;
         factory = new TouchstoneFactory(address(manager), keccak256(_vaultCode()), keccak256(_hookCode()));
         deployer = address(this);
-        seedParams = SeedParams({a0: 1e18, a1: 1e18, curator: curator, wit0: 1e9, wit1: 1e9});
+        seedParams = _seedParams();
     }
 
     function _hookArgsFor(address vaultAddr) internal view returns (HookArgs memory) {
@@ -85,7 +105,7 @@ abstract contract DeployBaseUnplaced is Test {
             currency1: Currency.wrap(address(token1)),
             fee: FEE,
             tickSpacing: TICK_SPACING,
-            seedSqrtPriceX96: TickMath.getSqrtPriceAtTick(SEED_TICK),
+            seedSqrtPriceX96: TickMath.getSqrtPriceAtTick(_seedTick()),
             tier: tier
         });
     }
@@ -115,7 +135,8 @@ abstract contract DeployBaseUnplaced is Test {
     }
 
     function advance(uint256 n) internal {
-        vm.roll(block.number + n);
-        vm.warp(block.timestamp + n * blocktime);
+        // vm.getBlockNumber / getBlockTimestamp: via-IR may fold `block.number` within one call
+        vm.roll(vm.getBlockNumber() + n);
+        vm.warp(vm.getBlockTimestamp() + n * blocktime);
     }
 }

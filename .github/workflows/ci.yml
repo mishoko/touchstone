@@ -23,6 +23,11 @@ jobs:
       - name: Size gate (every src/ runtime <= 22,000 B; strict parse)
         run: python3 script/size_gate.py
 
+      - name: Size budget record (growth > 256 B over the accepted size needs a note)
+        run: |
+          python3 script/size_budget.py --selftest
+          python3 script/size_budget.py
+
       - name: Size gate rejects the oversized fixture
         run: |
           set +e

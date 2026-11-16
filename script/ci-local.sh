@@ -16,6 +16,10 @@ forge --version | head -1 | grep -q "forge Version: ${FOUNDRY_VERSION}" \
 step "size gate: every src/ runtime <= 22,000 B"
 python3 script/size_gate.py
 
+step "size budget record (growth > 256 B over the accepted size needs a note)"
+python3 script/size_budget.py --selftest
+python3 script/size_budget.py
+
 step "size gate rejects the oversized fixture"
 set +e
 out=$(FOUNDRY_PROFILE=oversized python3 script/size_gate.py --scope test/fixtures 2>&1); rc=$?

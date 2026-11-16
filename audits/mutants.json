@@ -263,7 +263,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (PoolId.unwrap(key.toId()) != PoolId.unwrap(POOL_ID)) revert WrongPool();",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-025",
@@ -274,7 +274,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (msg.sender != VAULT) revert OnlyVault();",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-026",
@@ -285,7 +285,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "// [MU-026] initialization by anyone but the hook's own constructor reverts\n        revert HookNotImplemented();",
    "replace": "// [MU-026] initialization by anyone but the hook's own constructor reverts\n        return IHooks.beforeInitialize.selector;",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-027",
@@ -384,7 +384,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "bool creditV = refIn && !_emptyRange &&",
    "replace": "bool creditV = !_emptyRange &&",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-036",
@@ -428,7 +428,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "j * c <= newOut && n < 3",
    "replace": "j * c < newOut && n < 3",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-040",
@@ -439,7 +439,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "bool refIn = lo <= ref && ref < hi;",
    "replace": "bool refIn = lo <= tick && tick < hi;",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-041",
@@ -450,7 +450,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "uint256 end = now_ < freshEnd ? now_ : freshEnd;",
    "replace": "uint256 end = now_;",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-042",
@@ -461,7 +461,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "int24 m = MedianOracle.med9(_ring, _head, _count);",
    "replace": "_insert(now_, tick);\n                int24 m = MedianOracle.med9(_ring, _head, _count);",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-043",
@@ -472,7 +472,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "        _resetStreak = 0;\n        _outBlocks = 0;\n        emit RangeRegistered",
    "replace": "        emit RangeRegistered",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-044",
@@ -626,7 +626,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "creditV ? _satAdd(tauV0, cr) : tauV0,",
    "replace": "creditV ? _satAdd(tauV0, trunc) : tauV0,",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-058",
@@ -637,7 +637,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (read) (ok, t) = _readAnchor(k);",
    "replace": "if (read) {\n            (ok, t) = _readAnchor(k);\n            _commit(ok, t, k);\n            read = false;\n        }",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-059",
@@ -648,7 +648,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "_latch(oldOut, newOut, last);",
    "replace": "_latch(0, newOut, last);",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-060",
@@ -670,7 +670,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (streak >= RESET_RUN) {",
    "replace": "if (streak >= 1) {",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-062",
@@ -714,7 +714,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "ModifyLiquidityParams(nlo, nhi, int256(uint256(lw)), _witSalt(epoch))",
    "replace": "ModifyLiquidityParams(nlo, nhi, int256(uint256(lw)), _witSalt(0))",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-066",
@@ -747,7 +747,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "            _gapSinceVerify = false;\n            emit GapCleared(1);",
    "replace": "            emit GapCleared(1);",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-069",
@@ -846,7 +846,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "bool refIn = lo <= ref && ref < hi;",
    "replace": "bool refIn = _emptyRange || (lo <= ref && ref < hi);",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-078",
@@ -868,7 +868,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (now_ > freshEnd) {",
    "replace": "if (now_ >= freshEnd) {",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-080",
@@ -890,7 +890,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "        _gapSinceVerify = false;\n        emit GapCleared(0);",
    "replace": "        emit GapCleared(0);",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-082",
@@ -934,7 +934,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "uint256 end = now_ < freshEnd ? now_ : freshEnd;",
    "replace": "uint256 end = (now_ < freshEnd || (read && ok)) ? now_ : freshEnd;",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-086",
@@ -945,7 +945,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "            _gapSinceVerify = true;\n            emit GapSet",
    "replace": "            emit GapSet",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-087",
@@ -956,7 +956,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (_vaultLo <= t && t < _vaultHi) {",
    "replace": "if (_vaultLo <= t && t < _vaultHi) {\n            _gapSinceVerify = false;",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-088",
@@ -989,7 +989,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "        _outBlocks = 0;\n        emit RangeRegistered(lo, hi, liveTick);",
    "replace": "        _outBlocks = 0;\n        _pendingBreaches = 0;\n        emit RangeRegistered(lo, hi, liveTick);",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-091",
@@ -1000,7 +1000,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "_pendingBreaches = n >= p ? 0 : p - n;",
    "replace": "_pendingBreaches = 0;",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-092",
@@ -1011,7 +1011,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "(tick > lo || (tick == lo && sqrtP > TickMath.getSqrtPriceAtTick(lo)))",
    "replace": "(tick >= lo)",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-093",
@@ -1088,7 +1088,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "_writeCache(liveTick, _anchor());",
    "replace": "_writeCache(_refTick, _anchor());",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-100",
@@ -1099,7 +1099,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (gasleft() < REFRESH_GAS_MIN) revert RefGas();",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-101",
@@ -1110,7 +1110,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (d < 0 && d % w != 0) --q;",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-102",
@@ -1121,7 +1121,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "ok := and(s, eq(returndatasize(), 0x100))",
    "replace": "ok := s",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-103",
@@ -1132,7 +1132,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "let s := staticcall(cap, pool, p, 0x84, p, 0x100)",
    "replace": "let s := staticcall(cap, pool, p, 0x84, 0, 0)\n            returndatacopy(p, 0, returndatasize())",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-104",
@@ -1143,7 +1143,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (card < t.MIN_CARD) revert BadRef();",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-105",
@@ -1154,7 +1154,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "return uint32(block.timestamp / GRID_SEC);",
    "replace": "return uint32(block.number / GRID);",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-106",
@@ -1176,7 +1176,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "for (uint256 j = oldOut / c + 1; j * c <= newOut",
    "replace": "for (uint256 j = oldOut / c + 1; j == 1 && j * c <= newOut",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-108",
@@ -1209,7 +1209,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "        if (k > _refGrid) {",
    "replace": "        if (k >= _refGrid) {",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-111",
@@ -1220,7 +1220,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "return _readRef(block.timestamp - uint256(k) * GRID_SEC);",
    "replace": "return _readRef(0);",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-112",
@@ -1231,7 +1231,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "        _snapshot();\n        _refresh();",
    "replace": "        _refresh();\n        _snapshot();",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-113",
@@ -1242,7 +1242,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (read) (ok, t) = _readAnchor(k);",
    "replace": "if (read) {\n            (ok, t) = _readAnchor(k);\n            if (!ok) revert RefUnreadable();\n        }",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-114",
@@ -1253,7 +1253,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (r.token0() != Currency.unwrap(a.currency0) || r.token1() != Currency.unwrap(a.currency1)) revert BadRef();",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-115",
@@ -1264,7 +1264,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "uint256 streak;",
    "replace": "uint256 streak = _resetStreak;",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-116",
@@ -1275,7 +1275,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "streak = _refGrid + 1 == k ? _resetStreak + 1 : 1;",
    "replace": "streak = _resetStreak + 1;",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-117",
@@ -1319,7 +1319,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "        _armed = true;\n",
    "replace": "\n",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-121",
@@ -1385,7 +1385,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "return _window(uint32(secondsAgo) + REF_WINDOW, uint32(secondsAgo));",
    "replace": "return _window(uint32(secondsAgo) + 12, uint32(secondsAgo));",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-127",
@@ -1396,7 +1396,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (!ok) revert RefUnreadable();\n    }\n\n    function tryRef()",
    "replace": "\n    }\n\n    function tryRef()",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-128",
@@ -1407,7 +1407,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "address public immutable REF_POOL;",
    "replace": "address public REF_POOL;",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-129",
@@ -1440,7 +1440,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "try this.witnessStep(epoch) returns (uint256 a, uint256 b, uint128 l) {\n            (fg0, fg1, lw) = (a, b, l);\n            // the flag describes the live witness: a failed roll leaves both unchanged\n            _witnessFallback = fallbackUsed;\n        } catch {}",
    "replace": "(fg0, fg1, lw) = this.witnessStep(epoch);\n        _witnessFallback = fallbackUsed;",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-132",
@@ -1484,7 +1484,7 @@
    "file": "src/TouchstoneFactory.sol",
    "find": "bytes32 sv = keccak256(abi.encode(msg.sender, saltV));",
    "replace": "bytes32 sv = saltV;",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-136",
@@ -1517,7 +1517,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "// [MU-138] donations to the pool revert\n        revert HookNotImplemented();",
    "replace": "// [MU-138] donations to the pool revert\n        return IHooks.beforeDonate.selector;",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-139",
@@ -1528,7 +1528,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "// [MU-139] the markout read covers exactly (now - a, now - b]\n        return _window(a, b);",
    "replace": "// [MU-139] the markout read covers exactly (now - a, now - b]\n        return _readRef(b);",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-140",
@@ -1539,7 +1539,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "&& (tick < hi - 1 || (tick == hi - 1",
    "replace": "&& (tick < hi || (tick == hi - 1",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-141",
@@ -1550,7 +1550,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "|| t.RESET_RUN < 2) revert BadTier();",
    "replace": ") revert BadTier();",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-142",
@@ -1561,7 +1561,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "< uint256(t.EDGE_DELAY) + 3 * uint256(t.GRID) + t.REF_WINDOW / (t.GRID_SEC / t.GRID)",
    "replace": "< 0",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-143",
@@ -1572,7 +1572,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "t.GRID_SEC == 0 || t.GRID_SEC % t.GRID != 0 ||",
    "replace": "t.GRID_SEC == 0 ||",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-144",
@@ -1583,7 +1583,7 @@
    "file": "src/TouchstoneHook.sol",
    "find": "t.W_TICKS <= 0 || t.W_TICKS % (2 * a.tickSpacing) != 0",
    "replace": "t.W_TICKS <= 0",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-145",
@@ -1594,7 +1594,7 @@
    "file": "src/libraries/MedianOracle.sol",
    "find": "// [MU-145] the lower median of the newest min(count, 9) entries\n            return a[(n - 1) / 2];",
    "replace": "// [MU-145] the lower median of the newest min(count, 9) entries\n            return a[n / 2];",
-   "status": "pending"
+   "status": "KILLED"
   }
  ]
 }

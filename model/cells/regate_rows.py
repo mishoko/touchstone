@@ -67,6 +67,12 @@ def l6():
         lines.append(f"  competitive building, L_deep ×{ls}: safe NAV over j = 1..10 held blocks: min {res[ls]} WETH "
                      f"(j=1 {per[1]}, j=10 {per[10]}); builder holding all ten blocks, one round trip (disclosed limit): "
                      f"{safe_nav(ls, NB, per_block=False)} WETH")
+    global FEE_T
+    f0, FEE_T = FEE_T, FEE_T - 1      # the markout tick is floored on chain (integer closes, a floored mean): ≈ 1 tick lost
+    fl = {ls: min(safe_nav(ls, j) for j in range(1, NB + 1)) for ls in (1.0, 0.25)}
+    FEE_T = f0
+    lines.append(f"  with the on-chain floor of the markout tick (margin FEE_TICKS − 1): safe NAV {fl[1.0]} / {fl[0.25]} WETH "
+                 f"(L_deep / L_deep/4): {'meets' if fl[0.25] >= NAV_MAX else 'BELOW'} NAV_MAX {NAV_MAX}")
     ctl = safe_nav(1.0, 1, l_deep=1.0)
     ok = res[0.25] is not None and res[0.25] >= NAV_MAX
     lines.append(f"  rule: safe NAV ≥ NAV_MAX {NAV_MAX} at L_deep/4: {'PASS' if ok else 'FAIL'}; control L_deep → 0: "

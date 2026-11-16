@@ -496,7 +496,6 @@ EQUIVALENT = {
     'op:drop0: slot[1] > 0 and slot[0] != e #2': 'Settle: an empty slot: the overwrite moves 0 shares',
     'rel:>->>=: slot[1] > 0 #2': 'Settle: slot[1] >= 0 always; an empty foreign slot moves 0 shares, a same-epoch slot fails the epoch test',
     'lit:1-1: for leg in legs[1:]:': 'measure_c: re-comparing the first leg with itself fails the strict >, so the result is unchanged',
-    'op:then: tick if ok else 0': 'the event field: a failed window read returns tick 0, so both arms give 0',
     'rel:<-><=: x < 0': 'x = 0 returns 0 on both branches',
     'rel:>->>=: x > cap': 'x = cap returns cap on both branches',
     'rel:<=-><: s <= sa': 's = sa: the in-range branch gives getAmount0Delta(sa, sb) and getAmount1Delta(sa, sa) = 0, the same amounts',

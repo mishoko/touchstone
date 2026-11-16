@@ -1021,7 +1021,7 @@ class Vault:
         self.S -= burned
         self.rec(now // t.EPOCH)["charge"] += extra
         self.pending = None
-        self.events.append(("Settled", pd["charge0"], extra, tick if ok else 0, not ok))
+        self.events.append(("Settled", pd["charge0"], extra, tick, not ok))   # a failed read returns tick 0
         return extra, burn_s, ok
 
     def prologue(self, now, ts):

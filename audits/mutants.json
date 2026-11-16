@@ -1518,6 +1518,17 @@
    "find": "// [MU-138] donations to the pool revert\n        revert HookNotImplemented();",
    "replace": "// [MU-138] donations to the pool revert\n        return IHooks.beforeDonate.selector;",
    "status": "pending"
+  },
+  {
+   "id": "MU-139",
+   "area": "repair C",
+   "desc": "`tryWindow` reads the anchored REF_WINDOW ending at `b` instead of the window (a, b]",
+   "killer_id": "U-ref-fail",
+   "kill": "test_U_ref_fail__tryWindowReadsOnlyItsOwnWindow",
+   "file": "src/TouchstoneHook.sol",
+   "find": "// [MU-139] the markout read covers exactly (now - a, now - b]\n        return _window(a, b);",
+   "replace": "// [MU-139] the markout read covers exactly (now - a, now - b]\n        return _readRef(b);",
+   "status": "pending"
   }
  ]
 }

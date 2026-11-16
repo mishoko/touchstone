@@ -236,6 +236,7 @@ contract TouchstoneHook is BaseHook, Extsload, ITouchstoneHook {
     }
 
     function tryWindow(uint32 a, uint32 b) external view returns (bool ok, int24 tick) {
+        // [MU-139] the markout read covers exactly (now - a, now - b]
         return _window(a, b);
     }
 

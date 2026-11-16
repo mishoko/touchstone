@@ -255,6 +255,49 @@ contract HookTest is HookBase {
         assertFalse(ok);
     }
 
+    /// The markout read over a window that ends in the past: the mean over (now - a, now - b] only, rounded toward
+    /// negative infinity, independent of the ticks after the window and of the cache.
+    function test_U_ref_fail__tryWindowReadsOnlyItsOwnWindow() public {
+        uint32 t = uint32(vm.getBlockTimestamp());
+        uint32[] memory s = new uint32[](4);
+        int24[] memory k = new int24[](4);
+        // -7 over (t-900, t-600], -8 over (t-600, t-450], +5000 after t-450 (outside the window read below)
+        (s[0], s[1], s[2], s[3]) = (0, t - 900, t - 600, t - 450);
+        (k[0], k[1], k[2], k[3]) = (0, -7, -8, 5000);
+        ref.setPath(s, k);
+        (bool ok, int24 tick) = h.tryWindow(900, 450);
+        assertTrue(ok);
+        // (-7 * 300 - 8 * 150) / 450 = -3300 / 450 = -7.33 -> -8 (toward negative infinity, not -7)
+        assertEq(tick, -8);
+        (ok, tick) = h.tryWindow(600, 450);
+        assertTrue(ok);
+        assertEq(tick, -8);
+        // the read writes nothing: the cache is unchanged
+        Obs memory o = h.obs();
+        (ok, tick) = h.tryWindow(450, 0);
+        assertEq(tick, 5000);
+        assertEq(h.obs().refCachedAt, o.refCachedAt);
+        assertEq(h.obs().refTick, o.refTick);
+    }
+
+    /// A window older than the reference's oracle history fails (ok = false) without reverting; one second younger
+    /// succeeds.
+    function test_U_ref_fail__tryWindowOlderThanHistoryFails() public {
+        uint32 t = uint32(vm.getBlockTimestamp());
+        uint32[] memory s = new uint32[](1);
+        int24[] memory k = new int24[](1);
+        (s[0], k[0]) = (t - 1000, 42);
+        ref.setPath(s, k);
+        (bool ok, int24 tick) = h.tryWindow(1001, 0);
+        assertFalse(ok);
+        assertEq(tick, 0);
+        (ok, tick) = h.tryWindow(1001, 500);
+        assertFalse(ok);
+        (ok, tick) = h.tryWindow(1000, 0);
+        assertTrue(ok);
+        assertEq(tick, 42);
+    }
+
     function test_U_clock__tickClampedToTheTickRange() public {
         refConst(TickMath.MAX_TICK);
         (, int24 tick) = h.tryRef();

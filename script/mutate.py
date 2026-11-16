@@ -80,7 +80,18 @@ def restore_leftovers():
                 print('restored', orig[:-len('.mutorig')])
 
 
+FLAGS = ('--audit', '--full', '--write')
+
+
 def main(argv):
+    if any(a in ('-h', '--help') for a in argv):
+        print(__doc__)
+        return 0
+    bad = [a for a in argv if a.startswith('-') and a not in FLAGS]
+    if bad:
+        # an unknown flag must never fall through to "all mutants" (a campaign that mutates src/)
+        print('mutate: unknown option', ' '.join(bad), '; known:', ' '.join(FLAGS))
+        return 2
     doc, muts = load()
     if '--audit' in argv:
         return 0 if audit(muts) else 1

@@ -6,9 +6,11 @@ import {Extsload} from "@uniswap/v4-core/src/Extsload.sol";
 import {IUnlockCallback} from "@uniswap/v4-core/src/interfaces/callback/IUnlockCallback.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {PoolId} from "@uniswap/v4-core/src/types/PoolId.sol";
+import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
-import {ModifyLiquidityParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
+import {ModifyLiquidityParams, SwapParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -38,6 +40,7 @@ import {FeeBank} from "./libraries/FeeBank.sol";
 ///      the slots of its storage-layout snapshot (the Lens decodes them), and the tier through `TIER_HASH`.
 contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
+    using StateLibrary for IPoolManager;
 
     uint256 internal constant WAD = 1e18;
     uint256 public constant S_SEED = 1e24;
@@ -62,6 +65,14 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
     uint256 internal immutable H_MARKOUT;
     uint256 internal immutable REF_GAS_CAP;
     int24 internal immutable FEE_TICKS;
+    int24 internal immutable REF_BAND;
+    int24 internal immutable BAND_SWAP;
+    uint256 internal immutable COOLDOWN;
+    uint256 internal immutable RESERVE_RATIO;
+    uint256 internal immutable MAX_SWAP_ACTION;
+    uint256 internal immutable MAX_SWAP_EPOCH;
+    uint256 internal immutable MAX_SWAPS;
+    PoolId internal immutable POOL_ID;
     bytes32 public immutable TIER_HASH;
 
     // ------------------------------------------------------------------ storage (spec field widths)
@@ -80,6 +91,8 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
     uint16 internal _swapCount;
     /// @dev The pending curator action's block timestamp (0 = none); the rest of its record follows `_bank`.
     uint40 internal _tAction;
+    /// @dev The block of the curator's last action (0 = none yet: no cooldown before the first action).
+    uint40 internal _lastAction;
     uint128 internal _baseOwed;
     bool internal _seeded;
     address public curator;
@@ -97,6 +110,7 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
     event Checkpoint(uint64 tauV, uint64 tauB, uint256 nav0, uint64 delta, uint256 base, uint128 L, int24 lo, int24 hi);
     event BreachProcessed(uint32 count, uint40 lastBlock, uint256 forfeited);
     event Settled(uint256 charge0, uint256 extra, int24 tickMk, bool fallbackUsed);
+    event Action(uint8 kind, uint256 charge, uint160 pStar, uint256 burnedBank, uint256 burnedBond);
 
     error OnlyFactory();
     error OnlyPoolManager();
@@ -107,6 +121,12 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
     error NavCap();
     error BondMin();
     error RefGas();
+    error OnlyCurator();
+    error Fence();
+    error Cooldown();
+    error MaxSwaps();
+    error SwapCap();
+    error MaxCharge();
 
     constructor() ERC20("Touchstone Vault Share", "TSV") {
         FACTORY = msg.sender;
@@ -131,6 +151,14 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
         H_MARKOUT = t.H_MARKOUT;
         REF_GAS_CAP = t.REF_GAS_CAP;
         FEE_TICKS = t.FEE_TICKS;
+        REF_BAND = t.REF_BAND;
+        BAND_SWAP = t.BAND_SWAP;
+        COOLDOWN = t.COOLDOWN;
+        RESERVE_RATIO = t.RESERVE_RATIO;
+        MAX_SWAP_ACTION = t.MAX_SWAP_ACTION;
+        MAX_SWAP_EPOCH = t.MAX_SWAP_EPOCH;
+        MAX_SWAPS = t.MAX_SWAPS;
+        POOL_ID = PoolId.wrap(keccak256(abi.encode(p.key)));
     }
 
     // ------------------------------------------------------------------ entry points
@@ -169,6 +197,12 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
         );
     }
 
+    /// @notice The curator's exact-input swap from idle, charged its implementation shortfall (see `_rebalanceSwap`).
+    function rebalanceSwap(bool zeroForOne, uint128 amountIn, uint256 maxCharge) external nonReentrant {
+        if (msg.sender != curator) revert OnlyCurator();
+        MANAGER.unlock(abi.encode(Entry.RebalanceSwap, msg.sender, abi.encode(zeroForOne, amountIn, maxCharge)));
+    }
+
     /// @notice Settles a pending curator action whose markout window has closed (a no-op otherwise), then checkpoints.
     function settle() external nonReentrant {
         MANAGER.unlock(abi.encode(Entry.Settle, msg.sender, ""));
@@ -184,14 +218,20 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
         _settle();
         Obs memory o = _prologue();
         // [MU-037] every entry point checkpoints
-        _checkpoint(o);
+        (bool liveRead, int24 liveTick) = _checkpoint(o);
         // [MU-073] the mode gate runs after the prologue checkpoint, which may have moved the mode to EXITED
         if (!Ladder.allowed(_bank.mode, uint8(entry))) revert Ladder.BadMode();
-        return _dispatch(entry, payer, args);
+        return _dispatch(entry, payer, args, liveRead, liveTick);
     }
 
     /// @dev The entry points of this build. A test harness extends it; every other entry is unreachable here.
-    function _dispatch(Entry entry, address payer, bytes memory args) internal virtual returns (bytes memory) {
+    ///      `liveRead`/`liveTick`: the checkpoint's live reference read in this call, if it made one that succeeded.
+    function _dispatch(Entry entry, address payer, bytes memory args, bool liveRead, int24 liveTick)
+        internal
+        virtual
+        returns (bytes memory)
+    {
+        if (entry == Entry.RebalanceSwap) return _rebalanceSwap(args, liveRead, liveTick);
         if (entry == Entry.Deposit) return _deposit(payer, args);
         // [MU-172] an entry this build does not implement never falls through to a flow
         if (entry == Entry.Withdraw) return _withdraw(payer, args);
@@ -308,6 +348,92 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
         return abi.encode(a0, a1);
     }
 
+    /// @notice The curator's exact-input swap from idle. Guards: the fence `|tick_spot − refTick| ≤ REF_BAND` at the
+    ///         live reference, the cooldown, `MAX_SWAPS`, the per-action and per-epoch caps (fractions of NAV valued at
+    ///         the reference on the holdings before the action, each rounded up, checked on the requested amount) and
+    ///         idle. The swap stops at `tick_spot ∓ (FEE_TICKS + BAND_SWAP)` on the adverse side (a partial fill is
+    ///         charged on its result and counted by the amount filled); it settles through claims, and the position's
+    ///         fees are collected again before the charge. Never changes the mode.
+    function _rebalanceSwap(bytes memory args, bool liveRead, int24 liveTick) internal returns (bytes memory) {
+        (bool z, uint128 amountIn, uint256 maxCharge) = abi.decode(args, (bool, uint128, uint256));
+        // s0 = s_spot (no move); then the live reference, once
+        (uint160 s0, int24 tickSpot,,) = MANAGER.getSlot0(POOL_ID);
+        // [MU-108] [MU-193] [MU-210] the checkpoint's successful live read is reused; otherwise (none, or a failed one) the
+        // action reads it here and reverts RefUnreadable if it cannot
+        int24 ref = liveRead ? liveTick : HOOK.liveRef();
+        _guards(tickSpot, ref);
+        // [MU-015] at most MAX_SWAPS per epoch
+        if (_swapCount >= MAX_SWAPS) revert MaxSwaps();
+        // [MU-007] the action is measured on the holdings it starts from (after collect-first), nothing earlier
+        Holdings memory before = _holdings();
+        uint160 sRef = TickMath.getSqrtPriceAtTick(ref);
+        // [MU-117] [MU-133] the caps are fractions of NAV at the reference on the holdings before the action
+        uint256 frac = ExecLedger.swapFrac(before, z, amountIn, sRef);
+        // [MU-022] [MU-209] the per-action and per-epoch caps, on the requested amount
+        if (frac > MAX_SWAP_ACTION || _epochSwapFrac + frac > MAX_SWAP_EPOCH) revert SwapCap();
+        // [MU-202] from idle only
+        if (amountIn > (z ? before.idle0 : before.idle1)) revert SwapCap();
+        // [MU-020] the price limit on the adverse side of spot
+        int24 lim = z ? tickSpot - (FEE_TICKS + BAND_SWAP) : tickSpot + (FEE_TICKS + BAND_SWAP);
+        BalanceDelta d =
+            MANAGER.swap(_key(), SwapParams(z, -int256(uint256(amountIn)), TickMath.getSqrtPriceAtTick(lim)), "");
+        uint256 paid = uint256(int256(-(z ? d.amount0() : d.amount1())));
+        uint256 got = uint256(int256(z ? d.amount1() : d.amount0()));
+        // settle through claims: burn the input's claims, mint the output's
+        MANAGER.burn(address(this), (z ? C0 : C1).toId(), paid);
+        _mintClaims(z ? C1 : C0, got);
+        if (z) (_idle0, _idle1) = (_idle0 - uint128(paid), SafeCast.toUint128(_idle1 + got));
+        else (_idle0, _idle1) = (SafeCast.toUint128(_idle0 + got), _idle1 - uint128(paid));
+        // [MU-009] the vault's own swap paid fees into its own position: collect them before NAV_after
+        _collect();
+        // [MU-201] the counters add the amount filled; [MU-207] and the swap
+        _epochSwapFrac = uint64(_min(_epochSwapFrac + ExecLedger.swapFrac(before, z, paid, sRef), type(uint64).max));
+        ++_swapCount;
+        // [MU-021] the mode is left as it is
+        _charge(uint8(Entry.RebalanceSwap), before, s0, s0, sRef, maxCharge);
+        return "";
+    }
+
+    /// @dev The guards common to both actions: the fence on the spot tick at the live reference and the cooldown.
+    function _guards(int24 tickSpot, int24 ref) internal view {
+        int256 dist = int256(tickSpot) - ref;
+        // [MU-206] [MU-212] both sides
+        if (dist > REF_BAND || -dist > REF_BAND) revert Fence();
+        uint256 la = _lastAction;
+        // [MU-014] COOLDOWN blocks since the last action; none before the first
+        if (la != 0 && block.number < la + COOLDOWN) revert Cooldown();
+    }
+
+    /// @notice The charge shared by both actions: the worse of the legs `s0`, `s_spot` and the reference
+    ///         (`ExecLedger.measure`), the reserve `RESERVE_RATIO·NAV_before(s_spot)`, the solvency gate and the burn
+    ///         (`Op.Charge`: the charge burned, the reserve's shares encumbered), the `maxCharge` backstop on
+    ///         `charge₀ + reserve`, the pending record, and the epilogue: `NAV₀` and `δ₀` re-based at the reference.
+    function _charge(uint8 kind, Holdings memory before, uint160 s0, uint160 sSpot, uint160 sRef, uint256 maxCharge)
+        internal
+    {
+        Holdings memory after_ = _holdings();
+        // the gate is FeeBank's (Op.Charge), on the same burns
+        (uint256 charge, uint160 pStar, uint256 burn, uint256 burnR, uint256 reserve, uint256 nav, uint64 delta) =
+            ExecLedger.actionCharge(before, after_, s0, sSpot, sRef, RESERVE_RATIO, totalSupply());
+        // [MU-197] [MU-198] [MU-199] the charge's burn and the reserve's shares, in that order
+        (uint256 burned,, uint256 bankBurn, uint256 bondBurn) =
+            FeeBank.bankApply(_bank, Op.Charge, abi.encode(burn, burnR));
+        // [MU-156] [MU-192] the curator's backstop covers the charge and the reserve
+        if (charge + reserve > maxCharge) revert MaxCharge();
+        // [MU-211] the charge burn leaves the supply
+        _burn(address(this), burned);
+        // [MU-204] [MU-214] [MU-215] the pending action, settled at its markout window
+        (_tAction, _pBefore, _pAfter, _pCharge0, _pReserve) =
+            (uint40(block.timestamp), before, after_, _u128(charge), _u128(reserve));
+        // [MU-205]
+        _lastAction = uint40(block.number);
+        // epilogue: [MU-203] NAV₀ and [MU-194] δ₀ re-based at the live reference on the new holdings
+        _nav0 = _u128(nav);
+        _delta0 = delta;
+        // [MU-213]
+        emit Action(kind, charge, pStar, bankBurn, bondBurn);
+    }
+
     // ------------------------------------------------------------------ prologue
 
     /// @notice Step 0: the markout settlement of a pending action once its window `(tAction + blocktime, tAction +
@@ -345,6 +471,13 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
         // [MU-027] the hook's span is closed in this block before anything reads or registers a range
         o = HOOK.snapshotIfNewBlock();
         // [MU-008] collect first: v4 pays all accrued fees on any modify, so sweep them into idle before pricing
+        _collect();
+    }
+
+    /// @dev Sweeps the position's accrued fees into idle (as claims); skipped at L = 0, where a zero-delta modify
+    ///      reverts.
+    function _collect() internal {
+        // [MU-200]
         if (_L > 0) {
             BalanceDelta d = _modify(0);
             uint256 f0 = uint256(int256(d.amount0()));
@@ -475,6 +608,10 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
 
     function _holdings() internal view returns (Holdings memory) {
         return Holdings(_idle0, _idle1, _L, _lo, _hi);
+    }
+
+    function _min(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a < b ? a : b;
     }
 
     function _u128(uint256 x) internal pure returns (uint128) {

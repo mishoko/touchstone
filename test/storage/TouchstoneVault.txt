@@ -16,6 +16,7 @@
    8  9    8 _epochSwapFrac: uint64
    8 17    2 _swapCount: uint16
    8 19    5 _tAction: uint40
+   8 24    5 _lastAction: uint40
    9  0   16 _baseOwed: uint128
    9 16    1 _seeded: bool
   10  0   20 curator: address

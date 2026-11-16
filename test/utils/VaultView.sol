@@ -15,6 +15,7 @@ library VaultView {
     uint256 internal constant SLOT_NAV0 = 7; // nav0 (low 128)
     uint256 internal constant SLOT_BANK = 11; // cohorts: 5 slots, then the scalars
     uint256 internal constant SLOT_TACTION = 8; // tAction u40 at byte offset 19
+    uint256 internal constant SLOT_COUNTERS = 8; // segStart u40, epoch u32, epochSwapFrac u64, swapCount u16, tAction, lastAction u40
     uint256 internal constant SLOT_PENDING = 21; // before (2 slots), after (2 slots), charge0 | reserve << 128
 
     function _ld(TouchstoneVault v, uint256 slot) private view returns (uint256) {
@@ -49,6 +50,18 @@ library VaultView {
         after_ = _hold(v, SLOT_PENDING + 2);
         uint256 c = _ld(v, SLOT_PENDING + 4);
         (charge0, reserve) = (uint128(c), uint128(c >> 128));
+    }
+
+    /// @notice The action guards' state: (epoch, epochSwapFrac, swapCount, lastAction), and δ₀.
+    function counters(TouchstoneVault v)
+        internal
+        view
+        returns (uint32 epoch, uint64 epochSwapFrac, uint16 swapCount, uint40 lastAction, uint64 delta0)
+    {
+        uint256 w = _ld(v, SLOT_COUNTERS);
+        (epoch, epochSwapFrac, swapCount) = (uint32(w >> 40), uint64(w >> 72), uint16(w >> 136));
+        lastAction = uint40(w >> 192);
+        delta0 = uint64(_ld(v, SLOT_NAV0) >> 128);
     }
 
     function nav0(TouchstoneVault v) internal view returns (uint256) {

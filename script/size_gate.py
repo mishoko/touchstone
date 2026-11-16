@@ -53,7 +53,7 @@ def main():
     names = declared(a.scope)
     if not names:
         print(f'size gate: no contracts under {a.scope}/'); return 1
-    r = subprocess.run(['forge', 'build', '--sizes', '--json'], cwd=ROOT, capture_output=True, text=True)
+    r = subprocess.run(['forge', 'build', '--sizes', '--json', a.scope], cwd=ROOT, capture_output=True, text=True)
     if r.returncode != 0:
         print(r.stdout[-2000:], r.stderr[-2000:], sep='\n'); print(f'size gate: forge exited {r.returncode}'); return 1
     try:

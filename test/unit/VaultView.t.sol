@@ -40,6 +40,17 @@ contract VaultViewTest is HarnessVaultBase {
         (uint40 tA2, Holdings memory pb2, Holdings memory pa2, uint128 c02, uint128 r2) = hv.pendingAction();
         assertEq(abi.encode(tA, pb, pa, c0, r), abi.encode(tA2, pb2, pa2, c02, r2), "pending");
         assertEq(tA, 0xABCDEF12, "tAction decoded");
+        hv.setScalars(1e30, 0x1234_5678_9ABC, 3, 4, 5, 0xDEADBEEF, 0x0FED_CBA9_8765_4321, 0xBEEF);
+        hv.setLastAction(0xCAFE_F00D_12);
+        (uint32 ep, uint64 esf, uint16 sc, uint40 la, uint64 d0) = tv.counters();
+        assertEq(ep, hv.scalars().epoch, "epoch");
+        assertEq(esf, hv.scalars().epochSwapFrac, "epochSwapFrac");
+        assertEq(sc, hv.scalars().swapCount, "swapCount");
+        assertEq(la, hv.lastAction(), "lastAction");
+        assertEq(d0, hv.scalars().delta0, "delta0");
+        assertEq(abi.encode(ep, esf, sc, la), abi.encode(uint32(0xDEADBEEF), uint64(0x0FED_CBA9_8765_4321), uint16(0xBEEF), uint40(0xCAFE_F00D_12)), "distinct values");
+        (tA,,,,) = tv.pending();
+        assertEq(tA, 0xABCDEF12, "tAction unchanged by the neighbours");
         (uint40 drip, uint40 rel) = tv.bankLimits();
         assertEq(drip, 31, "dripBlocks");
         assertEq(rel, 37, "releaseDelay");

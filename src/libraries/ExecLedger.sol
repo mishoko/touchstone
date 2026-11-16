@@ -13,6 +13,8 @@ import {Placement} from "./Placement.sol";
 ///         (`settleExtra`), and the placement sizing the vault's actions use (`placementSize`). All values are in
 ///         token1 units; every function is pure.
 library ExecLedger {
+    uint256 internal constant WAD = 1e18;
+
     /// @notice NAV of `h` at sqrt price `sqrtP` and the value of its position alone, both in token1 units (floor).
     function value(Holdings calldata h, uint160 sqrtP) external pure returns (uint256 nav, uint256 posValue) {
         return _value(h, sqrtP);
@@ -35,6 +37,64 @@ library ExecLedger {
         uint256 unvested,
         uint256 bond
     ) external pure returns (uint256 charge, uint160 pStar, uint256 navBurn, uint256 burn, uint256 burnR, bool ok) {
+        return _measure(before, after_, sqrtS0, sqrtSpot, sqrtRef, reserve, S, unvested, bond);
+    }
+
+    /// @notice A curator action's charge in one call (the vault's size lever): the reserve
+    ///         `RESERVE_RATIO·NAV_before(s_spot)` (floor), `measure` with that reserve (its gate is applied by
+    ///         `FeeBank`'s `Op.Charge` on the same burns), and the epilogue's re-base at the reference on the holdings
+    ///         after: `nav = NAV_after(s_ref)` and `delta = min(WAD, positionValue·WAD/nav)` (0 if nav = 0).
+    function actionCharge(
+        Holdings calldata before,
+        Holdings calldata after_,
+        uint160 sqrtS0,
+        uint160 sqrtSpot,
+        uint160 sqrtRef,
+        uint256 reserveRatio,
+        uint256 S
+    )
+        external
+        pure
+        returns (uint256 charge, uint160 pStar, uint256 burn, uint256 burnR, uint256 reserve, uint256 nav, uint64 delta)
+    {
+        // [MU-195] [MU-196] the reserve on the holdings before the action at the post-move spot
+        (uint256 navSpot,) = _value(before, sqrtSpot);
+        reserve = FullMath.mulDiv(reserveRatio, navSpot, WAD);
+        (charge, pStar,, burn, burnR,) = _measure(before, after_, sqrtS0, sqrtSpot, sqrtRef, reserve, S, 0, 0);
+        uint256 pos;
+        // [MU-208] the epilogue at the reference
+        (nav, pos) = _value(after_, sqrtRef);
+        if (nav > 0) {
+            uint256 d = FullMath.mulDiv(pos, WAD, nav);
+            delta = uint64(d < WAD ? d : WAD);
+        }
+    }
+
+    /// @notice A swap amount as a fraction of NAV, both valued at the reference on the holdings before the action:
+    ///         `ceil(value(amount)·WAD / NAV(sqrtRef))`, the amount in token0 when `zeroForOne`, else in token1;
+    ///         `type(uint256).max` when that NAV is 0 (no cap fits).
+    function swapFrac(Holdings calldata before, bool zeroForOne, uint256 amount, uint160 sqrtRef)
+        external
+        pure
+        returns (uint256)
+    {
+        (uint256 nav,) = _value(before, sqrtRef);
+        if (nav == 0) return type(uint256).max;
+        uint256 v = zeroForOne ? LiquidityValue.val(amount, 0, sqrtRef) : amount;
+        return FullMath.mulDivRoundingUp(v, WAD, nav);
+    }
+
+    function _measure(
+        Holdings calldata before,
+        Holdings calldata after_,
+        uint160 sqrtS0,
+        uint160 sqrtSpot,
+        uint160 sqrtRef,
+        uint256 reserve,
+        uint256 S,
+        uint256 unvested,
+        uint256 bond
+    ) private pure returns (uint256 charge, uint160 pStar, uint256 navBurn, uint256 burn, uint256 burnR, bool ok) {
         // [MU-001] [MU-002] [MU-125] [MU-146] [MU-178] the worse of the three legs; ties keep the spot leg
         (uint256 nb, uint256 na) = _legs(before, after_, sqrtSpot);
         pStar = sqrtSpot;

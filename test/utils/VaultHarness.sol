@@ -93,9 +93,13 @@ contract VaultHarness is TouchstoneVault {
         MANAGER.unlock(abi.encode(Entry.SetPositions, msg.sender, abi.encode(lo, hi)));
     }
 
-    function _dispatch(Entry entry, address payer, bytes memory args) internal override returns (bytes memory) {
+    function _dispatch(Entry entry, address payer, bytes memory args, bool liveRead, int24 liveTick)
+        internal
+        override
+        returns (bytes memory)
+    {
         if (entry == Entry.SetPositions) return _placeForTest(args);
-        return super._dispatch(entry, payer, args);
+        return super._dispatch(entry, payer, args, liveRead, liveTick);
     }
 
     function _placeForTest(bytes memory args) internal returns (bytes memory) {
@@ -215,6 +219,14 @@ contract VaultHarness is TouchstoneVault {
     /// @dev Sends an arbitrary entry through the vault's own unlock (the dispatch's unhandled-entry test).
     function rawEntry(Entry entry) external {
         MANAGER.unlock(abi.encode(entry, msg.sender, abi.encode(uint256(1), uint256(0), uint256(0), msg.sender)));
+    }
+
+    function lastAction() external view returns (uint40) {
+        return _lastAction;
+    }
+
+    function setLastAction(uint40 b) external {
+        _lastAction = b;
     }
 
     function scalars() external view returns (Scalars memory s) {

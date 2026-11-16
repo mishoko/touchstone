@@ -20,7 +20,7 @@ from size_gate import declared  # noqa: E402
 
 
 def measure():
-    r = subprocess.run(['forge', 'build', '--sizes', '--json'], cwd=ROOT, capture_output=True, text=True)
+    r = subprocess.run(['forge', 'build', '--sizes', '--json', 'src'], cwd=ROOT, capture_output=True, text=True)
     if r.returncode != 0:
         print(r.stdout[-2000:], r.stderr[-2000:], sep='\n')
         raise SystemExit(f'size budget: forge exited {r.returncode}')

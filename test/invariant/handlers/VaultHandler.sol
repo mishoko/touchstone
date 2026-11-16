@@ -19,6 +19,8 @@ import {TouchstoneVault} from "../../../src/TouchstoneVault.sol";
 import {Holdings} from "../../../src/types/Holdings.sol";
 import {Bank, Cohort, RING, V} from "../../../src/types/Bank.sol";
 import {ExecLedger} from "../../../src/libraries/ExecLedger.sol";
+import {FeeBank} from "../../../src/libraries/FeeBank.sol";
+import {Ladder} from "../../../src/libraries/Ladder.sol";
 
 /// @notice The minimal P2 handler: deposits, withdrawals, time (snapshotted steps and silent jumps), keep-alive
 ///         refreshes, test-only placements, third-party swaps, reference moves and `breakRef` (every failure mode of
@@ -58,6 +60,11 @@ contract VaultHandler is Test {
     uint256 public settledByRead;
     uint256 public settledByFallback;
     uint256 public withdrawalsSettling;
+    uint256 public curatorSwaps;
+    uint256 public settledReal;
+    bool internal _realPending;
+    uint256 public actionFailures;
+    bytes4 public actionSelector;
 
     constructor(
         IPoolManager m,
@@ -192,6 +199,7 @@ contract VaultHandler is Test {
             uint40(vm.getBlockTimestamp()), before, a, uint128(bound(charge0, 0, 1e16)), uint128(bound(reserve, 0, 1e16))
         );
         ++pends;
+        _realPending = false;
     }
 
     /// @notice The open `settle()`; it never reverts with full gas.
@@ -202,6 +210,48 @@ contract VaultHandler is Test {
         } catch (bytes memory err) {
             ++i10Failures;
             i10Selector = bytes4(err);
+        }
+    }
+
+    /// @notice The curator's `rebalanceSwap` of up to a quarter of the input token's idle balance. On even `align` the
+    ///         reference is first set flat at the pool's tick (its live TWAP equals it at once), so the fence passes;
+    ///         otherwise the action meets whatever the market and the reference are. Every revert must be one of the
+    ///         action's own guards (or the bank's gate, or the pending markout of a seam action).
+    function rebalance(bool z, uint256 amt, uint256 align) external {
+        if (align % 2 == 0) {
+            (, int24 t,,) = manager.getSlot0(poolId);
+            uint32[] memory st = new uint32[](1);
+            int24[] memory tk = new int24[](1);
+            (st[0], tk[0]) = (1, t);
+            refPool.setMode(MockRefPool.Mode.Ok);
+            refPool.setPath(st, tk);
+        }
+        Holdings memory h = hv.holdings();
+        // swap the other token if this one is (nearly) all deployed
+        if ((z ? h.idle0 : h.idle1) < 4) z = !z;
+        uint256 idle = z ? h.idle0 : h.idle1;
+        if (idle < 4) return;
+        amt = bound(amt, 1, idle / 4);
+        (, bool due, bool ok) = _expectedSettleBurn();
+        vm.prank(hv.curator());
+        try hv.rebalanceSwap(z, uint128(amt), type(uint256).max) {
+            ++curatorSwaps;
+            // settled first (prologue step 0), then this action's own record replaced it
+            if (due) _countSettled(ok);
+            _realPending = true;
+            (uint40 tA,,,,) = hv.pendingAction();
+            if (tA != vm.getBlockTimestamp()) _i2("the action left no pending record");
+        } catch (bytes memory err) {
+            bytes4 sel = bytes4(err);
+            if (
+                sel != TouchstoneVault.Fence.selector && sel != TouchstoneVault.Cooldown.selector
+                    && sel != TouchstoneVault.MaxSwaps.selector && sel != TouchstoneVault.SwapCap.selector
+                    && sel != FeeBank.Insolvent.selector && sel != FeeBank.MarkoutPending.selector
+                    && sel != Ladder.BadMode.selector && sel != ITouchstoneHook.RefUnreadable.selector
+            ) {
+                ++actionFailures;
+                actionSelector = sel;
+            }
         }
     }
 
@@ -312,8 +362,14 @@ contract VaultHandler is Test {
     function _countSettle(bool ok) internal {
         (uint40 tA,,,,) = hv.pendingAction();
         if (tA != 0 || hv.bankFull().reserveShares != 0) _i2("a due settlement left the record or the reserve");
+        _countSettled(ok);
+    }
+
+    function _countSettled(bool ok) internal {
         if (ok) ++settledByRead;
         else ++settledByFallback;
+        if (_realPending) ++settledReal;
+        _realPending = false;
     }
 
     function _i2(string memory why) internal {

@@ -68,6 +68,10 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         assertEq(handler.i2Failures(), 0, handler.i2Why());
     }
 
+    function invariant_U_guard__curatorActionRevertsOnlyOnItsGuards() public view {
+        assertEq(handler.actionFailures(), 0, vm.toString(abi.encodePacked(handler.actionSelector())));
+    }
+
     function invariant_I_10__withdrawNeverRevertsOutsideTheAllowList() public view {
         assertEq(handler.i10Failures(), 0, vm.toString(abi.encodePacked(handler.i10Selector())));
     }
@@ -98,6 +102,11 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         handler.refresh();
         handler.withdraw(2, 1e21 + 5); // the gate reads the live leg and opens
         handler.refresh();
+        // a real curator action, its markout settled by settle() on the window read
+        handler.rebalance(true, 1e15, 0); // within the per-action cap on both pools
+        assertEq(handler.curatorSwaps(), 1, "a curator action");
+        for (uint256 i; i < 13; ++i) handler.advance(0);
+        handler.settle();
         for (uint256 i; i < 3; ++i) handler.driveBreach();
         handler.withdraw(0, hv.balanceOf(a) / 2);
         // the markout settlement: a pending action settled by a withdrawal on the read, one by settle() on the
@@ -120,7 +129,10 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         assertGt(handler.exitedWithdrawals(), 0, "a withdrawal in EXITED");
         assertEq(handler.pends(), 2, "two pending actions");
         assertEq(handler.withdrawalsSettling(), 1, "a withdrawal settled");
-        assertEq(handler.settledByRead(), 1, "settled on the window read");
+        assertEq(handler.settledByRead(), 2, "settled on the window read");
+        assertEq(handler.curatorSwaps(), 1, "a curator action");
+        assertEq(handler.settledReal(), 1, "the real action settled");
+        assertEq(handler.actionFailures(), 0, "actions revert only on their guards");
         assertEq(handler.settledByFallback(), 1, "settled by the fallback");
         assertEq(handler.i2Failures(), 0, handler.i2Why());
         assertEq(handler.i10Failures(), 0, "I-10");

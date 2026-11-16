@@ -42,11 +42,16 @@
    "row": "markout: pending record, settlement step 0, settle(), moveTo",
    "budget": 700,
    "built": "partial: the pending record, settlement step 0 and settle(); no moveTo (setPositions)"
+  },
+  {
+   "row": "Actions (setPositions incl. pre-swap, rebalanceSwap, guards)",
+   "budget": 3300,
+   "built": "partial: rebalanceSwap, its guards and the shared charge path; no setPositions"
   }
  ],
  "contracts": {
   "ExecLedger": {
-   "runtime": 5109,
+   "runtime": 6002,
    "history": [
     {
      "runtime": 1936,
@@ -59,6 +64,10 @@
     {
      "runtime": 5109,
      "note": "s10 size lever (1), views to the Lens: the vault drops every state view (tier, holdings, nav0, bondShares, bank, bankLimits) and the tier's storage copy; it exposes extsload and the TIER_HASH commitment the factory checks (-1,253 B); the factory reads TIER_HASH instead of the tier struct"
+    },
+    {
+     "runtime": 6002,
+     "note": "s11: rebalanceSwap (fence, cooldown, MAX_SWAPS, caps at the reference, SwapCap, adverse limit, settlement through claims, collect after the swap) and the charge path shared by both actions (Op.Charge, the pending record, the epilogue re-base); +4,133 B as first written, then lever (2b): ExecLedger.actionCharge and swapFrac replace four value calls and measure (-743 B); ExecLedger grows by those two entries"
     }
    ]
   },
@@ -121,7 +130,7 @@
    ]
   },
   "TouchstoneVault": {
-   "runtime": 14967,
+   "runtime": 18357,
    "history": [
     {
      "runtime": 14971,
@@ -138,6 +147,10 @@
     {
      "runtime": 14967,
      "note": "s10 settlement (prologue step 0): the pending record (before/after holdings, charge0, reserve), the gas guard, the window read, settleExtra, the fallback, Op.Settle, settle() and the Settled event; five tier immutables (+1,223 B)"
+    },
+    {
+     "runtime": 18357,
+     "note": "s11: rebalanceSwap (fence, cooldown, MAX_SWAPS, caps at the reference, SwapCap, adverse limit, settlement through claims, collect after the swap) and the charge path shared by both actions (Op.Charge, the pending record, the epilogue re-base); +4,133 B as first written, then lever (2b): ExecLedger.actionCharge and swapFrac replace four value calls and measure (-743 B); ExecLedger grows by those two entries"
     }
    ]
   },

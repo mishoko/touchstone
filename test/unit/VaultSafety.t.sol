@@ -94,6 +94,37 @@ contract VaultReentrancyTest is VaultBase {
         v.withdraw(1e23, 0, 0, alice);
     }
 
+    /// @notice Every (callback entry, re-entered entry) pair among deposit and withdraw reverts on the guard.
+    function test_U_reent__tokenCallbacksCannotReenterAnyEntryPoint() public {
+        _fundUser(alice, 10e18);
+        _deposit(alice, 1e24);
+        bytes[2] memory inner = [
+            abi.encodeCall(TouchstoneVault.deposit, (1, type(uint256).max, type(uint256).max, alice)),
+            abi.encodeCall(TouchstoneVault.withdraw, (1, 0, 0, alice))
+        ];
+        bytes memory guard = abi.encodeWithSelector(ReentrancyGuardTransient.ReentrancyGuardReentrantCall.selector);
+        for (uint256 i; i < 2; ++i) {
+            // the callback fires on the deposit's payment (alice -> PoolManager): the guard's revert is bubbled
+            _cb().arm(vault, inner[i]);
+            vm.prank(alice);
+            vm.expectRevert(guard);
+            v.deposit(1e18, type(uint256).max, type(uint256).max, alice);
+            // the callback fires on the withdrawal's payout (PoolManager -> alice): the PoolManager wraps it
+            _cb().arm(vault, inner[i]);
+            vm.prank(alice);
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    CustomRevert.WrappedError.selector,
+                    address(token0),
+                    IERC20.transfer.selector,
+                    guard,
+                    abi.encodeWithSelector(CurrencyLibrary.ERC20TransferFailed.selector)
+                )
+            );
+            v.withdraw(1e23, 0, 0, alice);
+        }
+    }
+
     function test_U_reent__controlUnarmedCallbackTokenWorks() public {
         _fundUser(alice, 10e18);
         _deposit(alice, 1e24);
@@ -133,6 +164,24 @@ contract VaultReentrancyTest is VaultBase {
 }
 
 contract VaultFlowTest is VaultBase {
+    /// @notice F-3, the vault half: the shares the vault holds cover every bank bucket, and shares sent to the vault
+    ///         unsolicited are inert (they do not enter any bucket).
+    function test_F_3__vaultHeldSharesCoverTheBank(uint96 gift, uint96 s1, uint96 s2) public {
+        _fundUser(alice, 1e25);
+        _fundUser(bob, 1e25);
+        _deposit(alice, bound(s1, 1, 1e25));
+        gift = uint96(bound(gift, 0, v.balanceOf(alice)));
+        vm.prank(alice);
+        v.transfer(vault, gift);
+        _deposit(bob, bound(s2, 1, 1e25));
+        if (v.balanceOf(alice) / 2 > 0) _withdraw(alice, v.balanceOf(alice) / 2);
+        (uint128 cohorts, uint128 mp, uint128 vu, uint128 bond, uint128 pool,,) = v.bank();
+        uint256 buckets = uint256(cohorts) + mp + vu + bond + pool;
+        assertLe(buckets, v.balanceOf(vault), "vault-held shares cover the bank");
+        assertEq(v.balanceOf(vault) - buckets, gift, "unsolicited shares are inert");
+        assertEq(bond, 1e24 - 1e15, "a share gift does not enter the bond");
+    }
+
     /// @notice U-1b: a deposit or a withdrawal in a new block snapshots the hook first (its `_lastSnapBlock`, slot 0,
     ///         low 40 bits, equals the block).
     function test_U_1b__depositAndWithdrawSnapshotTheHookFirst() public {
@@ -184,27 +233,48 @@ contract VaultFlowTest is VaultBase {
         assertEq(o1, base1, "payout token1");
     }
 
-    /// @notice M-7: the donation (first-depositor) attack loses money: the attacker deposits, donates to the vault,
-    ///         a victim deposits, the attacker withdraws. Positive control: the same sequence against a vault that
-    ///         prices shares from its token balances without dead shares profits.
-    function test_M_7__donationAttackLosesMoney(uint64 donation) public {
-        uint256 d = bound(donation, 1e6, 1e21);
+    /// @notice M-7: the donation (first-depositor) attack, as a grid over the attacker's stake, the donation and the
+    ///         victim's size, with the donation made in all three custody forms (ERC-20 tokens, ERC-6909 claims and
+    ///         vault shares). The victim's cost and the attacker's payout equal those of the same run without the
+    ///         donation, so the attack's P&L is exactly minus the donation.
+    function test_M_7__donationAttackLosesMoney(uint256 stake, uint256 donation, uint256 victim) public {
+        stake = bound(stake, 1, 1e24);
+        uint256 d = bound(donation, 1, 1e21);
+        victim = bound(victim, 1, 1e25);
         address attacker = makeAddr("attacker");
-        _fundUser(attacker, 1e24);
-        _fundUser(alice, 1e24);
-        uint256 start0 = token0.balanceOf(attacker);
-        uint256 start1 = token1.balanceOf(attacker);
-        _deposit(attacker, 1);
-        vm.startPrank(attacker);
-        token0.transfer(vault, d);
-        token1.transfer(vault, d);
-        vm.stopPrank();
-        _deposit(alice, 1e24);
-        _withdraw(attacker, v.balanceOf(attacker));
-        uint256 end0 = token0.balanceOf(attacker);
-        uint256 end1 = token1.balanceOf(attacker);
-        assertLt(end0 + end1, start0 + start1, "the attack loses money");
-        assertLe(end0, start0 - d);
+        _fundUser(attacker, 1e25);
+        _fundUser(alice, 1e25);
+        ClaimDonor donor = new ClaimDonor(manager);
+        token0.mint(address(donor), d);
+
+        uint256 snap = vm.snapshotState();
+        (uint256 cost0, uint256 cost1, uint256 pay0, uint256 pay1) = _attackRun(attacker, stake, victim, 0, donor);
+        vm.revertToState(snap);
+        uint256 start = token0.balanceOf(attacker) + token1.balanceOf(attacker);
+        (uint256 c0, uint256 c1, uint256 p0, uint256 p1) = _attackRun(attacker, stake, victim, d, donor);
+        assertEq(c0, cost0, "victim cost token0 unchanged by the donation");
+        assertEq(c1, cost1, "victim cost token1 unchanged by the donation");
+        assertEq(p0, pay0, "attacker payout token0 unchanged by the donation");
+        assertEq(p1, pay1, "attacker payout token1 unchanged by the donation");
+        assertLt(token0.balanceOf(attacker) + token1.balanceOf(attacker), start, "the attack loses money");
+    }
+
+    /// @dev attacker deposits `stake`, donates `d` of token0 and token1 and `stake / 2` shares (when `d > 0`), the
+    ///      victim deposits `victim` shares, the attacker withdraws `stake - stake / 2` (the same in both runs).
+    function _attackRun(address attacker, uint256 stake, uint256 victim, uint256 d, ClaimDonor donor)
+        internal
+        returns (uint256 c0, uint256 c1, uint256 p0, uint256 p1)
+    {
+        _deposit(attacker, stake);
+        if (d > 0) {
+            vm.startPrank(attacker);
+            token1.transfer(vault, d); // ERC-20
+            v.transfer(vault, stake / 2); // shares
+            vm.stopPrank();
+            donor.donate(token0, vault, d); // ERC-6909 claims
+        }
+        (c0, c1) = _deposit(alice, victim);
+        (p0, p1) = _withdraw(attacker, stake - stake / 2);
     }
 
     function test_M_7__controlNaiveVaultProfits() public {

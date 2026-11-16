@@ -54,7 +54,7 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "if (burn > cover || burnR > cover - burn) revert Insolvent();",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-006",
@@ -175,7 +175,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "uint256 d0 = FullMath.mulDivRoundingUp(_idle0, s, S);",
    "replace": "uint256 d0 = FullMath.mulDiv(_idle0, s, S);",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-017",
@@ -186,7 +186,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        // [MU-017] the supply before the burn\n        uint256 S = totalSupply();",
    "replace": "        // [MU-017] the supply before the burn\n        uint256 S = totalSupply() - s;",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-018",
@@ -208,7 +208,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "if (S2 * BOND_RATIO > uint256(_bank.bondShares) * WAD) revert NavCap();",
    "replace": "if (S2 * BOND_RATIO < uint256(_bank.bondShares) * WAD) revert NavCap();",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-020",
@@ -252,7 +252,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "if (S2 * BOND_RATIO > uint256(_bank.bondShares) * WAD) revert NavCap();",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-024",
@@ -296,7 +296,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        HOOK.snapshotIfNewBlock();\n        // [MU-008]",
    "replace": "        // [MU-008]",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-028",
@@ -307,7 +307,7 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "c.epoch > b.cohorts[best].epoch",
    "replace": "c.epoch < b.cohorts[best].epoch",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-029",
@@ -318,7 +318,7 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "uint256 m = need < b.maturedPending ? need : b.maturedPending;",
    "replace": "uint256 vu = need < b.vestedUnclaimed ? need : b.vestedUnclaimed; b.vestedUnclaimed -= uint128(vu); need -= vu; fromBank += vu; uint256 m = need < b.maturedPending ? need : b.maturedPending;",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-030",
@@ -340,7 +340,7 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "if (b.dripBlocks == 0) {",
    "replace": "if (true) {",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-032",
@@ -351,7 +351,7 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "b.forfeitPool = _sat(uint256(b.forfeitPool) + forfeited);",
    "replace": "b.bondShares = _sat(uint256(b.bondShares) + forfeited);",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-033",
@@ -417,7 +417,7 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "return x > type(uint128).max ? type(uint128).max : uint128(x);",
    "replace": "require(x <= type(uint128).max); return uint128(x);",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-039",
@@ -494,7 +494,7 @@
    "file": "src/libraries/Ladder.sol",
    "find": "uint256 internal constant OPEN_EXITED = (1 << uint256(Entry.Withdraw))",
    "replace": "uint256 internal constant OPEN_EXITED = (1 << uint256(Entry.Deposit)) | (1 << uint256(Entry.TopUpBond)) | (1 << uint256(Entry.Withdraw))",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-046",
@@ -505,7 +505,7 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "if (b.mode != Ladder.EXITED) revert Ladder.BadMode();",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-047",
@@ -516,7 +516,7 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "forfeited = _forfeitAll(b, now_);",
    "replace": "forfeited = ev == Ladder.EV_RETIRE ? 0 : _forfeitAll(b, now_);",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-048",
@@ -527,7 +527,7 @@
    "file": "src/libraries/Ladder.sol",
    "find": "if (nb >= REMOVAL) return",
    "replace": "if (nb >= REMOVAL + 1) return",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-049",
@@ -582,7 +582,7 @@
    "file": "src/libraries/Ladder.sol",
    "find": "if (nb >= REMOVAL) return",
    "replace": "if (nb == REMOVAL) return",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-054",
@@ -604,7 +604,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "_nav0 = _u128(rebased);",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-056",
@@ -703,7 +703,7 @@
    "file": "src/libraries/Ladder.sol",
    "find": "OPEN_EXITED = (1 << uint256(Entry.Withdraw)) | (1 << uint256(Entry.Claim))",
    "replace": "OPEN_EXITED = (1 << uint256(Entry.Withdraw))",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-065",
@@ -723,9 +723,9 @@
    "killer_id": "U-navcap",
    "kill": "test_U_navcap__seedNav0ExcludesTheWitnessAndBankLimitsAreWritten",
    "file": "src/TouchstoneVault.sol",
-   "find": "_idle0 = _u128(a0);",
-   "replace": "_idle0 = _u128(a0 + wit0);",
-   "status": "pending"
+   "find": "_idle0 = SafeCast.toUint128(a0);",
+   "replace": "_idle0 = SafeCast.toUint128(a0 + wit0);",
+   "status": "KILLED"
   },
   {
    "id": "MU-067",
@@ -780,7 +780,7 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "if (exited) {",
    "replace": "if (exited || mode == Ladder.EXITED) {",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-072",
@@ -791,7 +791,7 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "uint256(b.exitBlock) + b.releaseDelay",
    "replace": "uint256(b.exitBlock) + b.dripBlocks",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-073",
@@ -813,7 +813,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "_bank.dripBlocks = DRIP_BLOCKS;",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-075",
@@ -901,7 +901,7 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "            vested += b.maturedPending;\n            b.maturedPending = 0;",
    "replace": "            vested += 0;",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-083",
@@ -923,7 +923,7 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "if (forfeited > 0) {",
    "replace": "if (true) {",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-085",
@@ -967,7 +967,7 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "uint256 m = need < b.maturedPending ? need : b.maturedPending;",
    "replace": "uint256 m = 0;",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-089",
@@ -978,7 +978,7 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "forfeited = _forfeitAll(b, now_);",
    "replace": "uint128 keep = ev == Ladder.EV_RETIRE ? b.maturedPending : 0; b.maturedPending -= keep; forfeited = _forfeitAll(b, now_); b.maturedPending = keep;",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-090",
@@ -1033,7 +1033,7 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "            if (gate) {\n                vested = s.shares;",
    "replace": "            if (true) {\n                vested = s.shares;",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-095",
@@ -1044,7 +1044,7 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "forfeited = _forfeitAll(b, now_);",
    "replace": "uint128 keep = ev == Ladder.EV_BREACH ? b.maturedPending : 0; b.maturedPending -= keep; forfeited = _forfeitAll(b, now_); b.maturedPending = keep;",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-096",
@@ -1297,7 +1297,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "ExecLedger.value(_holdings(), REF_SQRT_PRICE)",
    "replace": "ExecLedger.value(_holdings(), TickMath.getSqrtPriceAtTick(HOOK.obs().tickSpot))",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-119",
@@ -1363,7 +1363,7 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "b.forfeitPool = _sat(uint256(b.forfeitPool) + forfeited);",
    "replace": "b.forfeitPool = _sat(forfeited);",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-125",
@@ -1429,7 +1429,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "if (FullMath.mulDiv(navRef, S_SEED - DEAD, S_SEED) < BOND_MIN) revert BondMin();",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-131",
@@ -1682,7 +1682,7 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "if (b.reserveShares > 0) b.reserveForfeit = true;",
    "replace": "if (b.reserveShares > 0) { b.bondShares += b.reserveBond; b.reserveShares = 0; b.reserveBond = 0; }",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-154",
@@ -1693,7 +1693,7 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "uint256 fromNb = x < nonbond ? x : nonbond;",
    "replace": "uint256 fromNb = x > b.reserveBond ? x - b.reserveBond : 0;",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-155",
@@ -1726,7 +1726,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "if (navAfter > NAV_MAX) revert NavCap();",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-158",
@@ -1737,7 +1737,40 @@
    "file": "src/TouchstoneVault.sol",
    "find": "if (msg.sender != address(MANAGER)) revert OnlyPoolManager();",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-159",
+   "area": "guards",
+   "desc": "buckets read from the vault's claim balance instead of storage",
+   "killer_id": "M-7",
+   "kill": "test_M_7__donationAttackLosesMoney",
+   "file": "src/TouchstoneVault.sol",
+   "find": "uint256 d0 = FullMath.mulDivRoundingUp(_idle0, s, S);",
+   "replace": "uint256 d0 = FullMath.mulDivRoundingUp(MANAGER.balanceOf(address(this), C0.toId()), s, S);",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-160",
+   "area": "guards",
+   "desc": "`nonReentrant` dropped on `withdraw`",
+   "killer_id": "U-reent",
+   "kill": "test_U_reent__tokenCallbacksCannotReenterAnyEntryPoint",
+   "file": "src/TouchstoneVault.sol",
+   "find": "    function withdraw(uint256 shares, uint256 min0, uint256 min1, address to)\n        external\n        nonReentrant",
+   "replace": "    function withdraw(uint256 shares, uint256 min0, uint256 min1, address to)\n        external",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-161",
+   "area": "guards",
+   "desc": "`BOND_MIN` check `<` → `<=`",
+   "killer_id": "U-navcap",
+   "kill": "test_U_navcap__bondMinBoundaryAtTheReferencePrice",
+   "file": "src/TouchstoneVault.sol",
+   "find": "if (FullMath.mulDiv(navRef, S_SEED - DEAD, S_SEED) < BOND_MIN) revert BondMin();",
+   "replace": "if (FullMath.mulDiv(navRef, S_SEED - DEAD, S_SEED) <= BOND_MIN) revert BondMin();",
+   "status": "KILLED"
   }
  ]
 }

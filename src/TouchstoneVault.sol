@@ -10,6 +10,7 @@ import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {ModifyLiquidityParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -129,6 +130,7 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
     }
 
     /// @notice Burns `shares` of the caller and pays `to` a pro-rata slice of every bucket in kind (rounded down).
+    // [MU-160] every entry point holds the reentrancy lock across its whole unlock
     function withdraw(uint256 shares, uint256 min0, uint256 min1, address to)
         external
         nonReentrant
@@ -166,14 +168,15 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
         if (wit1 > 0) MANAGER.mint(address(HOOK), C1.toId(), wit1);
         HOOK.fundWitness(wit0, wit1);
         // [MU-066] the buckets hold the seed amounts only
-        _idle0 = _u128(a0);
-        _idle1 = _u128(a1);
+        _idle0 = SafeCast.toUint128(a0);
+        _idle1 = SafeCast.toUint128(a1);
         _mint(DEAD_ADDRESS, DEAD);
         _mint(address(this), S_SEED - DEAD);
         _bank.bondShares = uint128(S_SEED - DEAD);
         HOOK.armAtSeed();
         // [MU-130] [MU-118] the bond's value at the tier's immutable reference price, not the seed price
         (uint256 navRef,) = ExecLedger.value(_holdings(), REF_SQRT_PRICE);
+        // [MU-161] the bond may equal BOND_MIN
         if (FullMath.mulDiv(navRef, S_SEED - DEAD, S_SEED) < BOND_MIN) revert BondMin();
         Obs memory o = HOOK.obs();
         (uint256 navAtRef,) = ExecLedger.value(_holdings(), TickMath.getSqrtPriceAtTick(o.refTick));
@@ -181,6 +184,7 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
         _delta0 = 0;
         _epoch = o.epoch;
         _segStart = uint40(block.number);
+        _tauV0 = o.tauV;
         // [MU-074] the drip length and the release delay are written once, at seed
         _bank.dripBlocks = DRIP_BLOCKS;
         _bank.releaseDelay = RELEASE_DELAY;
@@ -193,6 +197,7 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
         // [MU-152] no deposit while a curator action awaits its markout settlement
         if (_tAction != 0) revert MarkoutPending();
         uint256 S = totalSupply();
+        // [MU-159] buckets come from storage, never from balances
         // [MU-016] [MU-134] every bucket is charged rounded up (>= 1 wei when non-zero)
         uint256 d0 = FullMath.mulDivRoundingUp(_idle0, s, S);
         uint256 d1 = FullMath.mulDivRoundingUp(_idle1, s, S);
@@ -202,7 +207,7 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
         if (dL > 0) {
             BalanceDelta d = _modify(int256(dL));
             (p0, p1) = (uint256(int256(-d.amount0())), uint256(int256(-d.amount1())));
-            _L = _u128(_L + dL);
+            _L = SafeCast.toUint128(_L + dL);
         }
         uint256 a0 = p0 + d0;
         uint256 a1 = p1 + d1;
@@ -211,8 +216,9 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
         _payIn(C1, payer, a1);
         _mintClaims(C0, d0);
         _mintClaims(C1, d1);
-        _idle0 = _u128(_idle0 + d0);
-        _idle1 = _u128(_idle1 + d1);
+        // custody buckets never saturate: a deposit that would overflow reverts
+        _idle0 = SafeCast.toUint128(_idle0 + d0);
+        _idle1 = SafeCast.toUint128(_idle1 + d1);
         _mint(to, s);
         uint256 S2 = S + s;
         // [MU-019] [MU-023] the bond cap in shares: S'·BOND_RATIO <= bondShares·WAD
@@ -268,8 +274,8 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
             uint256 f1 = uint256(int256(d.amount1()));
             _mintClaims(C0, f0);
             _mintClaims(C1, f1);
-            _idle0 = _u128(_idle0 + f0);
-            _idle1 = _u128(_idle1 + f1);
+            _idle0 = SafeCast.toUint128(_idle0 + f0);
+            _idle1 = SafeCast.toUint128(_idle1 + f1);
         }
     }
 

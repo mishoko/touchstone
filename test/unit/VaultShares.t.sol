@@ -5,6 +5,8 @@ import {VaultBase, ClaimDonor} from "../utils/VaultBase.sol";
 import {TouchstoneVault} from "../../src/TouchstoneVault.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {LiquidityValue} from "../../src/libraries/LiquidityValue.sol";
 
 /// @notice ShareMath, seed and the NAV caps on the real vault (EMPTY range, TEST tier).
 contract VaultSharesTest is VaultBase {
@@ -154,6 +156,45 @@ contract VaultSeedTest is VaultBase {
         tier.BOND_MIN = 1.3e18;
         _deployWith();
         assertEq(v.totalSupply(), 1e24);
+    }
+
+    /// @notice BOND_MIN at its exact boundary: a bond worth exactly BOND_MIN at the reference price passes; one wei
+    ///         more reverts.
+    function test_U_navcap__bondMinBoundaryAtTheReferencePrice() public {
+        uint160 ref = TickMath.getSqrtPriceAtTick(-10_000);
+        tier.REF_SQRT_PRICE = ref;
+        uint256 nav = LiquidityValue.val(seedParams.a0, seedParams.a1, ref);
+        uint256 bondValue = nav * (1e24 - 1e15) / 1e24;
+        tier.BOND_MIN = uint128(bondValue + 1);
+        _expectSeedRevert(TouchstoneVault.BondMin.selector);
+        tier.BOND_MIN = uint128(bondValue);
+        _deployWith();
+        assertEq(v.totalSupply(), 1e24);
+    }
+
+    /// @notice Control for the bond cap: with the cap removed (BOND_RATIO = 0) the over-cap deposit is admitted.
+    function test_U_navcap__bondCapControlWithoutTheCap() public {
+        tier.BOND_RATIO = 0;
+        _deployWith();
+        _fundUser(alice, 1e30);
+        uint256 overCap = v.bondShares() * 1e18 / 1.72e15 - v.totalSupply() + 1; // TEST tier ratio 1.72e-3
+        _deposit(alice, overCap);
+        assertGt(v.totalSupply() * 1.72e15, v.bondShares() * 1e18, "over the TEST tier's cap");
+    }
+
+    /// @notice Custody buckets never saturate: a deposit that would take a bucket past 2^128 - 1 reverts. (Unreachable
+    ///         with real tokens; the bucket is set near the bound in storage: slot 5, low 16 bytes = `_idle0`.)
+    function test_U_5__custodyOverflowReverts() public {
+        _deployWith();
+        _fundUser(alice, 1e30);
+        uint256 slot5 = uint256(vm.load(vault, bytes32(uint256(5))));
+        uint256 idle0 = type(uint128).max - 10;
+        vm.store(vault, bytes32(uint256(5)), bytes32((slot5 >> 128) << 128 | idle0));
+        assertEq(v.holdings().idle0, idle0, "slot 5 holds idle0");
+        uint256 d0 = (idle0 - 1) / 1e24 + 1; // the one-share slice, rounded up
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(SafeCast.SafeCastOverflowedUintDowncast.selector, 128, idle0 + d0));
+        v.deposit(1, type(uint256).max, type(uint256).max, alice);
     }
 
     function test_U_navcap__valuelessSeedReverts() public {

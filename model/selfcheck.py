@@ -1886,7 +1886,7 @@ def rules_r6():
         check(False, "the first action is not subject to COOLDOWN", ex.err)
     # constants (spec §3.2, §6), pinned as literals
     check((R.S_SEED, R.DEAD, R.N_SNAP, R.K_MED, R.V, R.TEST.MAX_SWAPS, R.TEST.DELTA_MIN, R.TEST.BOND_RATIO) ==
-          (10 ** 24, 10 ** 15, 32, 9, 4, 20, 5 * 10 ** 17, 172 * 10 ** 13), "pinned constants")
+          (10 ** 24, 10 ** 15, 32, 9, 4, 20, 5 * 10 ** 17, 173 * 10 ** 13), "pinned constants")
     check((R.TEST.RESERVE_RATIO, R.TEST.H_MARKOUT, R.DEMO.H_MARKOUT, R.MAINNET.H_MARKOUT, R.TEST.NAV_MAX, R.DEMO.NAV_MAX,
            R.MAINNET.NAV_MAX) == (6 * 10 ** 14, 120, 20, 120, R.U128, 1850 * 10 ** 18, 1850 * 10 ** 18),
           "repair C constants (RESERVE_RATIO, H_MARKOUT, NAV_MAX per tier)")
@@ -1971,7 +1971,7 @@ def rules_r7():
         check(got == row, f"{tr.NAME} per-chain parameters", got)
         check((tr.FEE, tr.SPACING, tr.FEE_TICKS, tr.W_TICKS, tr.BAND_SWAP, tr.REF_BAND, tr.DELTA_MIN, tr.MAX_SWAP_ACTION,
                tr.MAX_SWAP_EPOCH, tr.MAX_SWAPS, tr.RESET_RUN, tr.BOND_RATIO, tr.L_W_TARGET) ==
-              (500, 10, 5, 2000, 5, 60, 5 * 10 ** 17, 2 * 10 ** 16, 5 * 10 ** 16, 20, 2, 172 * 10 ** 13, 1000),
+              (500, 10, 5, 2000, 5, 60, 5 * 10 ** 17, 2 * 10 ** 16, 5 * 10 ** 16, 20, 2, 173 * 10 ** 13, 1000),
               f"{tr.NAME} shared parameters")
     # one skipped epoch flags exactly the skipped record stale
     w = World()
@@ -1990,8 +1990,8 @@ def rules_r7b():
     check(R.PLACEMENT_ERR == {1: "Fence", 2: "Width", 3: "Alignment", 4: "NotContained", 5: "NotContained"},
           "placement error mapping")
     check(all(not R.ladder_allowed(m, R.E["Seed"]) for m in range(3)), "Ladder.allowed(·, Seed) is false")
-    check((R.TEST.BOND_MIN, R.DEMO.BOND_MIN, R.MAINNET.BOND_MIN) == (0, 172 * 10 ** 16, 172 * 10 ** 16),
-          "BOND_MIN per tier (owner decision 2026-11-16: 1.72 WETH; TEST 0)")
+    check((R.TEST.BOND_MIN, R.DEMO.BOND_MIN, R.MAINNET.BOND_MIN) == (0, 173 * 10 ** 16, 173 * 10 ** 16),
+          "BOND_MIN per tier (owner decisions 2026-11-16: 1.73 WETH (s09); TEST 0)")
     # a placement that does not contain the reference reverts NotContained (code 5) at the vault
     w = World()
     w.v.pool.push_to(sqrt_at(T0 + 40))
@@ -2182,19 +2182,23 @@ def rules_markout():
               "measure_c: burn and burnR at one price")
         check(R.measure(h, h2, sp, sr, S, 10 ** 30, 0)[:4] == R.measure_c(h, h2, sp, sp, sr, 0, S, 10 ** 30, 0)[:4],
               "the two-leg measure is measure_c with s0 = spot and no reserve")
-    # settle_extra: legs p_mk ± FEE_TICKS, extra capped by the reserve, burnS capped by reserveShares
+    # settle_extra: legs p_mk − FEE_TICKS and p_mk + FEE_TICKS + 1 (upper leg rounded up), extra capped by the reserve,
+    # burnS capped by reserveShares; legs clamped to the tick range
     h = R.Holdings(10 ** 21, 10 ** 21)
     h2 = R.Holdings(10 ** 21 + 10 ** 18, 10 ** 21 - 3 * 10 ** 15)
     for tk in (T0 - 300, T0 - 50, T0, T0 + 50, T0 + 300):
         for res in (0, 10 ** 14, 10 ** 30):
             ex, pm, bs = R.settle_extra(h, h2, tk, 5, 0, res, h2, 10 ** 24, 10 ** 20)
-            lo_, hi_ = sqrt_at(tk - 5), sqrt_at(tk + 5)
+            lo_, hi_ = sqrt_at(tk - 5), sqrt_at(tk + 6)
             l_lo = R.value(h, lo_)[0] - R.value(h2, lo_)[0]
             l_hi = R.value(h, hi_)[0] - R.value(h2, hi_)[0]
             lm, pp = (l_hi, hi_) if l_hi > l_lo else (l_lo, lo_)
             check(ex == min(res, max(0, lm)) and pm == pp, "settle_extra: the worse markout leg, capped at the reserve")
             exp = 0 if ex == 0 else min(10 ** 20, R.ceil_div(ex * 10 ** 24, R.value(h2, pm)[0]))
             check(bs == exp, "settle_extra: burnS = min(reserveShares, ceilDiv(extra·S, NAV_now(p_mk)))", (bs, exp))
+    for tk in (R.MAX_TICK, R.MAX_TICK - 5, R.MIN_TICK, R.MIN_TICK + 4):   # clamped legs never leave the tick range
+        ex, pm, bs = R.settle_extra(h, h2, tk, 5, 0, 10 ** 30, h2, 10 ** 24, 10 ** 20)
+        check(sqrt_at(R.MIN_TICK) <= pm <= sqrt_at(R.MAX_TICK), "settle_extra: legs clamped at the tick bounds", tk)
     # FeeBank Charge/Settle: reserve composition, burn order, release targets
     b = R.Bank()
     b.cohorts[7 % R.RING] = [7, 100]

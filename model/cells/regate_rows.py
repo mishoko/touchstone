@@ -73,6 +73,11 @@ def l6():
     FEE_T = f0
     lines.append(f"  with the on-chain floor of the markout tick (margin FEE_TICKS − 1): safe NAV {fl[1.0]} / {fl[0.25]} WETH "
                  f"(L_deep / L_deep/4): {'meets' if fl[0.25] >= NAV_MAX else 'BELOW'} NAV_MAX {NAV_MAX}")
+    # v2.34 (owner R1-02): the upper leg at floor + FEE_TICKS + 1 >= ceil + FEE_TICKS, so its margin is >= FEE_TICKS again
+    # (the floor only widens the lower leg's margin): the full-margin row applies.
+    up = {ls: min(safe_nav(ls, j) for j in range(1, NB + 1)) for ls in (1.0, 0.25)}
+    lines.append(f"  with the upper leg rounded up (floor + FEE_TICKS + 1, spec v2.34): margin >= FEE_TICKS, safe NAV "
+                 f"{up[1.0]} / {up[0.25]} WETH: {'meets' if up[0.25] >= NAV_MAX else 'BELOW'} NAV_MAX {NAV_MAX}")
     ctl = safe_nav(1.0, 1, l_deep=1.0)
     ok = res[0.25] is not None and res[0.25] >= NAV_MAX
     lines.append(f"  rule: safe NAV ≥ NAV_MAX {NAV_MAX} at L_deep/4: {'PASS' if ok else 'FAIL'}; control L_deep → 0: "

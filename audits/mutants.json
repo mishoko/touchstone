@@ -5,45 +5,45 @@
    "id": "MU-001",
    "area": "ledger",
    "desc": "worse-of max → min",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "U-3",
+   "kill": "test_U_3__ledgerMeasureVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        return nb + naRef > nbRef + na;",
+   "replace": "        return nb + naRef < nbRef + na;",
+   "status": "KILLED"
   },
   {
    "id": "MU-002",
    "area": "ledger",
    "desc": "reference-only",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "U-3",
+   "kill": "test_U_3__ledgerMeasureVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        if (_worse(nb2, na2, nb, navAfterPStar)) (nb, navAfterPStar, pStar) = (nb2, na2, sqrtRef);",
+   "replace": "        if (true) (nb, navAfterPStar, pStar) = (nb2, na2, sqrtRef);",
+   "status": "KILLED"
   },
   {
    "id": "MU-003",
    "area": "ledger",
    "desc": "remove the 0 floor",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "U-3",
+   "kill": "test_U_3__ledgerMeasureVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        charge = nb > navAfterPStar ? nb - navAfterPStar : 0;",
+   "replace": "        charge = nb > navAfterPStar ? nb - navAfterPStar : navAfterPStar - nb;",
+   "status": "KILLED"
   },
   {
    "id": "MU-004",
    "area": "ledger",
    "desc": "100% → φ",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "U-3",
+   "kill": "test_U_3__ledgerMeasureVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        charge = nb > navAfterPStar ? nb - navAfterPStar : 0;",
+   "replace": "        charge = nb > navAfterPStar ? (nb - navAfterPStar) / 2 : 0;",
+   "status": "KILLED"
   },
   {
    "id": "MU-005",
@@ -60,12 +60,12 @@
    "id": "MU-006",
    "area": "ledger",
    "desc": "gate and burn at different prices",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "U-3",
+   "kill": "test_U_3__ledgerMeasureVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        burn = _shares(charge, S, navAfterPStar);",
+   "replace": "        burn = _shares(charge, S, na2);",
+   "status": "KILLED"
   },
   {
    "id": "MU-007",
@@ -104,45 +104,45 @@
    "id": "MU-010",
    "area": "guards",
    "desc": "fence removed, signed, or on med9 instead of spot",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "U-guard",
+   "kill": "test_U_guard__placementCheckVectorsBitForBit",
+   "file": "src/libraries/Placement.sol",
+   "find": "        if (dist > band || -dist > band) return 1;",
+   "replace": "        if (dist > band) return 1;",
+   "status": "KILLED"
   },
   {
    "id": "MU-011",
    "area": "guards",
    "desc": "placement-contains-spot-and-reference removed",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "U-guard",
+   "kill": "test_U_guard__placementCheckVectorsBitForBit",
+   "file": "src/libraries/Placement.sol",
+   "find": "        if (refTick < lo || refTick >= hi) return 5;",
+   "replace": "        if (false) return 5;",
+   "status": "KILLED"
   },
   {
    "id": "MU-012",
    "area": "guards",
    "desc": "width rule ≥ instead of =",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "U-guard",
+   "kill": "test_U_guard__placementCheckVectorsBitForBit",
+   "file": "src/libraries/Placement.sol",
+   "find": "        if (int256(hi) - int256(lo) != int256(wTicks)) return 2;",
+   "replace": "        if (int256(hi) - int256(lo) < int256(wTicks)) return 2;",
+   "status": "KILLED"
   },
   {
    "id": "MU-013",
    "area": "guards",
    "desc": "in-range `≤ tickUpper`",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "U-guard",
+   "kill": "test_U_guard__placementCheckVectorsBitForBit",
+   "file": "src/libraries/Placement.sol",
+   "find": "        if (tickSpot < lo || tickSpot >= hi) return 4;",
+   "replace": "        if (tickSpot < lo || tickSpot > hi) return 4;",
+   "status": "KILLED"
   },
   {
    "id": "MU-014",
@@ -192,12 +192,12 @@
    "id": "MU-018",
    "area": "guards",
    "desc": "L headroom removed",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "U-guard",
+   "kill": "test_U_guard__placementSizeVectorsBitForBit",
+   "file": "src/libraries/Placement.sol",
+   "find": "        uint256 head = l0 / 1e9 + 1;",
+   "replace": "        uint256 head = 0;",
+   "status": "KILLED"
   },
   {
    "id": "MU-019",
@@ -1369,12 +1369,12 @@
    "id": "MU-125",
    "area": "additional",
    "desc": "reference dropped from the worse-of",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "U-3",
+   "kill": "test_U_3__ledgerMeasureVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        (nb2, na2) = _legs(before, after_, sqrtRef);",
+   "replace": "        (nb2, na2) = (nb, navAfterPStar);",
+   "status": "KILLED"
   },
   {
    "id": "MU-126",
@@ -1413,12 +1413,12 @@
    "id": "MU-129",
    "area": "additional",
    "desc": "burn floor instead of ceil",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "U-3",
+   "kill": "test_U_3__ledgerMeasureVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        return FullMath.mulDivRoundingUp(x, S, nav);",
+   "replace": "        return FullMath.mulDiv(x, S, nav);",
+   "status": "KILLED"
   },
   {
    "id": "MU-130",
@@ -1490,23 +1490,23 @@
    "id": "MU-136",
    "area": "additional",
    "desc": "placement need not contain spot",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "U-guard",
+   "kill": "test_U_guard__placementCheckVectorsBitForBit",
+   "file": "src/libraries/Placement.sol",
+   "find": "        if (tickSpot < lo || tickSpot >= hi) return 4;",
+   "replace": "        if (false) return 4;",
+   "status": "KILLED"
   },
   {
    "id": "MU-137",
    "area": "additional",
    "desc": "`Placement.size` leg reverts on overflow",
    "killer_id": "U-guard",
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "kill": "test_U_guard__placementSizeVectorsBitForBit",
+   "file": "src/libraries/Placement.sol",
+   "find": "        if (FullMath.mulDiv(amount0, inter, 1 << 128) >= d) return type(uint128).max;",
+   "replace": "        if (false) return type(uint128).max;",
+   "status": "KILLED"
   },
   {
    "id": "MU-138",
@@ -1600,45 +1600,45 @@
    "id": "MU-146",
    "area": "ledger",
    "desc": "the `s0` leg dropped",
-   "killer_id": "U-settle",
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "U-3",
+   "kill": "test_U_3__ledgerMeasureVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        (uint256 nb2, uint256 na2) = _legs(before, after_, sqrtS0);",
+   "replace": "        (uint256 nb2, uint256 na2) = (nb, navAfterPStar);",
+   "status": "KILLED"
   },
   {
    "id": "MU-147",
    "area": "ledger",
    "desc": "the reserve outside the solvency gate",
-   "killer_id": "U-solv",
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "killer_id": "U-3",
+   "kill": "test_U_3__ledgerMeasureVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        ok = burn <= cover && burnR <= cover - burn;",
+   "replace": "        ok = burn <= cover;",
+   "status": "KILLED"
   },
   {
    "id": "MU-148",
    "area": "ledger",
    "desc": "markout legs without `FEE_TICKS`",
    "killer_id": "U-settle",
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "kill": "test_U_settle__settleExtraVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        pMk = TickMath.getSqrtPriceAtTick(_clamp(int256(tickMk) - feeTicks));",
+   "replace": "        pMk = TickMath.getSqrtPriceAtTick(_clamp(int256(tickMk)));",
+   "status": "KILLED"
   },
   {
    "id": "MU-149",
    "area": "ledger",
    "desc": "the settlement's extra uncapped or not net of the immediate charge",
    "killer_id": "U-settle",
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "pending"
+   "kill": "test_U_settle__settleExtraVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        if (extra > reserve) extra = reserve;",
+   "replace": "        if (false) extra = reserve;",
+   "status": "KILLED"
   },
   {
    "id": "MU-150",
@@ -1913,6 +1913,61 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (burned > 0) _burn(address(this), burned);",
    "replace": "        if (burned > 0) _burn(address(this), burned - 1);",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-175",
+   "area": "ledger",
+   "desc": "the upper markout leg floored, not rounded up (s09 D9-01)",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__settleExtraVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        uint160 pHi = TickMath.getSqrtPriceAtTick(_clamp(int256(tickMk) + feeTicks + 1));",
+   "replace": "        uint160 pHi = TickMath.getSqrtPriceAtTick(_clamp(int256(tickMk) + feeTicks));",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-176",
+   "area": "ledger",
+   "desc": "the markout legs unclamped at the tick bounds (s09 D9-02)",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__settleExtraVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        if (t > TickMath.MAX_TICK) return TickMath.MAX_TICK;",
+   "replace": "        if (false) return TickMath.MAX_TICK;",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-177",
+   "area": "ledger",
+   "desc": "measure's gate overflows on two saturated amounts (s09 D9-11)",
+   "killer_id": "U-3",
+   "kill": "test_U_3__ledgerMeasureVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        ok = burn <= cover && burnR <= cover - burn;",
+   "replace": "        ok = burn + burnR <= cover;",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-178",
+   "area": "ledger",
+   "desc": "the tie order puts s0 before spot (s09 D9-04 n)",
+   "killer_id": "U-3",
+   "kill": "test_U_3__ledgerMeasureVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        if (_worse(nb2, na2, nb, navAfterPStar)) (nb, navAfterPStar, pStar) = (nb2, na2, sqrtS0);",
+   "replace": "        if (!_worse(nb, navAfterPStar, nb2, na2)) (nb, navAfterPStar, pStar) = (nb2, na2, sqrtS0);",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-179",
+   "area": "ledger",
+   "desc": "the settlement's extra not net of the immediate charge (s09; MU-149's second half)",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__settleExtraVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        extra = loss > charge0 ? loss - charge0 : 0;",
+   "replace": "        extra = loss;",
    "status": "KILLED"
   }
  ]

@@ -312,6 +312,9 @@ def ledger_cases():
     add("s0-equal-spot-tie", R.Holdings(10 ** 21, 10 ** 21), R.Holdings(10 ** 21, 10 ** 21 - 10 ** 15), sqrt_at(T0), sqrt_at(T0), s0=sqrt_at(T0), note="spot, s0 and ref tie: p* = sqrtSpot",
         expect=("spot", True, True))
     c_, p_, n_, b_, br_, _ = R.measure_c(g0, g1, sqrt_at(T0 - 30), pool.s, sqrt_at(T0 + 40), 10 ** 17, S, 0, 0)
+    tie0, tie1 = R.Holdings(10 ** 21, 10 ** 21), R.Holdings(10 ** 21, 10 ** 21 - 10 ** 15)
+    add("tie-distinct-prices", tie0, tie1, sqrt_at(T0 + 20), sqrt_at(T0 - 20), s0=sqrt_at(T0 + 50), reserve=10 ** 15,
+        note="a token1-only loss ties every leg at distinct prices: p* = sqrtSpot", expect=("spot", True, True))
     add("reserve-gate-exact", g0, g1, pool.s, sqrt_at(T0 + 40), s0=sqrt_at(T0 - 30), reserve=10 ** 17, unv_=0,
         bond_=b_ + br_, note="burn + burnR == unvested + bond -> ok", expect=("s0", True, True))
     add("reserve-gate-revert", g0, g1, pool.s, sqrt_at(T0 + 40), s0=sqrt_at(T0 - 30), reserve=10 ** 17, unv_=0,
@@ -330,6 +333,11 @@ def ledger_cases():
     sold = R.Holdings(g0.idle0 - 10 ** 9, g0.idle1 + 3 * 10 ** 15)
     adds("markout-upper-leg", g0, sold, T0 + 40, 0, 10 ** 30, sold, S, 10 ** 20, note="the vault sold token0: the upper leg is worse")
     adds("markout-tie-lower-leg", g0, g0.copy(), T0 + 40, 0, 10 ** 30, g0, S, 10 ** 20, note="equal legs: pMk = the lower leg")
+    # v2.34 (s09 D9-01, D9-02): the round-up upper leg and the clamps at the tick bounds
+    adds("markout-clamp-max-tick", g0, sold, R.MAX_TICK, 0, 10 ** 30, sold, S, 10 ** 20, note="tickMk at MAX_TICK: both legs clamped")
+    adds("markout-clamp-near-max", g0, sold, R.MAX_TICK - 5, 0, 10 ** 30, sold, S, 10 ** 20, note="upper leg tickMk + 6 clamped to MAX_TICK")
+    adds("markout-clamp-min-tick", g0, sold, R.MIN_TICK, 0, 10 ** 30, sold, S, 10 ** 20, note="tickMk at MIN_TICK: the lower leg clamped")
+    adds("markout-upper-leg-rounded-up", g0, sold, T0 - 6, 0, 10 ** 30, sold, S, 10 ** 20, note="the upper leg sits at tickMk + FEE_TICKS + 1")
     add("charge-zero-nav-zero", R.Holdings(), R.Holdings(), sqrt_at(T0), sqrt_at(T0), note="no loss and no NAV: burn 0, ok")
     # ExecLedger.value
     for s in [sqrt_at(T0), sqrt_at(T0 + 500), sqrt_at(T0 + 2500), sqrt_at(T0 + 3000)]:
@@ -344,8 +352,10 @@ LEDGER_CONV = {
                "strictly larger loss; charge = max(0, max loss); pStar = argmax (sqrtSpot on a tie, incl. charge 0); "
                "navAfterPStar = NAV_after(pStar); burn = ceilDiv(charge*S, navAfterPStar) (0 when charge = 0; "
                "type(uint256).max when navAfterPStar = 0 and charge > 0); burnR = ceilDiv((charge + reserve)*S, "
-               "navAfterPStar) - burn (type(uint256).max when saturated); ok = burn + burnR <= unvested + bond.",
-    "settleExtra": "legs sqrtAt(tickMk - feeTicks) then sqrtAt(tickMk + feeTicks) (later replaces only if strictly larger); "
+               "navAfterPStar) - burn (type(uint256).max when saturated); ok = burn + burnR <= unvested + bond, evaluated without "
+               "overflow (both may be type(uint256).max).",
+    "settleExtra": "legs sqrtAt(max(MIN_TICK, tickMk - feeTicks)) then sqrtAt(min(MAX_TICK, tickMk + feeTicks + 1)) (the upper "
+                   "leg rounded up; the later replaces only if strictly larger); no revert on any input; "
                    "extra = min(reserve, max(0, loss_mk - charge0)); burnS = 0 if extra = 0, reserveShares if "
                    "NAV(now, pMk) = 0, else min(reserveShares, ceilDiv(extra*S, NAV(now, pMk))).",
     "NAV": "NAV(s) = q(idle0 + x_pos(s), s) + idle1 + y_pos(s); positions per Appendix A with roundUp = false.",
@@ -416,6 +426,9 @@ def placement_cases():
     size("empty-idle", R.Holdings(), T0 - 1000, T0 + 1000, sqrt_at(T0), sqrt_at(T0), True)
     size("tiny-headroom", R.Holdings(1000, 1000), T0 - 1000, T0 + 1000, sqrt_at(T0), sqrt_at(T0), True)
     size("ref-moves-delta", idle, T0 - 1000, T0 + 1000, sqrt_at(T0), sqrt_at(T0 + 60), False)
+    # v2.34 (s09 D9-11): at an extreme price with spot one unit inside the upper edge, the token0 leg's quotient exceeds 2^256
+    hx = R.MAX_TICK - R.MAX_TICK % SP
+    size("extreme-price-leg-overflow", R.Holdings(10 ** 30, 10 ** 30), hx - W, hx, sqrt_at(hx) - 1, sqrt_at(hx - 30), True)
     return cases
 
 
@@ -427,7 +440,8 @@ PLACEMENT_CONV = {
             "after = idle minus the v4 add amounts of L at sqrtSpot (roundUp = true); "
             "deltaAfter = min(WAD, positionValue(sqrtRef)*WAD / NAV(sqrtRef)) of `after` (0 when NAV = 0). "
             "deltaAfter < DELTA_MIN (0.5 WAD) means the vault reverts DeltaMin. Legs saturate at type(uint128).max "
-            "(spot one unit inside an edge, case token1-edge-saturated-leg).",
+            "(spot one unit inside an edge, case token1-edge-saturated-leg), including a quotient above 2^256 inside the leg's "
+            "mulDiv (case extreme-price-leg-overflow).",
     "fields": "Placement.check in {lo, hi, tickSpot, refTick, band, wTicks, spacing} out {errCode}; Placement.size in "
               "{idle, lo, hi, sqrtSpot, sqrtRef} out {L, after, deltaAfter}; idle/after are Holdings {idle0, idle1, L, lo, hi}.",
 }

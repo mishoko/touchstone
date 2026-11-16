@@ -1,9 +1,9 @@
 {
  "schema": "touchstone-vectors/1",
- "specVersion": "2.33",
+ "specVersion": "2.34",
  "conventions": {
   "check": "errCode = first failing code in numeric order: 1 |tickSpot - refTick| > band; 2 hi - lo != wTicks; 3 lo or hi not a multiple of spacing; 4 not lo <= tickSpot < hi; 5 not lo <= refTick < hi; 0 ok. The vault maps 1 Fence, 2 Width, 3 Alignment, 4 and 5 NotContained.",
-  "size": "L = getLiquidityForAmounts(sqrtSpot, sqrtAt(lo), sqrtAt(hi), idle0, idle1) - (L/1e9 + 1), floored at 0; after = idle minus the v4 add amounts of L at sqrtSpot (roundUp = true); deltaAfter = min(WAD, positionValue(sqrtRef)*WAD / NAV(sqrtRef)) of `after` (0 when NAV = 0). deltaAfter < DELTA_MIN (0.5 WAD) means the vault reverts DeltaMin. Legs saturate at type(uint128).max (spot one unit inside an edge, case token1-edge-saturated-leg).",
+  "size": "L = getLiquidityForAmounts(sqrtSpot, sqrtAt(lo), sqrtAt(hi), idle0, idle1) - (L/1e9 + 1), floored at 0; after = idle minus the v4 add amounts of L at sqrtSpot (roundUp = true); deltaAfter = min(WAD, positionValue(sqrtRef)*WAD / NAV(sqrtRef)) of `after` (0 when NAV = 0). deltaAfter < DELTA_MIN (0.5 WAD) means the vault reverts DeltaMin. Legs saturate at type(uint128).max (spot one unit inside an edge, case token1-edge-saturated-leg), including a quotient above 2^256 inside the leg's mulDiv (case extreme-price-leg-overflow).",
   "fields": "Placement.check in {lo, hi, tickSpot, refTick, band, wTicks, spacing} out {errCode}; Placement.size in {idle, lo, hi, sqrtSpot, sqrtRef} out {L, after, deltaAfter}; idle/after are Holdings {idle0, idle1, L, lo, hi}."
  },
  "cases": [
@@ -745,6 +745,34 @@
      "hi": "197250"
     },
     "deltaAfter": "999683555138141247"
+   }
+  },
+  {
+   "id": "placement-035-extreme-price-leg-overflow",
+   "fn": "Placement.size",
+   "in": {
+    "idle": {
+     "idle0": "1000000000000000000000000000000",
+     "idle1": "1000000000000000000000000000000",
+     "L": "0",
+     "lo": "0",
+     "hi": "0"
+    },
+    "lo": "885270",
+    "hi": "887270",
+    "sqrtSpot": "1461300573427867316570072651998408279850435624080",
+    "sqrtRef": "1459110375135176227217141799363990665779938914150"
+   },
+   "out": {
+    "L": "569763281975",
+    "after": {
+     "idle0": "999999999999999999999999999999",
+     "idle1": "1002024474224793782538",
+     "L": "569763281975",
+     "lo": "885270",
+     "hi": "887270"
+    },
+    "deltaAfter": "0"
    }
   }
  ]

@@ -32,7 +32,7 @@ from v4math import (  # noqa: E402
     get_liquidity_for_amounts, compute_swap_step_exact_in,
 )
 
-SPEC_VERSION = "2.33"
+SPEC_VERSION = "2.34"
 WAD = 10 ** 18
 U32 = (1 << 32) - 1
 U40 = (1 << 40) - 1
@@ -85,12 +85,12 @@ def _m_per_block(blocktime, m_year_wad=10 ** 16):
 
 _COMMON = dict(FEE=500, SPACING=10, FEE_TICKS=5, W_TICKS=2000, BAND_SWAP=5, REF_BAND=60,
                DELTA_MIN=WAD // 2, MAX_SWAP_ACTION=2 * 10 ** 16, MAX_SWAP_EPOCH=5 * 10 ** 16, MAX_SWAPS=20,
-               RESET_RUN=2, BOND_RATIO=172 * 10 ** 13, RESERVE_RATIO=6 * 10 ** 14, L_W_TARGET=1000)
+               RESET_RUN=2, BOND_RATIO=173 * 10 ** 13, RESERVE_RATIO=6 * 10 ** 14, L_W_TARGET=1000)
 TEST = Tier(NAME="TEST", BOND_MIN=0, BLOCKTIME=12, GRID=20, GRID_SEC=240, EPOCH=120, CURE_BLOCKS=200, COOLDOWN=14,
             REF_WINDOW=600, EDGE_DELAY=20, H_MARKOUT=120, NAV_MAX=U128, m_perBlock=_m_per_block(12), **_COMMON)
-DEMO = Tier(NAME="DEMO", BOND_MIN=172 * 10 ** 16, BLOCKTIME=1, GRID=300, GRID_SEC=300, EPOCH=3600, CURE_BLOCKS=1800, COOLDOWN=30,
+DEMO = Tier(NAME="DEMO", BOND_MIN=173 * 10 ** 16, BLOCKTIME=1, GRID=300, GRID_SEC=300, EPOCH=3600, CURE_BLOCKS=1800, COOLDOWN=30,
             REF_WINDOW=300, EDGE_DELAY=300, H_MARKOUT=20, NAV_MAX=1850 * 10 ** 18, m_perBlock=_m_per_block(1), **_COMMON)
-MAINNET = Tier(NAME="MAINNET", BOND_MIN=172 * 10 ** 16, BLOCKTIME=12, GRID=300, GRID_SEC=3600, EPOCH=50400, CURE_BLOCKS=7200, COOLDOWN=30,
+MAINNET = Tier(NAME="MAINNET", BOND_MIN=173 * 10 ** 16, BLOCKTIME=12, GRID=300, GRID_SEC=3600, EPOCH=50400, CURE_BLOCKS=7200, COOLDOWN=30,
                REF_WINDOW=600, EDGE_DELAY=1800, H_MARKOUT=120, NAV_MAX=1850 * 10 ** 18, m_perBlock=_m_per_block(12), **_COMMON)
 for _t in (TEST, DEMO, MAINNET):
     _t.FORFEIT_DRIP_BLOCKS = _t.EPOCH
@@ -180,11 +180,12 @@ def measure(before, after, sqrt_spot, sqrt_ref, S, unvested, bond):
 
 def settle_extra(before, after, tick_mk, fee_ticks, charge0, reserve, now_h, S, reserve_shares):
     """ExecLedger.settleExtra (repair C settlement with a successful window read) -> (extra, pMk, burnS).
-    Legs sqrtAt(tick_mk − fee_ticks) then sqrtAt(tick_mk + fee_ticks) (the later replaces only on a strictly larger
+    Legs sqrtAt(max(MIN_TICK, tick_mk − fee_ticks)) then sqrtAt(min(MAX_TICK, tick_mk + fee_ticks + 1)) (the upper leg is
+    rounded up: tryWindow returns the floor of the mean tick, owner R1-02, v2.34; the later replaces only on a strictly larger
     loss); extra = min(reserve, max(0, loss_mk − charge0)); burnS = min(reserveShares, ceilDiv(extra·S,
     NAV_now(pMk))) at the holdings now; reserveShares if NAV_now(pMk) = 0 and extra > 0; 0 if extra = 0."""
     p_lo = get_sqrt_price_at_tick(max(MIN_TICK, min(MAX_TICK, tick_mk - fee_ticks)))
-    p_hi = get_sqrt_price_at_tick(max(MIN_TICK, min(MAX_TICK, tick_mk + fee_ticks)))
+    p_hi = get_sqrt_price_at_tick(max(MIN_TICK, min(MAX_TICK, tick_mk + fee_ticks + 1)))
     l_lo = value(before, p_lo)[0] - value(after, p_lo)[0]
     l_hi = value(before, p_hi)[0] - value(after, p_hi)[0]
     loss_mk, p_mk = (l_hi, p_hi) if l_hi > l_lo else (l_lo, p_lo)

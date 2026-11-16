@@ -41,11 +41,15 @@
  ],
  "contracts": {
   "ExecLedger": {
-   "runtime": 1936,
+   "runtime": 4977,
    "history": [
     {
      "runtime": 1936,
      "note": "s08 baseline: P2 with the checkpoint (steps 1-6, accrual inert), the swap counters and the dispatch/_tryRef seams"
+    },
+    {
+     "runtime": 4977,
+     "note": "s9: ExecLedger gains measure (three legs, reserve, gate), settleExtra (clamped legs, upper leg rounded up) and placementSize (the Placement library behind the coarse link, spec lever D9-05); linked library outside the vault; Placement is an internal library (57 B stub)"
     }
    ]
   },
@@ -104,11 +108,24 @@
    ]
   },
   "TouchstoneVault": {
-   "runtime": 14971,
+   "runtime": 14997,
    "history": [
     {
      "runtime": 14971,
      "note": "s08 baseline: P2 with the checkpoint (steps 1-6, accrual inert), the swap counters and the dispatch/_tryRef seams"
+    },
+    {
+     "runtime": 14997,
+     "note": "s9: ExecLedger gains measure (three legs, reserve, gate), settleExtra (clamped legs, upper leg rounded up) and placementSize (the Placement library behind the coarse link, spec lever D9-05); linked library outside the vault; Placement is an internal library (57 B stub)"
+    }
+   ]
+  },
+  "Placement": {
+   "runtime": 57,
+   "history": [
+    {
+     "runtime": 57,
+     "note": "s9: ExecLedger gains measure (three legs, reserve, gate), settleExtra (clamped legs, upper leg rounded up) and placementSize (the Placement library behind the coarse link, spec lever D9-05); linked library outside the vault; Placement is an internal library (57 B stub)"
     }
    ]
   }

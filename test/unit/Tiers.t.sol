@@ -67,10 +67,10 @@ contract TiersTest is Test {
         (Tier memory m,) = Tiers.mainnet();
         (Tier memory d,) = Tiers.demo();
         (Tier memory t,) = Tiers.testing();
-        assertEq(m.BOND_RATIO, 1.72e15);
+        assertEq(m.BOND_RATIO, 1.73e15);
         assertEq(m.RESERVE_RATIO, 6e14);
-        assertEq(m.BOND_MIN, 1.72e18);
-        assertEq(d.BOND_MIN, 1.72e18);
+        assertEq(m.BOND_MIN, 1.73e18);
+        assertEq(d.BOND_MIN, 1.73e18);
         assertEq(t.BOND_MIN, 0);
         assertEq(m.NAV_MAX, 1850e18);
         assertEq(d.NAV_MAX, 1850e18);

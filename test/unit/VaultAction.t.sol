@@ -172,14 +172,25 @@ contract VaultActionTest is LiquidPoolBase {
         (Holdings memory b, uint256 S) = _prime();
         (uint256 g0,) = manager.getFeeGrowthInside(poolId, LO, HI);
         uint160 s0 = _sqrtSpot();
+        vm.recordLogs();
         _swapAs(true, 2e16, type(uint256).max);
         (uint256 g1,) = manager.getFeeGrowthInside(poolId, LO, HI);
         assertGt(g1, g0, "control: the swap paid fees into the vault's own position");
+        // the amount swapped in, from the PoolManager's own Swap event (the swapper's delta: amount0 < 0 paid in)
+        uint256 paid0 = _swapEventPaid0();
         (uint256 f0, uint256 f1) = ExpectedFlows.fees(manager, poolId, address(hv), LO, HI);
         assertEq(f0 + f1, 0, "nothing left uncollected");
         Holdings memory a = hv.holdings();
         (,, Holdings memory pa,,) = hv.pendingAction();
-        _eqH(pa, a, "after includes the collected fees");
+        _eqH(pa, a, "the record holds the holdings after");
+        // independent: idle0 = before − the amount swapped in (the PoolManager's event) + the token0 fee the collect
+        // brought back (the fee growth inside the vault's range times its L)
+        uint256 fee0;
+        unchecked {
+            fee0 = FullMath.mulDiv(g1 - g0, b.L, 1 << 128);
+        }
+        assertGt(fee0, 0, "a token0 fee");
+        assertEq(pa.idle0, b.idle0 - paid0 + fee0, "after includes the collected fee");
         Exp memory e = _expect(b, a, s0, 0, S);
         (,, , uint128 c0,) = hv.pendingAction();
         assertEq(c0, e.charge, "charged on the collected holdings");
@@ -297,24 +308,31 @@ contract VaultActionTest is LiquidPoolBase {
     ///         the burns passes the gate; one share less reverts `Insolvent` (control).
     function test_U_solv__worstSwapPlusReserveFitsTheBond() public {
         _setRef(tier.REF_BAND); // spot 0 at the fence below the reference
-        // JIT at the limit: the third-party depth is replaced by a large position on [-10, 0), just above the
-        // adverse limit, so the whole per-action amount fills inside the band at the worst prices it allows
+        // JIT at the limit: the third-party depth is replaced by a position on [-10, 0), just above the adverse limit,
+        // sized so that the per-action amount fills (almost) completely with the price reaching the limit
         _removeThirdPartyLiquidity();
-        lpRouter.modifyLiquidity(key, ModifyLiquidityParams(-10, 0, 1e22, 0), "");
+        lpRouter.modifyLiquidity(key, ModifyLiquidityParams(-10, 0, 8e19, 0), "");
         (Holdings memory b, uint256 S) = _prime();
         uint160 s0 = _sqrtSpot();
+        (uint256 g0,) = manager.getFeeGrowthInside(poolId, LO, HI);
         uint256 amt = _capAmount0(b, tier.MAX_SWAP_ACTION, tier.REF_BAND);
         uint256 snap = vm.snapshotState();
         _swapAs(true, uint128(amt), type(uint256).max);
         (, Holdings memory pb, Holdings memory pa, uint128 c0, uint128 r) = hv.pendingAction();
         _eqH(pb, b, "before");
         Exp memory e = _expect(b, pa, s0, tier.REF_BAND, S);
-        (uint256 navBurn,) = ExecLedger.value(pa, _sqrtSpot());
-        // the 2× rule on the gate's own quantity: (charge₀ + reserve)·2 ≤ BOND_RATIO·NAV
+        (,, uint256 navBurn,,,) = ExecLedger.measure(
+            pb, pa, s0, s0, TickMath.getSqrtPriceAtTick(tier.REF_BAND), 0, S, 0, 0
+        );
+        // the binding constraint: the adverse limit reached with the request filled (to 1e-4)
+        assertLe(_tick(), -(tier.FEE_TICKS + tier.BAND_SWAP), "the price reached the adverse limit");
+        (uint256 g1,) = manager.getFeeGrowthInside(poolId, LO, HI);
+        uint256 filled = pb.idle0 - pa.idle0 + FullMath.mulDiv(g1 - g0, pb.L, 1 << 128);
+        assertGe(filled * 1e4, amt * (1e4 - 1), "the request filled");
+        // the 2× rule on the gate's own quantity: (charge₀ + reserve)·2 ≤ BOND_RATIO·NAV′
         assertLe((uint256(c0) + r) * 2 * WAD, uint256(tier.BOND_RATIO) * navBurn, "2x cover at BOND_RATIO");
-        // control: the scenario is near the worst swap (fee + FEE_TICKS + BAND_SWAP + REF_BAND ≈ 1.38e-4 of NAV)
-        assertGe(uint256(c0) * 1e5, navBurn * 12, "charge >= 1.2e-4 of NAV: a near-worst swap");
-        assertEq(pb.idle0 - pa.idle0 <= amt, true, "filled within the request");
+        // control: the worst swap of the bond sizing (fee + FEE_TICKS + BAND_SWAP + REF_BAND: 1.38e-4 of NAV′)
+        assertGe(uint256(c0) * 1e6, navBurn * 137, "charge >= 1.37e-4 of NAV': the worst swap");
         uint256 need = e.burn + e.burnR;
         vm.revertToState(snap);
         // the bond at exactly the burns: passes
@@ -432,6 +450,24 @@ contract VaultActionTest is LiquidPoolBase {
         vm.expectRevert(TouchstoneVault.Cooldown.selector);
         hv.rebalanceSwap(true, 1e16, type(uint256).max);
         advance(1);
+        _swapAs(true, 1e16, type(uint256).max);
+    }
+
+    /// @notice No action over a pending record: blocks that come faster than the tier's nominal spacing pass the
+    ///         cooldown before the markout is due in time; the action reverts `MarkoutPending` even when the reserve
+    ///         holds no shares (so `Op.Charge`'s own check cannot fire). Control: at the nominal spacing it settles first.
+    function test_U_settle__noActionOverAPendingRecord() public {
+        _swapAs(true, 1e16, type(uint256).max);
+        uint256 snap = vm.snapshotState();
+        vm.roll(vm.getBlockNumber() + tier.COOLDOWN); // blocks, no time: the window is not due
+        Bank memory bk = hv.bankFull();
+        (bk.bondShares, bk.reserveShares, bk.reserveBond) = (bk.bondShares + bk.reserveShares, 0, 0);
+        hv.setBank(bk);
+        vm.prank(curator);
+        vm.expectRevert(TouchstoneVault.MarkoutPending.selector);
+        hv.rebalanceSwap(true, 1e16, type(uint256).max);
+        vm.revertToState(snap);
+        advance(tier.COOLDOWN); // the nominal spacing: due, settled first
         _swapAs(true, 1e16, type(uint256).max);
     }
 
@@ -572,6 +608,18 @@ contract VaultActionTest is LiquidPoolBase {
         assertEq(n, 1, "one Action event");
     }
 
+    function _swapEventPaid0() internal returns (uint256) {
+        bytes32 sig = keccak256("Swap(bytes32,address,int128,int128,uint160,uint128,int24,uint24)");
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        for (uint256 i; i < logs.length; ++i) {
+            if (logs[i].emitter == address(manager) && logs[i].topics[0] == sig) {
+                (int128 a0,,,,,) = abi.decode(logs[i].data, (int128, int128, uint160, uint128, int24, uint24));
+                return uint256(int256(-a0));
+            }
+        }
+        revert("no Swap event");
+    }
+
     function _seedMatured(uint128 amt) internal {
         Bank memory bk = hv.bankFull();
         bk.maturedPending += amt;
@@ -617,5 +665,85 @@ contract VaultActionUnplacedTest is LiquidPoolBase {
         assertEq(pb.idle0, b.idle0, "before");
         assertEq(pa.L, 0, "still no position");
         assertLt(pa.idle0, b.idle0, "swapped from idle");
+    }
+}
+
+/// @notice The USDC/WETH-like pool (tick 196,000; token0 at 6 decimals, token1 at 18): the caps and the charge in the
+///         `q` form where a token0 unit is worth ≈ 3.3e8 token1 units, so a cap valued in the wrong token fails.
+contract VaultActionHighTickTest is LiquidPoolBase {
+    using StateLibrary for *;
+
+    uint256 internal constant WAD = 1e18;
+    int24 internal constant C = 196_000;
+
+    function _highTick() internal pure override returns (bool) {
+        return true;
+    }
+
+    function setUp() public override {
+        super.setUp();
+        hv.placeForTest(C - 1800, C + 200); // most token0 stays idle
+        _setRef(C);
+    }
+
+    function _setRef(int24 t) internal {
+        uint32[] memory s = new uint32[](1);
+        int24[] memory k = new int24[](1);
+        (s[0], k[0]) = (1, t);
+        refPool.setPath(s, k);
+    }
+
+    function _capAmount0(Holdings memory h, uint256 capFrac, int24 ref) internal view returns (uint256 a) {
+        uint160 sr = TickMath.getSqrtPriceAtTick(ref);
+        (uint256 nav,) = ExecLedger.value(h, sr);
+        uint256 lim = FullMath.mulDiv(capFrac, nav, WAD);
+        uint256 hiA = h.idle0;
+        while (a < hiA) {
+            uint256 mid = (a + hiA + 1) / 2;
+            (uint256 v,) = ExecLedger.value(Holdings(uint128(mid), 0, 0, 0, 0), sr);
+            if (v <= lim) a = mid;
+            else hiA = mid - 1;
+        }
+    }
+
+    /// @notice The per-action cap at the reference in the q form: the largest token0 amount within the cap passes,
+    ///         one more unit (≈ 3.3e8 token1 units) reverts `SwapCap`.
+    function test_U_guard__perActionCapAtTheReferenceUsdcWeth() public {
+        _setRef(C + 50);
+        hv.settle();
+        Holdings memory b = hv.holdings();
+        uint256 amt = _capAmount0(b, tier.MAX_SWAP_ACTION, C + 50);
+        assertLt(amt, b.idle0, "the cap binds before idle");
+        uint256 snap = vm.snapshotState();
+        vm.prank(curator);
+        hv.rebalanceSwap(true, uint128(amt), type(uint256).max);
+        vm.revertToState(snap);
+        vm.prank(curator);
+        vm.expectRevert(TouchstoneVault.SwapCap.selector);
+        hv.rebalanceSwap(true, uint128(amt + 1), type(uint256).max);
+    }
+
+    /// @notice The charge, the reserve and the epilogue at the USDC/WETH-like price, exact against `ExecLedger`.
+    function test_U_3__chargeExactUsdcWeth() public {
+        _setRef(C + 40);
+        hv.settle();
+        Holdings memory b = hv.holdings();
+        uint256 S = hv.totalSupply();
+        (uint160 s0,,,) = manager.getSlot0(poolId);
+        vm.prank(curator);
+        hv.rebalanceSwap(true, 5e7, type(uint256).max);
+        (, Holdings memory pb, Holdings memory pa, uint128 c0, uint128 r) = hv.pendingAction();
+        assertEq(keccak256(abi.encode(pb)), keccak256(abi.encode(b)), "before");
+        uint160 sr = TickMath.getSqrtPriceAtTick(C + 40);
+        (uint256 navSpot,) = ExecLedger.value(b, s0);
+        uint256 reserve = FullMath.mulDiv(tier.RESERVE_RATIO, navSpot, WAD);
+        (uint256 charge,,, uint256 burn, uint256 burnR,) = ExecLedger.measure(b, pa, s0, s0, sr, reserve, S, 0, 0);
+        assertGt(charge, 0, "a charge");
+        assertEq(c0, charge, "charge");
+        assertEq(r, reserve, "reserve");
+        assertEq(hv.totalSupply(), S - burn, "burn");
+        assertEq(hv.bankFull().reserveShares, burnR, "reserve shares");
+        (uint256 nav,) = ExecLedger.value(pa, sr);
+        assertEq(hv.scalars().nav0, nav, "NAV0 at the reference");
     }
 }

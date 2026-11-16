@@ -2365,6 +2365,39 @@
    "find": "(uint40(block.timestamp), before, after_,",
    "replace": "(uint40(block.timestamp), after_, before,",
    "status": "KILLED"
+  },
+  {
+   "id": "MU-216",
+   "area": "ledger",
+   "desc": "an action over a pending record that is not yet due (the reserve with no shares; s11 fix review r1 F12-01)",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__noActionOverAPendingRecord",
+   "file": "src/TouchstoneVault.sol",
+   "find": "so one still pending is not due\n        if (_tAction != 0) revert MarkoutPending();\n",
+   "replace": "so one still pending is not due\n",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-217",
+   "area": "guards",
+   "desc": "the adverse limit without BAND_SWAP (s11 fix review r1 F12-04)",
+   "killer_id": "U-guard",
+   "kill": "test_U_guard__adverseLimitPartialFillCountsTheFilledAmount",
+   "file": "src/TouchstoneVault.sol",
+   "find": "z ? tickSpot - (FEE_TICKS + BAND_SWAP) : tickSpot + (FEE_TICKS + BAND_SWAP)",
+   "replace": "z ? tickSpot - FEE_TICKS : tickSpot + FEE_TICKS",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-218",
+   "area": "ledger",
+   "desc": "idle debited by the requested amount instead of the amount swapped in (s11 fix review r1 F12-04)",
+   "killer_id": "U-guard",
+   "kill": "test_U_guard__adverseLimitPartialFillCountsTheFilledAmount",
+   "file": "src/TouchstoneVault.sol",
+   "find": "(_idle0 - uint128(paid), SafeCast.toUint128(_idle1 + got))",
+   "replace": "(_idle0 - uint128(amountIn), SafeCast.toUint128(_idle1 + got))",
+   "status": "KILLED"
   }
  ]
 }

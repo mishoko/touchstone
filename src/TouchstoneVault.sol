@@ -373,7 +373,7 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
         if (frac > MAX_SWAP_ACTION || _epochSwapFrac + frac > MAX_SWAP_EPOCH) revert SwapCap();
         // [MU-202] from idle only
         if (amountIn > (z ? before.idle0 : before.idle1)) revert SwapCap();
-        // [MU-020] the price limit on the adverse side of spot
+        // [MU-020] [MU-217] the price limit on the adverse side of spot, FEE_TICKS + BAND_SWAP away
         int24 lim = z ? tickSpot - (FEE_TICKS + BAND_SWAP) : tickSpot + (FEE_TICKS + BAND_SWAP);
         BalanceDelta d =
             MANAGER.swap(_key(), SwapParams(z, -int256(uint256(amountIn)), TickMath.getSqrtPriceAtTick(lim)), "");
@@ -382,6 +382,7 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
         // settle through claims: burn the input's claims, mint the output's
         MANAGER.burn(address(this), (z ? C0 : C1).toId(), paid);
         _mintClaims(z ? C1 : C0, got);
+        // [MU-218] idle moves by the amounts actually swapped
         if (z) (_idle0, _idle1) = (_idle0 - uint128(paid), SafeCast.toUint128(_idle1 + got));
         else (_idle0, _idle1) = (SafeCast.toUint128(_idle0 + got), _idle1 - uint128(paid));
         // [MU-009] the vault's own swap paid fees into its own position: collect them before NAV_after
@@ -394,7 +395,8 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
         return "";
     }
 
-    /// @dev The guards common to both actions: the fence on the spot tick at the live reference and the cooldown.
+    /// @dev The guards common to both actions: the fence on the spot tick at the live reference, the cooldown, and no
+    ///      pending markout (the cooldown makes one due in time on a tier whose blocks keep their nominal spacing).
     function _guards(int24 tickSpot, int24 ref) internal view {
         int256 dist = int256(tickSpot) - ref;
         // [MU-206] [MU-212] both sides
@@ -402,6 +404,8 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
         uint256 la = _lastAction;
         // [MU-014] COOLDOWN blocks since the last action; none before the first
         if (la != 0 && block.number < la + COOLDOWN) revert Cooldown();
+        // [MU-216] never over a pending record: the prologue has settled a due one, so one still pending is not due
+        if (_tAction != 0) revert MarkoutPending();
     }
 
     /// @notice The charge shared by both actions: the worse of the legs `s0`, `s_spot` and the reference

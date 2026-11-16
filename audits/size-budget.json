@@ -130,7 +130,7 @@
    ]
   },
   "TouchstoneVault": {
-   "runtime": 18357,
+   "runtime": 18387,
    "history": [
     {
      "runtime": 14971,
@@ -151,6 +151,10 @@
     {
      "runtime": 18357,
      "note": "s11: rebalanceSwap (fence, cooldown, MAX_SWAPS, caps at the reference, SwapCap, adverse limit, settlement through claims, collect after the swap) and the charge path shared by both actions (Op.Charge, the pending record, the epilogue re-base); +4,133 B as first written, then lever (2b): ExecLedger.actionCharge and swapFrac replace four value calls and measure (-743 B); ExecLedger grows by those two entries"
+    },
+    {
+     "runtime": 18387,
+     "note": "s11 fix review r1: the no-pending-record guard (F12-01), +30 B"
     }
    ]
   },

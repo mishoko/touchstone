@@ -246,7 +246,9 @@ contract VaultHandler is Test {
             if (
                 sel != TouchstoneVault.Fence.selector && sel != TouchstoneVault.Cooldown.selector
                     && sel != TouchstoneVault.MaxSwaps.selector && sel != TouchstoneVault.SwapCap.selector
-                    && sel != FeeBank.Insolvent.selector && sel != FeeBank.MarkoutPending.selector
+                    && sel != FeeBank.Insolvent.selector
+                    // a pending record blocks an action only when the seam wrote it (a real one is due by the cooldown)
+                    && (sel != FeeBank.MarkoutPending.selector || _realPending)
                     && sel != Ladder.BadMode.selector && sel != ITouchstoneHook.RefUnreadable.selector
             ) {
                 ++actionFailures;

@@ -543,7 +543,7 @@
   {
    "id": "MU-050",
    "area": "ladder",
-   "desc": "pending breaches processed after accrual",
+   "desc": "pending breaches processed after accrual (P2: the step-3 writes are overwritten by step 4; re-verify at P3 with accrual, killer U-forfeit-quiet)",
    "killer_id": "U-forfeit",
    "kill": "test_U_forfeit__breachThenSegmentEndsAtTheCheckpoint",
    "file": "src/TouchstoneVault.sol",
@@ -1792,6 +1792,116 @@
    "file": "src/TouchstoneVault.sol",
    "find": "uint256 dL = FullMath.mulDiv(_L, s, S);",
    "replace": "uint256 dL = FullMath.mulDivRoundingUp(_L, s, S);",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-164",
+   "area": "additional",
+   "desc": "the live leg read when nothing is vestable",
+   "killer_id": "U-vest-gate",
+   "kill": "test_U_vest_gate__nothingVestableReadsNothing",
+   "file": "src/TouchstoneVault.sol",
+   "find": "o.refTick < hi && vestable) {",
+   "replace": "o.refTick < hi) {",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-165",
+   "area": "additional",
+   "desc": "the gate ignores EMPTY (equivalent by construction while EMPTY stores 0/0; killed with an explicit range)",
+   "killer_id": "U-vest-gate",
+   "kill": "test_U_vest_gate__emptyRangeBlocksTheVest",
+   "file": "src/TouchstoneVault.sol",
+   "find": "o.refFresh && !o.emptyRange && ",
+   "replace": "o.refFresh && ",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-166",
+   "area": "additional",
+   "desc": "the checkpoint does not acknowledge processed breaches to the hook",
+   "killer_id": "U-forfeit",
+   "kill": "test_U_forfeit__everyPendingBreachIsCountedAndAcknowledged",
+   "file": "src/TouchstoneVault.sol",
+   "find": "            HOOK.ackBreaches(n);\n",
+   "replace": "",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-167",
+   "area": "additional",
+   "desc": "the bank burn is not removed from the supply",
+   "killer_id": "U-forfeit",
+   "kill": "test_U_forfeit__dripBurnsHalfAtHalfTheDripLength",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        if (burned > 0) _burn(address(this), burned);\n",
+   "replace": "",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-168",
+   "area": "additional",
+   "desc": "no forfeit drip at the checkpoint",
+   "killer_id": "U-forfeit",
+   "kill": "test_U_forfeit__dripBurnsHalfAtHalfTheDripLength",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        if (b.forfeitPool > 0) _burnBank(Op.Drip, abi.encode(now_));\n",
+   "replace": "",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-169",
+   "area": "additional",
+   "desc": "a cohort counted vestable one epoch early",
+   "killer_id": "U-vest-gate",
+   "kill": "test_U_vest_gate__scenarioVectorsWithoutBaseBitForBit",
+   "file": "src/TouchstoneVault.sol",
+   "find": "uint256(b.cohorts[k].epoch) + 1 + V) return true;",
+   "replace": "uint256(b.cohorts[k].epoch) + V) return true;",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-170",
+   "area": "additional",
+   "desc": "the epoch roll does not advance the epoch",
+   "killer_id": "U-vest-gate",
+   "kill": "test_U_vest_gate__epochRollResetsTheSwapCounters",
+   "file": "src/TouchstoneVault.sol",
+   "find": "            _epoch = ne;\n",
+   "replace": "",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-171",
+   "area": "additional",
+   "desc": "vesting ignores the gate",
+   "killer_id": "U-vest-gate",
+   "kill": "test_U_vest_gate__liveReferenceOutBlocksTheVest",
+   "file": "src/TouchstoneVault.sol",
+   "find": "Op.VestTime, abi.encode(ne, gateOpen))",
+   "replace": "Op.VestTime, abi.encode(ne, true))",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-172",
+   "area": "guards",
+   "desc": "an unimplemented entry falls through to withdraw",
+   "killer_id": "U-mode",
+   "kill": "test_U_mode__anUnimplementedEntryRevertsInsteadOfFallingThrough",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        if (entry == Entry.Withdraw) return _withdraw(payer, args);\n        revert Ladder.BadMode();",
+   "replace": "        return _withdraw(payer, args);",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-173",
+   "area": "additional",
+   "desc": "the checkpoint burns more than the bank owes (F-3 / I-2 positive control)",
+   "killer_id": "U-forfeit",
+   "kill": "test_U_forfeit__dripBurnsHalfAtHalfTheDripLength",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        if (burned > 0) _burn(address(this), burned);",
+   "replace": "        if (burned > 0) _burn(address(this), burned + 1);",
    "status": "KILLED"
   }
  ]

@@ -6,6 +6,8 @@ import {HarnessVaultBase} from "../utils/HarnessVaultBase.sol";
 import {ITouchstoneHook} from "../../src/interfaces/ITouchstoneHook.sol";
 import {Bank, Cohort} from "../../src/types/Bank.sol";
 import {Ladder} from "../../src/libraries/Ladder.sol";
+import {Entry} from "../../src/types/Entry.sol";
+import {MockRefPool} from "../utils/MockRefPool.sol";
 
 /// @notice The checkpoint in the real flow (factory deployment, real hook, scripted reference pool): breaches latched
 ///         by an unplaced vault are processed by any entry point; the mode gate runs after the prologue; the vest
@@ -63,7 +65,48 @@ contract VaultCheckpointLiveTest is HarnessVaultBase {
         assertEq(mode, Ladder.EXITED, "the next checkpoint removes the curator");
     }
 
+    // ------------------------------------------------------------------ the seam and the dispatch
+
+    function test_U_mode__placementAfterABreachReturnsToNormal() public {
+        _driveBreaches(1);
+        _withdraw(alice, 1e20);
+        (,,,,, uint8 m,) = v.bank();
+        assertEq(m, Ladder.BREACHED, "breached");
+        hv.placeForTest(-600, 600);
+        Bank memory b = hv.bankFull();
+        assertEq(b.mode, Ladder.NORMAL, "a placement returns the vault to NORMAL");
+        assertTrue(b.placedByCurator, "placedByCurator");
+    }
+
+    function test_U_mode__anUnimplementedEntryRevertsInsteadOfFallingThrough() public {
+        vm.expectRevert(Ladder.BadMode.selector);
+        hv.rawEntry(Entry.Claim);
+        vm.expectRevert(Ladder.BadMode.selector);
+        hv.rawEntry(Entry.Poke);
+    }
+
     // ------------------------------------------------------------------ the live leg through the hook
+
+    function test_I_10__withdrawWithAMaturedCohortInEveryReferenceFailureMode() public {
+        uint256 cohort = _placeAndMature();
+        MockRefPool.Mode[5] memory modes = [
+            MockRefPool.Mode.Old,
+            MockRefPool.Mode.Revert,
+            MockRefPool.Mode.Short,
+            MockRefPool.Mode.GasBomb,
+            MockRefPool.Mode.ReturnBomb
+        ];
+        for (uint256 i; i < modes.length; ++i) {
+            refPool.setMode(modes[i]);
+            advance(1);
+            _withdraw(alice, 1e20); // the gate reads the live leg (something is vestable) and it fails soft
+            Bank memory b = hv.bankFull();
+            assertEq(b.vestedUnclaimed, 0, "a failed live read never vests");
+            assertEq(b.maturedPending, cohort, "the cohort waits");
+        }
+    }
+
+    // ------------------------------------------------------------------ the live leg through the hook (control)
 
     function test_U_vest_gate__realVaultReadsTheLiveReferenceThroughTheHook() public {
         uint256 cohort = _placeAndMature();

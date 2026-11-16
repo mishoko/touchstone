@@ -10,7 +10,6 @@ import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {SwapParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 import {PoolSwapTest} from "@uniswap/v4-core/src/test/PoolSwapTest.sol";
-import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {VaultHarness} from "../../utils/VaultHarness.sol";
 import {MockRefPool} from "../../utils/MockRefPool.sol";
 import {MockToken} from "../../utils/Stubs.sol";
@@ -18,6 +17,7 @@ import {ExpectedFlows} from "../../utils/ExpectedFlows.sol";
 import {ITouchstoneHook} from "../../../src/interfaces/ITouchstoneHook.sol";
 import {TouchstoneVault} from "../../../src/TouchstoneVault.sol";
 import {Holdings} from "../../../src/types/Holdings.sol";
+import {Bank, Cohort, RING, V} from "../../../src/types/Bank.sol";
 
 /// @notice The minimal P2 handler: deposits, withdrawals, time (snapshotted steps and silent jumps), keep-alive
 ///         refreshes, test-only placements, third-party swaps, reference moves and `breakRef` (every failure mode of
@@ -47,6 +47,7 @@ contract VaultHandler is Test {
     uint256 public placements;
     uint256 public breachesDriven;
     uint256 public exitedWithdrawals;
+    uint256 public bankSeeds;
     uint256 public i2Failures;
     string public i2Why;
     uint256 public i10Failures;
@@ -104,9 +105,9 @@ contract VaultHandler is Test {
         if (bal == 0) return;
         s = bound(s, 1, bal);
         // the expectation, from the PoolManager's state in this block (the prologue swaps nothing; collect-first
-        // sweeps the fees computed here; this build mints no bank shares, so the checkpoint burns none)
+        // sweeps the fees computed here) and the bank's closed-form drip (the checkpoint burns it before the flow)
         Holdings memory h = hv.holdings();
-        uint256 S = hv.totalSupply();
+        uint256 S = hv.totalSupply() - _dripOwed(hv.bankFull());
         (uint256 f0, uint256 f1) = ExpectedFlows.fees(manager, poolId, address(hv), h.lo, h.hi);
         uint128 dL = uint128(FullMath.mulDiv(h.L, s, S));
         (uint256 r0, uint256 r1) = ExpectedFlows.legs(manager, poolId, h.lo, h.hi, dL, false);
@@ -114,6 +115,7 @@ contract VaultHandler is Test {
         uint256 e1 = FullMath.mulDiv(h.idle1 + f1, s, S) + r1;
         uint256 b0 = token0.balanceOf(a);
         uint256 b1 = token1.balanceOf(a);
+        (uint128 posBefore,,) = manager.getPositionInfo(poolId, address(hv), h.lo, h.hi, bytes32(0));
         vm.prank(a);
         try hv.withdraw(s, 0, 0, a) {
             ++withdrawals;
@@ -122,16 +124,40 @@ contract VaultHandler is Test {
             if (mode == 2) ++exitedWithdrawals;
             if (token0.balanceOf(a) - b0 != e0) _i2("token0 payout");
             if (token1.balanceOf(a) - b1 != e1) _i2("token1 payout");
-            if (h.L - hv.holdings().L != dL) _i2("liquidity removed");
+            (uint128 posAfter,,) = manager.getPositionInfo(poolId, address(hv), h.lo, h.hi, bytes32(0));
+            if (posBefore - posAfter != dL) _i2("liquidity removed from the PoolManager position");
+            if (h.L - hv.holdings().L != dL) _i2("ledger L");
         } catch (bytes memory err) {
-            bytes4 sel = bytes4(err);
-            bool allowed = sel == TouchstoneVault.ZeroShares.selector || sel == TouchstoneVault.Slippage.selector
-                || sel == IERC20Errors.ERC20InsufficientBalance.selector;
-            if (!allowed) {
-                ++i10Failures;
-                i10Selector = sel;
-            }
+            // The spec's allow-list (ZeroShares, Slippage, ERC20InsufficientBalance) is the caller's own errors; this
+            // handler asks for 1 <= s <= balance with min = 0, so in its domain every revert is a failure (in
+            // particular an ERC20InsufficientBalance can only come from a checkpoint burn the vault cannot cover).
+            ++i10Failures;
+            i10Selector = bytes4(err);
         }
+    }
+
+    /// @notice Puts vault-held shares into the bank, carved out of the bond (they stay held by the vault): a due
+    ///         cohort, maturedPending, or a forfeit pool that starts dripping now. So the checkpoint's live read,
+    ///         drip burn, breach forfeit and vest run inside the flows.
+    function seedBank(uint256 kind, uint256 amt) external {
+        Bank memory b = hv.bankFull();
+        amt = bound(amt, 1, b.bondShares / 1000);
+        uint32 ne = uint32(vm.getBlockNumber() / hv.tier().EPOCH);
+        uint256 k = kind % 3;
+        if (k == 0) {
+            uint32 e = ne >= V + 1 ? ne - uint32(V + 1) : ne; // due when ne >= e + 1 + V
+            Cohort memory c = b.cohorts[e % RING];
+            if (c.shares > 0 && c.epoch != e) return;
+            b.cohorts[e % RING] = Cohort(e, c.shares + uint128(amt));
+        } else if (k == 1) {
+            b.maturedPending += uint128(amt);
+        } else {
+            if (b.forfeitPool > 0) return; // a restart burns the drip owed first; keep the handler's state reachable
+            (b.forfeitPool, b.forfeitTotal, b.forfeitStart) = (uint128(amt), uint128(amt), uint40(vm.getBlockNumber()));
+        }
+        b.bondShares -= uint128(amt);
+        hv.setBank(b);
+        ++bankSeeds;
     }
 
     function place(uint256 w, uint256 off) external {
@@ -211,6 +237,15 @@ contract VaultHandler is Test {
     }
 
     // ------------------------------------------------------------------ helpers
+
+    /// @dev The drip owed at the current block, by the closed form burnedSoFar = min(T, T·(now − start)/D).
+    function _dripOwed(Bank memory b) internal view returns (uint256) {
+        if (b.forfeitTotal == 0 || b.forfeitPool == 0) return 0;
+        uint256 el = vm.getBlockNumber() > b.forfeitStart ? vm.getBlockNumber() - b.forfeitStart : 0;
+        uint256 soFar = b.dripBlocks == 0 ? b.forfeitTotal : _min(b.forfeitTotal, uint256(b.forfeitTotal) * el / b.dripBlocks);
+        uint256 spent = b.forfeitTotal - b.forfeitPool;
+        return soFar > spent ? _min(soFar - spent, b.forfeitPool) : 0;
+    }
 
     function _i2(string memory why) internal {
         ++i2Failures;

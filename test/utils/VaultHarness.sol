@@ -11,7 +11,8 @@ import {TouchstoneVault} from "../../src/TouchstoneVault.sol";
 import {Obs} from "../../src/types/Obs.sol";
 import {Entry} from "../../src/types/Entry.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
-import {Bank, RING} from "../../src/types/Bank.sol";
+import {Bank, Op, RING} from "../../src/types/Bank.sol";
+import {FeeBank} from "../../src/libraries/FeeBank.sol";
 
 /// @notice Test-only extension of the vault; it never ships. One contract, two deployments:
 ///         - scripted (behind `MockVaultFactory`, whose hook is `AckRecorder`): `checkpoint(o, liveOk, liveTick)` runs the
@@ -95,6 +96,8 @@ contract VaultHarness is TouchstoneVault {
             _L = L;
         }
         HOOK.setVaultRange(lo, hi, HOOK.liveRef());
+        // the placement's mode row (NORMAL, placedByCurator), as setPositions applies it
+        FeeBank.bankApply(_bank, Op.Place, "");
         return "";
     }
 
@@ -147,6 +150,11 @@ contract VaultHarness is TouchstoneVault {
 
     function bankFull() external view returns (Bank memory) {
         return _bank;
+    }
+
+    /// @dev Sends an arbitrary entry through the vault's own unlock (the dispatch's unhandled-entry test).
+    function rawEntry(Entry entry) external {
+        MANAGER.unlock(abi.encode(entry, msg.sender, abi.encode(uint256(1), uint256(0), uint256(0), msg.sender)));
     }
 
     function scalars() external view returns (Scalars memory s) {

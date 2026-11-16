@@ -150,14 +150,22 @@ contract VaultCheckpointTest is ScriptedVaultBase {
         assertEq(b.breaches, 2, "two breaches counted");
         assertEq(b.mode, Ladder.BREACHED, "BREACHED below three");
         Vm.Log[] memory logs = vm.getRecordedLogs();
+        uint256 acks;
+        uint256 processed;
         for (uint256 i; i < logs.length; ++i) {
-            if (logs[i].topics[0] == T_ACK) assertEq(abi.decode(logs[i].data, (uint32)), 2, "ackBreaches(2)");
+            if (logs[i].topics[0] == T_ACK) {
+                ++acks;
+                assertEq(abi.decode(logs[i].data, (uint32)), 2, "ackBreaches(2)");
+            }
             if (logs[i].topics[0] == T_BREACH) {
+                ++processed;
                 (uint32 n, uint40 last,) = abi.decode(logs[i].data, (uint32, uint40, uint256));
                 assertEq(n, 2, "count");
                 assertEq(last, 1190, "lastBlock");
             }
         }
+        assertEq(acks, 1, "the hook is told exactly once");
+        assertEq(processed, 1, "one BreachProcessed");
         // a third breach removes the curator
         vm.roll(1201);
         o = _obsIn();

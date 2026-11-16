@@ -7,6 +7,7 @@ import {LiquidPoolBase} from "../utils/LiquidPoolBase.sol";
 import {VaultHandler} from "./handlers/VaultHandler.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
 import {Ladder} from "../../src/libraries/Ladder.sol";
+import {Bank, RING} from "../../src/types/Bank.sol";
 
 /// @notice The P2 invariants on the minimal handler with a live position (L > 0 from the start):
 ///         I-1 the vault's ERC-6909 claims and position cover its ledger, and the hook's claims cover its witness
@@ -42,6 +43,14 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         assertGe(m.balanceOf(hook, uint256(uint160(address(token1)))), w >> 128, "hook claims1 >= reserve1");
     }
 
+    /// @notice F-3 (vault half): the vault holds at least the shares its bank accounts for.
+    function invariant_F_3__vaultHeldSharesCoverTheBank() public view {
+        Bank memory b = hv.bankFull();
+        uint256 sum = uint256(b.maturedPending) + b.vestedUnclaimed + b.bondShares + b.forfeitPool + b.reserveShares;
+        for (uint256 k; k < RING; ++k) sum += b.cohorts[k].shares;
+        assertGe(v.balanceOf(vault), sum, "vault-held shares >= bank");
+    }
+
     function invariant_I_2__withdrawPaysTheExactProRataShare() public view {
         assertEq(handler.i2Failures(), 0, handler.i2Why());
     }
@@ -55,6 +64,9 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
     function test_I_10__handlerSequenceReachesEveryStateWithoutFailures() public {
         address a = address(uint160(0xA11CE0));
         for (uint256 i; i < 3; ++i) handler.deposit(i, 5e22);
+        for (uint256 k; k < 3; ++k) handler.seedBank(k, 1e20);
+        handler.advance(30 * 256 + 10); // a silent jump of 67 blocks (7690 % 100 = 90): the drip runs
+        handler.withdraw(1, 1e21 + 1);
         for (uint256 i; i < 6; ++i) {
             handler.swap(i % 2 == 0, type(uint256).max, 300);
             handler.advance(1);
@@ -62,10 +74,11 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         }
         for (uint256 m = 5; m < 10; ++m) {
             handler.breakRef(m);
-            handler.advance(99 * 256 + 99); // a silent jump
+            handler.advance(99 * 256 + 50); // a silent jump: 25394 % 100 = 94 >= 85, 37 + 99 % 84 = 52 blocks
             handler.withdraw(m, 3e20 + m);
             handler.deposit(m, 1e20);
         }
+        assertTrue(_obs().gapSinceVerify, "a silent jump left a gap");
         handler.breakRef(0);
         handler.refresh();
         for (uint256 i; i < 3; ++i) handler.driveBreach();
@@ -74,6 +87,7 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         assertEq(mode, Ladder.EXITED, "EXITED reached");
         assertGt(handler.withdrawalsWithL(), 10, "withdrawals with L > 0");
         assertGe(handler.breachesDriven(), 3, "three breaches driven");
+        assertEq(handler.bankSeeds(), 3, "bank seeded");
         assertGt(handler.exitedWithdrawals(), 0, "a withdrawal in EXITED");
         assertEq(handler.i2Failures(), 0, handler.i2Why());
         assertEq(handler.i10Failures(), 0, "I-10");

@@ -165,7 +165,9 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
     /// @dev The entry points of this build. A test harness extends it; every other entry is unreachable here.
     function _dispatch(Entry entry, address payer, bytes memory args) internal virtual returns (bytes memory) {
         if (entry == Entry.Deposit) return _deposit(payer, args);
-        return _withdraw(payer, args);
+        // [MU-172] an entry this build does not implement never falls through to a flow
+        if (entry == Entry.Withdraw) return _withdraw(payer, args);
+        revert Ladder.BadMode();
     }
 
     // ------------------------------------------------------------------ flows
@@ -311,13 +313,14 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
         // (1) the vest gate, evaluated once: the cache legs, then the live leg only when something is vestable
         bool vestable = _vestable(b, ne);
         bool gateOpen;
-        // [MU-069] [MU-093] [MU-106] a fresh, gap-free cached reference inside the registered range
+        // [MU-069] [MU-093] [MU-106] [MU-164] [MU-165] a fresh, gap-free cached reference inside the registered range
         if (o.refFresh && !o.emptyRange && !o.gapSinceVerify && lo <= o.refTick && o.refTick < hi && vestable) {
             (liveRead, liveTick) = _tryRef();
             // [MU-070] and the live reference inside the range (a failed read never opens the gate)
             gateOpen = liveRead && lo <= liveTick && liveTick < hi;
         }
         // (2) the forfeit drip up to now
+        // [MU-168]
         if (b.forfeitPool > 0) _burnBank(Op.Drip, abi.encode(now_));
         // (3) pending breaches, before any accrual or vesting
         uint32 n = o.pendingBreaches;
@@ -326,6 +329,7 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
             _baseOwed = 0;
             // [MU-123] every pending breach is counted and acknowledged
             uint256 forfeited = _burnBank(Op.Breach, abi.encode(n, now_));
+            // [MU-166] the hook's pending count is reduced by what was processed
             HOOK.ackBreaches(n);
             emit BreachProcessed(n, o.lastPendingBlock, forfeited);
             // [MU-050] the breach cutoff, then the segment below closes at now
@@ -337,9 +341,11 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
         _segStart = now_;
         emit Checkpoint(o.tauV, o.tauB, _nav0, _delta0, 0, _L, lo, hi);
         // (5) [MU-030] vest after breach processing: vested with the gate open, else held in maturedPending
+        // [MU-171] the gate decides
         if (vestable) FeeBank.bankApply(b, Op.VestTime, abi.encode(ne, gateOpen));
         // (6) the epoch roll
         if (ne > _epoch) {
+            // [MU-170]
             _epoch = ne;
             // [MU-132] the swap counters restart every epoch
             _epochSwapFrac = 0;
@@ -352,6 +358,7 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
         // [MU-078] maturedPending alone makes the live leg due
         if (b.maturedPending > 0) return true;
         for (uint256 k; k < RING; ++k) {
+            // [MU-169] due at (e + 1 + V)·EPOCH
             if (b.cohorts[k].shares > 0 && uint256(ne) >= uint256(b.cohorts[k].epoch) + 1 + V) return true;
         }
         return false;
@@ -362,6 +369,7 @@ contract TouchstoneVault is ERC20, IUnlockCallback, ReentrancyGuardTransient {
     function _burnBank(Op op, bytes memory args) internal returns (uint256 a) {
         uint256 burned;
         (burned,, a,) = FeeBank.bankApply(_bank, op, args);
+        // [MU-167] [MU-173] the bank's burn leaves the supply, exactly
         if (burned > 0) _burn(address(this), burned);
     }
 

@@ -5,6 +5,7 @@ import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {FixedPoint96} from "@uniswap/v4-core/src/libraries/FixedPoint96.sol";
 import {SqrtPriceMath} from "@uniswap/v4-core/src/libraries/SqrtPriceMath.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
+import {SafeCast} from "@uniswap/v4-core/src/libraries/SafeCast.sol";
 import {Holdings} from "../types/Holdings.sol";
 import {LiquidityValue} from "./LiquidityValue.sol";
 
@@ -56,7 +57,7 @@ library Placement {
         }
         // [MU-018] the headroom
         uint256 head = l0 / 1e9 + 1;
-        L = l0 > head ? uint128(l0 - head) : 0;
+        L = l0 > head ? SafeCast.toUint128(l0 - head) : 0;
         uint256 a0;
         uint256 a1;
         if (L > 0) {
@@ -86,13 +87,13 @@ library Placement {
         uint256 d = uint256(sb) - sa;
         // [MU-137] the leg saturates instead of reverting
         if (FullMath.mulDiv(amount0, inter, 1 << 128) >= d) return type(uint128).max;
-        uint256 l = FullMath.mulDiv(amount0, inter, d);
-        return l < type(uint128).max ? l : type(uint128).max;
+        return FullMath.mulDiv(amount0, inter, d); // < 2^128 after the check above
     }
 
     /// @dev `getLiquidityForAmount1` with the result saturated at `type(uint128).max` (`amount1·2^96 < 2^224`).
     function _liq1(uint160 sa, uint160 sb, uint256 amount1) private pure returns (uint256) {
         uint256 l = FullMath.mulDiv(amount1, FixedPoint96.Q96, uint256(sb) - sa);
+        // [MU-181] the token1 leg saturates (≈ 2^134 at the bottom of the tick range)
         return l < type(uint128).max ? l : type(uint128).max;
     }
 }

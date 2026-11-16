@@ -32,7 +32,7 @@ from v4math import (  # noqa: E402
     get_liquidity_for_amounts, compute_swap_step_exact_in,
 )
 
-SPEC_VERSION = "2.34"
+SPEC_VERSION = "2.35"
 WAD = 10 ** 18
 U32 = (1 << 32) - 1
 U40 = (1 << 40) - 1
@@ -151,14 +151,16 @@ def measure_c(before, after, sqrt_s0, sqrt_spot, sqrt_ref, reserve, S, unvested,
     """ExecLedger.measure (repair C) -> (charge, pStar, navAfterPStar, burn, burnR, ok).
     loss_p = NAV_before(p) − NAV_after(p) over the legs in the order spot, s0, ref (a later leg replaces only on a
     strictly larger loss, so p* = sqrtSpot on ties, incl. charge = 0); charge = max(0, max loss);
-    burn = ceilDiv(charge·S, NAV_after(p*)); burnR = ceilDiv((charge + reserve)·S, NAV_after(p*)) − burn; ok iff
-    burn + burnR ≤ unvested + bond. A positive amount against NAV_after(p*) = 0 saturates at type(uint256).max."""
+    NAV' = navBurn = the smallest NAV_after over the three legs (v2.34, owner F9-02: no curator-chosen leg lowers the
+    shares); burn = ceilDiv(charge·S, NAV'); burnR = ceilDiv((charge + reserve)·S, NAV') − burn; ok iff
+    burn + burnR ≤ unvested + bond. A positive amount against NAV' = 0 saturates at type(uint256).max."""
     legs = [(value(before, p)[0] - value(after, p)[0], p, value(after, p)[0]) for p in (sqrt_spot, sqrt_s0, sqrt_ref)]
     loss, p_star, nav_after = legs[0]
     for leg in legs[1:]:
         if leg[0] > loss:
             loss, p_star, nav_after = leg
     charge = loss if loss > 0 else 0
+    nav_after = min(leg[2] for leg in legs)   # the burn price: the smallest NAV_after over the legs
 
     def shares(x):
         if not x:
@@ -173,7 +175,7 @@ def measure_c(before, after, sqrt_s0, sqrt_spot, sqrt_ref, reserve, S, unvested,
 
 def measure(before, after, sqrt_spot, sqrt_ref, S, unvested, bond):
     """The two-leg form (s0 = spot, no reserve) used by the G0 cells and the status-quo controls -> (charge, pStar,
-    navAfterPStar, burn, ok). Identical to `measure_c` with sqrtS0 = sqrtSpot and reserve 0."""
+    navBurn, burn, ok). Identical to `measure_c` with sqrtS0 = sqrtSpot and reserve 0."""
     c, p, n, b, _, ok = measure_c(before, after, sqrt_spot, sqrt_spot, sqrt_ref, 0, S, unvested, bond)
     return c, p, n, b, ok
 

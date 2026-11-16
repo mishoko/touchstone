@@ -3,6 +3,7 @@ pragma solidity 0.8.26;
 
 import {VectorBase} from "../utils/VectorBase.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
+import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {ExecLedger} from "../../src/libraries/ExecLedger.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
 
@@ -31,7 +32,7 @@ contract LedgerVectorsTest is VectorBase {
         _hk(c, ".in.before");
         _hk(c, ".in.after");
         string[] memory o = new string[](6);
-        (o[0], o[1], o[2], o[3], o[4], o[5]) = ("charge", "pStar", "navAfterPStar", "burn", "burnR", "ok");
+        (o[0], o[1], o[2], o[3], o[4], o[5]) = ("charge", "pStar", "navBurn", "burn", "burnR", "ok");
         _keys(c, ".out", o);
     }
 
@@ -79,7 +80,7 @@ contract LedgerVectorsTest is VectorBase {
             (uint256 charge, uint160 pStar, uint256 navA, uint256 burn, uint256 burnR, bool ok) = _measure(c);
             assertEq(charge, _u(c, ".out.charge"), string.concat(cid, " charge"));
             assertEq(uint256(pStar), _u(c, ".out.pStar"), string.concat(cid, " pStar"));
-            assertEq(navA, _u(c, ".out.navAfterPStar"), string.concat(cid, " navAfterPStar"));
+            assertEq(navA, _u(c, ".out.navBurn"), string.concat(cid, " navBurn"));
             assertEq(burn, _u(c, ".out.burn"), string.concat(cid, " burn"));
             assertEq(burnR, _u(c, ".out.burnR"), string.concat(cid, " burnR"));
             assertEq(ok, _b(c, ".out.ok"), string.concat(cid, " ok"));
@@ -128,17 +129,69 @@ contract LedgerVectorsTest is VectorBase {
         assertEq(pMk, TickMath.getSqrtPriceAtTick(106), "upper leg at tickMk + feeTicks + 1");
     }
 
-    /// @notice The settlement never reverts on its legs: a markout tick at either bound settles (clamped legs).
-    function testFuzz_U_settle__legsClampedNeverRevert(int24 tickMk, uint8 fee, uint128 res) public pure {
+    /// @notice The settlement never reverts on its legs or its share math: any markout tick, any fee margin, a
+    ///         position with L > 0 and uint128 supply, reserve and reserve shares (clamped legs, an overflow-free cap).
+    function testFuzz_U_settle__legsClampedNeverRevert(
+        int24 tickMk,
+        uint16 fee,
+        uint128 res,
+        uint128 S,
+        uint128 rs,
+        uint128 L,
+        int24 c
+    ) public pure {
         tickMk = int24(bound(tickMk, TickMath.MIN_TICK, TickMath.MAX_TICK));
+        c = int24(bound(c, TickMath.MIN_TICK, TickMath.MAX_TICK - 2000)) / 10 * 10;
+        Holdings memory b = Holdings(1e21, 1e21, L, c, c + 2000);
+        Holdings memory a = Holdings(1e21 - 1e18, 1e21 + 1e17, L / 2, c, c + 2000);
+        (uint256 extra, uint160 pMk, uint256 burnS) =
+            ExecLedger.settleExtra(b, a, tickMk, int24(uint24(fee)), 0, res, a, S, rs);
+        assertLe(extra, res, "extra <= reserve");
+        assertLe(burnS, rs, "burnS <= reserveShares");
+        assertGe(pMk, TickMath.MIN_SQRT_PRICE, "pMk in range");
+        assertLe(pMk, TickMath.getSqrtPriceAtTick(TickMath.MAX_TICK), "pMk at most the price of MAX_TICK");
+    }
+
+    /// @notice The two counterexamples of fix review r1 (F9-01), pinned: the upper leg clamps to the price of MAX_TICK
+    ///         itself, which equals `MAX_SQRT_PRICE`, and the lower leg clamps at MIN_TICK.
+    function test_U_settle__legsClampAtBothTickBounds() public pure {
         Holdings memory b = Holdings(1e21, 1e21, 0, 0, 0);
         Holdings memory a = Holdings(1e21 - 1e18, 1e21 + 1e17, 0, 0, 0);
-        (uint256 extra, uint160 pMk, uint256 burnS) =
-            ExecLedger.settleExtra(b, a, tickMk, int24(uint24(fee)), 0, res, a, 1e24, 1e20);
-        assertLe(extra, res, "extra <= reserve");
-        assertLe(burnS, 1e20, "burnS <= reserveShares");
-        assertGe(pMk, TickMath.MIN_SQRT_PRICE, "pMk in range");
-        assertLt(pMk, TickMath.MAX_SQRT_PRICE, "pMk in range");
+        (, uint160 pMk,) = ExecLedger.settleExtra(b, a, 887270, 192, 0, 1242, a, 1e24, 1e20);
+        assertEq(pMk, TickMath.MAX_SQRT_PRICE, "upper leg clamped to MAX_TICK");
+        (, pMk,) = ExecLedger.settleExtra(b, b, -887272, 255, 0, 1, b, 1e24, 1e20);
+        assertEq(pMk, TickMath.MIN_SQRT_PRICE, "a tie keeps the lower leg, clamped to MIN_TICK");
+    }
+
+    /// @notice The settlement's share cap never overflows: at supply 1, a price near the top of the range and uint128
+    ///         reserve shares, `reserveShares·NAV_now/S` exceeds 2^256 (the counterexample of the s9 exploration run).
+    function test_U_settle__burnCapDoesNotOverflowAtTinySupply() public pure {
+        uint128 L = 2184764868214510588;
+        Holdings memory b = Holdings(1e21, 1e21, L, 0, 2000);
+        Holdings memory a = Holdings(1e21 - 1e18, 1e21 + 1e17, L / 2, 0, 2000);
+        (uint256 extra,, uint256 burnS) =
+            ExecLedger.settleExtra(b, a, 484120, 1, 0, 2, a, 1, 4994973406871068607839876929312525582);
+        assertEq(extra, 2, "extra capped at the reserve");
+        assertEq(burnS, 1, "one share at supply 1");
+    }
+
+    /// @notice F9-02 (owner): when every leg is a gain, the burns are priced at the smallest NAV_after over the legs,
+    ///         not at the least-gain leg's NAV_after, which the curator could place at a high-NAV' `s0`.
+    function test_U_3__allGainBurnsAtTheSmallestNavAfter() public pure {
+        Holdings memory b = Holdings(1e21, 1e21, 0, 0, 0);
+        Holdings memory a = Holdings(95e19, 11e20, 0, 0, 0); // sold token0 above every leg's price
+        uint160 s0 = TickMath.getSqrtPriceAtTick(5000);
+        uint160 sp = TickMath.getSqrtPriceAtTick(0);
+        uint160 sr = TickMath.getSqrtPriceAtTick(-2232);
+        (uint256 charge, uint160 pStar, uint256 navBurn,, uint256 burnR,) =
+            ExecLedger.measure(b, a, s0, sp, sr, 1e18, 1e24, 0, type(uint128).max);
+        (uint256 navAtRef,) = ExecLedger.value(a, sr);
+        (uint256 navAtS0,) = ExecLedger.value(a, s0);
+        assertEq(charge, 0, "every leg a gain");
+        assertEq(pStar, s0, "pStar names the least gain");
+        assertEq(navBurn, navAtRef, "the smallest NAV_after");
+        assertLt(navBurn, navAtS0, "control: the least-gain leg's NAV_after is larger");
+        assertGt(burnR, FullMath.mulDivRoundingUp(1e18, 1e24, navAtS0), "more reserve shares than at p*'s NAV_after");
     }
 
     /// @notice `ok` is computed without overflow when both amounts saturate (NAV_after(p*) = 0, charge and reserve > 0).

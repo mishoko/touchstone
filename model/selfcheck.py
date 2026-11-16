@@ -121,10 +121,10 @@ def props_ledger(rng):
         nb_r, na_r = R.value(h, sr)[0], R.value(h2, sr)[0]
         check(c == max(0, nb_s - na_s, nb_r - na_r), "charge = max(0, worse-of loss)")
         if c > 0 and n > 0:
-            check(burn == -((-c * S) // n), "burn = ceilDiv(charge·S, NAV'(p*))")
+            check(burn == -((-c * S) // n), "burn = ceilDiv(charge·S, NAV')")
             check(burn * n >= c * S and (burn - 1) * n < c * S, "burn is the least share count covering the charge")
-            check(ok == (burn <= unv + bond), "gate in shares at the same price p*")
-            check(n == (na_s if p == sp else na_r), "navAfterPStar is NAV_after at p*")
+            check(ok == (burn <= unv + bond), "gate in shares at the same price NAV'")
+            check(n == min(na_s, na_r), "navBurn is the smallest NAV_after over the legs")
     # the 0 floor: a gain at both prices is never paid out (charge 0, burn 0), and no netting across actions
     for _ in range(50):
         h = R.Holdings(rng.randint(1, 10 ** 13), rng.randint(1, 10 ** 22), 0, 0, 0)
@@ -2177,9 +2177,9 @@ def rules_markout():
             if l[0] > best[0]:
                 best = l
         check(c == max(0, best[0]) and p == best[1], "measure_c: worst of spot, s0, ref; earlier leg on ties")
-        na = R.value(h2, p)[0]
+        na = min(R.value(h2, x)[0] for x in (sp, s0, sr))
         check(b == (0 if c == 0 else R.ceil_div(c * S, na)) and br == (0 if c + res == 0 else R.ceil_div((c + res) * S, na)) - b,
-              "measure_c: burn and burnR at one price")
+              "measure_c: burn and burnR at one price, the smallest NAV_after over the legs")
         check(R.measure(h, h2, sp, sr, S, 10 ** 30, 0)[:4] == R.measure_c(h, h2, sp, sp, sr, 0, S, 10 ** 30, 0)[:4],
               "the two-leg measure is measure_c with s0 = spot and no reserve")
     # settle_extra: legs p_mk − FEE_TICKS and p_mk + FEE_TICKS + 1 (upper leg rounded up), extra capped by the reserve,

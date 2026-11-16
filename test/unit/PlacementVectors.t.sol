@@ -82,7 +82,7 @@ contract PlacementVectorsTest is VectorBase {
 
     /// @notice `size` never reverts on a leg overflow: with spot one unit inside either edge at any range, the legs
     ///         saturate and the amounts consumed never exceed idle.
-    function testFuzz_U_guard__sizeLegsSaturateNeverRevert(int24 c, uint112 x, uint112 y, bool upper) public pure {
+    function testFuzz_U_guard__sizeLegsSaturateNeverRevert(int24 c, uint128 x, uint128 y, bool upper) public pure {
         c = int24(bound(c, TickMath.MIN_TICK + 10, TickMath.MAX_TICK - 2010)) / 10 * 10;
         (int24 lo, int24 hi) = (c, c + 2000);
         uint160 sp = upper ? TickMath.getSqrtPriceAtTick(hi) - 1 : TickMath.getSqrtPriceAtTick(lo) + 1;

@@ -1,6 +1,6 @@
 {
  "schema": "touchstone-vectors/1",
- "specVersion": "2.34",
+ "specVersion": "2.35",
  "conventions": {
   "check": "errCode = first failing code in numeric order: 1 |tickSpot - refTick| > band; 2 hi - lo != wTicks; 3 lo or hi not a multiple of spacing; 4 not lo <= tickSpot < hi; 5 not lo <= refTick < hi; 0 ok. The vault maps 1 Fence, 2 Width, 3 Alignment, 4 and 5 NotContained.",
   "size": "L = getLiquidityForAmounts(sqrtSpot, sqrtAt(lo), sqrtAt(hi), idle0, idle1) - (L/1e9 + 1), floored at 0; after = idle minus the v4 add amounts of L at sqrtSpot (roundUp = true); deltaAfter = min(WAD, positionValue(sqrtRef)*WAD / NAV(sqrtRef)) of `after` (0 when NAV = 0). deltaAfter < DELTA_MIN (0.5 WAD) means the vault reverts DeltaMin. Legs saturate at type(uint128).max (spot one unit inside an edge, case token1-edge-saturated-leg), including a quotient above 2^256 inside the leg's mulDiv (case extreme-price-leg-overflow).",
@@ -748,7 +748,35 @@
    }
   },
   {
-   "id": "placement-035-extreme-price-leg-overflow",
+   "id": "placement-035-token1-leg-saturates-low",
+   "fn": "Placement.size",
+   "in": {
+    "idle": {
+     "idle0": "0",
+     "idle1": "100000000000000000000",
+     "L": "0",
+     "lo": "0",
+     "hi": "0"
+    },
+    "lo": "-887270",
+    "hi": "-885270",
+    "sqrtSpot": "4747302321",
+    "sqrtRef": "4747302321"
+   },
+   "out": {
+    "L": "340282366580656096542436143968393604023",
+    "after": {
+     "idle0": "0",
+     "idle1": "98059773999423258578",
+     "L": "340282366580656096542436143968393604023",
+     "lo": "-887270",
+     "hi": "-885270"
+    },
+    "deltaAfter": "19402260005767414"
+   }
+  },
+  {
+   "id": "placement-036-extreme-price-leg-overflow",
    "fn": "Placement.size",
    "in": {
     "idle": {

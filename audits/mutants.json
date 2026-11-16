@@ -19,8 +19,8 @@
    "killer_id": "U-3",
    "kill": "test_U_3__ledgerMeasureVectorsBitForBit",
    "file": "src/libraries/ExecLedger.sol",
-   "find": "        if (_worse(nb2, na2, nb, navAfterPStar)) (nb, navAfterPStar, pStar) = (nb2, na2, sqrtRef);",
-   "replace": "        if (true) (nb, navAfterPStar, pStar) = (nb2, na2, sqrtRef);",
+   "find": "        if (_worse(nb2, na2, nb, na)) (nb, na, pStar) = (nb2, na2, sqrtRef);",
+   "replace": "        if (true) (nb, na, pStar) = (nb2, na2, sqrtRef);",
    "status": "KILLED"
   },
   {
@@ -30,8 +30,8 @@
    "killer_id": "U-3",
    "kill": "test_U_3__ledgerMeasureVectorsBitForBit",
    "file": "src/libraries/ExecLedger.sol",
-   "find": "        charge = nb > navAfterPStar ? nb - navAfterPStar : 0;",
-   "replace": "        charge = nb > navAfterPStar ? nb - navAfterPStar : navAfterPStar - nb;",
+   "find": "        charge = nb > na ? nb - na : 0;",
+   "replace": "        charge = nb > na ? nb - na : na - nb;",
    "status": "KILLED"
   },
   {
@@ -41,8 +41,8 @@
    "killer_id": "U-3",
    "kill": "test_U_3__ledgerMeasureVectorsBitForBit",
    "file": "src/libraries/ExecLedger.sol",
-   "find": "        charge = nb > navAfterPStar ? nb - navAfterPStar : 0;",
-   "replace": "        charge = nb > navAfterPStar ? (nb - navAfterPStar) / 2 : 0;",
+   "find": "        charge = nb > na ? nb - na : 0;",
+   "replace": "        charge = nb > na ? (nb - na) / 2 : 0;",
    "status": "KILLED"
   },
   {
@@ -63,8 +63,8 @@
    "killer_id": "U-3",
    "kill": "test_U_3__ledgerMeasureVectorsBitForBit",
    "file": "src/libraries/ExecLedger.sol",
-   "find": "        burn = _shares(charge, S, navAfterPStar);",
-   "replace": "        burn = _shares(charge, S, na2);",
+   "find": "        burn = _shares(charge, S, navBurn);",
+   "replace": "        burn = _shares(charge, S, na);",
    "status": "KILLED"
   },
   {
@@ -1373,7 +1373,7 @@
    "kill": "test_U_3__ledgerMeasureVectorsBitForBit",
    "file": "src/libraries/ExecLedger.sol",
    "find": "        (nb2, na2) = _legs(before, after_, sqrtRef);",
-   "replace": "        (nb2, na2) = (nb, navAfterPStar);",
+   "replace": "        (nb2, na2) = (nb, na);",
    "status": "KILLED"
   },
   {
@@ -1604,7 +1604,7 @@
    "kill": "test_U_3__ledgerMeasureVectorsBitForBit",
    "file": "src/libraries/ExecLedger.sol",
    "find": "        (uint256 nb2, uint256 na2) = _legs(before, after_, sqrtS0);",
-   "replace": "        (uint256 nb2, uint256 na2) = (nb, navAfterPStar);",
+   "replace": "        (uint256 nb2, uint256 na2) = (nb, na);",
    "status": "KILLED"
   },
   {
@@ -1955,8 +1955,8 @@
    "killer_id": "U-3",
    "kill": "test_U_3__ledgerMeasureVectorsBitForBit",
    "file": "src/libraries/ExecLedger.sol",
-   "find": "        if (_worse(nb2, na2, nb, navAfterPStar)) (nb, navAfterPStar, pStar) = (nb2, na2, sqrtS0);",
-   "replace": "        if (!_worse(nb, navAfterPStar, nb2, na2)) (nb, navAfterPStar, pStar) = (nb2, na2, sqrtS0);",
+   "find": "        if (_worse(nb2, na2, nb, na)) (nb, na, pStar) = (nb2, na2, sqrtS0);",
+   "replace": "        if (!_worse(nb, na, nb2, na2)) (nb, na, pStar) = (nb2, na2, sqrtS0);",
    "status": "KILLED"
   },
   {
@@ -1968,6 +1968,39 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "        extra = loss > charge0 ? loss - charge0 : 0;",
    "replace": "        extra = loss;",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-180",
+   "area": "ledger",
+   "desc": "burns priced at NAV_after(p*) instead of the smallest NAV_after over the legs (s09 F9-02, owner)",
+   "killer_id": "U-3",
+   "kill": "test_U_3__ledgerMeasureVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        // [MU-180] the burn price is the smallest NAV_after over the legs\n        if (na2 < navBurn) navBurn = na2;",
+   "replace": "        // [MU-180] the burn price is the smallest NAV_after over the legs\n        if (false) navBurn = na2;",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-181",
+   "area": "guards",
+   "desc": "`Placement.size`'s token1 leg not saturated (s09 F9-04)",
+   "killer_id": "U-guard",
+   "kill": "test_U_guard__placementSizeVectorsBitForBit",
+   "file": "src/libraries/Placement.sol",
+   "find": "        return l < type(uint128).max ? l : type(uint128).max;",
+   "replace": "        return l;",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-182",
+   "area": "ledger",
+   "desc": "the settlement's share cap divides without the fit check (s09 exploration counterexample)",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__burnCapDoesNotOverflowAtTinySupply",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        if (_mulHi(reserveShares, navNow) < S && extra > FullMath.mulDiv(reserveShares, navNow, S)) {",
+   "replace": "        if (extra > FullMath.mulDiv(reserveShares, navNow, S)) {",
    "status": "KILLED"
   }
  ]

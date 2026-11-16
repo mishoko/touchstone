@@ -167,7 +167,7 @@ def ledger_cases():
         cases.append(dict(id=f"ledger-{len(cases):03d}-{tag}", fn="ExecLedger.measure",
                           **{"in": dict(before=before.d(), after=after.d(), sqrtS0=s0, sqrtSpot=s_spot, sqrtRef=s_ref,
                                         reserve=reserve, S=S_, unvested=unv_, bond=bond_),
-                             "out": dict(charge=c, pStar=p, navAfterPStar=n, burn=b, burnR=br, ok=ok)}))
+                             "out": dict(charge=c, pStar=p, navBurn=n, burn=b, burnR=br, ok=ok)}))
 
     def adds(tag, before, after, tick_mk, charge0, reserve, now_h, S_, rshares, note=""):
         ex, pm, bs = R.settle_extra(before, after, tick_mk, 5, charge0, reserve, now_h, S_, rshares)
@@ -315,6 +315,15 @@ def ledger_cases():
     tie0, tie1 = R.Holdings(10 ** 21, 10 ** 21), R.Holdings(10 ** 21, 10 ** 21 - 10 ** 15)
     add("tie-distinct-prices", tie0, tie1, sqrt_at(T0 + 20), sqrt_at(T0 - 20), s0=sqrt_at(T0 + 50), reserve=10 ** 15,
         note="a token1-only loss ties every leg at distinct prices: p* = sqrtSpot", expect=("spot", True, True))
+    # s09 fix review F9-02 (owner): an all-gain action; pStar is the least gain, the burns are priced at the smallest NAV'
+    ga, gb = R.Holdings(10 ** 21, 10 ** 21), R.Holdings(11 * 10 ** 20, 95 * 10 ** 19)
+    add("all-gain-least-at-s0", ga, gb, sqrt_at(0), sqrt_at(6932), s0=sqrt_at(-2232), reserve=10 ** 18,
+        note="every leg a gain; the least at s0: pStar = s0, the reserve priced at the smallest NAV_after", expect=("s0", False, True))
+    gs = R.Holdings(95 * 10 ** 19, 11 * 10 ** 20)   # sold token0: the loss rises with the price, NAV_after falls with it
+    add("all-gain-pstar-not-min-nav", ga, gs, sqrt_at(0), sqrt_at(-2232), s0=sqrt_at(5000), reserve=10 ** 18,
+        note="every leg a gain; pStar = s0 (highest price) but the burns use NAV_after at ref (the smallest)",
+        expect=("s0", False, True))
+    assert R.measure_c(ga, gs, sqrt_at(5000), sqrt_at(0), sqrt_at(-2232), 10 ** 18, S, unv, bond)[2] == R.value(gs, sqrt_at(-2232))[0]
     add("reserve-gate-exact", g0, g1, pool.s, sqrt_at(T0 + 40), s0=sqrt_at(T0 - 30), reserve=10 ** 17, unv_=0,
         bond_=b_ + br_, note="burn + burnR == unvested + bond -> ok", expect=("s0", True, True))
     add("reserve-gate-revert", g0, g1, pool.s, sqrt_at(T0 + 40), s0=sqrt_at(T0 - 30), reserve=10 ** 17, unv_=0,
@@ -350,19 +359,21 @@ def ledger_cases():
 LEDGER_CONV = {
     "measure": "loss_p = NAV_before(p) - NAV_after(p) for p in (sqrtSpot, sqrtS0, sqrtRef), a later leg replacing only on a "
                "strictly larger loss; charge = max(0, max loss); pStar = argmax (sqrtSpot on a tie, incl. charge 0); "
-               "navAfterPStar = NAV_after(pStar); burn = ceilDiv(charge*S, navAfterPStar) (0 when charge = 0; "
-               "type(uint256).max when navAfterPStar = 0 and charge > 0); burnR = ceilDiv((charge + reserve)*S, "
-               "navAfterPStar) - burn (type(uint256).max when saturated); ok = burn + burnR <= unvested + bond, evaluated without "
+               "pStar is the argmax of the signed loss also when every leg is a gain; navBurn = min over the three legs "
+               "of NAV_after(p); burn = ceilDiv(charge*S, navBurn) (0 when charge = 0; "
+               "type(uint256).max when navBurn = 0 and charge > 0); burnR = ceilDiv((charge + reserve)*S, "
+               "navBurn) - burn (type(uint256).max when saturated); ok = burn + burnR <= unvested + bond, evaluated without "
                "overflow (both may be type(uint256).max).",
     "settleExtra": "legs sqrtAt(max(MIN_TICK, tickMk - feeTicks)) then sqrtAt(min(MAX_TICK, tickMk + feeTicks + 1)) (the upper "
-                   "leg rounded up; the later replaces only if strictly larger); no revert on any input; "
+                   "leg rounded up; the later replaces only if strictly larger); no revert for valid ticks and uint128 reserve and "
+                   "reserveShares; "
                    "extra = min(reserve, max(0, loss_mk - charge0)); burnS = 0 if extra = 0, reserveShares if "
                    "NAV(now, pMk) = 0, else min(reserveShares, ceilDiv(extra*S, NAV(now, pMk))).",
     "NAV": "NAV(s) = q(idle0 + x_pos(s), s) + idle1 + y_pos(s); positions per Appendix A with roundUp = false.",
     "value": "ExecLedger.value(h, sqrtP) = (NAV(sqrtP), val(x_pos, y_pos, sqrtP)).",
     "holdings": "Holdings {idle0, idle1, L, lo, hi}; before/after are inputs.",
     "fields": "ExecLedger.measure in {before, after, sqrtS0, sqrtSpot, sqrtRef, reserve, S, unvested, bond} out {charge, "
-              "pStar, navAfterPStar, burn, burnR, ok}; ExecLedger.settleExtra in {before, after, tickMk, feeTicks, charge0, "
+              "pStar, navBurn, burn, burnR, ok}; ExecLedger.settleExtra in {before, after, tickMk, feeTicks, charge0, "
               "reserve, now, S, reserveShares} out {extra, pMk, burnS}; ExecLedger.value in {h, sqrtP} out {nav, posValue}; Holdings = {idle0, idle1, "
               "L, lo, hi}.",
 }
@@ -427,6 +438,9 @@ def placement_cases():
     size("tiny-headroom", R.Holdings(1000, 1000), T0 - 1000, T0 + 1000, sqrt_at(T0), sqrt_at(T0), True)
     size("ref-moves-delta", idle, T0 - 1000, T0 + 1000, sqrt_at(T0), sqrt_at(T0 + 60), False)
     # v2.34 (s09 D9-11): at an extreme price with spot one unit inside the upper edge, the token0 leg's quotient exceeds 2^256
+    # s09 fix review F9-04: the token1 leg saturates at the bottom of the tick range (raw L ≈ 2^134)
+    lx = -(R.MAX_TICK - R.MAX_TICK % SP)
+    size("token1-leg-saturates-low", R.Holdings(0, 10 ** 20), lx, lx + W, sqrt_at(lx + W), sqrt_at(lx + W), True)
     hx = R.MAX_TICK - R.MAX_TICK % SP
     size("extreme-price-leg-overflow", R.Holdings(10 ** 30, 10 ** 30), hx - W, hx, sqrt_at(hx) - 1, sqrt_at(hx - 30), True)
     return cases

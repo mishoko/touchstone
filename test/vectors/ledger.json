@@ -1,13 +1,13 @@
 {
  "schema": "touchstone-vectors/1",
- "specVersion": "2.34",
+ "specVersion": "2.35",
  "conventions": {
-  "measure": "loss_p = NAV_before(p) - NAV_after(p) for p in (sqrtSpot, sqrtS0, sqrtRef), a later leg replacing only on a strictly larger loss; charge = max(0, max loss); pStar = argmax (sqrtSpot on a tie, incl. charge 0); navAfterPStar = NAV_after(pStar); burn = ceilDiv(charge*S, navAfterPStar) (0 when charge = 0; type(uint256).max when navAfterPStar = 0 and charge > 0); burnR = ceilDiv((charge + reserve)*S, navAfterPStar) - burn (type(uint256).max when saturated); ok = burn + burnR <= unvested + bond, evaluated without overflow (both may be type(uint256).max).",
-  "settleExtra": "legs sqrtAt(max(MIN_TICK, tickMk - feeTicks)) then sqrtAt(min(MAX_TICK, tickMk + feeTicks + 1)) (the upper leg rounded up; the later replaces only if strictly larger); no revert on any input; extra = min(reserve, max(0, loss_mk - charge0)); burnS = 0 if extra = 0, reserveShares if NAV(now, pMk) = 0, else min(reserveShares, ceilDiv(extra*S, NAV(now, pMk))).",
+  "measure": "loss_p = NAV_before(p) - NAV_after(p) for p in (sqrtSpot, sqrtS0, sqrtRef), a later leg replacing only on a strictly larger loss; charge = max(0, max loss); pStar = argmax (sqrtSpot on a tie, incl. charge 0); pStar is the argmax of the signed loss also when every leg is a gain; navBurn = min over the three legs of NAV_after(p); burn = ceilDiv(charge*S, navBurn) (0 when charge = 0; type(uint256).max when navBurn = 0 and charge > 0); burnR = ceilDiv((charge + reserve)*S, navBurn) - burn (type(uint256).max when saturated); ok = burn + burnR <= unvested + bond, evaluated without overflow (both may be type(uint256).max).",
+  "settleExtra": "legs sqrtAt(max(MIN_TICK, tickMk - feeTicks)) then sqrtAt(min(MAX_TICK, tickMk + feeTicks + 1)) (the upper leg rounded up; the later replaces only if strictly larger); no revert for valid ticks and uint128 reserve and reserveShares; extra = min(reserve, max(0, loss_mk - charge0)); burnS = 0 if extra = 0, reserveShares if NAV(now, pMk) = 0, else min(reserveShares, ceilDiv(extra*S, NAV(now, pMk))).",
   "NAV": "NAV(s) = q(idle0 + x_pos(s), s) + idle1 + y_pos(s); positions per Appendix A with roundUp = false.",
   "value": "ExecLedger.value(h, sqrtP) = (NAV(sqrtP), val(x_pos, y_pos, sqrtP)).",
   "holdings": "Holdings {idle0, idle1, L, lo, hi}; before/after are inputs.",
-  "fields": "ExecLedger.measure in {before, after, sqrtS0, sqrtSpot, sqrtRef, reserve, S, unvested, bond} out {charge, pStar, navAfterPStar, burn, burnR, ok}; ExecLedger.settleExtra in {before, after, tickMk, feeTicks, charge0, reserve, now, S, reserveShares} out {extra, pMk, burnS}; ExecLedger.value in {h, sqrtP} out {nav, posValue}; Holdings = {idle0, idle1, L, lo, hi}."
+  "fields": "ExecLedger.measure in {before, after, sqrtS0, sqrtSpot, sqrtRef, reserve, S, unvested, bond} out {charge, pStar, navBurn, burn, burnR, ok}; ExecLedger.settleExtra in {before, after, tickMk, feeTicks, charge0, reserve, now, S, reserveShares} out {extra, pMk, burnS}; ExecLedger.value in {h, sqrtP} out {nav, posValue}; Holdings = {idle0, idle1, L, lo, hi}."
  },
  "cases": [
   {
@@ -39,7 +39,7 @@
    "out": {
     "charge": "0",
     "pStar": "1446042728370400211848465323367120",
-    "navAfterPStar": "999682734266542492742",
+    "navBurn": "999682734266542492742",
     "burn": "0",
     "burnR": "0",
     "ok": true
@@ -74,7 +74,7 @@
    "out": {
     "charge": "333121824",
     "pStar": "1446042728370400211848465323367120",
-    "navAfterPStar": "999682734266209370918",
+    "navBurn": "999682734266209370918",
     "burn": "333227545682",
     "burnR": "0",
     "ok": true
@@ -109,7 +109,7 @@
    "out": {
     "charge": "56842402531645074",
     "pStar": "1446042728370400211848465323367120",
-    "navAfterPStar": "606605594054360029786",
+    "navBurn": "606605594054360029786",
     "burn": "93705701181765279423",
     "burnR": "0",
     "ok": true
@@ -144,7 +144,7 @@
    "out": {
     "charge": "42734020004070075",
     "pStar": "1443153677377763044040766749680588",
-    "navAfterPStar": "1025333455976060876326",
+    "navBurn": "1025333455976060876326",
     "burn": "41678167970623416211",
     "burnR": "0",
     "ok": true
@@ -179,7 +179,7 @@
    "out": {
     "charge": "10215625834896142",
     "pStar": "1446042728370400211848465323367120",
-    "navAfterPStar": "999672518641040718424",
+    "navBurn": "999672518641040718424",
     "burn": "10218972357851058399",
     "burnR": "0",
     "ok": true
@@ -214,7 +214,7 @@
    "out": {
     "charge": "912855617920815",
     "pStar": "1446042728370400211848465323367120",
-    "navAfterPStar": "999681821411257693751",
+    "navBurn": "999681821411257693751",
     "burn": "913146161477789458",
     "burnR": "0",
     "ok": true
@@ -249,7 +249,7 @@
    "out": {
     "charge": "3475745102616159",
     "pStar": "1446042728370400211848465323367120",
-    "navAfterPStar": "1499361992788315491149",
+    "navBurn": "1499361992788315491149",
     "burn": "2318149399100364763",
     "burnR": "0",
     "ok": true
@@ -284,8 +284,8 @@
    "out": {
     "charge": "10059193708446823",
     "pStar": "1450387152716278242562425184642509",
-    "navAfterPStar": "1002679632986701706021",
-    "burn": "10032310797500995633",
+    "navBurn": "999792991574124913103",
+    "burn": "10061276477452714526",
     "burnR": "0",
     "ok": true
    }
@@ -319,7 +319,7 @@
    "out": {
     "charge": "64788011386709648",
     "pStar": "1446042728370400211848465323367120",
-    "navAfterPStar": "999617946255488904918",
+    "navBurn": "999617946255488904918",
     "burn": "64812773349459958088",
     "burnR": "0",
     "ok": true
@@ -354,7 +354,7 @@
    "out": {
     "charge": "1499363040630760",
     "pStar": "1447489421991553876686484286145677",
-    "navAfterPStar": "1003364600041929296636",
+    "navBurn": "1003364600041929296636",
     "burn": "1494335200352995887",
     "burnR": "0",
     "ok": true
@@ -389,7 +389,7 @@
    "out": {
     "charge": "56842402531645074",
     "pStar": "1446042728370400211848465323367120",
-    "navAfterPStar": "606605594054360029786",
+    "navBurn": "606605594054360029786",
     "burn": "93705701181765279423",
     "burnR": "0",
     "ok": false
@@ -424,7 +424,7 @@
    "out": {
     "charge": "56842402531645074",
     "pStar": "1446042728370400211848465323367120",
-    "navAfterPStar": "606605594054360029786",
+    "navBurn": "606605594054360029786",
     "burn": "93705701181765279423",
     "burnR": "0",
     "ok": true
@@ -459,7 +459,7 @@
    "out": {
     "charge": "56842402531645074",
     "pStar": "1446042728370400211848465323367120",
-    "navAfterPStar": "606605594054360029786",
+    "navBurn": "606605594054360029786",
     "burn": "93705701181765279423",
     "burnR": "0",
     "ok": true
@@ -494,7 +494,7 @@
    "out": {
     "charge": "1",
     "pStar": "1446042728370400211848465323367120",
-    "navAfterPStar": "1333121822844583743043",
+    "navBurn": "1333121822844583743043",
     "burn": "751",
     "burnR": "0",
     "ok": true
@@ -529,7 +529,7 @@
    "out": {
     "charge": "0",
     "pStar": "1446042728370400211848465323367120",
-    "navAfterPStar": "1001366468533751229132",
+    "navBurn": "1001366468533751229132",
     "burn": "0",
     "burnR": "0",
     "ok": true
@@ -564,7 +564,7 @@
    "out": {
     "charge": "1000000000000000",
     "pStar": "1446042728370400211848465323367120",
-    "navAfterPStar": "1001364468533751229132",
+    "navBurn": "1001364468533751229132",
     "burn": "998637390703757291",
     "burnR": "0",
     "ok": true
@@ -599,7 +599,7 @@
    "out": {
     "charge": "3331218238",
     "pStar": "1446042728370400211848465323367120",
-    "navAfterPStar": "0",
+    "navBurn": "0",
     "burn": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
     "burnR": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
     "ok": false
@@ -634,7 +634,7 @@
    "out": {
     "charge": "1000000000000000",
     "pStar": "1446042728370400211848465323367120",
-    "navAfterPStar": "1001364468533751229132",
+    "navBurn": "1001364468533751229132",
     "burn": "1",
     "burnR": "0",
     "ok": true
@@ -669,7 +669,7 @@
    "out": {
     "charge": "0",
     "pStar": "1446042728370400211848465323367120",
-    "navAfterPStar": "999682734266542492743",
+    "navBurn": "999682734266542492743",
     "burn": "0",
     "burnR": "0",
     "ok": true
@@ -704,7 +704,7 @@
    "out": {
     "charge": "127703835577276784",
     "pStar": "1443875398546251921704139393227811",
-    "navAfterPStar": "606514776259254806934",
+    "navBurn": "606514776259254806934",
     "burn": "210553543913478812961",
     "burnR": "0",
     "ok": true
@@ -739,7 +739,7 @@
    "out": {
     "charge": "1000000000000000",
     "pStar": "1446042728370400211848465323367120",
-    "navAfterPStar": "333121823844582743044200889666",
+    "navBurn": "333121823844582743044200889666",
     "burn": "3001904795",
     "burnR": "0",
     "ok": true
@@ -774,14 +774,84 @@
    "out": {
     "charge": "1000000000000000",
     "pStar": "1447489421991553876686484286145677",
-    "navAfterPStar": "333788700801655642465516541779",
-    "burn": "2995907284",
-    "burnR": "2995907284",
+    "navBurn": "332456279242008779846317182929",
+    "burn": "3007914311",
+    "burnR": "3007914311",
     "ok": true
    }
   },
   {
-   "id": "ledger-022-reserve-gate-exact",
+   "id": "ledger-022-all-gain-least-at-s0",
+   "fn": "ExecLedger.measure",
+   "in": {
+    "before": {
+     "idle0": "1000000000000000000000",
+     "idle1": "1000000000000000000000",
+     "L": "0",
+     "lo": "0",
+     "hi": "0"
+    },
+    "after": {
+     "idle0": "1100000000000000000000",
+     "idle1": "950000000000000000000",
+     "L": "0",
+     "lo": "0",
+     "hi": "0"
+    },
+    "sqrtS0": "70862218172824289969754751350",
+    "sqrtSpot": "79228162514264337593543950336",
+    "sqrtRef": "112046559425783515914356180039",
+    "reserve": "1000000000000000000",
+    "S": "1000000000000000000000000",
+    "unvested": "400000000000000000000",
+    "bond": "500000000000000000000"
+   },
+   "out": {
+    "charge": "0",
+    "pStar": "70862218172824289969754751350",
+    "navBurn": "1829960146204318336852",
+    "burn": "0",
+    "burnR": "546459988253945397150",
+    "ok": true
+   }
+  },
+  {
+   "id": "ledger-023-all-gain-pstar-not-min-nav",
+   "fn": "ExecLedger.measure",
+   "in": {
+    "before": {
+     "idle0": "1000000000000000000000",
+     "idle1": "1000000000000000000000",
+     "L": "0",
+     "lo": "0",
+     "hi": "0"
+    },
+    "after": {
+     "idle0": "950000000000000000000",
+     "idle1": "1100000000000000000000",
+     "L": "0",
+     "lo": "0",
+     "hi": "0"
+    },
+    "sqrtS0": "101729702841318637793976746270",
+    "sqrtSpot": "79228162514264337593543950336",
+    "sqrtRef": "70862218172824289969754751350",
+    "reserve": "1000000000000000000",
+    "S": "1000000000000000000000000",
+    "unvested": "400000000000000000000",
+    "bond": "500000000000000000000"
+   },
+   "out": {
+    "charge": "0",
+    "pStar": "101729702841318637793976746270",
+    "navBurn": "1859965580812820381826",
+    "burn": "0",
+    "burnR": "537644357678377955739",
+    "ok": true
+   }
+  },
+  {
+   "id": "ledger-024-reserve-gate-exact",
    "fn": "ExecLedger.measure",
    "in": {
     "before": {
@@ -809,14 +879,14 @@
    "out": {
     "charge": "127703835577276784",
     "pStar": "1443875398546251921704139393227811",
-    "navAfterPStar": "606514776259254806934",
+    "navBurn": "606514776259254806934",
     "burn": "210553543913478812961",
     "burnR": "164876444753350888103",
     "ok": true
    }
   },
   {
-   "id": "ledger-023-reserve-gate-revert",
+   "id": "ledger-025-reserve-gate-revert",
    "fn": "ExecLedger.measure",
    "in": {
     "before": {
@@ -844,14 +914,14 @@
    "out": {
     "charge": "127703835577276784",
     "pStar": "1443875398546251921704139393227811",
-    "navAfterPStar": "606514776259254806934",
+    "navBurn": "606514776259254806934",
     "burn": "210553543913478812961",
     "burnR": "164876444753350888103",
     "ok": false
    }
   },
   {
-   "id": "ledger-024-reserve-charge-zero",
+   "id": "ledger-026-reserve-charge-zero",
    "fn": "ExecLedger.measure",
    "in": {
     "before": {
@@ -879,14 +949,14 @@
    "out": {
     "charge": "0",
     "pStar": "1446042728370400211848465323367120",
-    "navAfterPStar": "333121823844583743044200889666",
+    "navBurn": "333121823844583743044200889666",
     "burn": "0",
     "burnR": "1801142876427",
     "ok": true
    }
   },
   {
-   "id": "ledger-025-reserve-nav-zero",
+   "id": "ledger-027-reserve-nav-zero",
    "fn": "ExecLedger.measure",
    "in": {
     "before": {
@@ -914,14 +984,14 @@
    "out": {
     "charge": "3331218238",
     "pStar": "1446042728370400211848465323367120",
-    "navAfterPStar": "0",
+    "navBurn": "0",
     "burn": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
     "burnR": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
     "ok": false
    }
   },
   {
-   "id": "ledger-026-markout-uncapped",
+   "id": "ledger-028-markout-uncapped",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -959,7 +1029,7 @@
    }
   },
   {
-   "id": "ledger-027-markout-capped",
+   "id": "ledger-029-markout-capped",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -997,7 +1067,7 @@
    }
   },
   {
-   "id": "ledger-028-markout-other-side",
+   "id": "ledger-030-markout-other-side",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -1035,7 +1105,7 @@
    }
   },
   {
-   "id": "ledger-029-markout-below-charge0",
+   "id": "ledger-031-markout-below-charge0",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -1073,7 +1143,7 @@
    }
   },
   {
-   "id": "ledger-030-markout-burn-capped-by-reserve-shares",
+   "id": "ledger-032-markout-burn-capped-by-reserve-shares",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -1111,7 +1181,7 @@
    }
   },
   {
-   "id": "ledger-031-markout-nav-now-zero",
+   "id": "ledger-033-markout-nav-now-zero",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -1149,7 +1219,7 @@
    }
   },
   {
-   "id": "ledger-032-markout-zero-extra-nav-zero",
+   "id": "ledger-034-markout-zero-extra-nav-zero",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -1187,7 +1257,7 @@
    }
   },
   {
-   "id": "ledger-033-markout-reserve-one-wei",
+   "id": "ledger-035-markout-reserve-one-wei",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -1225,7 +1295,7 @@
    }
   },
   {
-   "id": "ledger-034-markout-upper-leg",
+   "id": "ledger-036-markout-upper-leg",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -1263,7 +1333,7 @@
    }
   },
   {
-   "id": "ledger-035-markout-tie-lower-leg",
+   "id": "ledger-037-markout-tie-lower-leg",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -1301,7 +1371,7 @@
    }
   },
   {
-   "id": "ledger-036-markout-clamp-max-tick",
+   "id": "ledger-038-markout-clamp-max-tick",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -1339,7 +1409,7 @@
    }
   },
   {
-   "id": "ledger-037-markout-clamp-near-max",
+   "id": "ledger-039-markout-clamp-near-max",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -1377,7 +1447,7 @@
    }
   },
   {
-   "id": "ledger-038-markout-clamp-min-tick",
+   "id": "ledger-040-markout-clamp-min-tick",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -1415,7 +1485,7 @@
    }
   },
   {
-   "id": "ledger-039-markout-upper-leg-rounded-up",
+   "id": "ledger-041-markout-upper-leg-rounded-up",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -1453,7 +1523,7 @@
    }
   },
   {
-   "id": "ledger-040-charge-zero-nav-zero",
+   "id": "ledger-042-charge-zero-nav-zero",
    "fn": "ExecLedger.measure",
    "in": {
     "before": {
@@ -1481,14 +1551,14 @@
    "out": {
     "charge": "0",
     "pStar": "1446042728370400211848465323367120",
-    "navAfterPStar": "0",
+    "navBurn": "0",
     "burn": "0",
     "burnR": "0",
     "ok": true
    }
   },
   {
-   "id": "ledger-041-value",
+   "id": "ledger-043-value",
    "fn": "ExecLedger.value",
    "in": {
     "h": {
@@ -1506,7 +1576,7 @@
    }
   },
   {
-   "id": "ledger-042-value",
+   "id": "ledger-044-value",
    "fn": "ExecLedger.value",
    "in": {
     "h": {
@@ -1524,7 +1594,7 @@
    }
   },
   {
-   "id": "ledger-043-value",
+   "id": "ledger-045-value",
    "fn": "ExecLedger.value",
    "in": {
     "h": {
@@ -1542,7 +1612,7 @@
    }
   },
   {
-   "id": "ledger-044-value",
+   "id": "ledger-046-value",
    "fn": "ExecLedger.value",
    "in": {
     "h": {
@@ -1560,7 +1630,7 @@
    }
   },
   {
-   "id": "ledger-045-value-q-high-branch",
+   "id": "ledger-047-value-q-high-branch",
    "fn": "ExecLedger.value",
    "in": {
     "h": {
@@ -1578,7 +1648,7 @@
    }
   },
   {
-   "id": "ledger-046-value-empty",
+   "id": "ledger-048-value-empty",
    "fn": "ExecLedger.value",
    "in": {
     "h": {

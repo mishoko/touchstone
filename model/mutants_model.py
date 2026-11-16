@@ -67,6 +67,7 @@ MUTANTS = [
     ("ledger", "100% -> phi", "    charge = loss if loss > 0 else 0", "    charge = loss // 10 if loss > 0 else 0"),
     ("ledger", "no-op charged", "    charge = loss if loss > 0 else 0", "    charge = loss + 1 if loss >= 0 else 0"),
     ("ledger", "gate removed in measure", "    ok = burn + burn_r <= unvested + bond", "    ok = True"),
+    ("ledger", "burn priced at NAV_after(p*), not the smallest NAV_after (F9-02)", "    nav_after = min(leg[2] for leg in legs)   # the burn price: the smallest NAV_after over the legs", "    pass"),
     ("ledger", "burn priced at spot", "        return ceil_div(x * S, nav_after) if nav_after else U256", "        return ceil_div(x * S, legs[0][2]) if nav_after else U256"),
     ("ledger", "bond burn reported as bank", "return burn, 0, bank_burn, bond_burn", "return burn, 0, bank_burn + bond_burn, 0"),
     ("rounding", "burn rounds down", "        return ceil_div(x * S, nav_after) if nav_after else U256", "        return x * S // nav_after if nav_after else U256"),

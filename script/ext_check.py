@@ -8,8 +8,8 @@
     extension's own empty storage).
 (g) Layout: the extension's flattened storage layout is identical to the vault's (one `VaultStorage`).
 (h) Bytecode: the extension's runtime has no SELFDESTRUCT or CALLCODE, and DELEGATECALL only to the linked libraries
-    (the extension's sources contain no `delegatecall`, so every DELEGATECALL in its bytecode is a library call;
-    the contract must then have link references).
+    (no source the extension compiles, its imports followed transitively, contains `delegatecall`, so every DELEGATECALL
+    in its bytecode is a library call; the contract must then have link references).
 
   python3 script/ext_check.py             # all three checks (exit 1 on any failure)
   python3 script/ext_check.py --selftest  # each check against a planted defect it must catch, and a clean control
@@ -23,7 +23,29 @@ from storage_layout import inspect as layout_of  # noqa: E402
 VAULT, EXT, ENTRIES = 'TouchstoneVault', 'TouchstoneVaultExtension', 'IVaultEntries'
 EXTRA = {'dispatch'}  # P4 adds `roll` here with the record write
 ERC20_EXEMPT = {'transfer', 'approve', 'transferFrom'}
-EXT_SOURCES = ('src/TouchstoneVaultExtension.sol', 'src/TouchstoneVaultBase.sol')
+EXT_ROOT = 'src/TouchstoneVaultExtension.sol'
+
+
+def remappings():
+    r = subprocess.run(['forge', 'remappings'], cwd=ROOT, capture_output=True, text=True)
+    return sorted((l.split('=', 1) for l in r.stdout.split() if '=' in l), key=lambda kv: -len(kv[0]))
+
+
+def import_closure(root, remaps):
+    """Every source file the extension compiles (its transitive imports, remappings applied), repo-relative."""
+    seen, todo = set(), [root]
+    while todo:
+        f = todo.pop()
+        if f in seen:
+            continue
+        seen.add(f)
+        for imp in re.findall(r'import\s+[^;]*?"([^"]+)"', open(os.path.join(ROOT, f)).read()):
+            if imp.startswith('.'):
+                p = os.path.normpath(os.path.join(os.path.dirname(f), imp))
+            else:
+                p = next((t + imp[len(k):] for k, t in remaps if imp.startswith(k)), imp)
+            todo.append(os.path.normpath(p))
+    return sorted(seen)
 OP_SELFDESTRUCT, OP_CALLCODE, OP_DELEGATECALL = 0xFF, 0xF2, 0xF4
 
 
@@ -34,29 +56,21 @@ def forge_inspect(c, field):
     return json.loads(r.stdout)
 
 
-def sig(f):
-    return f"{f['name']}({','.join(_t(i) for i in f['inputs'])})"
-
-
-def _t(i):
-    t = i['type']
-    if t.startswith('tuple'):
-        return '(' + ','.join(_t(c) for c in i['components']) + ')' + t[len('tuple'):]
-    return t
-
-
 def funcs(abi):
     return [f for f in abi if f.get('type') == 'function']
 
 
 # ------------------------------------------------------------------ (e)
-def check_abi(vault_abi, ext_abi, entries_abi, fallback_names):
+def check_abi(vault_ids, ext_abi, entries_ids, entries_abi, fallback_names):
+    """`*_ids`: `forge inspect … methodIdentifiers` maps (signature -> 4-byte selector): the routing works on
+    selectors, so a vault function of another name whose selector collides with an allow-listed one also shadows it."""
     errs = []
-    allow = {sig(f) for f in funcs(entries_abi)}
+    allow_sel = {v: k for k, v in entries_ids.items()}
     allow_names = {f['name'] for f in funcs(entries_abi)}
-    vault_sigs = {sig(f) for f in funcs(vault_abi)}
-    for s in sorted(allow & vault_sigs):
-        errs.append(f'(e) the vault defines allow-listed {s}: it would shadow the forwarded entry point')
+    for vs, sel in sorted(vault_ids.items()):
+        if sel in allow_sel:
+            errs.append(f'(e) the vault function {vs} has the selector 0x{sel} of allow-listed {allow_sel[sel]}: it would '
+                        'shadow the forwarded entry point')
     if fallback_names != allow_names:
         errs.append(f'(e) the vault fallback forwards {sorted(fallback_names)}, the allow-list is {sorted(allow_names)}')
     nonview = {f['name'] for f in funcs(ext_abi) if f.get('stateMutability') not in ('view', 'pure')}
@@ -105,7 +119,8 @@ def check_bytecode(code, link_refs, sources):
         errs.append('(h) the extension runtime contains CALLCODE')
     for path, text in sources.items():
         if re.search(r'\bdelegatecall\b', re.sub(r'//[^\n]*|/\*.*?\*/', '', text, flags=re.S)):
-            errs.append(f'(h) {path} contains delegatecall: only linked-library calls may DELEGATECALL')
+            errs.append(f'(h) {path} (compiled into the extension) contains delegatecall: only linked-library calls may '
+                    'DELEGATECALL')
     if OP_DELEGATECALL in ops and not link_refs:
         errs.append('(h) the extension runtime DELEGATECALLs but links no library')
     return errs
@@ -128,10 +143,10 @@ def link_refs(c):
 def main():
     errs = []
     vault_src = open(os.path.join(ROOT, 'src/TouchstoneVault.sol')).read()
-    errs += check_abi(forge_inspect(VAULT, 'abi'), forge_inspect(EXT, 'abi'), forge_inspect(ENTRIES, 'abi'),
-                      fallback_names(vault_src))
+    errs += check_abi(forge_inspect(VAULT, 'methodIdentifiers'), forge_inspect(EXT, 'abi'),
+                      forge_inspect(ENTRIES, 'methodIdentifiers'), forge_inspect(ENTRIES, 'abi'), fallback_names(vault_src))
     errs += check_layout(layout_of(VAULT), layout_of(EXT))
-    srcs = {p: open(os.path.join(ROOT, p)).read() for p in EXT_SOURCES}
+    srcs = {p: open(os.path.join(ROOT, p)).read() for p in import_closure(EXT_ROOT, remappings())}
     errs += check_bytecode(runtime(EXT), link_refs(EXT), srcs)
     for e in errs:
         print('ext_check FAIL:', e)
@@ -145,12 +160,14 @@ def selftest():
                                                 inputs=[dict(type=t) for t in ins])
     entries = [fn('seed', ['uint256']), fn('deposit', ['uint256']), fn('withdraw', ['uint256'])]
     ext = entries + [fn('dispatch', ['uint8']), fn('VAULT', m='view')] + [fn(n) for n in ERC20_EXEMPT]
-    vault = [fn('settle'), fn('setPositions', ['int24'])]
+    ids = {'seed(uint256)': 'e828f5ab', 'deposit(uint256)': 'fad3cc4b', 'withdraw(uint256)': 'd331bef7'}
+    vault = {'settle()': '11da60b4', 'setPositions(int24)': '0badf00d'}
     names = {'seed', 'deposit', 'withdraw'}
-    ok = not check_abi(vault, ext, entries, names)                               # control
-    ok &= bool(check_abi(vault + [fn('deposit', ['uint256'])], ext, entries, names))  # a shadowing selector
-    ok &= bool(check_abi(vault, ext + [fn('sweep')], entries, names))              # an extra extension entry
-    ok &= bool(check_abi(vault, ext, entries, names - {'withdraw'}))               # the fallback misses one
+    ok = not check_abi(vault, ext, ids, entries, names)                                   # control
+    ok &= bool(check_abi({**vault, 'deposit(uint256)': 'fad3cc4b'}, ext, ids, entries, names))  # a shadowing function
+    ok &= bool(check_abi({**vault, 'other(bytes32,uint8)': 'fad3cc4b'}, ext, ids, entries, names))  # a colliding selector
+    ok &= bool(check_abi(vault, ext + [fn('sweep')], ids, entries, names))                  # an extra extension entry
+    ok &= bool(check_abi(vault, ext, ids, entries, names - {'withdraw'}))                   # the fallback misses one
     lay = '   0  0   32 _balances: mapping\n'
     ok &= not check_layout(lay, lay)
     ok &= bool(check_layout(lay, lay + '  99  0   32 _extra: uint256\n'))           # a planted divergence
@@ -161,6 +178,17 @@ def selftest():
     ok &= bool(check_bytecode(bytes([0xF4]), False, {}))                             # DELEGATECALL, no library
     ok &= not check_bytecode(bytes([0xF4]), True, {'a.sol': '// delegatecall in a comment'})
     ok &= bool(check_bytecode(bytes([0xF4]), True, {'a.sol': 'x.delegatecall(y);'}))  # a planted delegatecall
+    # the closure reaches an imported file: a planted delegatecall two imports away is scanned
+    import tempfile
+    with tempfile.TemporaryDirectory(dir=ROOT) as d:
+        rel = os.path.relpath(d, ROOT)
+        open(os.path.join(d, 'A.sol'), 'w').write('import "./B.sol";\n')
+        open(os.path.join(d, 'B.sol'), 'w').write('import {X} from "lib/C.sol";\n')
+        os.makedirs(os.path.join(d, 'lib'))
+        open(os.path.join(d, 'lib', 'C.sol'), 'w').write('function f(address a) { a.delegatecall(""); }\n')
+        cl = import_closure(os.path.join(rel, 'A.sol'), [('lib/', os.path.join(rel, 'lib') + '/')])
+        srcs = {p: open(os.path.join(ROOT, p)).read() for p in cl}
+        ok &= len(cl) == 3 and bool(check_bytecode(bytes([0xF4]), True, srcs))
     print('ext_check selftest', 'OK' if ok else 'FAILED')
     return 0 if ok else 1
 

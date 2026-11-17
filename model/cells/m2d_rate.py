@@ -35,27 +35,51 @@ CHARGE RULES evaluated on the same physical attack (the attack's outcome does no
   A fixed Monte Carlo sample of η per σ and distribution (GBM; Student-t3 at the same sd as the stress) is reused
   across attacks; the colluder takes the better sign of the bias. The colluder commits before the markout exists, so
   an attack's net is its expectation over η; the luckiest draw is reported for information.
-- s16   the fee-aware settlement of the specification (§3.4): the same immediate legs; the settlement is
-        `R.settle_extra` at the integer markout tick floor(r + bias·η) (the window mean floored), legs tick_mk − FEE_TICKS,
-        tick_mk and tick_mk + FEE_TICKS + 1, each holding valued with the arbitrage fee its position earns from s0 (before)
-        or sEnd (after) to the leg, the leg chosen by g/nb, and the burn re-priced in shares: the coalition's net uses the
+- fee_aware   the fee-aware settlement of the specification (§3.4): the same immediate legs; the settlement is
+        `R.settle_extra` at the integer markout tick tick_mk = floor(mean_k floor(r + bias·u_k)) (the reference pool's
+        closing tick is an integer per block and `tryWindow` floors the window mean), legs tick_mk − FEE_TICKS, tick_mk
+        and tick_mk + FEE_TICKS + 1, each holding valued with the arbitrage fee its position earns from s0 (before) or
+        sEnd (after) to the leg, the leg chosen by g/nb, and the burn re-priced in shares: the coalition's net uses the
         total burn burn₀ + burnS against a fixed supply S_act = n4.S_TOT (burn₀ at NAV' = the smallest NAV_after over the
-        immediate legs). s0 = sEnd = the pushed spot (the defence's worst case, as for C120). The ablation adds one element
-        at a time (v0: C120 at exact fractional ticks; v1: the integer floor; v2: the upper leg + 1; v3: the centre leg;
-        v4: the share burn; s16: the fee terms). An attack the status quo does not let through cannot profit under s16:
-        its burn is ≥ burn₀ ≥ the status quo's burn (more legs, a lower burn price), so only sq-positive attacks are
-        evaluated, as for C120.
+        immediate legs). The ablation adds one element at a time (v0: C120 at exact fractional ticks; v1: the integer
+        floor; v2: the upper leg + 1; v3: the centre leg; v4: the share burn; fee_aware: the fee terms); its column fixes
+        s0 = sEnd = the pushed spot (the C120-era convention, kept for the differential).
+        THE s0 SEARCH (column fee_aware_s0, the verdict column). Under the fee-aware rule s0 also sets F(before, s0, ·),
+        which shrinks as s0 approaches the leg, so the pushed spot is no longer the defence's worst case. For every attack
+        (range, push target, k) the Sybil instead pushes only to s0 ∈ {the pushed spot, the reference, the old range's
+        edges, r − FEE_TICKS, r + FEE_TICKS}, each clipped to the push path [r, pushed spot] (no guard reads s0: the
+        fence and containment run on the post-move spot), the vault removes its old position at s0 and its own `moveTo`
+        (§3.6) carries spot from s0 to the pushed spot: across an empty region at k = 0 (free), across the third party's
+        liquidity at k = 1 (the vault pays the swap from idle, the fee to the third party; the move's input valued at the
+        reference must fit `MAX_SWAP_ACTION`·NAV_before(reference) and idle, else the action reverts). The immediate legs
+        are then {spot, s0, reference} (spot first, then s0, then the reference on ties) and NAV' the smallest NAV_after
+        over the three. The coalition takes the best s0 per attack (the column is the maximum over the base attack and
+        every searched s0). The sq filter stays valid: the status quo (legs {spot, reference}) is evaluated on each
+        searched attack and burn₀ over three legs is ≥ the status quo's burn.
+        An attack the status quo does not let through cannot profit under the fee-aware rule: its burn is ≥ burn₀ ≥ the
+        status quo's burn (more legs, a lower burn price), so only sq-positive attacks are evaluated, as for C120.
 A cycle's net is the best net over all legal attacks (0 if the coalition abstains). Placement rate per year =
 `m2d.n_opps` (once per COOLDOWN in range; per exit the best of 10 COOLDOWN slots) × E[max(0, cycle net)], summed
 over exit and in-range lanes. Swap lanes: (a) 2.6 NAV/yr × the best D's per-unit net; (b) 130/yr × the best cycle's
 net (the colluder spends its swap budget on its best opportunities). Total = placements + max(a, b).
 
 Bound: ≤ 0.1% of NAV per year at σ 60% and ≤ 0.6% at σ 120%; the Student-t3 stress ≤ 2× the bound.
+Lane (b) and the s0 search: lane (b) keeps s0 = sEnd = the pushed spot, and its F(after) term uses the placement-only
+after holding (the position placed from the un-swapped idle), although in the action the pre-swap runs before the
+placement and so changes L: the additive approximation lane (b) inherits from C120 (the loss at p is the placement's
+plus the swap's at p).
+
 Fit seeds 0–99: python3 model/cells/m2d_rate.py [n_seeds] [procs] [cap (default 6e-4)] [clamp (diagnostic; default none)].
-Re-gate (held-out seeds, the shipped parameters only): python3 model/cells/m2d_rate.py --seeds FIRST:END [procs]
-(writes output/$M2D_OUT/m2d_rate_<FIRST>-<END>.json/.txt, default output/s16; seeds 300–499 are judged, 100–299
-reported; C120 and the status quo are printed as before, the s16 rule after them). M2D_DIFF=1 on fit seeds adds the
-exact-tick C120 on the pre-swap lane and asserts the generalised rule equal to `R.settle_extra` on every evaluation.
+Re-gate (held-out seeds, the shipped parameters only):
+  python3 model/cells/m2d_rate.py --seeds FIRST:END [procs] [--out DIR]
+writes DIR/m2d_rate_<FIRST>-<END-1>.json/.txt (DIR: --out, else $M2D_OUT_DIR, else output/fee_aware); seeds 300–499 are
+judged, 100–299 reported. The JSON holds the per-cycle rows and a `meta` record: the git commit (`git rev-parse HEAD`
+and whether the tree was dirty), the command line, the wall time, and per σ the largest signed attack E[net] under
+C120 and the fee-aware rule (fixed s0 and searched s0), the s0 search's gain over the pushed spot and the v0 differential.
+Slices run separately are summarised together with
+  python3 model/cells/m2d_rate.py --merge OUT_STEM part1.json part2.json ...
+M2D_DIFF=1 on fit seeds adds the exact-tick C120 on the pre-swap lane and asserts the generalised rule equal to
+`R.settle_extra` on every evaluation (placements, searched s0 and lane (b)).
 """
 import json
 import math
@@ -86,18 +110,22 @@ BOUND = {0.6: 1e-3, 1.2: 6e-3}
 LAGS_PER_STATE = 3
 GRID_STEP = 0.25
 DIFF = os.environ.get("M2D_DIFF") == "1"   # fit seeds: the exact-tick C120 (v0) on lane (b) and the R.settle_extra check
+MAX_SWAP_ACTION = R.MAINNET.MAX_SWAP_ACTION   # the vault's own move shares the per-action swap cap (§3.6)
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT = os.path.join(ROOT, "output", "s4")
-OUT_TAG = os.environ.get("M2D_OUT", "s16")   # the re-gate's output directory under output/
+OUT_DIR = os.environ.get("M2D_OUT_DIR", os.path.join(ROOT, "output", "fee_aware"))   # the re-gate's output directory
 
 
 def sd12(sigma):
     return sigma * math.sqrt(12 / (365 * 86400)) / math.log(1.0001)
 
 
-def eta_sample(sigma, dist, n=N_ETA, seed=0):
+def eta_sample(sigma, dist, n=N_ETA, seed=0, blocks=False):
     """η = mean of the deep pool's closing ticks over the window minus the market at the action, given that the
-    action block closed at the stale band edge (u_1 = m_1 − 5). Negative mean: the bias points to the stale side."""
+    action block closed at the stale band edge (u_1 = m_1 − 5). Negative mean: the bias points to the stale side.
+    With `blocks`, also the integer markout offsets per bias sign: {sgn: floor(mean_k floor(sgn·u_k))} (int64), so that
+    tick_mk = r + offset[sgn] for an integer market tick r (each block's close is an integer tick; `tryWindow` floors
+    the window mean)."""
     rng = np.random.default_rng(1_000_003 + int(sigma * 100) * 7 + (0 if dist == "gbm" else 1) + seed * 13)
     T = WINDOW
     inc = rng.standard_normal((n, T)) if dist == "gbm" else rng.standard_t(3, (n, T)) / np.sqrt(3.0)
@@ -106,7 +134,17 @@ def eta_sample(sigma, dist, n=N_ETA, seed=0):
     u[:, 0] = -float(FEE_TICKS)
     for k in range(1, T + 1):
         u[:, k] = np.clip(u[:, k - 1], m[:, k] - FEE_TICKS, m[:, k] + FEE_TICKS)
-    return u[:, 1:].mean(axis=1)                   # blocks 2..11: the window starts one block after the action
+    ub = u[:, 1:]                                   # blocks 2..11: the window starts one block after the action
+    eta = ub.mean(axis=1)
+    if not blocks:
+        return eta
+    return eta, int_offsets(ub)
+
+
+def int_offsets(ub):
+    """{sgn: floor(mean_k floor(sgn·u_k))} for a (draws × blocks) matrix of continuous closes relative to the market."""
+    nb = ub.shape[1]
+    return {s: np.floor_divide(np.floor(s * ub).astype(np.int64).sum(axis=1), nb) for s in (1, -1)}
 
 
 def sqrt_at_frac(t):
@@ -114,8 +152,11 @@ def sqrt_at_frac(t):
     return int(sqrt_at(b) * 1.0001 ** ((t - b) / 2))
 
 
-def attack(h, r, ref, d_signed, lo, k, band=BAND, push_sqrt=None, tl=None, th=None):
-    """push -> place -> revert. Returns the Sybil's P&L, the NAVs at r and the holdings before/after the action."""
+def attack(h, r, ref, d_signed, lo, k, band=BAND, push_sqrt=None, tl=None, th=None, s0_sqrt=None):
+    """push -> place -> revert. Returns the Sybil's P&L, the NAVs at r and the holdings before/after the action.
+    `s0_sqrt` (the s0 search): the Sybil pushes only to s0, the vault removes its old position there and its own
+    `moveTo` carries spot to the push target (an exact-output swap from idle across whatever third-party liquidity lies
+    between; it reverts on short idle or above `MAX_SWAP_ACTION`·NAV_before(reference) at the reference)."""
     sr = sqrt_at(r)
     pool = R.Pool(sr, FEE)
     if h.L:
@@ -124,21 +165,41 @@ def attack(h, r, ref, d_signed, lo, k, band=BAND, push_sqrt=None, tl=None, th=No
     if third:
         pool.modify("lp", tl, th, third)
     nav0 = R.value(h, sr)[0]
-    ain, aout, zfo = pool.push_to(push_sqrt if push_sqrt is not None else sqrt_at(r + d_signed))
+    target = push_sqrt if push_sqrt is not None else sqrt_at(r + d_signed)
+    if s0_sqrt is None:
+        s0_sqrt = target
+    ain, aout, zfo = pool.push_to(s0_sqrt)
     syb0, syb1 = (-ain, aout) if zfo else (aout, -ain)
-    tick_spot = pool.tick
-    if R.placement_check(lo, lo + W, tick_spot, ref, band, W, SPACING):
-        return None
+    if s0_sqrt == target:
+        tick_spot = pool.tick
+        if R.placement_check(lo, lo + W, tick_spot, ref, band, W, SPACING):
+            return None
     hb = h.copy()
     if hb.L:
         _, _, f0, f1 = pool.modify("vault", hb.lo, hb.hi, 0)
         hb.idle0 += f0
         hb.idle1 += f1
     before = hb.copy()
-    s_spot = pool.s
+    s0 = pool.s
     if hb.L:
         a0, a1, _, _ = pool.modify("vault", hb.lo, hb.hi, -hb.L)
         hb = R.Holdings(hb.idle0 - a0, hb.idle1 - a1)
+    move_in = 0
+    if pool.s != target:   # the vault's own move (§3.6): the old position is already removed
+        ain, aout, zfo = pool.push_to(target)
+        if pool.s != target:
+            return None                                  # Move
+        hb = R.Holdings(hb.idle0 - ain, hb.idle1 + aout) if zfo else R.Holdings(hb.idle0 + aout, hb.idle1 - ain)
+        if hb.idle0 < 0 or hb.idle1 < 0:
+            return None                                  # SwapCap (idle short)
+        s_ref = sqrt_at(ref)
+        move_in = R.mul_div_up(ain, s_ref * s_ref, 1 << 192) if zfo else ain
+        if move_in * R.WAD > MAX_SWAP_ACTION * R.value(before, s_ref)[0]:
+            return None                                  # SwapCap (the per-action cap)
+        tick_spot = pool.tick
+        if R.placement_check(lo, lo + W, tick_spot, ref, band, W, SPACING):
+            return None
+    s_spot = pool.s
     L, after, dl = R.placement_size(hb, lo, lo + W, pool.s, sqrt_at(ref))
     if dl < R.WAD // 2 or L == 0:
         return None
@@ -155,7 +216,7 @@ def attack(h, r, ref, d_signed, lo, k, band=BAND, push_sqrt=None, tl=None, th=No
     nav1 = R.value(hf, sr)[0]
     sybil = R.q(syb0, sr) + syb1 if syb0 >= 0 else syb1 - R.mul_div_up(-syb0, sr * sr, 1 << 192)
     return dict(sybil=sybil, nav0=nav0, nav1=nav1, before=before, after=after, s_spot=s_spot, tick_spot=tick_spot,
-                pre_idle=hb)
+                pre_idle=hb, s0=s0, lo=lo, push_sqrt=push_sqrt, move_in=move_in)
 
 
 def loss_at(a, p):
@@ -196,6 +257,12 @@ class Swap:
             return R.q(self.amount, p) - self.got
         return self.amount - R.q(self.got, p)
 
+    def after(self, h):
+        """The holding h with the fill applied to its idle (the exact form of the additive loss, for the check)."""
+        if self.sell0:
+            return R.Holdings(h.idle0 - self.amount, h.idle1 + self.got, h.L, h.lo, h.hi)
+        return R.Holdings(h.idle0 + self.got, h.idle1 - self.amount, h.L, h.lo, h.hi)
+
 
 def c120(a, r, ref, legs_imm, eta, sgn, swap=None, cap=CAP, clamp=None):
     """Expected coalition net over η (sign sgn on the bias), the luckiest net, and the share of draws in which the
@@ -226,23 +293,24 @@ def c120(a, r, ref, legs_imm, eta, sgn, swap=None, cap=CAP, clamp=None):
     return float(np.mean(nets)), float(max(nets)), float(binds.mean())
 
 
-# ----------------------------------------------------------------------------- the fee-aware settlement (s16 rule)
+# ----------------------------------------------------------------------------- the fee-aware settlement
 # The specification's settlement (§3.4, fee-aware legs): `R.settle_extra` evaluated at the integer markout tick
-# tick_mk = floor(market + bias·η) (the window mean floored, as `tryWindow` returns it), with s0 = the pushed spot (the
-# defence's worst case, as for C120) and sEnd = the spot the action leaves. The charge is a share burn against a fixed
-# supply S_act = n4.S_TOT: burn₀ = ceilDiv(charge₀·S, NAV') with NAV' the smallest NAV_after over {s0, spot, reference},
-# the reserve's shares ceilDiv((charge₀ + reserve)·S, NAV') − burn₀, and the settlement burn burnS of §3.4.
-# `settle_var` generalises the rule for the ablation and the differential check (every flag off reproduces C120 at
-# exact fractional ticks); with every flag on and no extra loss term it is asserted equal to `R.settle_extra`.
+# tick_mk = floor(mean_k floor(market + bias·u_k)) (integer closes per block, the window mean floored as `tryWindow`
+# returns it), with s0 the spot before the vault's own move and sEnd = the spot the action leaves. The charge is a share
+# burn against a fixed supply S_act = n4.S_TOT: burn₀ = ceilDiv(charge₀·S, NAV') with NAV' the smallest NAV_after over
+# {s0, spot, reference}, the reserve's shares ceilDiv((charge₀ + reserve)·S, NAV') − burn₀, and the settlement burn
+# burnS of §3.4. `settle_var` generalises the rule for the ablation and the differential check (every flag off
+# reproduces C120 at exact fractional ticks); with every flag on it is asserted equal to `R.settle_extra` (lane (b):
+# on the after holding with the fill applied to idle, the additive leg within 1 wei of it).
 S_ACT = S_TOT
 RULE_FULL = dict(int_tick=True, up1=True, centre=True, fees=True, shares=True)
-VARIANTS = (  # the ablation, in order: each adds one element of the s16 rule
-    ("v0_s05x", dict(int_tick=False, up1=False, centre=False, fees=False, shares=False)),
+VARIANTS = (  # the ablation, in order: each adds one element of the fee-aware rule
+    ("v0_exact", dict(int_tick=False, up1=False, centre=False, fees=False, shares=False)),
     ("v1_int", dict(int_tick=True, up1=False, centre=False, fees=False, shares=False)),
     ("v2_up1", dict(int_tick=True, up1=True, centre=False, fees=False, shares=False)),
     ("v3_centre", dict(int_tick=True, up1=True, centre=True, fees=False, shares=False)),
     ("v4_shares", dict(int_tick=True, up1=True, centre=True, fees=False, shares=True)),
-    ("s16", RULE_FULL),
+    ("fee_aware", RULE_FULL),
 )
 
 
@@ -329,12 +397,38 @@ def net_shares(a, burn, gain=0, shift=0):
     return a["sybil"] + gain + cur
 
 
-def c16(a, r, ctx, eta, sgn, cfg, leg, swap=None, check=False):
+CHECKS = {"settle_extra": 0, "settle_extra_b": 0}   # assertion counts (M2D_DIFF=1), reported by the smoke run
+
+
+def check_settle(ctx, t, burn, swap=None):
+    """Asserts `settle_var` under the full rule equal to `R.settle_extra` at tick t. With a pre-swap (lane (b)) the
+    reference runs on the after holding with the fill applied to idle (`Swap.after`), the generalised rule is re-run on
+    that holding, and the additive leg (NAV_after − the swap's loss) is asserted within 1 wei of it at every leg."""
+    after = ctx["after"] if swap is None else swap.after(ctx["after"])
+    pend = dict(s0=ctx["s0"], sEnd=ctx["sEnd"], charge0=ctx["c0"], reserve=ctx["reserve"], burn0=ctx["burn0"], sAct=S_ACT)
+    _, _, bs = R.settle_extra(ctx["before"], after, pend, t, FEE_TICKS, FEE, ctx["reserve_shares"])
+    if swap is None:
+        assert burn == ctx["burn0"] + bs, ("settle_var differs from R.settle_extra", t, burn, ctx["burn0"] + bs)
+        CHECKS["settle_extra"] += 1
+        return
+    ctx_x = dict(ctx, after=after)
+    leg_x, leg_a = legs_of(ctx_x), legs_of(ctx, swap.loss)
+    burn_x, _, _ = settle_var(ctx_x, leg_x, t, RULE_FULL)
+    assert burn_x == ctx["burn0"] + bs, ("settle_var (lane b, exact after) differs from R.settle_extra", t, burn_x)
+    for tt in (t - FEE_TICKS, t, t + FEE_TICKS + 1):
+        va = leg_a(tt)
+        vx = leg_x(tt)
+        assert abs((va[1] - va[4]) - vx[1]) <= 1 and va[3] == vx[3], ("lane (b) additive leg off by > 1 wei", tt)
+    CHECKS["settle_extra_b"] += 1
+
+
+def c_fee_aware(a, r, ctx, eta, sgn, cfg, leg, swap=None, check=False, eta_int=None):
     """Expected coalition net over η, the luckiest net and the share of draws on which the reserve caps the settlement,
-    under the rule `cfg`. Integer rules are evaluated once per distinct tick_mk = floor(r + sgn·η)."""
+    under the rule `cfg`. Integer rules are evaluated once per distinct tick_mk = r + eta_int[sgn] (the floored mean of
+    the per-block integer closes); fractional rules at r + sgn·η."""
     gain = swap.loss(sqrt_at(r)) if swap else 0
     if cfg["int_tick"]:
-        tk = np.floor(r + sgn * eta).astype(np.int64)
+        tk = r + eta_int[sgn]
         uniq, inv = np.unique(tk, return_inverse=True)
     else:
         uniq, inv = r + sgn * eta, np.arange(len(eta))
@@ -342,11 +436,8 @@ def c16(a, r, ctx, eta, sgn, cfg, leg, swap=None, check=False):
     for t in uniq:
         t = int(t) if cfg["int_tick"] else float(t)
         burn, ch, bd = settle_var(ctx, leg, t, cfg)
-        if check and cfg is RULE_FULL and swap is None:
-            pend = dict(s0=ctx["s0"], sEnd=ctx["sEnd"], charge0=ctx["c0"], reserve=ctx["reserve"], burn0=ctx["burn0"],
-                        sAct=S_ACT)
-            _, _, bs = R.settle_extra(ctx["before"], ctx["after"], pend, t, FEE_TICKS, FEE, ctx["reserve_shares"])
-            assert burn == ctx["burn0"] + bs, ("settle_var differs from R.settle_extra", t, burn, ctx["burn0"] + bs)
+        if check and cfg is RULE_FULL:
+            check_settle(ctx, t, burn, swap)
         n = net_shares(a, burn, gain, gain) if burn is not None else net_of(a, int(ch), max(ctx["nav_imm"], 1), gain, gain)
         vals.append(n)
         binds.append(bd)
@@ -354,11 +445,50 @@ def c16(a, r, ctx, eta, sgn, cfg, leg, swap=None, check=False):
     return float(np.mean(nets)), float(nets.max()), float(np.array(binds, dtype=float)[inv].mean())
 
 
-def sweep(h, r, ref, etas, cap=CAP, clamp=None, diff=False):
-    """Best cycle net per rule over d, direction, k and range, for the placement lane and the pre-swap lane (b)."""
+def s0_candidates(h, r, ref, t_target):
+    """The s0 search (S16F-01): (label, tick) for the reference, r ∓ FEE_TICKS and the old range's edges, each clipped
+    to the push path [r, t_target]; the pushed spot itself is the base attack. Duplicates keep the first label."""
+    a, b = sorted((r, t_target))
+    xs = [("ref", ref), ("r-5", r - FEE_TICKS), ("r+5", r + FEE_TICKS)]
+    if h.L:
+        xs += [("old_lo", h.lo), ("old_hi", h.hi)]
+    out, seen = [], set()
+    for lab, x in xs:
+        x = min(max(x, a), b)
+        if x != t_target and x not in seen:
+            seen.add(x)
+            out.append((lab, x))
+    return out
+
+
+def imm_legs(a, s_ref):
+    """The immediate charge over {spot, s0, reference} (spot first, then s0, then the reference; a later leg replaces
+    only on a strictly larger loss), the NAV_after at its leg and NAV' = the smallest NAV_after over the three."""
+    vals = [loss_at(a, p) for p in (a["s_spot"], a["s0"], s_ref)]
+    best = vals[0]
+    for v in vals[1:]:
+        if v[0] > best[0]:
+            best = v
+    return max(0, best[0]), best[1], min(v[1] for v in vals)
+
+
+def sq_net(a, s_ref):
+    """The status-quo control's net (legs {spot, reference}) and its two legs."""
+    l_s, n_s = loss_at(a, a["s_spot"])
+    l_r, n_r = loss_at(a, s_ref)
+    imm = (l_s, n_s) if l_s >= l_r else (l_r, n_r)
+    imm = (max(0, imm[0]), imm[1])
+    return net_of(a, imm[0], imm[1]), imm, (l_s, n_s), (l_r, n_r)
+
+
+def sweep(h, r, ref, etas, cap=CAP, clamp=None, diff=False, etas_int=None):
+    """Best cycle net per rule over d, direction, k and range, for the placement lane and the pre-swap lane (b); the
+    fee-aware rule also with the s0 search (column fee_aware_s0)."""
     out = dict(sq=0, c=0.0, c_t3=0.0, c_lucky=0, sq_b=0, c_b=0.0, c_b_t3=0.0, n_att=0, n_pos_sq=0, n_pos_sq_b=0,
                bind_sum=0.0, bind_n=0, bind_b_sum=0.0, bind_b_n=0,
-               s16_t3=0.0, s16_lucky=0.0, s16_b_t3=0.0, s16_bind_sum=0.0, s16_bind_b_sum=0.0, v0_diff=0.0, v0_b_diff=0.0)
+               fa_t3=0.0, fa_lucky=0.0, fa_b_t3=0.0, fa_bind_sum=0.0, fa_bind_b_sum=0.0, v0_diff=0.0, v0_b_diff=0.0,
+               fee_aware_s0=0.0, fee_aware_s0_sig=-1e30, fa_s0_t3=0.0, s0_n_att=0, s0_n_pos_sq=0, s0_beats=0, s0_new_pos=0,
+               s0_gain=-1e30, s0_gain_label=None, s0_wins={})
     for name, _ in VARIANTS:
         out[name] = 0.0
         out[name + "_b"] = 0.0
@@ -366,6 +496,8 @@ def sweep(h, r, ref, etas, cap=CAP, clamp=None, diff=False):
         out[name + "_b_sig"] = -1e30
     out["c_sig"] = out["c_b_sig"] = -1e30
     nav_r = R.value(h, sqrt_at(r))[0]
+    s_ref = sqrt_at(ref)
+    full = cap == CAP and clamp is None
     ds = sorted(set(DS) | set(range(130, BAND + abs(r - ref) + 10, 10)))   # every legal push: up to the fence beyond the lag
     assert max(ds) >= BAND + abs(r - ref), "the push grid must reach the guard"
     for d in ds:
@@ -390,18 +522,16 @@ def sweep(h, r, ref, etas, cap=CAP, clamp=None, diff=False):
                         atts.append(a)
                 for a in atts:
                     out["n_att"] += 1
-                    s_ref = sqrt_at(ref)
                     sgn_bias = -1 if a["tick_spot"] < r else 1     # the bias that helps: toward the pushed spot
                     # placement only
-                    l_s, n_s = loss_at(a, a["s_spot"])
-                    l_r, n_r = loss_at(a, s_ref)
-                    imm = (l_s, n_s) if l_s >= l_r else (l_r, n_r)
-                    imm = (max(0, imm[0]), imm[1])
-                    n = net_of(a, imm[0], imm[1])
+                    n, imm, (l_s, n_s), (l_r, n_r) = sq_net(a, s_ref)
                     out["sq"] = max(out["sq"], n)
+                    base_fa = None
                     if n > 0:
-                        # the s16 record: s0 = sEnd = the pushed spot; NAV' the smallest NAV_after over {s0, spot, ref}
-                        ctx = make_ctx(a["before"], a["after"], a["s_spot"], a["s_spot"], imm[0], imm[1], min(n_s, n_r),
+                        # the fee-aware record with s0 = sEnd = the pushed spot; NAV' the smallest NAV_after over the legs
+                        c0, nav_imm, nav_burn = imm_legs(a, s_ref)
+                        assert (c0, nav_imm, nav_burn) == (imm[0], imm[1], min(n_s, n_r))
+                        ctx = make_ctx(a["before"], a["after"], a["s0"], a["s_spot"], c0, nav_imm, nav_burn,
                                        R.value(a["before"], a["s_spot"])[0])
                         out["n_pos_sq"] += 1
                         for key, dist in (("c", "gbm"), ("c_t3", "t3")):
@@ -413,19 +543,60 @@ def sweep(h, r, ref, etas, cap=CAP, clamp=None, diff=False):
                                 out["bind_n"] += 1
                                 c120_en = en
                                 out["c_sig"] = max(out["c_sig"], en)
-                        if cap == CAP and clamp is None:
+                        if full:
                             leg = legs_of(ctx)
                             for name, cfg in VARIANTS:
-                                en, lucky, cl = c16(a, r, ctx, etas["gbm"], sgn_bias, cfg, leg, check=diff)
+                                en, lucky, cl = c_fee_aware(a, r, ctx, etas["gbm"], sgn_bias, cfg, leg, check=diff,
+                                                            eta_int=etas_int["gbm"])
                                 out[name] = max(out[name], en)
                                 out[name + "_sig"] = max(out[name + "_sig"], en)
-                                if name == "v0_s05x":
+                                if name == "v0_exact":
                                     out["v0_diff"] = max(out["v0_diff"], abs(en - c120_en) / nav_r)
-                                if name == "s16":
-                                    out["s16_lucky"] = max(out["s16_lucky"], lucky)
-                                    out["s16_bind_sum"] += cl
-                            en, _, _ = c16(a, r, ctx, etas["t3"], sgn_bias, RULE_FULL, leg)
-                            out["s16_t3"] = max(out["s16_t3"], en)
+                                if name == "fee_aware":
+                                    out["fa_lucky"] = max(out["fa_lucky"], lucky)
+                                    out["fa_bind_sum"] += cl
+                                    base_fa = en
+                                    out["fee_aware_s0"] = max(out["fee_aware_s0"], en)
+                                    out["fee_aware_s0_sig"] = max(out["fee_aware_s0_sig"], en)
+                            en, _, _ = c_fee_aware(a, r, ctx, etas["t3"], sgn_bias, RULE_FULL, leg, eta_int=etas_int["t3"])
+                            out["fa_t3"] = max(out["fa_t3"], en)
+                            out["fa_s0_t3"] = max(out["fa_s0_t3"], en)
+                    if full:
+                        # the s0 search: push only to s0, the vault's own move carries spot to the same target
+                        t_target = R.get_tick_at_sqrt_price(a["push_sqrt"]) if a["push_sqrt"] is not None else r + sg * d
+                        best_v = None
+                        for lab, t0 in s0_candidates(h, r, ref, t_target):
+                            av = attack(h, r, ref, sg * d, a["lo"], k, push_sqrt=a["push_sqrt"], tl=tl, th=th,
+                                        s0_sqrt=sqrt_at(t0))
+                            if av is None:
+                                continue
+                            out["s0_n_att"] += 1
+                            nv, _, _, _ = sq_net(av, s_ref)
+                            if nv <= 0:
+                                continue                    # the fee-aware net ≤ the status quo's ≤ 0
+                            out["s0_n_pos_sq"] += 1
+                            sb = -1 if av["tick_spot"] < r else 1
+                            c0, nav_imm, nav_burn = imm_legs(av, s_ref)
+                            ctx_v = make_ctx(av["before"], av["after"], av["s0"], av["s_spot"], c0, nav_imm, nav_burn,
+                                             R.value(av["before"], av["s_spot"])[0])
+                            leg_v = legs_of(ctx_v)
+                            en, _, _ = c_fee_aware(av, r, ctx_v, etas["gbm"], sb, RULE_FULL, leg_v, check=diff,
+                                                   eta_int=etas_int["gbm"])
+                            out["fee_aware_s0"] = max(out["fee_aware_s0"], en)
+                            out["fee_aware_s0_sig"] = max(out["fee_aware_s0_sig"], en)
+                            en_t, _, _ = c_fee_aware(av, r, ctx_v, etas["t3"], sb, RULE_FULL, leg_v, eta_int=etas_int["t3"])
+                            out["fa_s0_t3"] = max(out["fa_s0_t3"], en_t)
+                            if best_v is None or en > best_v[0]:
+                                best_v = (en, lab)
+                        if best_v is not None and n <= 0:
+                            out["s0_new_pos"] += 1          # the status quo filters the pushed spot, not this s0
+                        elif best_v is not None:            # a like-for-like comparison: both fee-aware E[net]
+                            gain = (best_v[0] - base_fa) / nav_r
+                            if gain > out["s0_gain"]:
+                                out["s0_gain"], out["s0_gain_label"] = gain, best_v[1]
+                            if best_v[0] > base_fa:
+                                out["s0_beats"] += 1
+                                out["s0_wins"][best_v[1]] = out["s0_wins"].get(best_v[1], 0) + 1
                     # (b) a 2% pre-swap at the pushed (stale) spot into the Sybil's JIT liquidity, then the placement
                     sell0 = a["tick_spot"] < r
                     amt = SWAP_FRAC * nav_r
@@ -455,24 +626,27 @@ def sweep(h, r, ref, etas, cap=CAP, clamp=None, diff=False):
                                 out["bind_b_n"] += 1
                                 c120_en = en
                                 out["c_b_sig"] = max(out["c_b_sig"], en)
-                        if cap == CAP and clamp is None:
+                        if full:
                             # the pre-swap is part of the action: NAV_after(p) falls by its loss at p at every leg
+                            # (s0 = sEnd = the pushed spot; F(after) on the placement-only after holding, see the docstring)
                             nav_burn = min(n_s - sw.loss(a["s_spot"]), n_r - sw.loss(s_ref))
-                            ctx_b = make_ctx(a["before"], a["after"], a["s_spot"], a["s_spot"], imm_b[0], imm_b[1],
+                            ctx_b = make_ctx(a["before"], a["after"], a["s0"], a["s_spot"], imm_b[0], imm_b[1],
                                              nav_burn, R.value(a["before"], a["s_spot"])[0])
                             leg = legs_of(ctx_b, sw.loss)
                             for name, cfg in VARIANTS:
-                                if name == "v0_s05x" and not diff:
+                                if name == "v0_exact" and not diff:
                                     continue
-                                en, _, cl = c16(a, r, ctx_b, etas["gbm"], sgn_bias, cfg, leg, swap=sw)
+                                en, _, cl = c_fee_aware(a, r, ctx_b, etas["gbm"], sgn_bias, cfg, leg, swap=sw,
+                                                        check=diff, eta_int=etas_int["gbm"])
                                 out[name + "_b"] = max(out[name + "_b"], en)
                                 out[name + "_b_sig"] = max(out[name + "_b_sig"], en)
-                                if name == "v0_s05x":
+                                if name == "v0_exact":
                                     out["v0_b_diff"] = max(out["v0_b_diff"], abs(en - c120_en) / nav_r)
-                                if name == "s16":
-                                    out["s16_bind_b_sum"] += cl
-                            en, _, _ = c16(a, r, ctx_b, etas["t3"], sgn_bias, RULE_FULL, leg, swap=sw)
-                            out["s16_b_t3"] = max(out["s16_b_t3"], en)
+                                if name == "fee_aware":
+                                    out["fa_bind_b_sum"] += cl
+                            en, _, _ = c_fee_aware(a, r, ctx_b, etas["t3"], sgn_bias, RULE_FULL, leg, swap=sw,
+                                                   eta_int=etas_int["t3"])
+                            out["fa_b_t3"] = max(out["fa_b_t3"], en)
     return out
 
 
@@ -499,21 +673,23 @@ def swap_lane_a(sigma, etas, cap=CAP, clamp=None):
     return res
 
 
-def swap_lane_a16(etas, cap=CAP):
-    """Lane (a) under the s16 rule, per unit of swapped value (ticks of 1e-4): the markout tick floored to an integer
-    (tick_mk − spot = floor(D + η), spot an integer tick), legs tick_mk − FEE_TICKS, tick_mk and tick_mk + FEE_TICKS + 1.
-    The vault's loss on the fill is linear in the leg's tick, so the upper leg is the worst. The fee terms are left out:
-    the position is unchanged by the swap and the fill has no slippage (sEnd = s0), so F(before) − F(after) ≥ 0 (the
-    before term rounds up at γ + 2 pips, the credit rounds down less its margins): leaving it out can only overstate
-    the colluder's net. The re-priced burn values the total burn at ≥ the loss at the leg (to first order in the swap's
-    2% of NAV), i.e. the charge is max(charge₀, min(loss_mk, charge₀ + cap))."""
+def swap_lane_a_fa(etas_int, cap=CAP):
+    """Lane (a) under the fee-aware rule, per unit of swapped value (ticks of 1e-4): the markout tick an integer,
+    tick_mk − spot = D + floor(mean_k floor(u_k)) (spot an integer tick, each block's close an integer tick; `etas_int`
+    the offsets of `eta_sample(..., blocks=True)`, sign +1 as rel = D + η in `swap_lane_a`), legs tick_mk − FEE_TICKS,
+    tick_mk and tick_mk + FEE_TICKS + 1. The vault's loss on the fill is linear in the leg's tick, so the upper leg is
+    the worst. The fee terms are left out: the position is unchanged by the swap and the fill has no slippage
+    (sEnd = s0), so F(before) − F(after) ≥ 0 (the before term rounds up at γ + 2 pips, the credit rounds down less its
+    margins): leaving it out can only overstate the colluder's net. The re-priced burn values the total burn at ≥ the
+    loss at the leg (to first order in the swap's 2% of NAV), i.e. the charge is max(charge₀, min(loss_mk, charge₀ +
+    cap))."""
     res = {}
     cap_t = cap / SWAP_FRAC / 1e-4
-    for dist, eta in etas.items():
+    for dist, off in etas_int.items():
         best_c, best_d, bind = -1e9, None, 0.0
         for D in DS_SWAP:
             g = D + FEE_TICKS
-            rel = np.floor(D + eta)
+            rel = (D + off[1]).astype(float)
             loss_mk = rel + FEE_TICKS + 1 + FEE_TICKS
             extra = np.maximum(0.0, loss_mk - FEE_TICKS)
             ch = FEE_TICKS + np.minimum(extra, cap_t)
@@ -528,7 +704,9 @@ def run(args):
     seed, sigma, cap, clamp = args
     assert seed < 100 or (cap == CAP and clamp is None), "held-out seeds run the shipped parameters only"
     es = seed if seed >= 100 else 0       # held-out seeds draw their own η sample (fit seeds reuse sample 0)
-    etas = {"gbm": eta_sample(sigma, "gbm", seed=es), "t3": eta_sample(sigma, "t3", seed=es)}
+    etas, etas_int = {}, {}
+    for dist in ("gbm", "t3"):
+        etas[dist], etas_int[dist] = eta_sample(sigma, dist, seed=es, blocks=True)
     rng = random.Random(seed * 7919 + int(sigma * 100))
     rows = []
     for variant in ("exit", "in"):
@@ -537,7 +715,7 @@ def run(args):
             sgn = (1 if r >= h.hi else -1) if variant == "exit" else rng.choice((1, -1))
             ref = r - sgn * abs(ell)
             nav = R.value(h, sqrt_at(r))[0]
-            res = sweep(h, r, ref, etas, cap, clamp, diff=seed < 100 and DIFF)
+            res = sweep(h, r, ref, etas, cap, clamp, diff=seed < 100 and DIFF, etas_int=etas_int)
             rows.append(dict(seed=seed, sigma=sigma, v=variant, lag=sgn * abs(ell), nav=nav, **res))
     return rows
 
@@ -594,10 +772,16 @@ def summarise(rows, cap=CAP, clamp=None):
     return "\n".join(lines)
 
 
-def summarise16(rows, ablation=True):
-    """The s16 rule (fee-aware settlement) next to C120 on the same attacks and η draws, and the ablation."""
-    lines = ["\nThe fee-aware settlement (s16 rule: R.settle_extra at the floored integer markout tick, burn in shares at "
-             f"S_act = {S_ACT:.0e}); same attacks and η draws as C120"]
+def sig_max_bp(g, key):
+    """The largest signed E[net] (bp of NAV) of `key` over the cycles g; None if no sq-positive attack was evaluated."""
+    xs = [r[key] / r["nav"] * 1e4 for r in g if r[key] > -1e29]
+    return max(xs) if xs else None
+
+
+def summarise_fa(rows, ablation=True):
+    """The fee-aware settlement next to C120 on the same attacks and η draws, the s0 search, and the ablation."""
+    lines = ["\nThe fee-aware settlement (R.settle_extra at the integer markout tick floor(mean of the per-block integer closes), "
+             f"burn in shares at S_act = {S_ACT:.0e}); same attacks and η draws as C120"]
     for sg in sorted({r["sigma"] for r in rows}):
         g = [r for r in rows if r["sigma"] == sg]
         lines.append(f"σ {sg}  (bound {BOUND[sg] * 100:.1f}% NAV/yr; t3 {2 * BOUND[sg] * 100:.1f}%)")
@@ -613,15 +797,17 @@ def summarise16(rows, ablation=True):
             return tot, "; ".join(parts)
 
         def sig_max(key):
-            xs = [r[key] / r["nav"] * 1e4 for r in g if r[key] > -1e29]
-            return f"{max(xs):+.4f} bp" if xs else "none (no sq-positive attack)"
+            x = sig_max_bp(g, key)
+            return f"{x:+.4f} bp" if x is not None else "none (no sq-positive attack)"
 
         def best_b(key):
             return SWAPS_PER_YEAR * max(max(0, r[key]) / r["nav"] for r in g)
-        etas = {"gbm": eta_sample(sg, "gbm", 200000), "t3": eta_sample(sg, "t3", 200000)}
-        a16 = swap_lane_a16(etas)
+        etas, etas_int = {}, {}
+        for dist in ("gbm", "t3"):
+            etas[dist], etas_int[dist] = eta_sample(sg, dist, 200000, blocks=True)
+        afa = swap_lane_a_fa(etas_int)
         a05 = swap_lane_a(sg, etas)
-        names = [n for n, _ in VARIANTS] if ablation else ["s16"]
+        names = [n for n, _ in VARIANTS] if ablation else ["fee_aware"]
         for name in names:
             tot, parts = place(name)
             bb = best_b(name + "_b")
@@ -631,50 +817,143 @@ def summarise16(rows, ablation=True):
             lines.append(f"  {name:10s}: placements {tot[0] * 100:.3f}% [90% CI {tot[1] * 100:.3f}, {tot[2] * 100:.3f}] ({parts}); "
                          f"max cycle E[net] {mx:.4f} bp (largest signed attack E[net] {sig}); pre-swap (b) best-cycle "
                          f"{bb * 100:.3f}%/yr (max cycle E[net] {mxb:.4f} bp; largest signed {sigb})")
-        lines.append(f"  C120 (s05) largest signed attack E[net]: placements {sig_max('c_sig')}; pre-swap {sig_max('c_b_sig')}")
-        sw16 = {d: SWAPS_PER_YEAR * SWAP_FRAC * max(0.0, a16[d][0]) * 1e-4 for d in a16}
+        ps0, parts0 = place("fee_aware_s0")
+        wins = {}
+        for r in g:
+            for k_, v_ in r["s0_wins"].items():
+                wins[k_] = wins.get(k_, 0) + v_
+        gains = [(r["s0_gain"], r["s0_gain_label"]) for r in g if r["s0_gain"] > -1e29]
+        gmax = max(gains, default=(None, None))
+        lines.append(f"  fee_aware_s0 (s0 searched; the verdict column): placements {ps0[0] * 100:.3f}% [90% CI {ps0[1] * 100:.3f}, "
+                     f"{ps0[2] * 100:.3f}] ({parts0}); max cycle E[net] {max(r['fee_aware_s0'] / r['nav'] for r in g) * 1e4:.4f} bp "
+                     f"(largest signed attack E[net] {sig_max('fee_aware_s0_sig')}; fixed s0 {sig_max('fee_aware_sig')})")
+        lines.append(f"  s0 search: {sum(r['s0_n_att'] for r in g)} legal searched attacks, {sum(r['s0_n_pos_sq'] for r in g)} "
+                     f"sq-positive; attacks whose pushed spot the status quo filters but a searched s0 does not: "
+                     f"{sum(r['s0_new_pos'] for r in g)}; where both are evaluated, a searched s0 beat the pushed spot on "
+                     f"{sum(r['s0_beats'] for r in g)} attacks {wins or ''}, largest gain "
+                     + (f"{gmax[0] * 1e4:+.4f} bp ({gmax[1]})" if gmax[0] is not None else "none")
+                     + " (best searched fee-aware E[net] − the pushed spot's)")
+        lines.append(f"  C120 largest signed attack E[net]: placements {sig_max('c_sig')}; pre-swap {sig_max('c_b_sig')}")
+        swfa = {d: SWAPS_PER_YEAR * SWAP_FRAC * max(0.0, afa[d][0]) * 1e-4 for d in afa}
         for d in ("gbm", "t3"):
-            lines.append(f"  swap (a) {d}: s16 {sw16[d] * 100:.3f}%/yr (best E[net]/Δx {a16[d][0]:+.2f} ticks at D {a16[d][1]}; "
-                         f"cap binds {a16[d][2] * 100:.1f}%) | C120 best E[net]/Δx {a05[d][1]:+.2f} ticks at D {a05[d][2]}")
-        p16, _ = place("s16")
-        pt3, _ = place("s16_t3")
-        tot16 = p16[0] + max(sw16["gbm"], best_b("s16_b"))
-        tot16t = pt3[0] + max(sw16["t3"], best_b("s16_b_t3"))
+            lines.append(f"  swap (a) {d}: fee_aware {swfa[d] * 100:.3f}%/yr (best E[net]/Δx {afa[d][0]:+.2f} ticks at D {afa[d][1]}; "
+                         f"cap binds {afa[d][2] * 100:.1f}%) | C120 best E[net]/Δx {a05[d][1]:+.2f} ticks at D {a05[d][2]}")
+        pt3, _ = place("fa_s0_t3")
+        tot_fa = ps0[0] + max(swfa["gbm"], best_b("fee_aware_b"))
+        tot_fat = pt3[0] + max(swfa["t3"], best_b("fa_b_t3"))
         n_pos = sum(r["n_pos_sq"] for r in g)
         n_pos_b = sum(r["n_pos_sq_b"] for r in g)
-        lk, _ = place("s16_lucky")
-        lines.append(f"  s16 t3: placements {pt3[0] * 100:.3f}%; max cycle E[net] {max(r['s16_t3'] / r['nav'] for r in g) * 1e4:.4f} bp; "
-                     f"pre-swap (b) {best_b('s16_b_t3') * 100:.3f}%/yr")
-        lines.append(f"  s16 luckiest draw (info): placements {lk[0] * 100:.3f}%/yr; max per cycle "
-                     f"{max(r['s16_lucky'] / r['nav'] for r in g) * 1e4:.4f} bp")
-        lines.append(f"  s16 reserve cap binds on {sum(r['s16_bind_sum'] for r in g) / max(1, n_pos) * 100:.2f}% of draws "
-                     f"(placements, {n_pos} sq-positive attacks) and {sum(r['s16_bind_b_sum'] for r in g) / max(1, n_pos_b) * 100:.2f}% "
+        lk, _ = place("fa_lucky")
+        lines.append(f"  fee_aware t3 (s0 searched): placements {pt3[0] * 100:.3f}%; max cycle E[net] "
+                     f"{max(r['fa_s0_t3'] / r['nav'] for r in g) * 1e4:.4f} bp; pre-swap (b) {best_b('fa_b_t3') * 100:.3f}%/yr")
+        lines.append(f"  fee_aware luckiest draw (info, fixed s0): placements {lk[0] * 100:.3f}%/yr; max per cycle "
+                     f"{max(r['fa_lucky'] / r['nav'] for r in g) * 1e4:.4f} bp")
+        lines.append(f"  fee_aware reserve cap binds on {sum(r['fa_bind_sum'] for r in g) / max(1, n_pos) * 100:.2f}% of draws "
+                     f"(placements, {n_pos} sq-positive attacks) and {sum(r['fa_bind_b_sum'] for r in g) / max(1, n_pos_b) * 100:.2f}% "
                      f"(pre-swap, {n_pos_b})")
-        if ablation:
-            lines.append(f"  differential v0 (exact ticks, every s16 element off) vs C120 (0.25-tick grid): max |ΔE[net]| per "
-                         f"attack {max(r['v0_diff'] for r in g) * 1e4:.2e} bp (placements), {max(r['v0_b_diff'] for r in g) * 1e4:.2e} bp (pre-swap)")
-        lines.append(f"  TOTAL s16 (placements + max(a, b)): {tot16 * 100:.3f}%/yr (bound {BOUND[sg] * 100:.1f}); t3 "
-                     f"{tot16t * 100:.3f}%/yr (bound {2 * BOUND[sg] * 100:.1f})")
+        lines.append(f"  differential v0 (exact ticks, every fee-aware element off) vs C120 (0.25-tick grid): max |ΔE[net]| per "
+                     f"attack {max(r['v0_diff'] for r in g) * 1e4:.2e} bp (placements), {max(r['v0_b_diff'] for r in g) * 1e4:.2e} bp "
+                     f"(pre-swap{'' if ablation else '; computed with M2D_DIFF=1 on fit seeds only'})")
+        lines.append(f"  TOTAL fee_aware (placements with s0 searched + max(a, b)): {tot_fa * 100:.3f}%/yr (bound {BOUND[sg] * 100:.1f}); t3 "
+                     f"{tot_fat * 100:.3f}%/yr (bound {2 * BOUND[sg] * 100:.1f})")
     return "\n".join(lines)
 
 
-if __name__ == "__main__" and len(sys.argv) > 2 and sys.argv[1] == "--seeds":
-    first, end = (int(x) for x in sys.argv[2].split(":"))
-    procs = int(sys.argv[3]) if len(sys.argv) > 3 else 9
-    jobs = [(s, sg, CAP, None) for sg in (0.6, 1.2) for s in range(first, end)]
+def git_meta():
+    """The commit the run executes (and whether tracked files had uncommitted changes)."""
+    import subprocess
+    try:
+        head = subprocess.run(["git", "-C", ROOT, "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
+        dirty = bool(subprocess.run(["git", "-C", ROOT, "status", "--porcelain", "--untracked-files=no"],
+                                    capture_output=True, text=True, check=True).stdout.strip())
+    except (OSError, subprocess.CalledProcessError):
+        head, dirty = None, None
+    return dict(commit=head, dirty=dirty)
+
+
+def meta_of(rows, wall_s):
+    """The traceability record of a run: commit, command, wall time and per σ the margins."""
+    m = dict(git_meta(), argv=sys.argv, wall_s=round(wall_s, 1), cycles=len(rows), sigmas={})
+    for sg in sorted({r["sigma"] for r in rows}):
+        g = [r for r in rows if r["sigma"] == sg]
+        gains = [r["s0_gain"] for r in g if r["s0_gain"] > -1e29]
+        m["sigmas"][str(sg)] = dict(
+            largest_signed_bp=dict(c120=sig_max_bp(g, "c_sig"), c120_preswap=sig_max_bp(g, "c_b_sig"),
+                                   fee_aware_fixed_s0=sig_max_bp(g, "fee_aware_sig"),
+                                   fee_aware_s0_searched=sig_max_bp(g, "fee_aware_s0_sig"),
+                                   fee_aware_preswap=sig_max_bp(g, "fee_aware_b_sig")),
+            s0_beats=sum(r["s0_beats"] for r in g), s0_gain_max_bp=max(gains) * 1e4 if gains else None,
+            s0_new_pos=sum(r["s0_new_pos"] for r in g), s0_sq_pos=sum(r["s0_n_pos_sq"] for r in g),
+            v0_diff_max_bp=max(r["v0_diff"] for r in g) * 1e4, v0_b_diff_max_bp=max(r["v0_b_diff"] for r in g) * 1e4,
+            sq_pos_attacks=sum(r["n_pos_sq"] for r in g), cycles_fa_s0_pos=sum(1 for r in g if r["fee_aware_s0"] > 0))
+    return m
+
+
+def run_pool(jobs, procs, every=20):
+    """Runs the jobs on `procs` workers; returns the rows, the wall time and the summed assertion counts."""
     t0 = time.time()
-    rows = []
+    rows, checks = [], {}
     with mp.Pool(procs) as pool:
-        for i, rr in enumerate(pool.imap_unordered(run, jobs)):
+        for i, (rr, ck) in enumerate(pool.imap_unordered(run_checked, jobs)):
             rows.extend(rr)
-            if (i + 1) % 20 == 0:
+            for k_, v_ in ck.items():
+                checks[k_] = checks.get(k_, 0) + v_
+            if (i + 1) % every == 0 or i + 1 == len(jobs):
                 print(f"{i + 1}/{len(jobs)} {time.time() - t0:.0f}s", flush=True, file=sys.stderr)
-    out = os.path.join(ROOT, "output", OUT_TAG)
+    return rows, time.time() - t0, checks
+
+
+def run_checked(args):
+    """`run` plus the assertion counts of this job (the counters live in the worker process)."""
+    before = dict(CHECKS)
+    rows = run(args)
+    return rows, {k_: CHECKS[k_] - before[k_] for k_ in CHECKS}
+
+
+if __name__ == "__main__" and len(sys.argv) > 3 and sys.argv[1] == "--merge":
+    # python3 model/cells/m2d_rate.py --merge OUT_STEM part1.json part2.json ...: one summary over slices run separately
+    # (each slice keeps its own meta: commit, command, wall time); writes OUT_STEM.json/.txt
+    stem, parts = sys.argv[2], sys.argv[3:]
+    rows, metas = [], []
+    for p_ in parts:
+        with open(p_) as fh:
+            d_ = json.load(fh)
+        rows.extend(d_["rows"])
+        metas.append(dict(d_["meta"], file=os.path.abspath(p_)))
+    commits = {m_["commit"] for m_ in metas}
+    meta = meta_of(rows, sum(m_["wall_s"] for m_ in metas))
+    meta.update(parts=metas, commits_agree=len(commits) == 1, any_dirty=any(m_["dirty"] for m_ in metas))
+    seeds = sorted({r_["seed"] for r_ in rows})
+    s = (f"m2d_rate re-gate (merged {len(parts)} slices), reserve {CAP:g}·NAV (seeds {seeds[0]}–{seeds[-1]}, {len(set(seeds))} "
+         f"seeds, {len(rows)} cycles, {meta['wall_s']:.0f} s summed; commits {sorted(c_ or '?' for c_ in commits)}"
+         f"{' (uncommitted changes in a slice)' if meta['any_dirty'] else ''})"
+         + summarise(rows, CAP, None) + "\n" + summarise_fa(rows, ablation=seeds[0] < 100))
+    with open(stem + ".json", "w") as fh:
+        json.dump(dict(meta=meta, rows=rows), fh, default=str)
+    with open(stem + ".txt", "w") as fh:
+        fh.write(s + "\n")
+    print(s)
+    sys.exit(0)
+
+if __name__ == "__main__" and len(sys.argv) > 2 and sys.argv[1] == "--seeds":
+    args = sys.argv[2:]
+    out = OUT_DIR
+    if "--out" in args:
+        j = args.index("--out")
+        out = os.path.abspath(args[j + 1])
+        args = args[:j] + args[j + 2:]
+    first, end = (int(x) for x in args[0].split(":"))
+    procs = int(args[1]) if len(args) > 1 else 2
+    jobs = [(s, sg, CAP, None) for sg in (0.6, 1.2) for s in range(first, end)]
+    rows, wall, checks = run_pool(jobs, procs)
     os.makedirs(out, exist_ok=True)
+    meta = meta_of(rows, wall)
+    meta["checks"] = checks
+    s = (f"m2d_rate re-gate, reserve {CAP:g}·NAV (seeds {first}–{end - 1}, {len(rows)} cycles, {wall:.0f} s; commit "
+         f"{meta['commit']}{' (uncommitted changes)' if meta['dirty'] else ''})"
+         + summarise(rows, CAP, None) + "\n" + summarise_fa(rows, ablation=first < 100))
     with open(os.path.join(out, f"m2d_rate_{first}-{end - 1}.json"), "w") as fh:
-        json.dump(rows, fh, default=str)
-    s = (f"m2d_rate re-gate, reserve {CAP:g}·NAV (seeds {first}–{end - 1}, {len(rows)} cycles, {time.time() - t0:.0f} s)"
-         + summarise(rows, CAP, None) + "\n" + summarise16(rows, ablation=first < 100))
+        json.dump(dict(meta=meta, rows=rows), fh, default=str)
     print(s)
     with open(os.path.join(out, f"m2d_rate_{first}-{end - 1}.txt"), "w") as fh:
         fh.write(s + "\n")
@@ -682,22 +961,22 @@ if __name__ == "__main__" and len(sys.argv) > 2 and sys.argv[1] == "--seeds":
 
 if __name__ == "__main__":
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 100
-    procs = int(sys.argv[2]) if len(sys.argv) > 2 else 9
+    procs = int(sys.argv[2]) if len(sys.argv) > 2 else 2
     cap = float(sys.argv[3]) if len(sys.argv) > 3 else CAP               # the settlement reserve (fraction of NAV)
     clamp = int(sys.argv[4]) if len(sys.argv) > 4 and sys.argv[4] != "none" else None   # diagnostic only
     tag = ("" if cap == CAP else f"_cap{cap:g}") + ("" if clamp is None else f"_clamp{clamp}")
     jobs = [(s, sg, cap, clamp) for sg in (0.6, 1.2) for s in range(n)]
     assert max(j[0] for j in jobs) < 100
-    t0 = time.time()
-    rows = []
-    with mp.Pool(procs) as pool:
-        for i, rr in enumerate(pool.imap_unordered(run, jobs)):
-            rows.extend(rr)
-            print(f"{i + 1}/{len(jobs)} {time.time() - t0:.0f}s", flush=True, file=sys.stderr)
+    rows, wall, checks = run_pool(jobs, procs, every=1)
     os.makedirs(OUT, exist_ok=True)
+    meta = meta_of(rows, wall)
+    meta["checks"] = checks
     with open(os.path.join(OUT, f"m2d_rate_fit_v3{tag}.json"), "w") as fh:
-        json.dump(rows, fh, default=str)
-    s = f"m2d_rate C120, reserve cap {cap:g}·NAV, clamp {clamp} (fit seeds 0–{n - 1}, {len(rows)} cycles, {time.time() - t0:.0f} s)" + summarise(rows, cap, clamp)
+        json.dump(dict(meta=meta, rows=rows), fh, default=str)
+    s = f"m2d_rate C120, reserve cap {cap:g}·NAV, clamp {clamp} (fit seeds 0–{n - 1}, {len(rows)} cycles, {wall:.0f} s)" + summarise(rows, cap, clamp)
+    if cap == CAP and clamp is None:
+        s += "\n" + summarise_fa(rows, ablation=True)
+    s += f"\nassertions executed (M2D_DIFF={int(DIFF)}): {checks}"
     print(s)
     with open(os.path.join(OUT, f"m2d_rate_fit_v3{tag}.txt"), "w") as fh:
         fh.write(s + "\n")

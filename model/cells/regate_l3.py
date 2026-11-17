@@ -11,12 +11,21 @@ The honest curator tops up its bond (modelled as a bond large enough never to bi
 L8: edge-6h at m = 1%/yr with the bond at `BOND_RATIO`·S from seed, eroding with every bond burn and never topped up,
 the solvency gate enforced: the share of wanted actions that revert (by error), settlement fallbacks and breaches.
 
-The settlement applied is the model's (fee-aware, spec §3.4) unless L3_RULE=s05 selects the holdings-only rule
-(`sim.SETTLE`); every settlement also records the other rules on the same pending record, which gives the honest
-settlement cost of the mimic per bucket.
+The settlement applied is the model's (fee-aware, spec §3.4) unless L3_RULE=holdings_only selects the holdings-only
+rule (`sim.SETTLE`); every settlement also records the other rules on the same pending record, which gives the honest
+settlement cost of the mimic per bucket. The markout read floors each block's close to an integer tick before the
+window mean is floored (`sim.SETTLE["int_closes"]`; L3_CONT_CLOSES=1 restores the continuous mean of earlier runs).
 
-Usage: python3 model/cells/regate_l3.py <first_seed> <n_seeds> [procs]
-(writes output/$L3_OUT/l3-<rule>-<first>-<n>.json/.txt, default output/s16)
+HONEST-COST ROW (S16F-02): the mimic (edge-6h) at m = 2.2%/yr without an observer, every settlement classed by the
+action it settles (all; placements; placements with / without the vault's own move; exit re-entries (the market
+outside the range before the action) / in-range re-placements; swaps): per class the count, mean and max burnS
+(fraction of the supply S_act) and extra (fraction of NAV), the share with burnS > 0, the reserve-capped count and the
+annual cost in %NAV/yr (mean over paths, 90% CI), under the fee-aware rule next to the holdings-only rule.
+
+Usage: python3 model/cells/regate_l3.py <first_seed> <n_seeds> [procs] [--honest-only] [--out DIR]
+--honest-only runs only the honest-cost row's simulations (the mimic, m = 2.2%/yr, no observer; no L3 verdict, no L8).
+Writes DIR/l3-<rule>-<first>-<n>[-honest].json/.txt (DIR: --out, else $L3_OUT_DIR, else output/fee_aware); the summary
+JSON's `meta` holds the commit, the command and the wall time. Seeds < 100 need TS_SMOKE=1.
 """
 import json
 import math
@@ -36,18 +45,30 @@ MS = (0.0, 0.01, 0.022)
 MIMIC = "edge-6h"
 BOTS = tuple(dict.fromkeys((MIMIC, "edge60") + B.GATED + B.REPORTED))
 ROOT = os.path.dirname(os.path.dirname(HERE))
-OUT = os.path.join(ROOT, "output", os.environ.get("L3_OUT", "s16"))
-RULE = os.environ.get("L3_RULE", "s15")          # the settlement applied: s15 (the model's, fee-aware) or s05
+OUT = os.environ.get("L3_OUT_DIR", os.path.join(ROOT, "output", "fee_aware"))
+RULE = os.environ.get("L3_RULE", "fee_aware")    # the settlement applied: fee_aware (the model's) or holdings_only
+assert RULE in S.RULES, RULE
+INT_CLOSES = os.environ.get("L3_CONT_CLOSES") != "1"
 S.SETTLE["rule"] = RULE
+S.SETTLE["int_closes"] = INT_CLOSES
 WAD = 10 ** 18
+HONEST_M = 0.022
 
 
 def job(args):
-    seed, kind, sigma = args
+    seed, kind, sigma, honest_only = args
     S.SETTLE["rule"] = RULE
+    S.SETTLE["int_closes"] = INT_CLOSES
     assert seed >= 100 or os.environ.get("TS_SMOKE"), "held-out seeds only (100-299 reported, 300-499 judged)"
     path = S.market_path(seed, sigma, I.DAYS, kind, edge=T0 + 1000)
     rows = []
+    if honest_only:   # the honest-cost row only: the mimic at m = 2.2%/yr, no observer (the same Sim as the full run's)
+        sim = S.Sim(path, HONEST_M, observer=False, place=B.PLACES.get(MIMIC, True), sigma=sigma,
+                    rng_seed=seed * 1009 + int(sigma * 100), bond_ratio=WAD)
+        r = sim.run(B.make(MIMIC), I.DAYS * 24)
+        r.pop("action_charges")
+        r.update(bot=MIMIC, seed=seed, kind=kind, sigma=sigma, m=HONEST_M, observer=False)
+        return [r], None
     for name in BOTS:
         variants = (True,) if name == "lazy-under-ladder" else (False,) if name == "lazy" else (False, True)
         for obs in variants:
@@ -95,30 +116,9 @@ def analyse(rows, l8):
                      f"{' (reported)' if kind == 'hover' else ''}; mimic mean {g['mimic_mean']:+.3f} p5 {g['mimic_p5']:+.3f} ETH; "
                      f"charges {g['charges_yr']:.2f} ETH/yr, actions {g['actions_yr']:.0f}/yr; delayed-24h − mimic "
                      f"{-dl['diff']:+.3f} (SE {dl['se']:.3f})")
-    # the honest settlement cost: the mimic (edge-6h, no observer) at m = 2.2%/yr; every settlement evaluated under the
-    # s15 rule, the s05 rule and s05 with the upper leg rounded up (s14), on the same pending records
-    lines.append(f"Honest settlement cost (edge-6h, m = 2.2%/yr, no observer; applied rule {RULE}; the other rules computed "
-                 "on the same pending records):")
-    yr = 365 / I.DAYS
-    for (kind, sigma) in I.KINDS:
-        xs = [r for r in rows if r["bot"] == MIMIC and not r["observer"] and r["m"] == 0.022 and r["kind"] == kind
-              and r["sigma"] == sigma]
-        st = [r["settle_stats"] for r in xs]
-        n = sum(x["n"] for x in st)
-        d = dict(n=n, settles_yr=n / len(st) * yr)
-        for k in ("x15", "x05", "x14", "b15", "b05", "b14"):
-            d[k + "_mean"] = sum(x[k + "_sum"] for x in st) / max(1, n)
-            d[k + "_max"] = max(x[k + "_max"] for x in st)
-            d[k + "_pos_share"] = sum(x[k + "_pos"] for x in st) / max(1, n)
-            d[k + "_yr"] = mean_ci([x[k + "_sum"] * yr for x in st])
-        d["cap15"] = sum(x["cap15"] for x in st)
-        out.setdefault("honest_cost", {})[I.bucket(kind, sigma)] = d
-        lines.append(f"  {I.bucket(kind, sigma)}: {n} settlements ({d['settles_yr']:.0f}/yr); extra per settlement (NAV) s15 mean "
-                     f"{d['x15_mean']:.3e} max {d['x15_max']:.3e} | s05 mean {d['x05_mean']:.3e} max {d['x05_max']:.3e} | s14 mean "
-                     f"{d['x14_mean']:.3e}; burnS > 0 on s15 {d['b15_pos_share'] * 100:.1f}% / s05 {d['b05_pos_share'] * 100:.1f}% / "
-                     f"s14 {d['b14_pos_share'] * 100:.1f}%; annual %NAV/yr s15 {d['x15_yr'][0] * 100:.4f} [{d['x15_yr'][1] * 100:.4f}, "
-                     f"{d['x15_yr'][2] * 100:.4f}] | s05 {d['x05_yr'][0] * 100:.4f} | s14 {d['x14_yr'][0] * 100:.4f}; s15 − s05 "
-                     f"{(d['x15_yr'][0] - d['x05_yr'][0]) * 100:+.4f} %NAV/yr; reserve caps s15 on {d['cap15']}")
+    hc, hl = honest_cost(rows)
+    out["honest_cost"] = hc
+    lines += hl
     # L8
     lines.append("L8 liveness (edge-6h, m = 1%, eroding BOND_RATIO·S bond, gate enforced, no top-up):")
     for (kind, sigma) in I.KINDS:
@@ -140,24 +140,87 @@ def analyse(rows, l8):
     return out, "\n".join(lines)
 
 
+def honest_cost(rows):
+    """The honest-cost row: the mimic (edge-6h, no observer) at m = 2.2%/yr; every settlement evaluated under the
+    fee-aware rule, the holdings-only rule and the holdings-only rule with the upper leg rounded up, on the same pending
+    records, classed by the settled action (`sim.Sim.SETTLE_CLASSES`)."""
+    lines = [f"Honest settlement cost (edge-6h, m = 2.2%/yr, no observer; applied rule {RULE}; markout closes "
+             f"{'integer per block' if INT_CLOSES else 'continuous'}; the other rules computed on the same pending records). "
+             "burnS as a fraction of S_act, extra as a fraction of NAV; per class: settlements, burnS mean / max, share "
+             "with burnS > 0, extra mean / max, %NAV/yr [90% CI] (fee-aware) | holdings-only %NAV/yr:"]
+    out = {}
+    yr = 365 / I.DAYS
+    for (kind, sigma) in I.KINDS:
+        xs = [r for r in rows if r["bot"] == MIMIC and not r["observer"] and r["m"] == HONEST_M and r["kind"] == kind
+              and r["sigma"] == sigma]
+        if not xs:
+            continue
+        b = I.bucket(kind, sigma)
+        out[b] = {}
+        lines.append(f"  {b} ({len(xs)} paths):")
+        for cls in S.Sim.SETTLE_CLASSES:
+            st = [r["settle_stats"][cls] for r in xs]
+            n = sum(x["n"] for x in st)
+            d = dict(n=n, per_path_yr=n / len(st) * yr, cap_fa=sum(x["cap_fa"] for x in st))
+            for k in S.Sim.SETTLE_KEYS:
+                d[k + "_mean"] = sum(x[k + "_sum"] for x in st) / max(1, n)
+                d[k + "_max"] = max(x[k + "_max"] for x in st)
+                d[k + "_pos_share"] = sum(x[k + "_pos"] for x in st) / max(1, n)
+                d[k + "_yr"] = mean_ci([x[k + "_sum"] * yr for x in st])
+            out[b][cls] = d
+            if n == 0:
+                lines.append(f"    {cls:12s}: 0 settlements")
+                continue
+            lines.append(f"    {cls:12s}: {n} ({d['per_path_yr']:.0f}/yr); burnS mean {d['b_fa_mean']:.3e} max {d['b_fa_max']:.3e}, "
+                         f"> 0 on {d['b_fa_pos_share'] * 100:.1f}%; extra mean {d['x_fa_mean']:.3e} max {d['x_fa_max']:.3e}; "
+                         f"{d['x_fa_yr'][0] * 100:.4f} [{d['x_fa_yr'][1] * 100:.4f}, {d['x_fa_yr'][2] * 100:.4f}] %NAV/yr | "
+                         f"holdings-only {d['x_ho_yr'][0] * 100:.4f} (upper leg + 1: {d['x_ho1_yr'][0] * 100:.4f}); "
+                         f"fee-aware − holdings-only {(d['x_fa_yr'][0] - d['x_ho_yr'][0]) * 100:+.4f} %NAV/yr; reserve caps "
+                         f"{d['cap_fa']}")
+    return out, lines
+
+
 if __name__ == "__main__":
-    first, n = int(sys.argv[1]), int(sys.argv[2])
-    procs = int(sys.argv[3]) if len(sys.argv) > 3 else 9
-    jobs = [(sd, k, s) for (k, s) in I.KINDS for sd in range(first, first + n)]
+    import subprocess
+    args = sys.argv[1:]
+    if "--out" in args:
+        j = args.index("--out")
+        OUT = os.path.abspath(args[j + 1])
+        args = args[:j] + args[j + 2:]
+    honest_only = "--honest-only" in args
+    args = [x for x in args if x != "--honest-only"]
+    first, n = int(args[0]), int(args[1])
+    procs = int(args[2]) if len(args) > 2 else 2
+    jobs = [(sd, k, s, honest_only) for (k, s) in I.KINDS for sd in range(first, first + n)]
     t0 = time.time()
     rows, l8 = [], []
     with mp.Pool(procs) as pool:
-        for i, (r, x) in enumerate(pool.imap_unordered(job, jobs, chunksize=2)):
+        for i, (r, x) in enumerate(pool.imap_unordered(job, jobs, chunksize=1 if honest_only else 2)):
             rows.extend(r)
-            l8.append(x)
-            if (i + 1) % 50 == 0:
+            if x is not None:
+                l8.append(x)
+            if (i + 1) % 10 == 0 or i + 1 == len(jobs):
                 print(f"{i + 1}/{len(jobs)} {time.time() - t0:.0f}s", flush=True, file=sys.stderr)
+    wall = time.time() - t0
+    try:
+        commit = subprocess.run(["git", "-C", ROOT, "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
+        dirty = bool(subprocess.run(["git", "-C", ROOT, "status", "--porcelain", "--untracked-files=no"], capture_output=True,
+                                    text=True, check=True).stdout.strip())
+    except (OSError, subprocess.CalledProcessError):
+        commit, dirty = None, None
     os.makedirs(OUT, exist_ok=True)
-    tag = f"{RULE}-{first}-{n}" + ("-smoke" if os.environ.get("TS_SMOKE") else "")
+    tag = f"{RULE}-{first}-{n}" + ("-honest" if honest_only else "") + ("-smoke" if os.environ.get("TS_SMOKE") else "")
     with open(os.path.join(OUT, f"l3-{tag}.json"), "w") as fh:
         json.dump(dict(rows=rows, l8=l8), fh)
-    out, txt = analyse(rows, l8)
-    txt = f"L3/L8 seeds {first}-{first + n - 1}, settlement {RULE} ({len(rows)} runs, {time.time() - t0:.0f} s)\n" + txt
+    if honest_only:
+        out, lines = honest_cost(rows)
+        txt = "\n".join(lines)
+    else:
+        out, txt = analyse(rows, l8)
+    out["meta"] = dict(commit=commit, dirty=dirty, argv=sys.argv, wall_s=round(wall, 1), runs=len(rows), rule=RULE,
+                       int_closes=INT_CLOSES)
+    txt = (f"L3{'' if honest_only else '/L8'} seeds {first}-{first + n - 1}, settlement {RULE} ({len(rows)} runs, {wall:.0f} s; "
+           f"commit {commit}{' (uncommitted changes)' if dirty else ''})\n" + txt)
     print(txt)
     with open(os.path.join(OUT, f"l3-{tag}.txt"), "w") as fh:
         fh.write(txt + "\n")

@@ -147,13 +147,17 @@ R.Pool.collect = _measured_collect
 
 
 # ----------------------------------------------------------------------------- the settlement rule and its shadow
-# The model's settlement is the fee-aware one (spec §3.4; `R.settle_extra`). For the comparison on the same paths the
-# earlier rule (holdings-only legs tick_mk ± FEE_TICKS, extra = min(reserve, max(0, loss − charge₀)), burnS =
-# min(reserveShares, ceilDiv(extra·S, NAV_now(p_mk))) at the holdings and supply at settlement) can be selected with
-# SETTLE["rule"] = "s05"; the variant with the upper leg rounded up ("s14") is computed alongside. Every settlement
-# records all three on the vault (`settle_log`), whichever rule is applied.
+# The model's settlement is the fee-aware one (spec §3.4; `R.settle_extra`; SETTLE["rule"] = "fee_aware"). For the
+# comparison on the same paths the earlier holdings-only rule (legs tick_mk ± FEE_TICKS, extra = min(reserve, max(0,
+# loss − charge₀)), burnS = min(reserveShares, ceilDiv(extra·S, NAV_now(p_mk))) at the holdings and supply at
+# settlement) can be selected with SETTLE["rule"] = "holdings_only"; the holdings-only variant with the upper leg
+# rounded up ("holdings_only_up1") is computed alongside. Every settlement records all three on the vault
+# (`settle_log`), whichever rule is applied. SETTLE["int_closes"] (default off, for the cells gated before it existed)
+# floors each block's close to an integer tick before the window mean is floored (the reference pool's closes are
+# integer ticks per block, so `tryWindow` returns floor(mean_k floor(close_k))); off, the continuous mean is floored.
 _ORIG_SETTLE = R.settle_extra
-SETTLE = {"rule": "s15", "vault": None}
+RULES = ("fee_aware", "holdings_only")
+SETTLE = {"rule": "fee_aware", "vault": None, "int_closes": False}
 
 
 def settle_holdings_only(before, after, tick_mk, fee_ticks, charge0, reserve, now_h, S, reserve_shares, up1):
@@ -174,15 +178,16 @@ def settle_holdings_only(before, after, tick_mk, fee_ticks, charge0, reserve, no
 
 def _settle_shadow(before, after, pend, tick_mk, fee_ticks, fee_pips, reserve_shares):
     v = SETTLE["vault"]
-    r15 = _ORIG_SETTLE(before, after, pend, tick_mk, fee_ticks, fee_pips, reserve_shares)
-    r05 = settle_holdings_only(before, after, tick_mk, fee_ticks, pend["charge0"], pend["reserve"], v.h, v.S,
-                               reserve_shares, False)
-    r14 = settle_holdings_only(before, after, tick_mk, fee_ticks, pend["charge0"], pend["reserve"], v.h, v.S,
-                               reserve_shares, True)
+    assert SETTLE["rule"] in RULES, SETTLE["rule"]
+    r_fa = _ORIG_SETTLE(before, after, pend, tick_mk, fee_ticks, fee_pips, reserve_shares)
+    r_ho = settle_holdings_only(before, after, tick_mk, fee_ticks, pend["charge0"], pend["reserve"], v.h, v.S,
+                                reserve_shares, False)
+    r_ho1 = settle_holdings_only(before, after, tick_mk, fee_ticks, pend["charge0"], pend["reserve"], v.h, v.S,
+                                 reserve_shares, True)
     v.__dict__.setdefault("settle_log", []).append(
-        dict(x15=r15[0], b15=r15[2], x05=r05[0], b05=r05[2], x14=r14[0], b14=r14[2], sAct=pend["sAct"], S=v.S,
-             rs=reserve_shares))
-    return r15 if SETTLE["rule"] == "s15" else r05
+        dict(x_fa=r_fa[0], b_fa=r_fa[2], x_ho=r_ho[0], b_ho=r_ho[2], x_ho1=r_ho1[0], b_ho1=r_ho1[2], sAct=pend["sAct"],
+             S=v.S, rs=reserve_shares))
+    return r_fa if SETTLE["rule"] == "fee_aware" else r_ho
 
 
 R.settle_extra = _settle_shadow
@@ -219,7 +224,8 @@ class Sim:
         self.trade = 0.0            # the curator's own trading P&L (spot moves), valued at the market
         self.counts = dict(actions=0, pokes=0, pings=0, moves=0, reverts=0, arbs=0, settles=0, fallbacks=0)
         self.extras = []            # markout extras at settlement (fraction of NAV), measurement only
-        self.settle_rows = []       # per settlement: s15 / s05 / s14 extra (fraction of NAV) and burn (fraction of S)
+        self.settle_rows = []       # per settlement: the three rules' extra (fraction of NAV) and burn (fraction of S),
+        self.pend_tag = None        # tagged with the settled action (kind, the vault's own move, out of range before it)
         self.reverts = {}
         self.in_actual = 0
         self.hours = 0
@@ -233,6 +239,7 @@ class Sim:
         br = self.t.BOND_RATIO if bond_ratio is None else bond_ratio
         self.v.bank.bondShares = R.mul_div(self.v.S, br, R.WAD)   # the bond at BOND_RATIO·S; depositors hold the rest
         if place:
+            self.pend_tag = dict(kind="seed", move=False, exit=False)
             lo = floor_sp(T0) - W // 2
             self.v.set_positions(lo, lo + W, R.Vault.NO_PRESWAP, self.B0, self.ts())
             self.settle_pending()
@@ -283,6 +290,8 @@ class Sim:
         for k in range(1, n + 1):
             u = min(max(u, m[k] - FEE_TICKS), m[k] + FEE_TICKS)
             closes.append(u)
+        if SETTLE["int_closes"]:
+            return sum(math.floor(c) for c in closes) // n
         return math.floor(sum(closes) / n)
 
     def settle_pending(self):
@@ -332,24 +341,38 @@ class Sim:
     # calls
     def _drain_settle_log(self, nav):
         """Moves the settlements of the last call (none if it reverted) into `settle_rows`, valued at the NAV at the
-        market before the call."""
+        market before the call and tagged with the action they settle (`pend_tag`)."""
         log = self.v.__dict__.get("settle_log")
         if not log:
             return
+        tag = self.pend_tag or dict(kind="unknown", move=False, exit=False)
         for e in log:
-            self.settle_rows.append((e["x15"] / max(1, nav), e["b15"] / max(1, e["sAct"]), e["x05"] / max(1, nav),
-                                     e["b05"] / max(1, e["S"]), e["x14"] / max(1, nav), e["b14"] / max(1, e["S"]),
-                                     e["b15"] >= e["rs"] > 0))
+            self.settle_rows.append(dict(
+                x_fa=e["x_fa"] / max(1, nav), b_fa=e["b_fa"] / max(1, e["sAct"]), x_ho=e["x_ho"] / max(1, nav),
+                b_ho=e["b_ho"] / max(1, e["S"]), x_ho1=e["x_ho1"] / max(1, nav), b_ho1=e["b_ho1"] / max(1, e["S"]),
+                cap_fa=e["b_fa"] >= e["rs"] > 0, **tag))
         log.clear()
+
+    def _action_tag(self, name, kw):
+        """The class of a curator action, read before the call: placement or swap, with or without the vault's own
+        move, and whether the market was outside the vault's range (an exit re-entry)."""
+        h = self.v.h
+        out = h.L == 0 or not (h.lo <= self.mkt() < h.hi)
+        if name == "set_positions":
+            return dict(kind="place", move=bool(kw.get("move_to")), exit=out)
+        return dict(kind="swap", move=False, exit=out)
 
     def vcall(self, name, *a, gas=None, **kw):
         self.set_pps()
         SETTLE["vault"] = self.v
         nav = self.v.nav(CUR["ms"])
+        tag = self._action_tag(name, kw) if name in ("set_positions", "rebalance_swap") else None
         try:
             r = getattr(self.v, name)(*a, now=self.now, ts=self.ts()) if name != "set_positions" else \
                 self.v.set_positions(*a, self.now, self.ts(), **kw)
             self._drain_settle_log(nav)
+            if tag is not None:
+                self.pend_tag = tag
             return True, r
         except (R.Revert, R.MathRevert) as e:
             self._drain_settle_log(nav)
@@ -481,15 +504,30 @@ class Sim:
         self.poke()
         return self.result(policy)
 
+    SETTLE_KEYS = ("x_fa", "b_fa", "x_ho", "b_ho", "x_ho1", "b_ho1")
+    SETTLE_CLASSES = {  # the honest-cost row's classes of the settled action
+        "all": lambda r: True,
+        "place": lambda r: r["kind"] == "place",
+        "place_move": lambda r: r["kind"] == "place" and r["move"],
+        "place_nomove": lambda r: r["kind"] == "place" and not r["move"],
+        "place_exit": lambda r: r["kind"] == "place" and r["exit"],
+        "place_in": lambda r: r["kind"] == "place" and not r["exit"],
+        "swap": lambda r: r["kind"] == "swap",
+    }
+
     def _settle_stats(self):
-        rows = self.settle_rows
-        out = dict(n=len(rows))
-        for i, k in enumerate(("x15", "b15", "x05", "b05", "x14", "b14")):
-            xs = [r[i] for r in rows]
-            out[k + "_sum"] = sum(xs)
-            out[k + "_max"] = max(xs, default=0.0)
-            out[k + "_pos"] = sum(1 for x in xs if x > 0)
-        out["cap15"] = sum(1 for r in rows if r[6])
+        """Per class of settled action: the count and, per rule, the sum, max and count > 0 of the extra (fraction of
+        NAV) and of the burn (fraction of the supply), and the reserve-capped count under the fee-aware rule."""
+        out = {}
+        for cls, f in self.SETTLE_CLASSES.items():
+            rows = [r for r in self.settle_rows if f(r)]
+            d = dict(n=len(rows), cap_fa=sum(1 for r in rows if r["cap_fa"]))
+            for k in self.SETTLE_KEYS:
+                xs = [r[k] for r in rows]
+                d[k + "_sum"] = sum(xs)
+                d[k + "_max"] = max(xs, default=0.0)
+                d[k + "_pos"] = sum(1 for x in xs if x > 0)
+            out[cls] = d
         return out
 
     def result(self, policy):

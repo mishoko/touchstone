@@ -33,23 +33,23 @@ def case(shift, tick_mk):
                                                      S_ACT, 2 ** 127, 2 ** 127)
     reserve = R.mul_div(RESERVE_RATIO, R.value(before, s)[0], R.WAD)
     pend = dict(s0=s, sEnd=s, charge0=c0, reserve=reserve, burn0=burn0, sAct=S_ACT)
-    ex15, _, b15 = _ORIG_SETTLE(before, after, pend, tick_mk, FEE_TICKS, FEE, burn_r)
+    ex_fa, _, b_fa = _ORIG_SETTLE(before, after, pend, tick_mk, FEE_TICKS, FEE, burn_r)
     S_now = S_ACT - burn0
-    _, _, b05 = settle_holdings_only(before, after, tick_mk, FEE_TICKS, c0, reserve, after, S_now, burn_r, False)
-    _, _, b14 = settle_holdings_only(before, after, tick_mk, FEE_TICKS, c0, reserve, after, S_now, burn_r, True)
-    return dict(shift=shift, tick=tick_mk, c0=c0, burn0=burn0, b15=b15, ex15=ex15, b05=b05, b14=b14, rs=burn_r,
+    _, _, b_ho = settle_holdings_only(before, after, tick_mk, FEE_TICKS, c0, reserve, after, S_now, burn_r, False)
+    _, _, b_ho1 = settle_holdings_only(before, after, tick_mk, FEE_TICKS, c0, reserve, after, S_now, burn_r, True)
+    return dict(shift=shift, tick=tick_mk, c0=c0, burn0=burn0, b_fa=b_fa, ex_fa=ex_fa, b_ho=b_ho, b_ho1=b_ho1, rs=burn_r,
                 Lb=before.L, La=after.L, nav=R.value(before, s)[0])
 
 
 def main():
     print(f"honest re-placement at tick 0, no move; S_act = {S_ACT:.0e}; reserve ratio {RESERVE_RATIO / 1e18:g}")
-    print(f"{'shift':>6} {'tick_mk':>7} {'charge0':>8} {'burnS/S (s15)':>14} {'of reserve':>11} {'extra/NAV':>10} "
-          f"{'burnS/S (s05)':>14} {'(s14)':>10}  L_after/L_before")
+    print(f"{'shift':>6} {'tick_mk':>7} {'charge0':>8} {'burnS/S (fee-aware)':>14} {'of reserve':>11} {'extra/NAV':>10} "
+          f"{'burnS/S (holdings)':>14} {'(+1 leg)':>10}  L_after/L_before")
     for shift in (200, 600, 0, -200):
         for t in (12, 60, -60):
             c = case(shift, t)
-            print(f"{c['shift']:>+6} {c['tick']:>+7} {c['c0']:>8} {c['b15'] / S_ACT:>14.3e} {c['b15'] / c['rs']:>11.3e} "
-                  f"{c['ex15'] / c['nav']:>10.2e} {c['b05'] / S_ACT:>14.3e} {c['b14'] / S_ACT:>10.3e}  {c['La'] / c['Lb']:.4f}")
+            print(f"{c['shift']:>+6} {c['tick']:>+7} {c['c0']:>8} {c['b_fa'] / S_ACT:>14.3e} {c['b_fa'] / c['rs']:>11.3e} "
+                  f"{c['ex_fa'] / c['nav']:>10.2e} {c['b_ho'] / S_ACT:>14.3e} {c['b_ho1'] / S_ACT:>10.3e}  {c['La'] / c['Lb']:.4f}")
 
 
 if __name__ == "__main__":

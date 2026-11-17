@@ -1900,8 +1900,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "    fallback(bytes calldata data) external nonReentrant returns (bytes memory) {",
    "replace": "    fallback(bytes calldata data) external returns (bytes memory) {",
-   "status": "PENDING-RERUN",
-   "basis": "fa4352f1a98b4ef4"
+   "status": "KILLED",
+   "basis": "fb6b91c9da2996f5"
   },
   {
    "id": "MU-161",
@@ -2044,8 +2044,8 @@
    "file": "src/TouchstoneVaultExtension.sol",
    "find": "        if (entry == Entry.Withdraw) return _withdraw(payer, args);\n        revert Ladder.BadMode();",
    "replace": "        if (entry == Entry.Withdraw) return _withdraw(payer, args);\n        return _withdraw(payer, args);",
-   "status": "PENDING-RERUN",
-   "basis": "4790cf2f4d99f0a0"
+   "status": "KILLED",
+   "basis": "5fa3d391bcf51b7c"
   },
   {
    "id": "MU-173",
@@ -3123,7 +3123,8 @@
    "file": "src/TouchstoneVaultExtension.sol",
    "find": "        if (address(this) == SELF) revert NotDelegated();\n",
    "replace": "",
-   "status": "PENDING-RERUN"
+   "status": "KILLED",
+   "basis": "7b0b82ed9e9d9907"
   },
   {
    "id": "MU-264",
@@ -3134,7 +3135,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "                || (sel != IVaultEntries.seed.selector && sel != IVaultEntries.deposit.selector\n                    && sel != IVaultEntries.withdraw.selector)",
    "replace": "                || false",
-   "status": "PENDING-RERUN"
+   "status": "KILLED",
+   "basis": "61298aa2753b703b"
   },
   {
    "id": "MU-265",
@@ -3145,7 +3147,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (ext.code.length == 0) revert BadExtension();\n",
    "replace": "",
-   "status": "PENDING-RERUN"
+   "status": "KILLED",
+   "basis": "817ac470f0ecdfc9"
   },
   {
    "id": "MU-266",
@@ -3156,7 +3159,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (ITouchstoneVaultExtension(ext).VAULT() != address(this)) revert BadExtension();\n",
    "replace": "",
-   "status": "PENDING-RERUN"
+   "status": "KILLED",
+   "basis": "817ac470f0ecdfc9"
   },
   {
    "id": "MU-267",
@@ -3167,7 +3171,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (ITouchstoneVaultExtension(ext).CONFIG_HASH() != CONFIG) revert BadExtension();\n",
    "replace": "",
-   "status": "PENDING-RERUN"
+   "status": "KILLED",
+   "basis": "817ac470f0ecdfc9"
   },
   {
    "id": "MU-268",
@@ -3178,7 +3183,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (entry == Entry.Seed) return _extension(entry, payer, args);\n        if (!_seeded) revert NotSeeded();",
    "replace": "        if (!_seeded) revert NotSeeded();\n        if (entry == Entry.Seed) return _extension(entry, payer, args);",
-   "status": "PENDING-RERUN"
+   "status": "KILLED",
+   "basis": "fc8667915eee1b1a"
   },
   {
    "id": "MU-269",
@@ -3189,7 +3195,8 @@
    "file": "src/TouchstoneFactory.sol",
    "find": "keccak256(extensionCreationCode) != EXTENSION_CODE_HASH",
    "replace": "false",
-   "status": "PENDING-RERUN"
+   "status": "KILLED",
+   "basis": "6b964388f0db9e1c"
   }
  ]
 }

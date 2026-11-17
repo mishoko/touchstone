@@ -17,7 +17,7 @@ import {Obs} from "../../src/types/Obs.sol";
 ///         - Lane 2, across blocks (out in one block, back in the next): τ_v moves only down (a forged ledger can make
 ///           the curator look less in range, never more), τ_b is unchanged, and frozen boundary medians can move (a
 ///           9-block window ending on an "out" block holds 5 of 9 out): the boundaries moved and the coalition's loss
-///           per moved boundary are reported (the off-chain `suspect` flag reads such a median jump); the coalition
+///           per moved boundary are reported (the off-chain `suspect` flag may flag such a median jump); the coalition
 ///           loses.
 ///         The forgery cost (the coalition's loss per round trip and per block of τ_v moved) is reported.
 contract MN3Test is CellBase {
@@ -88,6 +88,7 @@ contract MN3Test is CellBase {
         assertEq(l1.tauB, base.tauB, "lane 1: tau_b");
         assertEq(l1.med9, base.med9, "lane 1: the endpoint median");
         assertGt(base.g1, base.g0, "non-vacuous: several boundaries in the window");
+        assertTrue(l1.g0 == base.g0 && l1.g1 == base.g1 && l2.g0 == base.g0 && l2.g1 == base.g1, "the same window");
         uint256 moved;
         for (uint256 k; k <= base.g1 - base.g0; ++k) {
             assertEq(l1.frozenMed[k], base.frozenMed[k], "lane 1: every frozen boundary median");
@@ -95,7 +96,8 @@ contract MN3Test is CellBase {
         }
         int256 net1 = l1.wealth - base.wealth;
         assertLt(net1, 0, "lane 1 loses");
-        // lane 2: tau_v only down, tau_b and the endpoint unchanged
+        assertGt(moved, 0, "control: the frozen-median comparison discriminates (lane 2 moves boundaries)");
+        // lane 2: tau_v only down, tau_b unchanged; boundary medians may move (reported below)
         assertLe(l2.tauV, base.tauV, "lane 2: tau_v never up");
         assertGt(base.tauV - l2.tauV, 0, "lane 2 moves tau_v (non-vacuous)");
         assertEq(l2.tauB, base.tauB, "lane 2: tau_b");

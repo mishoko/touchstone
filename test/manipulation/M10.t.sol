@@ -20,9 +20,9 @@ import {PreSwap} from "../../src/types/PreSwap.sol";
 ///           > 0 and at most its supply share of the forfeit (the time-weighted share).
 ///           Positive controls (on chain, the defence off): with the drip off (an instant burn) the same-block snipe
 ///           profits (a checkpoint drips before it forfeits, so the burn lands at the sniper's own exit: the drip is
-///           what defends this lane); and shares minted before the forfeit is processed capture an instant burn.
+///           what defends this lane); a detection check shows an instant burn reaching holders at processing.
 ///         - Lane B, the base mint (what the checkpoint on every supply change defends): a deposit while base is
-///           pending is priced after the mint (a same-block exit returns what was paid, killer of MU-278), and
+///           pending is priced after the mint (a same-block exit returns what was paid), and
 ///           observed in-range time has accrued base that no one has minted; a holder withdraws
 ///           (its checkpoint mints the base first). Pass: the payout is the post-mint pro-rata share. Positive control:
 ///           the payout without the checkpoint (pre-mint pro-rata) exceeds it, so the escape the defence closes is real.
@@ -104,9 +104,9 @@ contract M10Test is LiquidPoolBase {
         }
     }
 
-    /// @notice Positive control (on chain): shares minted before the forfeit is processed (the window the checkpoint on
-    ///         every supply change closes: here the deposit precedes the breach's latch) capture the instant burn.
-    function test_M_10__ctlSharesMintedBeforeTheForfeitIsProcessedProfit() public {
+    /// @notice Detection check (no defence off): with an instant burn, shares held when the forfeit is processed (here a
+    ///         deposit before the breach latches: an ordinary holder) receive it, so the measure sees the burn.
+    function test_M_10__ctlAnInstantBurnReachesHoldersAtProcessing() public {
         Bank memory b = hv.bankFull();
         (b.maturedPending, b.bondShares, b.dripBlocks) = (b.maturedPending + 5e23, b.bondShares - 5e23, 0);
         hv.setBank(b);
@@ -120,7 +120,7 @@ contract M10Test is LiquidPoolBase {
         int256 pnl = _val(o0, o1) - _val(i0, i1);
         console.log("M-10 control, minted before the forfeit");
         console.logInt(pnl);
-        assertGt(pnl, 0, "control: a holder before the forfeit captures it");
+        assertGt(pnl, 0, "detection: an instant burn reaches holders");
     }
 
     function test_M_10__ctlSnipeHeldThroughTheDripGainsItsTimeWeightedShare() public {
@@ -143,7 +143,7 @@ contract M10Test is LiquidPoolBase {
         (nav,) = ExecLedger.value(hv.holdings(), TickMath.getSqrtPriceAtTick(0));
     }
 
-    /// @notice Lane B, the deposit side (killer of MU-278, the deposit without its checkpoint): a deposit while base is
+    /// @notice Lane B, the deposit side (killer of MU-037's class: the deposit without its checkpoint): a deposit while base is
     ///         accrued and unminted is priced after the mint, so a same-block exit returns what was paid (less rounding).
     ///         Without the checkpoint the depositor's new shares would be diluted by the mint its own exit triggers.
     function test_M_10__depositBeforeAPendingBaseMintIsPricedAfterIt() public {
@@ -175,7 +175,8 @@ contract M10Test is LiquidPoolBase {
         _keepAlive(200); // observed in-range time: base accrued, not minted
     }
 
-    /// @notice Lane B: a holder's withdrawal while base is accrued and unminted pays the post-mint pro-rata share.
+    /// @notice Lane B, the withdrawal side (killer of MU-278, the withdrawal without its checkpoint, the on-chain
+    ///         defence-off run): a holder's withdrawal while base is accrued and unminted pays the post-mint pro-rata share.
     function test_M_10__withdrawBeforeAPendingBaseMintCannotEscapeIt() public {
         _placeAndAccrue();
         uint16[4] memory pct = [uint16(1), 5, 10, 50];

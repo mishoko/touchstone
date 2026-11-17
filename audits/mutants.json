@@ -3302,14 +3302,14 @@
   {
    "id": "MU-278",
    "area": "base",
-   "desc": "the deposit without its checkpoint (the pending base minted after the depositor's mint, diluting it; T16, M-10 lane B)",
+   "desc": "the withdrawal without its checkpoint (a holder exits before the pending base mint; T16, M-10 lane B)",
    "killer_id": "M-10",
-   "kill": "test_M_10__depositBeforeAPendingBaseMintIsPricedAfterIt",
+   "kill": "test_M_10__withdrawBeforeAPendingBaseMintCannotEscapeIt",
    "file": "src/TouchstoneVault.sol",
    "find": "        (bool liveRead, int24 liveTick) = _checkpoint(o);\n",
-   "replace": "        bool liveRead;\n        int24 liveTick;\n        if (entry != Entry.Deposit) (liveRead, liveTick) = _checkpoint(o);\n",
+   "replace": "        bool liveRead;\n        int24 liveTick;\n        if (entry != Entry.Withdraw) (liveRead, liveTick) = _checkpoint(o);\n",
    "status": "KILLED",
-   "basis": "46d7863ae237cc14"
+   "basis": "298da37600b88532"
   }
  ]
 }

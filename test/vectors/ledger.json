@@ -1,6 +1,6 @@
 {
  "schema": "touchstone-vectors/1",
- "specVersion": "2.38",
+ "specVersion": "2.39",
  "conventions": {
   "measure": "loss_p = NAV_before(p) - NAV_after(p) for p in (sqrtSpot, sqrtS0, sqrtRef), a later leg replacing only on a strictly larger loss; charge = max(0, max loss); pStar = argmax (sqrtSpot on a tie, incl. charge 0); pStar is the argmax of the signed loss also when every leg is a gain; navBurn = min over the three legs of NAV_after(p); burn = ceilDiv(charge*S, navBurn) (0 when charge = 0; type(uint256).max when navBurn = 0 and charge > 0); burnR = ceilDiv((charge + reserve)*S, navBurn) - burn (type(uint256).max when saturated); ok = burn + burnR <= unvested + bond, evaluated without overflow (both may be type(uint256).max).",
   "settleExtra": "legs sqrtAt(max(MIN_TICK, tickMk - feeTicks)) then sqrtAt(min(MAX_TICK, tickMk + feeTicks + 1)) (the upper leg rounded up; the later replaces only if strictly larger); no revert for valid ticks and uint128 reserve and reserveShares; extra = min(reserve, max(0, loss_mk - charge0)); burnS = 0 if extra = 0, reserveShares if NAV(now, pMk) = 0, else min(reserveShares, ceilDiv(extra*S, NAV(now, pMk))).",

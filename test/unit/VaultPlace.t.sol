@@ -5,6 +5,7 @@ import {Vm} from "forge-std/Vm.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
+import {SqrtPriceMath} from "@uniswap/v4-core/src/libraries/SqrtPriceMath.sol";
 import {SwapParams, ModifyLiquidityParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 import {PoolSwapTest} from "@uniswap/v4-core/src/test/PoolSwapTest.sol";
 import {LiquidPoolBase} from "../utils/LiquidPoolBase.sol";
@@ -443,6 +444,33 @@ contract VaultPlaceTest is LiquidPoolBase {
         _place(-1000, 1000, PreSwap(true, false, uint128(amt + nav / WAD + 1)), 0);
     }
 
+    /// @notice The move paid in token0 (down, at a reference where `q` is not the identity) is valued at the reference
+    ///         like a token0 swap: JIT on its path sized just over the cap reverts `SwapCap`; just under it passes and
+    ///         the epoch counter holds exactly the token0 fraction.
+    function test_U_guard__moveDownPaidInToken0CappedAtTheReference() public {
+        _setRef(-10);
+        (Holdings memory b,) = _prime();
+        (uint256 nav,) = ExecLedger.value(b, _sqrt(-10));
+        uint256 cap = FullMath.mulDiv(tier.MAX_SWAP_ACTION, nav, WAD);
+        _removeThirdPartyLiquidity();
+        // the token0 value (at the reference) a 10-tick move down through L = 1e20 on [-10, 0) costs, scaled to the cap
+        (uint256 v1,) = ExecLedger.value(
+            Holdings(uint128(SqrtPriceMath.getAmount0Delta(_sqrt(-10), _sqrt(0), 1e20, true)), 0, 0, 0, 0), _sqrt(-10)
+        );
+        uint256 lCap = FullMath.mulDiv(1e20, cap, v1);
+        uint256 snap = vm.snapshotState();
+        lpRouter.modifyLiquidity(key, ModifyLiquidityParams(-10, 0, int256(lCap * 101 / 100), 0), "");
+        _placeReverts(-1000, 1000, _none(), _sqrt(-10), TouchstoneVault.SwapCap.selector);
+        vm.revertToState(snap);
+        lpRouter.modifyLiquidity(key, ModifyLiquidityParams(-10, 0, int256(lCap * 98 / 100), 0), "");
+        vm.recordLogs();
+        _place(-1000, 1000, _none(), _sqrt(-10));
+        (int128[] memory d0,) = _vaultSwaps();
+        uint256 paid = uint256(int256(-d0[0]));
+        assertEq(hv.scalars().epochSwapFrac, _fracOf(b, true, paid, -10), "the token0 fraction at the reference");
+        assertNotEq(_fracOf(b, true, paid, -10), _fracOf(b, false, paid, -10), "control: token1 at par differs");
+    }
+
     /// @notice The move counts toward the epoch cap: with the counter `MAX_SWAP_EPOCH − f` the move of fraction f
     ///         passes; one unit higher it reverts `SwapCap`.
     function test_U_guard__moveCountsTowardTheEpochCap() public {
@@ -596,6 +624,35 @@ contract VaultPlaceTest is LiquidPoolBase {
 
     /// @dev The JIT size that maximises the ratio here (a sweep over 1e18…1e24 peaks at 5e20: 8.66e-4).
     uint256 internal constant JIT_L = 5e20;
+
+    /// @notice The worst-placement shape with the vault's own move inside the shared budget: spot 70 ticks above the
+    ///         reference, the move down to the fence through JIT (≈ half the per-action budget, paid in token0), then
+    ///         the rest of the budget as an adverse token1 pre-swap into the same JIT; (charge + reserve) is still
+    ///         covered twice at `BOND_RATIO` (§3.7: the move fills inside the fence, no worse per unit than the pre-swap).
+    function test_U_solv__moveAndPreSwapInTheSharedBudgetFitTheBond() public {
+        _credit(9e18, 0);
+        _setRef(-70); // spot 0 is outside the fence; the move brings it to -10
+        _removeThirdPartyLiquidity();
+        lpRouter.modifyLiquidity(key, ModifyLiquidityParams(-10, 0, 2e20, 0), "");
+        (Holdings memory b, uint256 S) = _prime();
+        uint160 s0 = _sqrtSpot();
+        (uint256 nav,) = ExecLedger.value(b, _sqrt(-70));
+        // the move's fraction, measured in a dry run
+        uint256 snap = vm.snapshotState();
+        vm.recordLogs();
+        _place(-150, 1850, _none(), _sqrt(-10));
+        (int128[] memory d0,) = _vaultSwaps();
+        uint256 f = _fracOf(b, true, uint256(int256(-d0[0])), -70);
+        vm.revertToState(snap);
+        assertGt(f * 4, tier.MAX_SWAP_ACTION, "the move uses a real part of the budget");
+        PreSwap memory ps = PreSwap(true, false, uint128(FullMath.mulDiv(tier.MAX_SWAP_ACTION - f, nav, WAD)));
+        _place(-150, 1850, ps, _sqrt(-10));
+        (,, Holdings memory pa, uint128 c0, uint128 r) = hv.pendingAction();
+        Exp memory e = _expect(b, pa, s0, _sqrt(-10), -70, S);
+        assertEq(c0, e.charge, "charge");
+        assertGt(c0, 0, "a charge");
+        assertLe((uint256(c0) + r) * 2 * WAD, uint256(tier.BOND_RATIO) * e.navBurn, "2x cover at BOND_RATIO");
+    }
     /// @notice The first placement at deploy: no unvested pay, so the charge and the reserve come from the bond
     ///         (`reserveBond = burnR`); deposits revert until the settlement, which returns the unburned reserve to
     ///         the bond. Spot sits `REF_BAND` from the reference.

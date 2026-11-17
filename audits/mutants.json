@@ -1286,7 +1286,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "ExecLedger.swapFrac(before, z, amountIn, sRef);",
    "replace": "ExecLedger.swapFrac(before, z, amountIn, TickMath.getSqrtPriceAtTick(tickSpot));",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-118",
@@ -2628,7 +2628,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            if (moveFrac > MAX_SWAP_ACTION || _epochSwapFrac + moveFrac > MAX_SWAP_EPOCH) revert SwapCap();",
    "replace": "            if (_epochSwapFrac + moveFrac > MAX_SWAP_EPOCH) revert SwapCap();",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-240",
@@ -2639,7 +2639,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            if (moveFrac > MAX_SWAP_ACTION || _epochSwapFrac + moveFrac > MAX_SWAP_EPOCH) revert SwapCap();",
    "replace": "            if (moveFrac > MAX_SWAP_ACTION) revert SwapCap();",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-241",
@@ -2650,7 +2650,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            _epochSwapFrac += uint64(moveFrac);\n",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-242",
@@ -2661,7 +2661,18 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (frac + used > MAX_SWAP_ACTION || _epochSwapFrac + frac > MAX_SWAP_EPOCH) revert SwapCap();",
    "replace": "        if (frac > MAX_SWAP_ACTION || _epochSwapFrac + frac > MAX_SWAP_EPOCH) revert SwapCap();",
-   "status": "pending"
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-243",
+   "area": "guards",
+   "desc": "the vault's move valued in the other token (s12 fix review r2 F13-11)",
+   "killer_id": "U-guard",
+   "kill": "test_U_guard__moveDownPaidInToken0CappedAtTheReference",
+   "file": "src/TouchstoneVault.sol",
+   "find": "            moveFrac = ExecLedger.swapFrac(before, zm, paidMove, sRef);",
+   "replace": "            moveFrac = ExecLedger.swapFrac(before, !zm, paidMove, sRef);",
+   "status": "KILLED"
   }
  ]
 }

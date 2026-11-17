@@ -434,6 +434,7 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
         // it a trade of vault capital beyond MAX_SWAP_ACTION (an honest move across an empty region pays ≈ nothing)
         uint256 moveFrac;
         if (paidMove > 0) {
+            // [MU-243] in the token paid, at the reference
             moveFrac = ExecLedger.swapFrac(before, zm, paidMove, sRef);
             // [MU-239] [MU-240]
             if (moveFrac > MAX_SWAP_ACTION || _epochSwapFrac + moveFrac > MAX_SWAP_EPOCH) revert SwapCap();

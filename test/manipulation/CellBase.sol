@@ -167,6 +167,12 @@ abstract contract CellBase is DeployBaseUnplaced {
         return type(TouchstoneVaultExtension).creationCode;
     }
 
+    /// @dev The base rate the cell runs at: 0 by default (the cells measure an attack's own profit); the base-gaming
+    ///      cells (M-N1, M-N3) return the tier's real m and difference against the no-attack world.
+    function _cellM(uint64) internal view virtual returns (uint64) {
+        return 0;
+    }
+
     /// @dev The deployment's first range (centred on the seed tick by default).
     function _firstLo() internal view virtual returns (int24) {
         return _floor(_seedTick()) - int24(int256(uint256(2000))) / 2;
@@ -178,7 +184,7 @@ abstract contract CellBase is DeployBaseUnplaced {
         _setUpEnv();
         // the cells measure an attack's own profit: base pay (spec §3.5) accrues to the curator with or without the
         // attack, so they run with m = 0 (as designed in s14); base gaming is M-N1 and M-N2's
-        tier.m_perBlock = 0;
+        tier.m_perBlock = _cellM(tier.m_perBlock);
         W = tier.W_TICKS;
         market = _seedTick();
         bundler = new CuratorBundler(owner, factory);

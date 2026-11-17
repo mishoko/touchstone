@@ -37,6 +37,70 @@ def test_S_4__no_mutation_markers_in_the_tree():
             assert run('script/markers.py', '--root', d).returncode == 1, name
 
 
+# Every state-changing entry point of the hook, the vault (with its extension's allow-listed entries) and the factory,
+# with the only caller class that passes its guard. None is an owner or admin: D-3's Solidity half
+# (test/deploy/Privilege.t.sol) shows each guard refuses the deployer and the factory after seed.
+D3_ENTRIES = {
+    'TouchstoneHook': {
+        'ackBreaches': 'vault', 'armAtSeed': 'vault', 'fundWitness': 'vault', 'rollWitness': 'vault',
+        'setVaultRange': 'vault', 'witnessStep': 'self', 'refreshRef': 'anyone', 'snapshotIfNewBlock': 'anyone',
+        'beforeInitialize': 'poolManager', 'afterInitialize': 'poolManager', 'beforeAddLiquidity': 'poolManager',
+        'afterAddLiquidity': 'poolManager', 'beforeRemoveLiquidity': 'poolManager',
+        'afterRemoveLiquidity': 'poolManager', 'beforeSwap': 'poolManager', 'afterSwap': 'poolManager',
+        'beforeDonate': 'poolManager', 'afterDonate': 'poolManager',
+    },
+    'TouchstoneVault': {
+        'setPositions': 'curator', 'rebalanceSwap': 'curator', 'settle': 'anyone', 'unlockCallback': 'poolManager',
+        'approve': 'holder', 'transfer': 'holder', 'transferFrom': 'holder', '<fallback>': 'allow-list',
+    },
+    'TouchstoneVaultExtension': {
+        'seed': 'factory-once', 'deposit': 'anyone', 'withdraw': 'anyone', 'dispatch': 'vault-delegatecall',
+        'approve': 'holder', 'transfer': 'holder', 'transferFrom': 'holder',
+    },
+    'TouchstoneFactory': {'deploy': 'anyone'},
+}
+D3_FORBIDDEN = ('owner', 'admin', 'pause', 'upgrade', 'rescue', 'sweep', 'setparam', 'settier', 'setfee', 'setcurator',
+                'setref', 'kill', 'destruct', 'migrate', 'grant', 'revoke')
+
+
+def d3_entries(out_dir):
+    import json
+    found = {}
+    for c in D3_ENTRIES:
+        abi = json.load(open(os.path.join(out_dir, c + '.sol', c + '.json')))['abi']
+        names = {x['name'] for x in abi if x['type'] == 'function' and x.get('stateMutability') not in ('view', 'pure')}
+        names |= {'<fallback>' for x in abi if x['type'] in ('fallback', 'receive')}
+        found[c] = names
+    return found
+
+
+def d3_violations(found):
+    bad = []
+    for c, names in found.items():
+        extra = names - set(D3_ENTRIES[c])
+        missing = set(D3_ENTRIES[c]) - names
+        if extra:
+            bad.append(f'{c}: entry points outside the table: {sorted(extra)}')
+        if missing:
+            bad.append(f'{c}: table entries not in the ABI: {sorted(missing)}')
+        bad += [f'{c}.{n}: privileged name' for n in names if any(w in n.lower() for w in D3_FORBIDDEN)]
+    return bad
+
+
+def test_D_3__abi_has_no_privileged_entry_point():
+    out = os.path.join(ROOT, 'out')
+    if not os.path.exists(os.path.join(out, 'TouchstoneHook.sol')):
+        raise AssertionError('run forge build first (D-3 reads the ABIs in out/)')
+    bad = d3_violations(d3_entries(out))
+    assert not bad, '\n'.join(bad)
+    # controls: an added owner setter and an unlisted entry point both fail the check
+    planted = d3_entries(out)
+    planted['TouchstoneVault'] = planted['TouchstoneVault'] | {'setOwner'}
+    planted['TouchstoneFactory'] = planted['TouchstoneFactory'] | {'deploy2'}
+    bad = d3_violations(planted)
+    assert any('setOwner' in b for b in bad) and any('deploy2' in b for b in bad), bad
+
+
 if __name__ == '__main__':
     tests = [v for k, v in sorted(globals().items()) if k.startswith('test_') and callable(v)]
     for t in tests:

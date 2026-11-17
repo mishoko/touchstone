@@ -25,7 +25,8 @@ market price, + the curator's pay change (base accrued, attack − baseline) + t
 Assertion (pre-registered pass bar): max net over every path, state, push, direction, Δ and k ≤ 0 (1 wei per
 action of rounding); and the charge is unchanged (exactly 0 in both branches: no curator action).
 Parking lane (disclosed): the push of one raw unit inside the exited edge, reported with the bound "τ_v credit
-≤ 2·GRID per exit".
+≤ GRID·(1 + ⌈REF_WINDOW/GRID_SEC⌉) per exit" (one anchor plus the anchors the TWAP needs to cross the edge), which
+is 2·GRID on the mainnet and DEMO tiers (REF_WINDOW ≤ GRID_SEC); the Foundry cell M-N1 measures it on v4.
 Positive control (the defence disabled: τ_v on the pool price alone): the optimal attacker's profit per path
 (the best push, parking included, or abstaining) at k = 0 is > 0 with a one-sided 95% CI lower bound > 0.
 """

@@ -440,6 +440,7 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
             if (priced) {
                 // [MU-109] NAV' at the reference, on the holdings after collect-first
                 (uint256 navp,) = ExecLedger.value(_holdings(), TickMath.getSqrtPriceAtTick(pt));
+                // [MU-271] strict: at navp == amount the share count is unbounded (a mulDiv by zero would revert)
                 if (navp > amount) {
                     uint256 shares = FullMath.mulDiv(amount, totalSupply(), navp - amount);
                     FeeBank.bankApply(b, Op.Accrue, abi.encode(ne, shares, gateOpen));

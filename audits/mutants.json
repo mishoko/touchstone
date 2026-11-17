@@ -3214,6 +3214,18 @@
    "replace": "",
    "status": "KILLED",
    "basis": "7c909786488c99d0"
+  },
+  {
+   "id": "MU-271",
+   "area": "bank",
+   "desc": "the mint's guard `navp > amount` weakened to `>=` (a checkpoint reverts at the boundary: a withdrawal lock)",
+   "killer_id": "U-base",
+   "kill": "test_U_base__navEqualToTheAmountDefersWithoutReverting",
+   "file": "src/TouchstoneVault.sol",
+   "find": "                if (navp > amount) {",
+   "replace": "                if (navp >= amount) {",
+   "status": "KILLED",
+   "basis": "4b7a4fa52e77205a"
   }
  ]
 }

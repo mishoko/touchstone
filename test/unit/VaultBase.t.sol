@@ -131,4 +131,20 @@ contract VaultBaseAccrualTest is ScriptedVaultBase {
         Vm.Log[] memory logs = vm.getRecordedLogs();
         assertEq(logs[0].topics[0], T_DEFERRED, "CheckpointDeferred");
     }
+
+    /// @notice The boundary NAV' == amount defers too: a mint there would divide by zero and revert the checkpoint (a
+    ///         withdrawal lock), so the comparison is strict (MU-271). Control: one wei less owed mints.
+    function test_U_base__navEqualToTheAmountDefersWithoutReverting() public {
+        VaultHarness h = _h(0, true, Ladder.NORMAL);
+        uint256 navp = _navAt(h, 0);
+        h.setScalars(2e18, 0, 0, 1150, uint128(navp), 10, 0, 0);
+        uint256 S = h.totalSupply();
+        h.checkpoint(_obsIn(), true, 0);
+        assertEq(h.totalSupply(), S, "nothing minted at NAV' == amount");
+        assertEq(h.scalars().baseOwed, navp, "still owed");
+        VaultHarness c = _h(0, true, Ladder.NORMAL);
+        c.setScalars(2e18, 0, 0, 1150, uint128(navp - 1), 10, 0, 0);
+        c.checkpoint(_obsIn(), true, 0);
+        assertGt(c.totalSupply(), S, "control: below NAV' it mints");
+    }
 }

@@ -2,6 +2,8 @@
 pragma solidity 0.8.26;
 
 import {Test} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
+import {Obs} from "../../../src/types/Obs.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {PoolId} from "@uniswap/v4-core/src/types/PoolId.sol";
@@ -145,6 +147,8 @@ contract VaultHandler is Test, SettleExtraOracle {
         uint256 b1 = token1.balanceOf(a);
         (uint128 posBefore,,) = manager.getPositionInfo(poolId, address(hv), h.lo, h.hi, bytes32(0));
         uint256 vestedBefore = hv.bankFull().vestedUnclaimed;
+        uint256 owedBefore = hv.scalars().baseOwed;
+        vm.recordLogs();
         vm.prank(a);
         try IVaultEntries(address(hv)).withdraw(s, 0, 0, a) {
             ++withdrawals;
@@ -158,11 +162,17 @@ contract VaultHandler is Test, SettleExtraOracle {
             }
             // the prologue (settlement burn, drip, base mint) changes the supply only, never the buckets: the flow's
             // supply is exact after the call (the withdrawal burnt s), and the closed-form one without base bounds it
+            // the prologue's base mint, recomputed independently (spec §3.5, §4.6): the amount from the vault's own
+            // `Checkpoint.base` plus the deferred `baseOwed` (forfeited first by a processed breach), priced at the
+            // cached reference if fresh, else the live read, on the holdings after collect-first; the supply after the
+            // call must then equal the closed-form settlement-and-drip prediction plus exactly that mint (fix review
+            // r2 S16B2-01: an under-burned settlement or drip fails here)
+            uint256 mint = _expectedBaseMint(owedBefore, sNoBase, Holdings(uint128(h.idle0 + f0), uint128(h.idle1 + f1), h.L, h.lo, h.hi));
             uint256 S = hv.totalSupply() + s;
-            if (S < sNoBase) _i2("supply below the settlement and drip prediction");
-            if (S > sNoBase) {
+            if (S != sNoBase + mint) _i2("supply after the prologue (settlement, drip, base mint)");
+            if (mint > 0) {
                 ++withdrawalsMintingBase;
-                baseMinted += S - sNoBase;
+                baseMinted += mint;
             }
             uint128 dL = uint128(FullMath.mulDiv(h.L, s, S));
             (uint256 r0, uint256 r1) = ExpectedFlows.legs(manager, poolId, h.lo, h.hi, dL, false);
@@ -181,6 +191,31 @@ contract VaultHandler is Test, SettleExtraOracle {
             i10Selector = bytes4(err);
         }
     }
+
+    /// @dev The base shares the last call's checkpoint should have minted, from its recorded logs (see `withdraw`).
+    function _expectedBaseMint(uint256 owedBefore, uint256 sNoBase, Holdings memory hc) internal returns (uint256) {
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        uint256 base;
+        bool deferred;
+        for (uint256 i; i < logs.length; ++i) {
+            if (logs[i].emitter != address(hv)) continue;
+            bytes32 t = logs[i].topics[0];
+            if (t == T_CHECKPOINT) (,,,, base,,,) = abi.decode(logs[i].data, (uint64, uint64, uint256, uint64, uint256, uint128, int24, int24));
+            else if (t == T_DEFERRED) deferred = true;
+            else if (t == T_BREACH) owedBefore = 0;
+        }
+        uint256 amount = base + owedBefore;
+        if (amount == 0 || deferred) return 0;
+        Obs memory o = hook.obs();
+        int24 pt = o.refTick;
+        if (!o.refFresh) (, pt) = hook.tryRef();
+        (uint256 navp,) = ExecLedger.value(hc, TickMath.getSqrtPriceAtTick(pt));
+        return FullMath.mulDiv(amount, sNoBase, navp - amount);
+    }
+
+    bytes32 internal constant T_CHECKPOINT = keccak256("Checkpoint(uint64,uint64,uint256,uint64,uint256,uint128,int24,int24)");
+    bytes32 internal constant T_DEFERRED = keccak256("CheckpointDeferred()");
+    bytes32 internal constant T_BREACH = keccak256("BreachProcessed(uint32,uint40,uint256)");
 
     /// @notice Puts vault-held shares into the bank, carved out of the bond (they stay held by the vault): a due
     ///         cohort, maturedPending, or a forfeit pool that starts dripping now. So the checkpoint's live read,

@@ -130,7 +130,7 @@
    ]
   },
   "TouchstoneVault": {
-   "runtime": 21057,
+   "runtime": 21469,
    "history": [
     {
      "runtime": 14971,
@@ -159,6 +159,10 @@
     {
      "runtime": 21057,
      "note": "s12: setPositions (the removal to idle, the vault's exact-output move to moveTo with SwapCap and Move, the placement rules, the optional pre-swap through the shared capped swap, the sizing through ExecLedger.placementSize, DeltaMin, setVaultRange, Op.Place). First written as a second action function: 22,623 B (+4,236 B; the shared charge path was inlined twice). Restructured: both actions run one body with one _charge call site (rebalanceSwap encodes its swap as the pre-swap of an action with no placement) and every PoolManager delta of the vault is booked through one helper (_book): 21,057 B (+2,670 B), 57 B over the 21,000 B escalation line (escalated). CuratorBundler (periphery, outside the vault gate) recorded at 9,145 B."
+    },
+    {
+     "runtime": 21469,
+     "note": "s12 fix review r1 F13-01: the vault's move counts as a swap (its input valued at the reference shares the per-action cap with the pre-swap and is added to the epoch counter): +412 B, vault 21,469 B."
     }
    ]
   },

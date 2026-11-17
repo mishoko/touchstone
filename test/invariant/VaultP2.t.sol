@@ -108,10 +108,11 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         handler.rebalance(true, 1e6, 0); // within the per-action cap on both pools
         assertEq(handler.curatorSwaps(), 1, "a curator action");
         for (uint256 i; i < 14; ++i) handler.advance(0);
-        // a placement with the vault's own move (5 ticks down: move = 35 << 2) and a token0 pre-swap of 1e6 (within
+        // a placement with the vault's own move (a sub-tick move: move = 1 << 2; a move of whole ticks through this
+        // depth meets the per-action cap) and a token0 pre-swap of 1e6 (within
         // the per-action cap on both pools; pre = 1e6 << 8 | 2: divisible by 3, bit 2 clear); it settles the swap's
         // markout first
-        handler.place(5, 0, 256_000_002, 140);
+        handler.place(5, 0, 256_000_002, 4);
         assertEq(handler.curatorPlacements(), 2, "a moved, pre-swapped placement");
         assertEq(handler.placementsMoved(), 1, "moved");
         assertEq(handler.placementsPreSwapped(), 1, "pre-swapped");

@@ -87,7 +87,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (_L > 0) _book(_modify(0));",
    "replace": "        if (false) _book(_modify(0));",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-009",
@@ -230,7 +230,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        // [MU-021] rebalanceSwap leaves the mode as it is\n        if (place) {",
    "replace": "        // [MU-021] rebalanceSwap leaves the mode as it is\n        if (!place) FeeBank.bankApply(_bank, Op.Place, \"\");\n        if (place) {",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-022",
@@ -239,7 +239,7 @@
    "killer_id": "U-guard",
    "kill": "test_U_guard__perActionCapAtTheReferenceOnTheHoldings",
    "file": "src/TouchstoneVault.sol",
-   "find": "        if (frac > MAX_SWAP_ACTION || _epochSwapFrac + frac > MAX_SWAP_EPOCH) revert SwapCap();\n",
+   "find": "        if (frac + used > MAX_SWAP_ACTION || _epochSwapFrac + frac > MAX_SWAP_EPOCH) revert SwapCap();\n",
    "replace": "",
    "status": "KILLED"
   },
@@ -406,7 +406,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        (bool liveRead, int24 liveTick) = _checkpoint(o);\n",
    "replace": "        bool liveRead;\n        int24 liveTick;\n        if (entry != Entry.Deposit) (liveRead, liveTick) = _checkpoint(o);\n",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-038",
@@ -483,7 +483,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            if (deltaAfter < DELTA_MIN) revert DeltaMin();",
    "replace": "            if (deltaAfter <= DELTA_MIN) revert DeltaMin();",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-045",
@@ -681,7 +681,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            if (deltaAfter < DELTA_MIN) revert DeltaMin();",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-063",
@@ -802,7 +802,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        Obs memory o = _prologue();\n        // [MU-037] every entry point checkpoints\n        (bool liveRead, int24 liveTick) = _checkpoint(o);\n        // [MU-073] the mode gate runs after the prologue checkpoint, which may have moved the mode to EXITED\n        if (!Ladder.allowed(_bank.mode, uint8(entry))) revert Ladder.BadMode();",
    "replace": "        // [MU-037] [MU-073]\n        if (!Ladder.allowed(_bank.mode, uint8(entry))) revert Ladder.BadMode();\n        Obs memory o = _prologue();\n        (bool liveRead, int24 liveTick) = _checkpoint(o);",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-074",
@@ -824,7 +824,7 @@
    "file": "src/periphery/CuratorBundler.sol",
    "find": "        if (msg.sender != OWNER) revert OnlyOwner();",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-076",
@@ -1075,9 +1075,9 @@
    "killer_id": "U-guard",
    "kill": "test_U_guard__preSwapWithMaxSwapsExhaustedReverts",
    "file": "src/TouchstoneVault.sol",
-   "find": "        if (ps.active) _cappedSwap(ps.zeroForOne, ps.amountIn, before, sRef, tickSpot);",
-   "replace": "        if (ps.active) {\n            if (place) (_swapCount, _epochSwapFrac) = (0, 0);\n            _cappedSwap(ps.zeroForOne, ps.amountIn, before, sRef, tickSpot);\n        }",
-   "status": "pending"
+   "find": "        if (ps.active) _cappedSwap(ps.zeroForOne, ps.amountIn, before, sRef, tickSpot, moveFrac);",
+   "replace": "        if (ps.active) {\n            if (place) (_swapCount, _epochSwapFrac) = (0, 0);\n            _cappedSwap(ps.zeroForOne, ps.amountIn, before, sRef, tickSpot, moveFrac);\n        }",
+   "status": "KILLED"
   },
   {
    "id": "MU-099",
@@ -1285,8 +1285,8 @@
    "kill": "test_U_guard__perActionCapAtTheReferenceOnTheHoldings",
    "file": "src/TouchstoneVault.sol",
    "find": "ExecLedger.swapFrac(before, z, amountIn, sRef);",
-   "replace": "ExecLedger.swapFrac(before, z, amountIn, s0);",
-   "status": "KILLED"
+   "replace": "ExecLedger.swapFrac(before, z, amountIn, TickMath.getSqrtPriceAtTick(tickSpot));",
+   "status": "pending"
   },
   {
    "id": "MU-118",
@@ -1306,9 +1306,9 @@
    "killer_id": "U-3",
    "kill": "test_U_3__preSwapChargedWithThePlacement",
    "file": "src/TouchstoneVault.sol",
-   "find": "        if (ps.active) _cappedSwap(ps.zeroForOne, ps.amountIn, before, sRef, tickSpot);",
-   "replace": "        if (ps.active) _cappedSwap(ps.zeroForOne, ps.amountIn, before, sRef, tickSpot);\n        if (place && ps.active) before = _holdings();",
-   "status": "pending"
+   "find": "        if (ps.active) _cappedSwap(ps.zeroForOne, ps.amountIn, before, sRef, tickSpot, moveFrac);",
+   "replace": "        if (ps.active) _cappedSwap(ps.zeroForOne, ps.amountIn, before, sRef, tickSpot, moveFrac);\n        if (place && ps.active) before = _holdings();",
+   "status": "KILLED"
   },
   {
    "id": "MU-120",
@@ -1671,7 +1671,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        // [MU-152] no deposit while a curator action awaits its markout settlement\n        if (_tAction != 0) revert MarkoutPending();",
    "replace": "        // [MU-152] no deposit while a curator action awaits its markout settlement\n        if (false) revert MarkoutPending();",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-153",
@@ -1704,7 +1704,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        _charge(uint8(entry), before, s0, sSpot, sRef, maxCharge);",
    "replace": "        _charge(uint8(entry), before, sSpot, sSpot, sRef, maxCharge);",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-156",
@@ -1891,7 +1891,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (entry == Entry.Settle) return \"\";\n        revert Ladder.BadMode();",
    "replace": "        if (entry == Entry.Settle) return \"\";\n        return _withdraw(payer, args);",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-173",
@@ -2199,7 +2199,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (_L > 0) _book(_modify(0));",
    "replace": "        _book(_modify(0));",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-201",
@@ -2221,7 +2221,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (amountIn > (z ? _idle0 : _idle1)) revert SwapCap();\n",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-203",
@@ -2296,8 +2296,8 @@
    "killer_id": "U-guard",
    "kill": "test_U_guard__perEpochCap",
    "file": "src/TouchstoneVault.sol",
-   "find": "if (frac > MAX_SWAP_ACTION || _epochSwapFrac + frac > MAX_SWAP_EPOCH) revert SwapCap();",
-   "replace": "if (frac > MAX_SWAP_ACTION) revert SwapCap();",
+   "find": "if (frac + used > MAX_SWAP_ACTION || _epochSwapFrac + frac > MAX_SWAP_EPOCH) revert SwapCap();",
+   "replace": "if (frac + used > MAX_SWAP_ACTION) revert SwapCap();",
    "status": "KILLED"
   },
   {
@@ -2397,7 +2397,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        // [MU-218] idle moves by the amounts actually swapped\n        _book(d);",
    "replace": "        // [MU-218] idle moves by the amounts actually swapped\n        _book(d);\n        if (z) _idle0 -= amountIn - uint128(-d.amount0());\n        else _idle1 -= amountIn - uint128(-d.amount1());",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-219",
@@ -2408,7 +2408,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            _removeToIdle();\n",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-220",
@@ -2419,7 +2419,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            if (moveTo != 0 && moveTo != s0) {",
    "replace": "            if (moveTo != 0) {",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-221",
@@ -2428,9 +2428,9 @@
    "killer_id": "U-settle",
    "kill": "test_U_settle__moveMissRevertsMove",
    "file": "src/TouchstoneVault.sol",
-   "find": "                bool zm = moveTo < s0;",
-   "replace": "                bool zm = moveTo > s0;",
-   "status": "pending"
+   "find": "                zm = moveTo < s0;",
+   "replace": "                zm = moveTo > s0;",
+   "status": "KILLED"
   },
   {
    "id": "MU-222",
@@ -2439,9 +2439,9 @@
    "killer_id": "U-settle",
    "kill": "test_U_settle__moveAboveIdleRevertsSwapCap",
    "file": "src/TouchstoneVault.sol",
-   "find": "                if (uint128(-(zm ? dm.amount0() : dm.amount1())) > (zm ? _idle0 : _idle1)) revert SwapCap();\n",
+   "find": "                if (paidMove > (zm ? _idle0 : _idle1)) revert SwapCap();\n",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-223",
@@ -2452,7 +2452,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (moveTo != 0 && sSpot != moveTo) revert Move();\n",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-224",
@@ -2463,7 +2463,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        _guards(tickSpot, ref);",
    "replace": "        _guards(TickMath.getTickAtSqrtPrice(s0), ref);",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-225",
@@ -2474,7 +2474,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        uint64 deltaAfter;\n",
    "replace": "        uint64 deltaAfter;\n        if (place) {\n            (, int24 tAfter,,) = MANAGER.getSlot0(POOL_ID);\n            if (Placement.check(lo, hi, tAfter, ref, REF_BAND, W_TICKS, SPACING) != 0) revert NotContained();\n        }\n",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-226",
@@ -2485,7 +2485,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            if (code == 2) revert Width();\n",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-227",
@@ -2496,7 +2496,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            if (code == 3) revert Alignment();\n",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-228",
@@ -2507,7 +2507,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            (uint160 sNow,,,) = MANAGER.getSlot0(POOL_ID);",
    "replace": "            uint160 sNow = sSpot;",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-229",
@@ -2518,7 +2518,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "                _book(_modify(int256(uint256(L))));",
    "replace": "                L += L / 1e9 + 1;\n                _book(_modify(int256(uint256(L))));",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-230",
@@ -2529,7 +2529,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            HOOK.setVaultRange(lo, hi, ref);",
    "replace": "            HOOK.setVaultRange(lo + SPACING, hi, ref);",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-231",
@@ -2540,7 +2540,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            HOOK.setVaultRange(lo, hi, ref);",
    "replace": "            HOOK.setVaultRange(lo, hi + SPACING, ref);",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-232",
@@ -2551,7 +2551,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            HOOK.setVaultRange(lo, hi, ref);",
    "replace": "            HOOK.setVaultRange(lo, hi, tickSpot);",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-233",
@@ -2562,7 +2562,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            FeeBank.bankApply(_bank, Op.Place, \"\");",
    "replace": "            FeeBank.bankApply(_bank, Op.Claim, \"\");",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-234",
@@ -2573,7 +2573,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            FeeBank.bankApply(_bank, Op.Place, \"\");",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-235",
@@ -2584,7 +2584,7 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            if (L > 0) {",
    "replace": "            if (true) {",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-236",
@@ -2595,7 +2595,7 @@
    "file": "src/periphery/CuratorBundler.sol",
    "find": "        if (msg.sender != address(MANAGER)) revert OnlyPoolManager();",
    "replace": "",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-237",
@@ -2606,7 +2606,7 @@
    "file": "src/periphery/CuratorBundler.sol",
    "find": "        if (dist > int256(uint256(tol)) || -dist > int256(uint256(tol))) revert Tolerance();",
    "replace": "        if (dist > int256(uint256(tol))) revert Tolerance();",
-   "status": "pending"
+   "status": "KILLED"
   },
   {
    "id": "MU-238",
@@ -2617,6 +2617,50 @@
    "file": "src/periphery/CuratorBundler.sol",
    "find": "        if (address(vault) != address(0)) revert Deployed();",
    "replace": "",
+   "status": "KILLED"
+  },
+  {
+   "id": "MU-239",
+   "area": "guards",
+   "desc": "the vault's move not held to the per-action swap cap (s12 fix review r1 F13-01)",
+   "killer_id": "U-guard",
+   "kill": "test_U_guard__moveCappedLikeASwap",
+   "file": "src/TouchstoneVault.sol",
+   "find": "            if (moveFrac > MAX_SWAP_ACTION || _epochSwapFrac + moveFrac > MAX_SWAP_EPOCH) revert SwapCap();",
+   "replace": "            if (_epochSwapFrac + moveFrac > MAX_SWAP_EPOCH) revert SwapCap();",
+   "status": "pending"
+  },
+  {
+   "id": "MU-240",
+   "area": "guards",
+   "desc": "the vault's move not held to the epoch swap cap (s12 F13-01)",
+   "killer_id": "U-guard",
+   "kill": "test_U_guard__moveCountsTowardTheEpochCap",
+   "file": "src/TouchstoneVault.sol",
+   "find": "            if (moveFrac > MAX_SWAP_ACTION || _epochSwapFrac + moveFrac > MAX_SWAP_EPOCH) revert SwapCap();",
+   "replace": "            if (moveFrac > MAX_SWAP_ACTION) revert SwapCap();",
+   "status": "pending"
+  },
+  {
+   "id": "MU-241",
+   "area": "guards",
+   "desc": "the vault's move not added to the epoch counter (s12 F13-01)",
+   "killer_id": "U-guard",
+   "kill": "test_U_guard__moveCappedLikeASwap",
+   "file": "src/TouchstoneVault.sol",
+   "find": "            _epochSwapFrac += uint64(moveFrac);\n",
+   "replace": "",
+   "status": "pending"
+  },
+  {
+   "id": "MU-242",
+   "area": "guards",
+   "desc": "the pre-swap not sharing the per-action budget with the move (s12 F13-01)",
+   "killer_id": "U-guard",
+   "kill": "test_U_guard__moveAndPreSwapShareThePerActionBudget",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        if (frac + used > MAX_SWAP_ACTION || _epochSwapFrac + frac > MAX_SWAP_EPOCH) revert SwapCap();",
+   "replace": "        if (frac > MAX_SWAP_ACTION || _epochSwapFrac + frac > MAX_SWAP_EPOCH) revert SwapCap();",
    "status": "pending"
   }
  ]

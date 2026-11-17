@@ -395,16 +395,20 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
         (uint160 s0,,,) = MANAGER.getSlot0(POOL_ID);
         // [MU-007] the action is measured on the holdings it starts from (after collect-first), nothing earlier
         Holdings memory before = _holdings();
+        // the vault's move: its direction and the input it paid (0 when there is none)
+        bool zm;
+        uint256 paidMove;
         if (place) {
             // [MU-219] the old position to idle before the move, so the move crosses only third-party liquidity
             _removeToIdle();
             // [MU-220] skipped when spot is already at moveTo (v4 rejects a price limit already reached)
             if (moveTo != 0 && moveTo != s0) {
                 // [MU-221] the direction that reaches moveTo
-                bool zm = moveTo < s0;
+                zm = moveTo < s0;
                 BalanceDelta dm = _swapRaw(zm, _moveOut(), moveTo);
+                paidMove = uint128(-(zm ? dm.amount0() : dm.amount1()));
                 // [MU-222] idle pays the move's input, checked before any claim is burned
-                if (uint128(-(zm ? dm.amount0() : dm.amount1())) > (zm ? _idle0 : _idle1)) revert SwapCap();
+                if (paidMove > (zm ? _idle0 : _idle1)) revert SwapCap();
                 _book(dm);
             }
         }
@@ -425,8 +429,19 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
             if (code != 0) revert NotContained();
         }
         uint160 sRef = TickMath.getSqrtPriceAtTick(ref);
+        // the move's input, valued as a swap (at the reference on the holdings before the action): it shares the
+        // per-action cap with the pre-swap and counts toward the epoch cap, so liquidity placed on its path cannot make
+        // it a trade of vault capital beyond MAX_SWAP_ACTION (an honest move across an empty region pays ≈ nothing)
+        uint256 moveFrac;
+        if (paidMove > 0) {
+            moveFrac = ExecLedger.swapFrac(before, zm, paidMove, sRef);
+            // [MU-239] [MU-240]
+            if (moveFrac > MAX_SWAP_ACTION || _epochSwapFrac + moveFrac > MAX_SWAP_EPOCH) revert SwapCap();
+            // [MU-241]
+            _epochSwapFrac += uint64(moveFrac);
+        }
         // [MU-098] [MU-119] the swap (or the pre-swap) under the swap caps and counters, charged with the action
-        if (ps.active) _cappedSwap(ps.zeroForOne, ps.amountIn, before, sRef, tickSpot);
+        if (ps.active) _cappedSwap(ps.zeroForOne, ps.amountIn, before, sRef, tickSpot, moveFrac);
         uint64 deltaAfter;
         if (place) {
             // [MU-228] L at the post-pre-swap spot
@@ -456,17 +471,21 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
     }
 
     /// @dev The exact-input swap from idle shared by `rebalanceSwap` and the placement's pre-swap: `MAX_SWAPS`, the
-    ///      per-action and per-epoch caps (fractions of NAV at the reference on the holdings before the action, rounded
-    ///      up, checked on the requested amount) and idle; the price limit `FEE_TICKS + BAND_SWAP` on the adverse side
+    ///      per-action cap (shared with the placement's move, whose fraction is `used`) and the per-epoch cap (fractions
+    ///      of NAV at the reference on the holdings before the action, rounded up, checked on the requested amount) and
+    ///      idle; the price limit `FEE_TICKS + BAND_SWAP` on the adverse side
     ///      of `tickSpot` (a partial fill is charged on its result and counted by the amount filled); the settlement
     ///      through claims; the collect after it (skipped at L = 0); the counters.
-    function _cappedSwap(bool z, uint128 amountIn, Holdings memory before, uint160 sRef, int24 tickSpot) internal {
+    function _cappedSwap(bool z, uint128 amountIn, Holdings memory before, uint160 sRef, int24 tickSpot, uint256 used)
+        internal
+    {
         // [MU-015] at most MAX_SWAPS per epoch
         if (_swapCount >= MAX_SWAPS) revert MaxSwaps();
         // [MU-117] [MU-133] the caps are fractions of NAV at the reference on the holdings before the action
         uint256 frac = ExecLedger.swapFrac(before, z, amountIn, sRef);
         // [MU-022] [MU-209] the per-action and per-epoch caps, on the requested amount
-        if (frac > MAX_SWAP_ACTION || _epochSwapFrac + frac > MAX_SWAP_EPOCH) revert SwapCap();
+        // [MU-242] the per-action budget is shared with the placement's move (`used`)
+        if (frac + used > MAX_SWAP_ACTION || _epochSwapFrac + frac > MAX_SWAP_EPOCH) revert SwapCap();
         // [MU-202] from idle only
         if (amountIn > (z ? _idle0 : _idle1)) revert SwapCap();
         // [MU-020] [MU-217] the price limit on the adverse side of spot, FEE_TICKS + BAND_SWAP away

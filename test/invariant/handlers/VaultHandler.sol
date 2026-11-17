@@ -251,7 +251,7 @@ contract VaultHandler is Test {
             if (
                 sel != TouchstoneVault.Fence.selector && sel != TouchstoneVault.Cooldown.selector
                     && sel != TouchstoneVault.MaxSwaps.selector && sel != TouchstoneVault.SwapCap.selector
-                    && sel != FeeBank.Insolvent.selector
+                    && (sel != FeeBank.Insolvent.selector || !_coverShort())
                     // a pending record blocks an action only when the seam wrote it (a real one is due by the cooldown)
                     && (sel != FeeBank.MarkoutPending.selector || _realPending)
                     && sel != Ladder.BadMode.selector && sel != ITouchstoneHook.RefUnreadable.selector
@@ -264,7 +264,7 @@ contract VaultHandler is Test {
 
     /// @notice The curator's `setPositions` on a W-wide aligned range containing the (post-move) spot and the live
     ///         reference. On even `align` the reference is first set flat at the pool's tick. A quarter of the calls
-    ///         move spot by up to ±40 ticks with the vault's own move; a third add a pre-swap of up to an eighth of
+    ///         use the vault's own move: half of them by ±1…40 ticks, half by one unit of price; a third add a pre-swap of up to an eighth of
     ///         the input token's idle. Every revert must be one of the action's own guards, each allowed only in the
     ///         state that legitimises it; a success leaves the PoolManager position equal to the ledger, the old range
     ///         empty, the claims equal to idle, NORMAL and `placedByCurator`.
@@ -281,10 +281,21 @@ contract VaultHandler is Test {
         uint160 moveTo;
         int24 tm = t;
         if (move % 4 == 0) {
-            int24 dm = int24(int256(bound(move >> 2, 0, 79))) - 40;
-            if (dm >= 0) ++dm; // ±1 … ±40
-            tm = t + dm;
-            moveTo = TickMath.getSqrtPriceAtTick(tm);
+            int24 dm;
+            if ((move >> 2) % 2 == 0) {
+                dm = int24(int256(bound(move >> 3, 0, 79))) - 40;
+                if (dm >= 0) ++dm; // ±1 … ±40 ticks (through third-party depth this usually meets the swap cap)
+            }
+            if (dm != 0) {
+                tm = t + dm;
+                // one unit above sqrtAt(tm): the pool tick ends at tm from either side (a move down onto an initialized
+                // tick boundary would otherwise leave tm − 1)
+                moveTo = TickMath.getSqrtPriceAtTick(tm) + 1;
+            } else {
+                // a one-unit move from the current price (≈ free at any depth)
+                moveTo = sp + 1;
+                tm = TickMath.getTickAtSqrtPrice(moveTo);
+            }
         }
         (bool ok, int24 ref) = hook.tryRef();
         if (!ok) ref = tm;
@@ -321,13 +332,22 @@ contract VaultHandler is Test {
                 || (sel == TouchstoneVault.SwapCap.selector && (ps.active || moveTo != 0))
                 || (sel == TouchstoneVault.DeltaMin.selector && x.deltaShort)
                 || (sel == Ladder.BadMode.selector && x.mayExit)
-                // the bank's gate: the charge and the reserve against unvested pay and the bond
-                || sel == FeeBank.Insolvent.selector;
+                // the bank's gate, only once unvested pay and the bond are below the 2× rule's floor
+                || (sel == FeeBank.Insolvent.selector && _coverShort());
             if (!allowed) {
                 ++actionFailures;
                 actionSelector = sel;
             }
         }
+    }
+
+    /// @dev Unvested pay plus the bond below `S·BOND_RATIO/2`: the 2× rule covers any single action above that floor,
+    ///      so an `Insolvent` revert is legitimate only below it.
+    function _coverShort() internal view returns (bool) {
+        Bank memory b = hv.bankFull();
+        uint256 cover = uint256(b.maturedPending) + b.bondShares;
+        for (uint256 k; k < RING; ++k) cover += b.cohorts[k].shares;
+        return cover * 2e18 < hv.totalSupply() * hv.tier().BOND_RATIO;
     }
 
     /// @dev The states that legitimise each placement revert, read before the call.

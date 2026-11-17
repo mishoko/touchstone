@@ -148,6 +148,24 @@ contract VaultPlaceTest is LiquidPoolBase {
         }
     }
 
+    struct BalanceDeltaQuote {
+        uint256 paid;
+    }
+
+    /// @notice A router exact-input swap with the pre-swap's limit (`limitTicks` from the current tick); returns the
+    ///         input paid (call between snapshot and revert).
+    function _quote(bool z, uint256 amt, int24 limitTicks) internal returns (BalanceDeltaQuote memory q) {
+        int24 lim = z ? _tick() - limitTicks : _tick() + limitTicks;
+        uint256 b = z ? token0.balanceOf(address(this)) : token1.balanceOf(address(this));
+        swapRouter.swap(
+            key,
+            SwapParams(z, -int256(amt), _sqrt(lim)),
+            PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false}),
+            ""
+        );
+        q.paid = b - (z ? token0.balanceOf(address(this)) : token1.balanceOf(address(this)));
+    }
+
     function _positionL(int24 lo, int24 hi) internal view returns (uint128 l) {
         (l,,) = manager.getPositionInfo(poolId, address(hv), lo, hi, bytes32(0));
     }
@@ -347,6 +365,11 @@ contract VaultPlaceTest is LiquidPoolBase {
         // deep enough that the pre-swap of all idle token1 fills within its limit (idle token1 ends at exactly 0)
         lpRouter.modifyLiquidity(key, ModifyLiquidityParams(-6000, 6000, 1e23, 0), "");
         Holdings memory h = hv.holdings();
+        // precondition: the same exact-input swap within the pre-swap's limit consumes all of idle token1
+        uint256 snap = vm.snapshotState();
+        BalanceDeltaQuote memory q = _quote(false, h.idle1, 10);
+        assertEq(q.paid, h.idle1, "precondition: the pre-swap fills exactly");
+        vm.revertToState(snap);
         _placeReverts(-1000, 1000, PreSwap(true, false, h.idle1), 0, TouchstoneVault.DeltaMin.selector);
     }
 
@@ -356,12 +379,88 @@ contract VaultPlaceTest is LiquidPoolBase {
     ///         A move that fills before its limit reverts `Move` (reached here through the harness's finite output;
     ///         with the production `type(int128).max` only an astronomically deep pool fills first).
     function test_U_settle__moveMissRevertsMove() public {
+        _thinPath();
         uint256 snap = vm.snapshotState();
         _place(-1000, 1000, _none(), _sqrt(10));
         assertEq(_sqrtSpot(), _sqrt(10), "control: the move reaches moveTo");
         vm.revertToState(snap);
         hv.setMoveOut(1e10);
         _placeReverts(-1000, 1000, _none(), _sqrt(10), TouchstoneVault.Move.selector);
+    }
+
+    /// @dev Replaces the third-party depth with a thin position on [0, 10): a 10-tick move up costs ≈ 0.5% of NAV.
+    function _thinPath() internal {
+        _removeThirdPartyLiquidity();
+        lpRouter.modifyLiquidity(key, ModifyLiquidityParams(0, 10, 2e19, 0), "");
+    }
+
+    /// @notice The vault's move is a trade of vault capital whenever liquidity sits on its path, so its input (valued
+    ///         at the reference on the holdings before the action, like a swap) is held to `MAX_SWAP_ACTION` and counts
+    ///         toward the epoch cap: liquidity placed on the path sized to cost just over the cap reverts `SwapCap`;
+    ///         just under it passes and the epoch counter holds the move's fraction.
+    function test_U_guard__moveCappedLikeASwap() public {
+        (Holdings memory b,) = _prime();
+        (uint256 nav,) = ExecLedger.value(b, _sqrt(0));
+        uint256 cap = FullMath.mulDiv(tier.MAX_SWAP_ACTION, nav, WAD);
+        _removeThirdPartyLiquidity();
+        // the token1 a 10-tick move up through L on [0, 10) costs: L·(√p(10) − √p(0))/2^96, rounded up
+        uint256 perL = uint256(_sqrt(10) - _sqrt(0));
+        uint256 lOver = FullMath.mulDiv(cap, 1 << 96, perL) * 101 / 100; // ≈ 1% above the cap
+        uint256 snap = vm.snapshotState();
+        lpRouter.modifyLiquidity(key, ModifyLiquidityParams(0, 10, int256(lOver), 0), "");
+        _placeReverts(-1000, 1000, _none(), _sqrt(10), TouchstoneVault.SwapCap.selector);
+        vm.revertToState(snap);
+        lpRouter.modifyLiquidity(key, ModifyLiquidityParams(0, 10, int256(lOver * 98 / 101), 0), ""); // ≈ 2% below
+        vm.recordLogs();
+        _place(-1000, 1000, _none(), _sqrt(10));
+        (, int128[] memory d1) = _vaultSwaps();
+        uint256 paid = uint256(int256(-d1[0]));
+        assertGt(paid * 100, cap * 95, "control: the move paid close to the cap");
+        assertEq(hv.scalars().epochSwapFrac, _fracOf(b, false, paid, 0), "the epoch counter holds the move");
+        assertEq(hv.scalars().swapCount, 0, "a move is not a swap");
+    }
+
+    /// @notice The move and the pre-swap share one per-action budget: after a move that used a fraction f, a pre-swap
+    ///         of `MAX_SWAP_ACTION − f` (rounded down) passes and one fraction unit more reverts `SwapCap`.
+    function test_U_guard__moveAndPreSwapShareThePerActionBudget() public {
+        _thinPath();
+        (Holdings memory b,) = _prime();
+        uint256 snap = vm.snapshotState();
+        vm.recordLogs();
+        _place(-1000, 1000, _none(), _sqrt(10));
+        (, int128[] memory d1) = _vaultSwaps();
+        uint256 f = _fracOf(b, false, uint256(int256(-d1[0])), 0);
+        vm.revertToState(snap);
+        assertGt(f, 0, "the move used part of the budget");
+        // the largest token1 pre-swap whose own fraction fits the rest: value·WAD ≤ (cap − f)·NAV
+        (uint256 nav,) = ExecLedger.value(b, _sqrt(0));
+        uint256 amt = FullMath.mulDiv(tier.MAX_SWAP_ACTION - f, nav, WAD);
+        snap = vm.snapshotState();
+        _place(-1000, 1000, PreSwap(true, false, uint128(amt)), _sqrt(10));
+        vm.revertToState(snap);
+        _placeReverts(-1000, 1000, PreSwap(true, false, uint128(amt + nav / WAD + 1)), _sqrt(10), TouchstoneVault.SwapCap.selector);
+        // control: the same pre-swap without the move passes (the budget is the move's, not the pre-swap's own)
+        _place(-1000, 1000, PreSwap(true, false, uint128(amt + nav / WAD + 1)), 0);
+    }
+
+    /// @notice The move counts toward the epoch cap: with the counter `MAX_SWAP_EPOCH − f` the move of fraction f
+    ///         passes; one unit higher it reverts `SwapCap`.
+    function test_U_guard__moveCountsTowardTheEpochCap() public {
+        _thinPath();
+        (Holdings memory b,) = _prime();
+        uint256 snap = vm.snapshotState();
+        vm.recordLogs();
+        _place(-1000, 1000, _none(), _sqrt(10));
+        (, int128[] memory d1) = _vaultSwaps();
+        uint256 f = _fracOf(b, false, uint256(int256(-d1[0])), 0);
+        vm.revertToState(snap);
+        snap = vm.snapshotState();
+        _setCounters(uint64(tier.MAX_SWAP_EPOCH - f), 0);
+        _place(-1000, 1000, _none(), _sqrt(10));
+        assertEq(hv.scalars().epochSwapFrac, tier.MAX_SWAP_EPOCH, "at the epoch cap");
+        vm.revertToState(snap);
+        _setCounters(uint64(tier.MAX_SWAP_EPOCH - f + 1), 0);
+        _placeReverts(-1000, 1000, _none(), _sqrt(10), TouchstoneVault.SwapCap.selector);
     }
 
     /// @notice The move pays its input from idle: a move whose input exceeds idle reverts `SwapCap` before any claim

@@ -119,6 +119,28 @@ contract CuratorBundlerTest is VaultBase {
         assertEq(tA, vm.getBlockTimestamp(), "in the same transaction");
     }
 
+    /// @notice The repair-C sequence through the bundler at third-party depth 0: the vault sits above its range after
+    ///         the market moved; `moveAndPlace` re-aligns spot to the reference in the bundler's unlock (an empty
+    ///         region), then the vault's own unlock removes the old position and moves to one unit below `sqrtAt(hi)` and
+    ///         places, in one transaction (no nested unlock).
+    function test_U_6__moveAndPlaceWithTheVaultsOwnMoveAtDepthZero() public {
+        _deployAndPlace(-1000, 1000);
+        advance(tier.COOLDOWN);
+        _setRef(3000);
+        vm.prank(owner);
+        bundler.moveSpot(TickMath.getSqrtPriceAtTick(1000)); // the market, through the vault's own range
+        uint160 align = TickMath.getSqrtPriceAtTick(3000);
+        uint160 moveTo = TickMath.getSqrtPriceAtTick(3010) - 1;
+        vm.prank(owner);
+        bundler.moveAndPlace(align, 2000, 1010, 3010, _none(), moveTo, type(uint256).max);
+        assertEq(_sqrtSpot(), moveTo, "the vault's own move");
+        Holdings memory h = v.holdings();
+        assertEq(h.lo, 1010, "placed");
+        assertGt(h.L, 0, "liquidity");
+        (uint40 tA,,,,) = v.pending();
+        assertEq(tA, vm.getBlockTimestamp(), "in one transaction");
+    }
+
     /// @notice `moveSpot` moves the pool's spot with the bundler's tokens; `sweep` returns them to any address.
     function test_U_6__moveSpotAndSweep() public {
         _deployAndPlace(-1000, 1000);

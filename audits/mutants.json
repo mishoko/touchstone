@@ -3202,6 +3202,18 @@
    "replace": "false",
    "status": "KILLED",
    "basis": "6b964388f0db9e1c"
+  },
+  {
+   "id": "MU-270",
+   "area": "ledger",
+   "desc": "base minted inside a markout window does not raise the record's sAct (S15D-07)",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__baseMintedInsideTheWindowRaisesSAct",
+   "file": "src/TouchstoneVault.sol",
+   "find": "                    if (_tAction != 0) _pend.sAct = _u128(uint256(_pend.sAct) + shares);\n",
+   "replace": "",
+   "status": "KILLED",
+   "basis": "7c909786488c99d0"
   }
  ]
 }

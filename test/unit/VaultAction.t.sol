@@ -289,6 +289,39 @@ contract VaultActionTest is LiquidPoolBase, SettleExtraOracle {
         _deposit(bob, 1e18); // and deposits reopen
     }
 
+    /// @notice S15D-07 (spec §3.4): base minted by a checkpoint inside a pending action's markout window raises the
+    ///         record's `sAct` by exactly the shares minted, and the settlement then sizes its burn on the raised supply.
+    ///         Control: the oracle on the un-raised record gives a different burn.
+    function test_U_settle__baseMintedInsideTheWindowRaisesSAct() public {
+        _swapAs(true, 2e16, type(uint256).max);
+        uint256 tA = vm.getBlockTimestamp();
+        (, Holdings memory pb, Holdings memory pa,,) = hv.pendingAction();
+        uint128 rs = hv.bankFull().reserveShares;
+        Markout memory m0 = hv.markout();
+        advance(1);
+        refPool.setTick(100); // adverse: the sold token0 dearer than at the action
+        advance(3);
+        // a checkpoint inside the window (not due: no settlement), which mints base
+        uint256 S0 = hv.totalSupply();
+        hv.settle();
+        uint256 minted = hv.totalSupply() - S0;
+        assertGt(minted, 0, "base minted inside the window");
+        assertEq(hv.markout().sAct, m0.sAct + minted, "sAct raised by the shares minted");
+        assertTrue(hv.markout().sAct > m0.sAct, "raised");
+        advance(tier.H_MARKOUT / blocktime - 3);
+        refPool.setTick(0);
+        advance(1);
+        assertEq(vm.getBlockTimestamp(), tA + 2 * blocktime + tier.H_MARKOUT, "due");
+        (,, uint256 burnS) = _settleExtra(pb, pa, hv.markout(), 100, tier.FEE_TICKS, hv.feePips(), rs);
+        (,, uint256 burnUnraised) = _settleExtra(pb, pa, m0, 100, tier.FEE_TICKS, hv.feePips(), rs);
+        assertGt(burnS, 0, "a burn");
+        assertTrue(burnS != burnUnraised, "control: the raise changes the burn");
+        uint256 S = hv.totalSupply();
+        uint256 banked = _cohorts();
+        hv.settle();
+        assertEq(hv.totalSupply(), S - burnS + (_cohorts() - banked), "the burn on the raised sAct");
+    }
+
     function _cohorts() internal view returns (uint256 c) {
         Bank memory b = hv.bankFull();
         for (uint256 k; k < RING; ++k) {

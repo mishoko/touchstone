@@ -24,12 +24,6 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
 
     VaultHandler internal handler;
 
-    /// @dev The P2 invariants check the pro-rata flows' exact payouts; base pay (spec §3.5, its own vectors and
-    ///         U-base) is off here so the handler's expected supply needs no model of the checkpoint's mint.
-    function _adjustTier(Tier memory t) internal view virtual override {
-        t.m_perBlock = 0;
-    }
-
     function setUp() public virtual override {
         super.setUp();
         int24 c = _seedTick();
@@ -92,7 +86,8 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
                 _highTick() ? "tick196k," : "tick0,",
                 vm.toString(handler.rebalanceCalls()), ",", vm.toString(handler.curatorSwaps()), ",",
                 vm.toString(handler.placeCalls()), ",", vm.toString(handler.curatorPlacements()), ",",
-                vm.toString(handler.placementsMoved()), ",", vm.toString(handler.placementsPreSwapped())
+                vm.toString(handler.placementsMoved()), ",", vm.toString(handler.placementsPreSwapped()), ",",
+                vm.toString(handler.withdrawalsMintingBase())
             )
         );
     }

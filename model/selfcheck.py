@@ -2285,6 +2285,7 @@ def rules_markout():
           pd["reserve"] == R.mul_div(t.RESERVE_RATIO, R.value(pd["before"], sqrt_at(T0))[0], R.WAD) and
           w.v.bank.reserveShares > 0, "an action records the pending markout and reserves its shares")
     t_a = pd["tAction"]
+    sact0, m_act = pd["sAct"], sum(r["minted"] for r in w.v.records.values())
     w.step(1)
     try:
         w.v.deposit(10 ** 20, w.block, w.ts())
@@ -2302,8 +2303,9 @@ def rules_markout():
     rs, S0, m0 = w.v.bank.reserveShares, w.v.S, sum(r["minted"] for r in w.v.records.values())
     h_now = w.v.h.copy()
     check(pd["sAct"] > 0 and pd["burn0"] >= 0 and pd["s0"] > 0 and pd["sEnd"] > 0, "the record keeps s0, sEnd, burn0, sAct")
-    # the live record: base minted inside the window has raised its sAct since the action (spec §3.4, S15D-07)
-    check(w.v.pending["sAct"] >= pd["sAct"], "base minted inside the window only raises the record's sAct")
+    # the live record: base minted inside the window raised its sAct by exactly those shares (spec §3.4, S15D-07)
+    check(w.v.pending["sAct"] == sact0 + (m0 - m_act) and m0 > m_act,
+          "base minted inside the window raises the record's sAct by the shares minted", (w.v.pending["sAct"], sact0, m0 - m_act))
     pd = w.v.pending
     exp = R.settle_extra(pd["before"], pd["after"], pd, T0 + 40, t.FEE_TICKS, w.v.pool.fee, rs)
     w.v.settle(w.block, w.ts())

@@ -444,7 +444,7 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
                     uint256 shares = FullMath.mulDiv(amount, totalSupply(), navp - amount);
                     FeeBank.bankApply(b, Op.Accrue, abi.encode(ne, shares, gateOpen));
                     _mint(address(this), shares);
-                    // a mint inside a pending action's markout window enters its supply (S15D-07)
+                    // [MU-270] a mint inside a pending action's markout window enters its supply (S15D-07)
                     if (_tAction != 0) _pend.sAct = _u128(uint256(_pend.sAct) + shares);
                     // [MU-083]
                     _baseOwed = 0;

@@ -12,21 +12,21 @@ tick 0 / tick 196k): swaps 1,210 / 1,152 of 15,288 rebalance calls (7.9% / 7.5%)
 calls (4.7%), 103 / 126 moved and 204 / 120 pre-swapped placements."""
 import csv, sys
 
-FLOORS = {'swap_rate': 0.025, 'place_rate': 0.015, 'moved': 25, 'pre': 35}
+FLOORS = {'swap_rate': 0.025, 'place_rate': 0.015, 'moved': 25, 'pre': 35, 'base': 1}
 
 
 def check(rows):
     agg = {}
     for r in rows:
-        a = agg.setdefault(r[0], [0] * 7)
+        a = agg.setdefault(r[0], [0] * 8)
         a[0] += 1
-        for i, v in enumerate(r[1:7]):
+        for i, v in enumerate(r[1:8]):
             a[i + 1] += int(v)
     errs = []
     if set(agg) != {'tick0', 'tick196k'}:
         errs.append(f'expected both pools, got {sorted(agg)}')
-    for pool, (runs, rb, sw, pl, pd, mv, pre) in sorted(agg.items()):
-        print(f'{pool}: {runs} runs; swaps {sw}/{rb}; placements {pd}/{pl}; moved {mv}; pre-swapped {pre}')
+    for pool, (runs, rb, sw, pl, pd, mv, pre, bm) in sorted(agg.items()):
+        print(f'{pool}: {runs} runs; swaps {sw}/{rb}; placements {pd}/{pl}; moved {mv}; pre-swapped {pre}; withdrawals minting base {bm}')
         if rb == 0 or sw / rb < FLOORS['swap_rate']:
             errs.append(f'{pool}: swap rate {sw}/{rb} below {FLOORS["swap_rate"]}')
         if pl == 0 or pd / pl < FLOORS['place_rate']:
@@ -35,14 +35,17 @@ def check(rows):
             errs.append(f'{pool}: {mv} moved placements < {FLOORS["moved"]}')
         if pre < FLOORS['pre']:
             errs.append(f'{pool}: {pre} pre-swapped placements < {FLOORS["pre"]}')
+        if bm < FLOORS['base']:
+            errs.append(f'{pool}: {bm} withdrawals minted base < {FLOORS["base"]} (the mint path is not fuzzed)')
     return errs
 
 
 def main(argv):
     if argv[1:2] == ['--selftest']:
-        good = [['tick0', '100', '8', '100', '5', '30', '40'], ['tick196k', '100', '8', '100', '5', '30', '40']]
-        bad = [['tick0', '100', '0', '100', '5', '30', '40'], ['tick196k', '100', '8', '100', '5', '30', '40']]
+        good = [['tick0', '100', '8', '100', '5', '30', '40', '3'], ['tick196k', '100', '8', '100', '5', '30', '40', '3']]
+        bad = [['tick0', '100', '0', '100', '5', '30', '40', '3'], ['tick196k', '100', '8', '100', '5', '30', '40', '3']]
         ok = not check(good) and len(check(bad)) == 1 and check(good[:1])
+        ok = ok and len(check([g[:7] + ['0'] for g in good])) == 2  # a campaign that never mints base fails
         print('nonvacuity selftest', 'OK' if ok else 'FAILED')
         return 0 if ok else 1
     if len(argv) != 2:

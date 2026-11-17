@@ -8,6 +8,9 @@ import {VaultHarness, Scalars, CheckpointLog} from "../utils/VaultHarness.sol";
 import {Obs} from "../../src/types/Obs.sol";
 import {Bank, RING} from "../../src/types/Bank.sol";
 import {Ladder} from "../../src/libraries/Ladder.sol";
+import {ExecLedger} from "../../src/libraries/ExecLedger.sol";
+import {Holdings} from "../../src/types/Holdings.sol";
+import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 
 /// @notice U-base (spec §3.5): the checkpoint's base accrual on the scripted harness.
 contract VaultBaseAccrualTest is ScriptedVaultBase {
@@ -89,5 +92,43 @@ contract VaultBaseAccrualTest is ScriptedVaultBase {
         uint256 total = base + _expected(h, uint64(WAD / 2), 60);
         assertEq(h.totalSupply() - S, FullMath.mulDiv(total, S, 2e18 - total), "owed + new base minted once");
         assertEq(h.scalars().baseOwed, 0);
+    }
+
+    function _navAt(VaultHarness h, int24 t) internal view returns (uint256 v) {
+        (v,) = ExecLedger.value(h.holdings(), TickMath.getSqrtPriceAtTick(t));
+    }
+
+    /// @notice The mint price: the cached reference when fresh (the live read is not used), else the live read.
+    function test_U_base__mintPricedAtTheCacheWhenFreshElseTheLiveRead() public {
+        uint256 base;
+        for (uint256 fresh; fresh < 2; ++fresh) {
+            VaultHarness h = _h(uint64(WAD / 2), true, Ladder.NORMAL);
+            Obs memory o = _obsIn();
+            o.refTick = 400;
+            o.refFresh = fresh == 1;
+            uint256 S = h.totalSupply();
+            h.checkpoint(o, true, -400);
+            base = _expected(h, uint64(WAD / 2), 60);
+            uint256 navp = _navAt(h, fresh == 1 ? int24(400) : int24(-400));
+            assertEq(h.totalSupply() - S, FullMath.mulDiv(base, S, navp - base), fresh == 1 ? "at the cache" : "at the live read");
+        }
+        assertTrue(_navAt(_h(0, true, 0), 400) != _navAt(_h(0, true, 0), -400), "control: the two prices differ");
+    }
+
+    /// @notice A price that leaves NAV' <= the amount defers it (spec §4.6), with `CheckpointDeferred`.
+    function test_U_base__navAtOrBelowTheAmountDefers() public {
+        VaultHarness h = _h(uint64(WAD), true, Ladder.NORMAL);
+        h.setHoldings(Holdings(1, 1, 0, -600, 600));
+        Obs memory o = _obsIn();
+        o.tauV = 1e9;
+        uint256 S = h.totalSupply();
+        vm.recordLogs();
+        h.checkpoint(o, true, 0);
+        uint256 base = _expected(h, uint64(WAD), 1e9);
+        assertGt(base, _navAt(h, 0), "the amount exceeds NAV'");
+        assertEq(h.totalSupply(), S, "nothing minted");
+        assertEq(h.scalars().baseOwed, base, "deferred");
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertEq(logs[0].topics[0], T_DEFERRED, "CheckpointDeferred");
     }
 }

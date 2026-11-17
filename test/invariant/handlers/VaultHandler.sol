@@ -66,6 +66,10 @@ contract VaultHandler is Test, SettleExtraOracle {
     uint256 public settledByRead;
     uint256 public settledByFallback;
     uint256 public withdrawalsSettling;
+    /// @dev Withdrawals whose prologue minted base (spec §3.5), and the shares minted: the campaign runs at the
+    ///      tier's m, so the mint path is fuzzed (non-vacuity).
+    uint256 public withdrawalsMintingBase;
+    uint256 public baseMinted;
     uint256 public curatorSwaps;
     uint256 public settledReal;
     bool internal _realPending;
@@ -134,12 +138,9 @@ contract VaultHandler is Test, SettleExtraOracle {
         Holdings memory h = hv.holdings();
         // settlement step 0 burns first (the drip it may restart owes nothing more in this block), then the drip
         (uint256 burnS, bool due, bool ok) = _expectedSettleBurn();
-        uint256 S = hv.totalSupply() - burnS - _dripOwed(hv.bankFull());
+        // the supply the flow sees, before base: the prologue's base mint (spec §3.5) only adds to it
+        uint256 sNoBase = hv.totalSupply() - burnS - _dripOwed(hv.bankFull());
         (uint256 f0, uint256 f1) = ExpectedFlows.fees(manager, poolId, address(hv), h.lo, h.hi);
-        uint128 dL = uint128(FullMath.mulDiv(h.L, s, S));
-        (uint256 r0, uint256 r1) = ExpectedFlows.legs(manager, poolId, h.lo, h.hi, dL, false);
-        uint256 e0 = FullMath.mulDiv(h.idle0 + f0, s, S) + r0;
-        uint256 e1 = FullMath.mulDiv(h.idle1 + f1, s, S) + r1;
         uint256 b0 = token0.balanceOf(a);
         uint256 b1 = token1.balanceOf(a);
         (uint128 posBefore,,) = manager.getPositionInfo(poolId, address(hv), h.lo, h.hi, bytes32(0));
@@ -155,6 +156,18 @@ contract VaultHandler is Test, SettleExtraOracle {
                 ++withdrawalsSettling;
                 _countSettle(ok);
             }
+            // the prologue (settlement burn, drip, base mint) changes the supply only, never the buckets: the flow's
+            // supply is exact after the call (the withdrawal burnt s), and the closed-form one without base bounds it
+            uint256 S = hv.totalSupply() + s;
+            if (S < sNoBase) _i2("supply below the settlement and drip prediction");
+            if (S > sNoBase) {
+                ++withdrawalsMintingBase;
+                baseMinted += S - sNoBase;
+            }
+            uint128 dL = uint128(FullMath.mulDiv(h.L, s, S));
+            (uint256 r0, uint256 r1) = ExpectedFlows.legs(manager, poolId, h.lo, h.hi, dL, false);
+            uint256 e0 = FullMath.mulDiv(h.idle0 + f0, s, S) + r0;
+            uint256 e1 = FullMath.mulDiv(h.idle1 + f1, s, S) + r1;
             if (token0.balanceOf(a) - b0 != e0) _i2("token0 payout");
             if (token1.balanceOf(a) - b1 != e1) _i2("token1 payout");
             (uint128 posAfter,,) = manager.getPositionInfo(poolId, address(hv), h.lo, h.hi, bytes32(0));

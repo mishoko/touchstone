@@ -6,10 +6,12 @@ import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {ExecLedger} from "../../src/libraries/ExecLedger.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
+import {SettleExtraOracle} from "../utils/SettleExtraOracle.sol";
 
 /// @notice U-3 and U-settle (library half): `ExecLedger.measure` and `ExecLedger.settleExtra` bit for bit against the
 ///         cases of test/vectors/ledger.json, plus the properties the vectors cannot state on their own.
-contract LedgerVectorsTest is VectorBase {
+contract LedgerVectorsTest is VectorBase, SettleExtraOracle {
+
     function _h(string memory c, string memory p) internal pure returns (Holdings memory) {
         return Holdings(
             uint128(_u(c, string.concat(p, ".idle0"))),
@@ -99,7 +101,8 @@ contract LedgerVectorsTest is VectorBase {
             cid = _s(c, ".id");
             if (!_eq(_s(c, ".fn"), "ExecLedger.settleExtra")) continue;
             _settleKeys(c);
-            (uint256 extra, uint160 pMk, uint256 burnS) = ExecLedger.settleExtra(
+            // the library reads the pending record through storage pointers, as the vault passes it
+            (uint256 extra, uint160 pMk, uint256 burnS) = _settleExtra(
                 _h(c, ".in.before"),
                 _h(c, ".in.after"),
                 int24(_i(c, ".in.tickMk")),
@@ -122,10 +125,10 @@ contract LedgerVectorsTest is VectorBase {
 
     /// @notice The upper markout leg sits one tick above `tickMk + feeTicks` (the floor of the window's mean is
     ///         rounded up): a sale of token0 is priced there, not at `tickMk + feeTicks`.
-    function test_U_settle__upperLegIsRoundedUp() public pure {
+    function test_U_settle__upperLegIsRoundedUp() public {
         Holdings memory b = Holdings(1e21, 1e21, 0, 0, 0);
         Holdings memory a = Holdings(1e21 - 1e18, 1e21 + 1e18, 0, 0, 0); // sold 1 token0 for 1 token1
-        (, uint160 pMk,) = ExecLedger.settleExtra(b, a, 100, 5, 0, type(uint128).max, a, 1e24, 1e20);
+        (, uint160 pMk,) = _settleExtra(b, a, 100, 5, 0, type(uint128).max, a, 1e24, 1e20);
         assertEq(pMk, TickMath.getSqrtPriceAtTick(106), "upper leg at tickMk + feeTicks + 1");
     }
 
@@ -139,13 +142,13 @@ contract LedgerVectorsTest is VectorBase {
         uint128 rs,
         uint128 L,
         int24 c
-    ) public pure {
+    ) public {
         tickMk = int24(bound(tickMk, TickMath.MIN_TICK, TickMath.MAX_TICK));
         c = int24(bound(c, TickMath.MIN_TICK, TickMath.MAX_TICK - 2000)) / 10 * 10;
         Holdings memory b = Holdings(1e21, 1e21, L, c, c + 2000);
         Holdings memory a = Holdings(1e21 - 1e18, 1e21 + 1e17, L / 2, c, c + 2000);
         (uint256 extra, uint160 pMk, uint256 burnS) =
-            ExecLedger.settleExtra(b, a, tickMk, int24(uint24(fee)), 0, res, a, S, rs);
+            _settleExtra(b, a, tickMk, int24(uint24(fee)), 0, res, a, S, rs);
         assertLe(extra, res, "extra <= reserve");
         assertLe(burnS, rs, "burnS <= reserveShares");
         assertGe(pMk, TickMath.MIN_SQRT_PRICE, "pMk in range");
@@ -154,34 +157,34 @@ contract LedgerVectorsTest is VectorBase {
 
     /// @notice The two counterexamples of fix review r1 (F9-01), pinned: the upper leg clamps to the price of MAX_TICK
     ///         itself, which equals `MAX_SQRT_PRICE`, and the lower leg clamps at MIN_TICK.
-    function test_U_settle__legsClampAtBothTickBounds() public pure {
+    function test_U_settle__legsClampAtBothTickBounds() public {
         Holdings memory b = Holdings(1e21, 1e21, 0, 0, 0);
         Holdings memory a = Holdings(1e21 - 1e18, 1e21 + 1e17, 0, 0, 0);
-        (, uint160 pMk,) = ExecLedger.settleExtra(b, a, 887270, 192, 0, 1242, a, 1e24, 1e20);
+        (, uint160 pMk,) = _settleExtra(b, a, 887270, 192, 0, 1242, a, 1e24, 1e20);
         assertEq(pMk, TickMath.MAX_SQRT_PRICE, "upper leg clamped to MAX_TICK");
-        (, pMk,) = ExecLedger.settleExtra(b, b, -887272, 255, 0, 1, b, 1e24, 1e20);
+        (, pMk,) = _settleExtra(b, b, -887272, 255, 0, 1, b, 1e24, 1e20);
         assertEq(pMk, TickMath.MIN_SQRT_PRICE, "a tie keeps the lower leg, clamped to MIN_TICK");
     }
 
     /// @notice The settlement's share cap never overflows: at supply 1, a price near the top of the range and uint128
     ///         reserve shares, `reserveShares·NAV_now/S` exceeds 2^256 (the counterexample of the s9 exploration run).
-    function test_U_settle__burnCapDoesNotOverflowAtTinySupply() public pure {
+    function test_U_settle__burnCapDoesNotOverflowAtTinySupply() public {
         uint128 L = 2184764868214510588;
         Holdings memory b = Holdings(1e21, 1e21, L, 0, 2000);
         Holdings memory a = Holdings(1e21 - 1e18, 1e21 + 1e17, L / 2, 0, 2000);
         (uint256 extra,, uint256 burnS) =
-            ExecLedger.settleExtra(b, a, 484120, 1, 0, 2, a, 1, 4994973406871068607839876929312525582);
+            _settleExtra(b, a, 484120, 1, 0, 2, a, 1, 4994973406871068607839876929312525582);
         assertEq(extra, 2, "extra capped at the reserve");
         assertEq(burnS, 1, "one share at supply 1");
     }
 
     /// @notice The share cap's fit check at equality (fix review r2 F10-02): with `S` equal to the high word of
     ///         `reserveShares·NAV_now`, the cap's division would overflow, so it is skipped and one share is burned.
-    function test_U_settle__burnCapAtFitBoundary() public pure {
+    function test_U_settle__burnCapAtFitBoundary() public {
         Holdings memory b = Holdings(1e21, 1e21, 0, 0, 0);
         Holdings memory a = Holdings(1e21 - 1e18, 1e21 + 1e17, 0, 0, 0);
         (uint256 extra,, uint256 burnS) =
-            ExecLedger.settleExtra(b, a, 500000, 1, 0, 1e18, a, 15186, type(uint128).max);
+            _settleExtra(b, a, 500000, 1, 0, 1e18, a, 15186, type(uint128).max);
         assertEq(extra, 1e18, "extra capped at the reserve");
         assertEq(burnS, 1, "the cap cannot bind; one share");
     }

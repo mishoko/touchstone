@@ -23,12 +23,13 @@ import {Bank, Cohort, RING, V} from "../../../src/types/Bank.sol";
 import {ExecLedger} from "../../../src/libraries/ExecLedger.sol";
 import {FeeBank} from "../../../src/libraries/FeeBank.sol";
 import {Ladder} from "../../../src/libraries/Ladder.sol";
+import {SettleExtraOracle} from "../../utils/SettleExtraOracle.sol";
 
 /// @notice The handler: deposits, withdrawals, time (snapshotted steps and silent jumps), keep-alive refreshes, the
 ///         curator's actions (`setPositions` with an optional move and pre-swap, `rebalanceSwap`), third-party swaps,
 ///         reference moves and `breakRef` (every failure mode of the scripted reference). Every withdrawal is checked against the exact pro-rata share computed from the
 ///         PoolManager's state (I-2) and against the revert allow-list (I-10); the results are kept in ghosts.
-contract VaultHandler is Test {
+contract VaultHandler is Test, SettleExtraOracle {
     using StateLibrary for IPoolManager;
 
     IPoolManager internal immutable manager;
@@ -535,7 +536,7 @@ contract VaultHandler is Test {
 
     /// @dev The settlement burn prologue step 0 will make in this block, computed from the hook's own window read and
     ///         `ExecLedger.settleExtra` on the pre-collect holdings and supply (the whole reserve if the read fails).
-    function _expectedSettleBurn() internal view returns (uint256 burnS, bool due, bool ok) {
+    function _expectedSettleBurn() internal returns (uint256 burnS, bool due, bool ok) {
         (uint40 tA, Holdings memory b, Holdings memory a, uint128 c0, uint128 r) = hv.pendingAction();
         uint256 ts = vm.getBlockTimestamp();
         uint256 H = hv.tier().H_MARKOUT;
@@ -546,7 +547,7 @@ contract VaultHandler is Test {
         (ok, tick) = hook.tryWindow(uint32(x), uint32(x - H));
         uint256 rs = hv.bankFull().reserveShares;
         if (!ok) return (rs, true, false);
-        (,, burnS) = ExecLedger.settleExtra(b, a, tick, hv.tier().FEE_TICKS, c0, r, hv.holdings(), hv.totalSupply(), rs);
+        (,, burnS) = _settleExtra(b, a, tick, hv.tier().FEE_TICKS, c0, r, hv.holdings(), hv.totalSupply(), rs);
         if (burnS > rs) burnS = rs;
     }
 

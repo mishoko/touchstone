@@ -18,13 +18,14 @@ import {Ladder} from "../../src/libraries/Ladder.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
 import {PreSwap} from "../../src/types/PreSwap.sol";
 import {Bank} from "../../src/types/Bank.sol";
+import {SettleExtraOracle} from "../utils/SettleExtraOracle.sol";
 
 /// @notice The curator's `setPositions` on the real hook over the scripted reference pool, from an unplaced vault (all
 ///         idle, about half of each token at tick 0). Expectations come from `ExecLedger` (checked bit for bit against
 ///         the reference model's vectors) on inputs the test reads itself: the holdings before the action, the pool's
 ///         spot before and after the vault's move, the PoolManager's `Swap` events, the scripted reference tick and
 ///         the supply.
-contract VaultPlaceTest is LiquidPoolBase {
+contract VaultPlaceTest is LiquidPoolBase, SettleExtraOracle {
     using StateLibrary for *;
 
     event Action(uint8 kind, uint256 charge, uint160 pStar, uint256 burnedBank, uint256 burnedBond);
@@ -672,7 +673,7 @@ contract VaultPlaceTest is LiquidPoolBase {
         vm.expectRevert(TouchstoneVault.MarkoutPending.selector);
         hv.deposit(1e18, type(uint256).max, type(uint256).max, bob);
         advance(2 + tier.H_MARKOUT / blocktime);
-        (uint256 extra,, uint256 burnS) = ExecLedger.settleExtra(
+        (uint256 extra,, uint256 burnS) = _settleExtra(
             pb, pa, tier.REF_BAND, tier.FEE_TICKS, c0, r, hv.holdings(), hv.totalSupply(), bk.reserveShares
         );
         extra;

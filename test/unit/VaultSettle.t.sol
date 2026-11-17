@@ -9,6 +9,7 @@ import {TouchstoneVault} from "../../src/TouchstoneVault.sol";
 import {ExecLedger} from "../../src/libraries/ExecLedger.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
 import {Bank, Cohort, RING} from "../../src/types/Bank.sol";
+import {SettleExtraOracle} from "../utils/SettleExtraOracle.sol";
 
 /// @notice The markout settlement in the vault (prologue step 0 and `settle()`), on the real hook over the scripted
 ///         reference pool. A pending action is written through the harness seam (the actions that record one are built
@@ -16,7 +17,7 @@ import {Bank, Cohort, RING} from "../../src/types/Bank.sol";
 ///         come from `ExecLedger.settleExtra` (checked bit for bit against the reference model's vectors) on inputs
 ///         the test computes itself: the window's tick from the scripted path, the supply and the holdings before
 ///         collect-first.
-contract VaultSettleTest is LiquidPoolBase {
+contract VaultSettleTest is LiquidPoolBase, SettleExtraOracle {
     event Settled(uint256 charge0, uint256 extra, int24 tickMk, bool fallbackUsed);
 
     int24 internal constant T_MK = 40; // the reference tick inside the markout window
@@ -66,8 +67,8 @@ contract VaultSettleTest is LiquidPoolBase {
         assertEq(vm.getBlockTimestamp(), tA + 2 * blocktime + tier.H_MARKOUT, "due time");
     }
 
-    function _expected(int24 tMk) internal view returns (uint256 extra, uint256 burnS) {
-        (extra,, burnS) = ExecLedger.settleExtra(
+    function _expected(int24 tMk) internal returns (uint256 extra, uint256 burnS) {
+        (extra,, burnS) = _settleExtra(
             pBefore, pAfter, tMk, tier.FEE_TICKS, CHARGE0, RESERVE, hv.holdings(), hv.totalSupply(), RES_SHARES
         );
     }

@@ -17,13 +17,14 @@ import {FeeBank} from "../../src/libraries/FeeBank.sol";
 import {Ladder} from "../../src/libraries/Ladder.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
 import {Bank, Cohort, RING} from "../../src/types/Bank.sol";
+import {SettleExtraOracle} from "../utils/SettleExtraOracle.sol";
 
 /// @notice The curator's `rebalanceSwap` and the charge path it shares with `setPositions`, on the real hook over the
 ///         scripted reference pool. The vault holds a position on [-1800, 200) around spot 0 (so most of its token0
 ///         stays idle and can be swapped). Expectations come from `ExecLedger.measure`/`value`/`settleExtra` (checked
 ///         bit for bit against the reference model's vectors) on inputs the test reads itself: the holdings before
 ///         the action (after collect-first), the pool's spot, the scripted reference tick and the supply.
-contract VaultActionTest is LiquidPoolBase {
+contract VaultActionTest is LiquidPoolBase, SettleExtraOracle {
     using StateLibrary for *;
 
     event Action(uint8 kind, uint256 charge, uint160 pStar, uint256 burnedBank, uint256 burnedBond);
@@ -254,7 +255,7 @@ contract VaultActionTest is LiquidPoolBase {
         advance(1);
         assertEq(vm.getBlockTimestamp(), tA + 2 * blocktime + tier.H_MARKOUT, "due");
         (uint256 extra,, uint256 burnS) =
-            ExecLedger.settleExtra(pb, pa, -30, tier.FEE_TICKS, c0, r, hv.holdings(), hv.totalSupply(), rs);
+            _settleExtra(pb, pa, -30, tier.FEE_TICKS, c0, r, hv.holdings(), hv.totalSupply(), rs);
         uint256 S = hv.totalSupply();
         vm.expectEmit(address(hv));
         emit Settled(c0, extra, -30, false);

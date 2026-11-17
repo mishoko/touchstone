@@ -124,8 +124,8 @@ library ExecLedger {
     ///         immediate charge and capped at the reserve; the reserve shares to burn, rounded up at `NAV(now, pMk)`
     ///         and capped at `reserveShares` (all of them if that NAV is 0 and extra > 0). No revert path on the legs.
     function settleExtra(
-        Holdings calldata before,
-        Holdings calldata after_,
+        Holdings storage before,
+        Holdings storage after_,
         int24 tickMk,
         int24 feeTicks,
         uint256 charge0,
@@ -133,13 +133,18 @@ library ExecLedger {
         Holdings calldata now_,
         uint256 S,
         uint256 reserveShares
-    ) external pure returns (uint256 extra, uint160 pMk, uint256 burnS) {
+    ) external view returns (uint256 extra, uint160 pMk, uint256 burnS) {
+        // `view`: the pending record is read here, through the vault's storage pointers (the vault's size lever; solc
+        // does not class a read through a storage-reference parameter as a state read and suggests `pure`)
+        Holdings memory b = before;
+        // [MU-245]
+        Holdings memory a = after_;
         // [MU-148] the legs sit FEE_TICKS outside the markout tick
         // [MU-175] the upper leg is rounded up; [MU-176] both legs are clamped to the tick range
         pMk = TickMath.getSqrtPriceAtTick(_clamp(int256(tickMk) - feeTicks));
         uint160 pHi = TickMath.getSqrtPriceAtTick(_clamp(int256(tickMk) + feeTicks + 1));
-        (uint256 nb, uint256 na) = _legs(before, after_, pMk);
-        (uint256 nb2, uint256 na2) = _legs(before, after_, pHi);
+        (uint256 nb, uint256 na) = _legs(b, a, pMk);
+        (uint256 nb2, uint256 na2) = _legs(b, a, pHi);
         if (_worse(nb2, na2, nb, na)) (nb, na, pMk) = (nb2, na2, pHi);
         uint256 loss = nb > na ? nb - na : 0;
         // [MU-149] [MU-179] net of the immediate charge, capped at the reserve
@@ -170,13 +175,13 @@ library ExecLedger {
 
     // ------------------------------------------------------------------ internals
 
-    function _value(Holdings calldata h, uint160 sqrtP) private pure returns (uint256 nav, uint256 posValue) {
+    function _value(Holdings memory h, uint160 sqrtP) private pure returns (uint256 nav, uint256 posValue) {
         (uint256 x, uint256 y) = LiquidityValue.amounts(h.L, h.lo, h.hi, sqrtP);
         posValue = LiquidityValue.val(x, y, sqrtP);
         nav = LiquidityValue.val(uint256(h.idle0) + x, uint256(h.idle1) + y, sqrtP);
     }
 
-    function _legs(Holdings calldata b, Holdings calldata a, uint160 p) private pure returns (uint256 nb, uint256 na) {
+    function _legs(Holdings memory b, Holdings memory a, uint160 p) private pure returns (uint256 nb, uint256 na) {
         (nb,) = _value(b, p);
         (na,) = _value(a, p);
     }

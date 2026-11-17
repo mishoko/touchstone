@@ -566,6 +566,7 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
         // [MU-150] a failed read burns the whole reserve
         uint256 burnS = b.reserveShares;
         if (ok) {
+            // [MU-244] the pending record's holdings before and after, read in the library through storage pointers
             (extra,, burnS) = ExecLedger.settleExtra(
                 _pBefore, _pAfter, tickMk, FEE_TICKS, _pCharge0, extra, _holdings(), totalSupply(), burnS
             );

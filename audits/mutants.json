@@ -11,7 +11,7 @@
    "find": "        return nb + naRef > nbRef + na;",
    "replace": "        return nb + naRef < nbRef + na;",
    "status": "KILLED",
-   "basis": "2a3853ed4b984243"
+   "basis": "3171808cf6b51e90"
   },
   {
    "id": "MU-002",
@@ -23,7 +23,7 @@
    "find": "        if (_worse(nb2, na2, nb, na)) (nb, na, pStar) = (nb2, na2, sqrtRef);",
    "replace": "        if (true) (nb, na, pStar) = (nb2, na2, sqrtRef);",
    "status": "KILLED",
-   "basis": "2b5ed44c2d3df2f7"
+   "basis": "7e950f4c6e54d96b"
   },
   {
    "id": "MU-003",
@@ -35,7 +35,7 @@
    "find": "        charge = nb > na ? nb - na : 0;",
    "replace": "        charge = nb > na ? nb - na : na - nb;",
    "status": "KILLED",
-   "basis": "2b5ed44c2d3df2f7"
+   "basis": "7e950f4c6e54d96b"
   },
   {
    "id": "MU-004",
@@ -47,7 +47,7 @@
    "find": "        charge = nb > na ? nb - na : 0;",
    "replace": "        charge = nb > na ? (nb - na) / 2 : 0;",
    "status": "KILLED",
-   "basis": "2b5ed44c2d3df2f7"
+   "basis": "7e950f4c6e54d96b"
   },
   {
    "id": "MU-005",
@@ -71,7 +71,7 @@
    "find": "        burn = _shares(charge, S, navBurn);",
    "replace": "        burn = _shares(charge, S, na);",
    "status": "KILLED",
-   "basis": "2b5ed44c2d3df2f7"
+   "basis": "7e950f4c6e54d96b"
   },
   {
    "id": "MU-007",
@@ -440,7 +440,7 @@
    "find": "        (bool liveRead, int24 liveTick) = _checkpoint(o);\n",
    "replace": "        bool liveRead;\n        int24 liveTick;\n        if (entry != Entry.Deposit) (liveRead, liveTick) = _checkpoint(o);\n",
    "status": "KILLED",
-   "basis": "ce957d9955a963d2"
+   "basis": "84385c674c2ed54e"
   },
   {
    "id": "MU-038",
@@ -865,7 +865,7 @@
    "find": "        Obs memory o = _prologue();\n        // [MU-037] every entry point checkpoints\n        (bool liveRead, int24 liveTick) = _checkpoint(o);\n        // [MU-073] the mode gate runs after the prologue checkpoint, which may have moved the mode to EXITED\n        if (!Ladder.allowed(_bank.mode, uint8(entry))) revert Ladder.BadMode();",
    "replace": "        // [MU-037] [MU-073]\n        if (!Ladder.allowed(_bank.mode, uint8(entry))) revert Ladder.BadMode();\n        Obs memory o = _prologue();\n        (bool liveRead, int24 liveTick) = _checkpoint(o);",
    "status": "KILLED",
-   "basis": "c77af3f0c04daf35"
+   "basis": "cb8e2770c7eedeff"
   },
   {
    "id": "MU-074",
@@ -1482,7 +1482,7 @@
    "find": "        (nb2, na2) = _legs(before, after_, sqrtRef);",
    "replace": "        (nb2, na2) = (nb, na);",
    "status": "KILLED",
-   "basis": "0e7112f98bb0d491"
+   "basis": "30f3537868de5aea"
   },
   {
    "id": "MU-126",
@@ -1530,7 +1530,7 @@
    "find": "        return FullMath.mulDivRoundingUp(x, S, nav);",
    "replace": "        return FullMath.mulDiv(x, S, nav);",
    "status": "KILLED",
-   "basis": "dd933bcb1436da41"
+   "basis": "37a03c0c62339be6"
   },
   {
    "id": "MU-130",
@@ -1733,7 +1733,7 @@
    "find": "        (uint256 nb2, uint256 na2) = _legs(before, after_, sqrtS0);",
    "replace": "        (uint256 nb2, uint256 na2) = (nb, na);",
    "status": "KILLED",
-   "basis": "2b5ed44c2d3df2f7"
+   "basis": "7e950f4c6e54d96b"
   },
   {
    "id": "MU-147",
@@ -1745,7 +1745,7 @@
    "find": "        ok = burn <= cover && burnR <= cover - burn;",
    "replace": "        ok = burn <= cover;",
    "status": "KILLED",
-   "basis": "2b5ed44c2d3df2f7"
+   "basis": "7e950f4c6e54d96b"
   },
   {
    "id": "MU-148",
@@ -1757,7 +1757,7 @@
    "find": "i == 0 ? int256(tickMk) - feeTicks :",
    "replace": "i == 0 ? int256(tickMk) :",
    "status": "KILLED",
-   "basis": "59923b1294d49671"
+   "basis": "cbb08dfa0b5068ca"
   },
   {
    "id": "MU-149",
@@ -1769,7 +1769,7 @@
    "find": "        if (burnS > reserveShares) burnS = reserveShares;",
    "replace": "        if (false) burnS = reserveShares;",
    "status": "KILLED",
-   "basis": "59923b1294d49671"
+   "basis": "cbb08dfa0b5068ca"
   },
   {
    "id": "MU-150",
@@ -1877,7 +1877,7 @@
    "find": "if (msg.sender != address(MANAGER)) revert OnlyPoolManager();",
    "replace": "",
    "status": "KILLED",
-   "basis": "66b6fc6a070893cb"
+   "basis": "66360fc4372ea5eb"
   },
   {
    "id": "MU-159",
@@ -2081,7 +2081,7 @@
    "find": "int256(tickMk) + feeTicks + 1)",
    "replace": "int256(tickMk) + feeTicks)",
    "status": "KILLED",
-   "basis": "59923b1294d49671"
+   "basis": "cbb08dfa0b5068ca"
   },
   {
    "id": "MU-176",
@@ -2093,7 +2093,7 @@
    "find": "        if (t > TickMath.MAX_TICK) return TickMath.MAX_TICK;",
    "replace": "        if (false) return TickMath.MAX_TICK;",
    "status": "KILLED",
-   "basis": "4a9bf50d2484e1e5"
+   "basis": "de8145cfe5e0d74b"
   },
   {
    "id": "MU-177",
@@ -2105,7 +2105,7 @@
    "find": "        ok = burn <= cover && burnR <= cover - burn;",
    "replace": "        ok = burn + burnR <= cover;",
    "status": "KILLED",
-   "basis": "2b5ed44c2d3df2f7"
+   "basis": "7e950f4c6e54d96b"
   },
   {
    "id": "MU-178",
@@ -2117,7 +2117,7 @@
    "find": "        if (_worse(nb2, na2, nb, na)) (nb, na, pStar) = (nb2, na2, sqrtS0);",
    "replace": "        if (!_worse(nb, na, nb2, na2)) (nb, na, pStar) = (nb2, na2, sqrtS0);",
    "status": "KILLED",
-   "basis": "2b5ed44c2d3df2f7"
+   "basis": "7e950f4c6e54d96b"
   },
   {
    "id": "MU-179",
@@ -2129,7 +2129,7 @@
    "find": "        burnS = req > pd.burn0 ? req - pd.burn0 : 0;",
    "replace": "        burnS = req;",
    "status": "KILLED",
-   "basis": "59923b1294d49671"
+   "basis": "cbb08dfa0b5068ca"
   },
   {
    "id": "MU-180",
@@ -2141,7 +2141,7 @@
    "find": "        // [MU-180] the burn price is the smallest NAV_after over the legs\n        if (na2 < navBurn) navBurn = na2;",
    "replace": "        // [MU-180] the burn price is the smallest NAV_after over the legs\n        if (false) navBurn = na2;",
    "status": "KILLED",
-   "basis": "2b5ed44c2d3df2f7"
+   "basis": "7e950f4c6e54d96b"
   },
   {
    "id": "MU-181",
@@ -2165,7 +2165,7 @@
    "find": "        uint256 req = FullMath.mulDivRoundingUp(g, pd.sAct, nb);",
    "replace": "        uint256 req = FullMath.mulDiv(g, pd.sAct, nb);",
    "status": "KILLED",
-   "basis": "59923b1294d49671"
+   "basis": "cbb08dfa0b5068ca"
   },
   {
    "id": "MU-183",
@@ -2177,7 +2177,7 @@
    "find": "        navBurn = na;\n",
    "replace": "        navBurn = type(uint256).max;\n",
    "status": "KILLED",
-   "basis": "2b5ed44c2d3df2f7"
+   "basis": "7e950f4c6e54d96b"
   },
   {
    "id": "MU-184",
@@ -2189,7 +2189,7 @@
    "find": "        if (h1 != h2) return h1 > h2;",
    "replace": "        return h1 > h2;",
    "status": "KILLED",
-   "basis": "9bb6860b1181f25a"
+   "basis": "cbda2f390d44ea8f"
   },
   {
    "id": "MU-185",
@@ -2920,7 +2920,7 @@
    "find": "        Holdings memory a = after_;",
    "replace": "        Holdings memory a = before;",
    "status": "KILLED",
-   "basis": "59923b1294d49671"
+   "basis": "cbb08dfa0b5068ca"
   },
   {
    "id": "MU-246",
@@ -2932,7 +2932,7 @@
    "find": "(i == 1 ? int256(tickMk) :",
    "replace": "(i == 1 ? int256(tickMk) - feeTicks :",
    "status": "KILLED",
-   "basis": "59923b1294d49671"
+   "basis": "cbb08dfa0b5068ca"
   },
   {
    "id": "MU-247",
@@ -2944,7 +2944,7 @@
    "find": "nbi = _satAdd(nbi, _arbFee(b, pd.s0, p, true, feePips));",
    "replace": "nbi = nbi;",
    "status": "KILLED",
-   "basis": "59923b1294d49671"
+   "basis": "cbb08dfa0b5068ca"
   },
   {
    "id": "MU-248",
@@ -2956,7 +2956,7 @@
    "find": "_arbFee(a, pd.sEnd, p, false, feePips)",
    "replace": "_arbFee(a, pd.sEnd, p, true, feePips)",
    "status": "KILLED",
-   "basis": "59923b1294d49671"
+   "basis": "cbb08dfa0b5068ca"
   },
   {
    "id": "MU-249",
@@ -2968,7 +2968,7 @@
    "find": "_gt512(gi, nb, g, nbi)",
    "replace": "gi > g",
    "status": "KILLED",
-   "basis": "59923b1294d49671"
+   "basis": "cbb08dfa0b5068ca"
   },
   {
    "id": "MU-250",
@@ -2980,7 +2980,7 @@
    "find": "FullMath.mulDivRoundingUp(g, pd.sAct, nb);",
    "replace": "FullMath.mulDivRoundingUp(g, pd.sAct, nb - g);",
    "status": "KILLED",
-   "basis": "59923b1294d49671"
+   "basis": "cbb08dfa0b5068ca"
   },
   {
    "id": "MU-252",
@@ -2992,7 +2992,7 @@
    "find": "        extra = FullMath.mulDiv(burnS, nb, pd.sAct);",
    "replace": "        extra = g;",
    "status": "KILLED",
-   "basis": "59923b1294d49671"
+   "basis": "cbb08dfa0b5068ca"
   },
   {
    "id": "MU-253",
@@ -3004,7 +3004,7 @@
    "find": "        bool down = p < s;",
    "replace": "        bool down = p > s;",
    "status": "KILLED",
-   "basis": "e575e459a0d098c8"
+   "basis": "d16eb294e24d4482"
   },
   {
    "id": "MU-254",
@@ -3016,7 +3016,7 @@
    "find": "        f = f > m ? f - m : 0;",
    "replace": "        f = f;",
    "status": "KILLED",
-   "basis": "e575e459a0d098c8"
+   "basis": "d16eb294e24d4482"
   },
   {
    "id": "MU-255",
@@ -3028,7 +3028,7 @@
    "find": "        return FullMath.mulDiv(f, 1e6 - CREDIT_MARGIN, 1e6);",
    "replace": "        return f;",
    "status": "KILLED",
-   "basis": "e575e459a0d098c8"
+   "basis": "d16eb294e24d4482"
   },
   {
    "id": "MU-256",

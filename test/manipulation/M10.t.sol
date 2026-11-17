@@ -143,7 +143,7 @@ contract M10Test is LiquidPoolBase {
         (nav,) = ExecLedger.value(hv.holdings(), TickMath.getSqrtPriceAtTick(0));
     }
 
-    /// @notice Lane B, the deposit side (killer of MU-037's class: the deposit without its checkpoint): a deposit while base is
+    /// @notice Lane B, the deposit side (the deposit without its checkpoint is MU-037, killed by U-breach): a deposit while base is
     ///         accrued and unminted is priced after the mint, so a same-block exit returns what was paid (less rounding).
     ///         Without the checkpoint the depositor's new shares would be diluted by the mint its own exit triggers.
     function test_M_10__depositBeforeAPendingBaseMintIsPricedAfterIt() public {

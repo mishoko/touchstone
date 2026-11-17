@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, Vm} from "forge-std/Test.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {IUnlockCallback} from "@uniswap/v4-core/src/interfaces/callback/IUnlockCallback.sol";
 import {Currency, CurrencyLibrary} from "@uniswap/v4-core/src/types/Currency.sol";
@@ -156,6 +156,14 @@ contract VaultExtensionTest is VaultBase {
         uint256 supply = v.totalSupply();
         uint256 b0 = token0.balanceOf(address(manager));
         f.go(2);
+        // the call got past both checks (the SELF refusal and the PoolManager check) and failed inside the flow's body,
+        // on the foreign contract's own storage (its zero supply), not on a guard
+        assertFalse(f.lastOk(), "the body ran on the foreign storage and reverted there");
+        assertTrue(
+            keccak256(f.lastRevert()) != keccak256(abi.encodeWithSelector(VaultCommon.NotDelegated.selector))
+                && keccak256(f.lastRevert()) != keccak256(abi.encodeWithSelector(VaultCommon.OnlyPoolManager.selector)),
+            "past both checks"
+        );
         for (uint256 i; i < 40; ++i) {
             assertEq(vm.load(vault, bytes32(i)), before[i], "vault storage unchanged");
         }
@@ -197,6 +205,30 @@ contract VaultExtensionTest is VaultBase {
         assertEq(token0.balanceOf(alice) - t0, o0, "withdraw o0");
         assertEq(token1.balanceOf(alice) - t1, o1, "withdraw o1");
         assertGt(o0 + o1, 0);
+    }
+
+    /// @notice The moved flows' events are emitted from the vault's address (the extension's code runs by
+    ///         delegatecall), with the flow's amounts; none comes from the extension.
+    function test_U_ext__movedFlowEventsComeFromTheVault() public {
+        _fundUser(alice, 10e18);
+        vm.recordLogs();
+        (uint256 a0, uint256 a1) = _deposit(alice, 3e23);
+        (uint256 o0, uint256 o1) = _withdraw(alice, 1e23);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bytes32 tDep = keccak256("Deposit(address,uint256,uint256,uint256)");
+        bytes32 tWd = keccak256("Withdraw(address,uint256,uint256,uint256)");
+        uint256 seen;
+        for (uint256 i; i < logs.length; ++i) {
+            assertTrue(logs[i].emitter != ext, "nothing is emitted from the extension's address");
+            bytes32 t = logs[i].topics[0];
+            if (t != tDep && t != tWd) continue;
+            assertEq(logs[i].emitter, vault, "emitted from the vault");
+            assertEq(logs[i].topics[1], bytes32(uint256(uint160(alice))));
+            if (t == tDep) assertEq(logs[i].data, abi.encode(a0, a1, uint256(3e23)), "Deposit fields");
+            else assertEq(logs[i].data, abi.encode(uint256(1e23), o0, o1), "Withdraw fields");
+            ++seen;
+        }
+        assertEq(seen, 2, "one Deposit and one Withdraw");
     }
 
     /// @notice (d) One transaction calling `deposit` then `withdraw` through the vault succeeds: the fallback releases

@@ -676,7 +676,10 @@ def sweep(h, r, ref, etas, cap=CAP, clamp=None, diff=False, etas_int=None):
 
 
 def swap_lane_a(sigma, etas, cap=CAP, clamp=None):
-    """Per unit of swapped value (ticks of 1e-4): sq and C120 nets for the best D (linear valuation). The cap per
+    """The bias keeps sign +1 here (S17F2-03): the charge is linear in the offset (the cap never binds), so the colluder's
+    better sign is the one with the larger mean offset, which is +1 at both σ and both distributions (measured in the s17
+    fix review r2: mean offset −2.05 vs +0.37 ticks at σ 0.6, −1.30 vs −0.52 at σ 1.2, gbm).
+    Per unit of swapped value (ticks of 1e-4): sq and C120 nets for the best D (linear valuation). The cap per
     unit of swapped value is cap / SWAP_FRAC (as ticks of 1e-4)."""
     res = {}
     cap_t = cap / SWAP_FRAC / 1e-4 if cap is not None else float("inf")
@@ -852,7 +855,8 @@ def summarise_fa(rows, ablation=True):
         lines.append(f"  fee_aware_s0 (s0 searched; the verdict column): placements {ps0[0] * 100:.3f}% [90% CI {ps0[1] * 100:.3f}, "
                      f"{ps0[2] * 100:.3f}] ({parts0}); max cycle E[net] {max(r['fee_aware_s0'] / r['nav'] for r in g) * 1e4:.4f} bp "
                      f"(largest signed attack E[net] {sig_max('fee_aware_s0_sig')}; fixed s0 {sig_max('fee_aware_sig')}; "
-                     f"tick_mk shifted one tick toward the pushed spot {sig_max('fa_fshift_sig')})")
+                     f"tick_mk shifted one tick toward the pushed spot, pushed-spot s0 on gbm placements only (S17F2-04) "
+                     f"{sig_max('fa_fshift_sig')})")
         lines.append(f"  s0 search: {sum(r['s0_n_att'] for r in g)} legal searched attacks, {sum(r['s0_n_pos_sq'] for r in g)} "
                      f"sq-positive; attacks whose pushed spot the status quo filters but a searched s0 does not: "
                      f"{sum(r['s0_new_pos'] for r in g)}; where both are evaluated, a searched s0 beat the pushed spot on "

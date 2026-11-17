@@ -72,6 +72,24 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         assertEq(handler.actionFailures(), 0, vm.toString(abi.encodePacked(handler.actionSelector())));
     }
 
+    /// @notice Non-vacuity of the random campaign (value review item 6, F-043). A single run may legitimately see every
+    ///         curator action revert (an early breach to EXITED), so non-vacuity is a property of the whole campaign:
+    ///         with `TS_NV_LOG=<file>` each run appends its counters, and `script/nonvacuity.py` checks the totals
+    ///         (run by `script/ci-local.sh` on the 256 x 128 campaign).
+    function afterInvariant() public {
+        string memory path = vm.envOr("TS_NV_LOG", string(""));
+        if (bytes(path).length == 0) return;
+        vm.writeLine(
+            path,
+            string.concat(
+                _highTick() ? "tick196k," : "tick0,",
+                vm.toString(handler.rebalanceCalls()), ",", vm.toString(handler.curatorSwaps()), ",",
+                vm.toString(handler.placeCalls()), ",", vm.toString(handler.curatorPlacements()), ",",
+                vm.toString(handler.placementsMoved()), ",", vm.toString(handler.placementsPreSwapped())
+            )
+        );
+    }
+
     function invariant_I_10__withdrawNeverRevertsOutsideTheAllowList() public view {
         assertEq(handler.i10Failures(), 0, vm.toString(abi.encodePacked(handler.i10Selector())));
     }

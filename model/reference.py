@@ -32,6 +32,8 @@ from v4math import (  # noqa: E402
     get_liquidity_for_amounts, compute_swap_step_exact_in,
 )
 
+# The spec version whose text this model was last checked against (documentation only; the vectors carry a hash of
+# the model instead, model/vectors.py `model_hash`).
 SPEC_VERSION = "2.39"
 WAD = 10 ** 18
 U32 = (1 << 32) - 1

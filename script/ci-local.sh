@@ -7,7 +7,9 @@ export CLAIMS_PHASE="${CLAIMS_PHASE:-P0}"
 FOUNDRY_VERSION="1.5.0"
 ANVIL_PORT="${ANVIL_PORT:-8545}"
 ANVIL_PK="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" # anvil's default account 0
-step() { printf '\n==> %s\n' "$*"; }
+T0=$SECONDS; TS=$SECONDS
+# each step prints the time the previous one took and the running total (to attribute the run's wall time)
+step() { printf '\n==> %s   [prev %ds, total %ds]\n' "$*" $((SECONDS - TS)) $((SECONDS - T0)); TS=$SECONDS; }
 
 step "toolchain: forge ${FOUNDRY_VERSION}"
 forge --version | head -1 | grep -q "forge Version: ${FOUNDRY_VERSION}" \
@@ -42,6 +44,14 @@ trap - EXIT
 step "forge test"
 forge test
 
+step "invariant campaign 256 x 128 and its non-vacuity (the fixed seed; forge test runs 64 x 64)"
+mkdir -p output/nonvacuity
+rm -f output/nonvacuity/inv.csv
+TS_NV_LOG=output/nonvacuity/inv.csv FOUNDRY_INVARIANT_RUNS=256 FOUNDRY_INVARIANT_DEPTH=128 \
+  forge test --mp 'test/invariant/*'
+python3 script/nonvacuity.py --selftest
+python3 script/nonvacuity.py output/nonvacuity/inv.csv
+
 step "golden vectors are reproducible"
 python3 model/reference.py --vectors
 git diff --exit-code -- test/vectors
@@ -63,4 +73,4 @@ python3 script/mutate.py --audit
 step "no mutation markers"
 python3 script/markers.py
 
-printf '\nci-local: all steps passed\n'
+printf '\nci-local: all steps passed in %ds\n' $((SECONDS - T0))

@@ -46,6 +46,15 @@ jobs:
       - name: Tests
         run: forge test -vv
 
+      - name: Invariant campaign 256 x 128 and its non-vacuity
+        run: |
+          mkdir -p output/nonvacuity
+          rm -f output/nonvacuity/inv.csv
+          TS_NV_LOG=output/nonvacuity/inv.csv FOUNDRY_INVARIANT_RUNS=256 FOUNDRY_INVARIANT_DEPTH=128 \
+            forge test --mp 'test/invariant/*'
+          python3 script/nonvacuity.py --selftest
+          python3 script/nonvacuity.py output/nonvacuity/inv.csv
+
       - name: Golden vectors are reproducible
         run: |
           python3 model/reference.py --vectors

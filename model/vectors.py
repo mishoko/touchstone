@@ -18,6 +18,18 @@ from v4math import (MIN_TICK, MAX_TICK, MIN_SQRT_PRICE, MAX_SQRT_PRICE, MathReve
 
 OUT = os.environ.get("VECTORS_OUT") or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "test", "vectors")
 SCHEMA = "touchstone-vectors/1"
+
+
+def model_hash():
+    """The vectors are stamped with a hash of the model that generated them (reference.py, v4math.py and this file),
+    not with the spec version: a spec edit that changes no model logic leaves the vectors byte-identical (owner-items
+    panel D7, s13). `script/ci-local.sh` regenerates and diffs them, so a stale stamp cannot pass."""
+    import hashlib
+    h = hashlib.sha256()
+    d = os.path.dirname(os.path.abspath(__file__))
+    for f in ("reference.py", "v4math.py", "vectors.py"):
+        h.update(f.encode() + b"\0" + open(os.path.join(d, f), "rb").read())
+    return h.hexdigest()[:16]
 MIN_CASES = {"math": 40, "ledger": 10, "bank": 30, "placement": 10, "clock": 30, "mode": 30, "scenario": 30}
 
 T0 = 196250  # tier A orientation: token0 USDC (6 decimals), token1 WETH (18 decimals); ≈ 3,000 USDC/WETH
@@ -43,7 +55,7 @@ def write(name, conventions, cases):
     assert len(cases) >= MIN_CASES[name], (name, len(cases))
     ids = [c["id"] for c in cases]
     assert len(ids) == len(set(ids)), "duplicate vector id"
-    doc = dict(schema=SCHEMA, specVersion=R.SPEC_VERSION, conventions=conventions, cases=enc(cases))
+    doc = dict(schema=SCHEMA, modelHash=model_hash(), conventions=conventions, cases=enc(cases))
     os.makedirs(OUT, exist_ok=True)
     with open(os.path.join(OUT, f"{name}.json"), "w") as fh:
         json.dump(doc, fh, indent=1)
@@ -1310,7 +1322,7 @@ def main():
     n["clock"] = write("clock", CLOCK_CONV, clock_cases())
     n["mode"] = write("mode", MODE_CONV, mode_cases())
     n["scenario"] = write("scenario", SCENARIO_CONV, scenario_cases())
-    print("vectors:", ", ".join(f"{k} {v}" for k, v in n.items()), f"-> {OUT} (specVersion {R.SPEC_VERSION})")
+    print("vectors:", ", ".join(f"{k} {v}" for k, v in n.items()), f"-> {OUT} (modelHash {model_hash()})")
     return n
 
 

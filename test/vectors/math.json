@@ -1,6 +1,6 @@
 {
  "schema": "touchstone-vectors/1",
- "specVersion": "2.39",
+ "modelHash": "4be8b096c965a67b",
  "conventions": {
   "ports": "TickMath, SqrtPriceMath, FullMath (v4-core) and LiquidityAmounts (v4-periphery) with their roundUp flags.",
   "LiquidityValue.q": "q(x,s) = s <= 2^128-1 ? mulDiv(s*s, x, 2^192) : mulDiv(mulDiv(s,s,2^64), x, 2^128).",

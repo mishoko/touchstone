@@ -70,6 +70,9 @@ contract VaultHandler is Test {
     uint256 public curatorPlacements;
     uint256 public placementsMoved;
     uint256 public placementsPreSwapped;
+    /// @notice Calls that reached the vault (non-vacuity of the random campaign, value review item 6).
+    uint256 public rebalanceCalls;
+    uint256 public placeCalls;
 
     constructor(
         IPoolManager m,
@@ -237,6 +240,26 @@ contract VaultHandler is Test {
         uint256 idle = z ? h.idle0 : h.idle1;
         if (idle < 4) return;
         amt = bound(amt, 1, idle / 4);
+        ++rebalanceCalls;
+        // the state each guard may legitimately revert in (the same predicates as `place`; no move, no placement)
+        Tier memory tr = hv.tier();
+        (uint160 sp, int24 tNow,,) = manager.getSlot0(poolId);
+        (bool refOk, int24 ref) = hook.tryRef();
+        Expect memory x = _placeExpect(tr, h, 0, sp, tNow, tNow, ref, refOk, true, false);
+        uint256 frac;
+        if (refOk) {
+            // the swap's fraction of NAV at the reference on the ledger holdings before the action; uncollected fees
+            // only raise the vault's NAV, so this over-states the fraction (a SwapCap below it is a wrong cap)
+            frac = ExecLedger.swapFrac(h, z, amt, TickMath.getSqrtPriceAtTick(ref));
+            // half the calls stay under the per-action cap (at tick 196,000 an idle/4 swap exceeds it), so the random
+            // campaign executes swaps rather than only exercising the cap
+            if (amt % 2 == 0 && frac > tr.MAX_SWAP_ACTION) {
+                amt = amt * tr.MAX_SWAP_ACTION / frac;
+                if (amt == 0) return;
+                frac = ExecLedger.swapFrac(h, z, amt, TickMath.getSqrtPriceAtTick(ref));
+            }
+        }
+        bool overCap = frac > tr.MAX_SWAP_ACTION || hv.scalars().epochSwapFrac + frac > tr.MAX_SWAP_EPOCH;
         (, bool due, bool ok) = _expectedSettleBurn();
         vm.prank(hv.curator());
         try hv.rebalanceSwap(z, uint128(amt), type(uint256).max) {
@@ -248,14 +271,17 @@ contract VaultHandler is Test {
             if (tA != vm.getBlockTimestamp()) _i2("the action left no pending record");
         } catch (bytes memory err) {
             bytes4 sel = bytes4(err);
-            if (
-                sel != TouchstoneVault.Fence.selector && sel != TouchstoneVault.Cooldown.selector
-                    && sel != TouchstoneVault.MaxSwaps.selector && sel != TouchstoneVault.SwapCap.selector
-                    && (sel != FeeBank.Insolvent.selector || !_coverShort())
-                    // a pending record blocks an action only when the seam wrote it (a real one is due by the cooldown)
-                    && (sel != FeeBank.MarkoutPending.selector || _realPending)
-                    && sel != Ladder.BadMode.selector && sel != ITouchstoneHook.RefUnreadable.selector
-            ) {
+            // value review V-1 (F-043): each guard only in the state that legitimises it, as in `place`
+            bool allowed = (sel == TouchstoneVault.Fence.selector && !x.fenceOk)
+                || (sel == ITouchstoneHook.RefUnreadable.selector && !refOk)
+                || (sel == TouchstoneVault.Cooldown.selector && x.cooling)
+                || (sel == TouchstoneVault.MaxSwaps.selector && x.swapsOut)
+                || (sel == TouchstoneVault.SwapCap.selector && (overCap || !refOk))
+                || (sel == FeeBank.Insolvent.selector && _coverShort())
+                // a pending record blocks an action only when the seam wrote it (a real one is due by the cooldown)
+                || (sel == FeeBank.MarkoutPending.selector && !_realPending)
+                || (sel == Ladder.BadMode.selector && x.mayExit);
+            if (!allowed) {
                 ++actionFailures;
                 actionSelector = sel;
             }
@@ -313,6 +339,14 @@ contract VaultHandler is Test {
             if (idle >= 8) ps = PreSwap(true, z, uint128(bound(pre >> 8, 1, idle / 8)));
         }
         Expect memory x = _placeExpect(tr, h, lo, sp, t, tm, ref, ok, ps.active, moveTo != 0);
+        // without a move the pre-swap alone spends the per-action budget: SwapCap only above it (V-1, F-043); a move's
+        // input depends on the depth it crosses, so with a move SwapCap stays allowed
+        bool capOk = moveTo != 0 || !ok;
+        if (!capOk && ps.active) {
+            uint256 f = ExecLedger.swapFrac(h, ps.zeroForOne, ps.amountIn, TickMath.getSqrtPriceAtTick(ref));
+            capOk = f > tr.MAX_SWAP_ACTION || hv.scalars().epochSwapFrac + f > tr.MAX_SWAP_EPOCH;
+        }
+        ++placeCalls;
         (, bool due, bool okS) = _expectedSettleBurn();
         vm.prank(hv.curator());
         try hv.setPositions(lo, lo + tr.W_TICKS, ps, moveTo, type(uint256).max) {
@@ -329,7 +363,7 @@ contract VaultHandler is Test {
                 || (sel == TouchstoneVault.Cooldown.selector && x.cooling)
                 || (sel == FeeBank.MarkoutPending.selector && !_realPending)
                 || (sel == TouchstoneVault.MaxSwaps.selector && ps.active && x.swapsOut)
-                || (sel == TouchstoneVault.SwapCap.selector && (ps.active || moveTo != 0))
+                || (sel == TouchstoneVault.SwapCap.selector && (ps.active || moveTo != 0) && capOk)
                 || (sel == TouchstoneVault.DeltaMin.selector && x.deltaShort)
                 || (sel == Ladder.BadMode.selector && x.mayExit)
                 // the bank's gate, only once unvested pay and the bond are below the 2× rule's floor

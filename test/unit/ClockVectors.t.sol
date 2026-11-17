@@ -62,7 +62,7 @@ contract ClockVectorsTest is Test {
 
     function _run(uint256 chunk) internal {
         string memory json = vm.readFile("test/vectors/clock.json");
-        _keys(json, "$", _list4("schema", "specVersion", "conventions", "cases"));
+        _keys(json, "$", _list4("schema", "modelHash", "conventions", "cases"));
         assertEq(vm.parseJsonString(json, ".schema"), "touchstone-vectors/1", "schema");
         string[] memory cs = JsonSlice.elements(json, "cases");
         assertGt(cs.length, 0, "no cases");

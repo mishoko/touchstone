@@ -13,7 +13,7 @@ abstract contract VectorBase is Test {
     function _cases(string memory name) internal returns (string[] memory cs) {
         string memory json = vm.readFile(string.concat("test/vectors/", name, ".json"));
         cid = name;
-        _keys(json, "$", _l4("schema", "specVersion", "conventions", "cases"));
+        _keys(json, "$", _l4("schema", "modelHash", "conventions", "cases"));
         assertEq(vm.parseJsonString(json, ".schema"), "touchstone-vectors/1", "schema");
         cs = JsonSlice.elements(json, "cases");
         assertGt(cs.length, 0, "no cases");

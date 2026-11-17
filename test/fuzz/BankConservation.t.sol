@@ -4,6 +4,7 @@ pragma solidity 0.8.26;
 import {Test} from "forge-std/Test.sol";
 import {FeeBank} from "../../src/libraries/FeeBank.sol";
 import {Bank, Op, RING} from "../../src/types/Bank.sol";
+import {Ladder} from "../../src/libraries/Ladder.sol";
 
 /// @notice F-3: bank conservation. Random op sequences on `FeeBank.bankApply`; after every op the change in the sum of
 ///         the buckets (cohorts, maturedPending, vestedUnclaimed, bond, forfeit pool and the reserve) equals the
@@ -24,6 +25,7 @@ contract BankConservationTest is Test {
         s += uint256(b.maturedPending) + b.vestedUnclaimed + b.bondShares + b.forfeitPool + b.reserveShares;
     }
 
+    /// forge-config: default.fuzz.runs = 64
     function test_F_3__bankConservation(uint256 seed) public {
         b.bondShares = 1e24 - 1e15;
         b.dripBlocks = 120;
@@ -38,8 +40,15 @@ contract BankConservationTest is Test {
             try this.applyExt(op, args) returns (uint256 burnShares, uint256 payShares, uint256, uint256) {
                 assertEq(_sum() + burnShares + payShares, before + added, "conservation");
                 ++executed;
-            } catch {
-                assertEq(_sum(), before, "a revert changes nothing");
+            } catch (bytes memory err) {
+                // a revert must be one of the bank's own guards (never a panic or an arithmetic failure); value review
+                // V-2 (F-043): the previous check, that a reverted call changes nothing, held by the EVM's semantics
+                bytes4 sel = bytes4(err);
+                assertTrue(
+                    sel == FeeBank.Insolvent.selector || sel == FeeBank.MarkoutPending.selector
+                        || sel == FeeBank.BondLocked.selector || sel == Ladder.BadMode.selector,
+                    "a revert outside the bank's guards"
+                );
             }
             assertLe(b.reserveBond, b.reserveShares, "reserve bond part");
             assertLe(b.forfeitPool, b.forfeitTotal, "drip target");

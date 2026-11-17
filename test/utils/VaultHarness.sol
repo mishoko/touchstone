@@ -13,6 +13,8 @@ import {Entry} from "../../src/types/Entry.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
 import {Bank, Op, RING} from "../../src/types/Bank.sol";
 import {FeeBank} from "../../src/libraries/FeeBank.sol";
+import {ExecLedger} from "../../src/libraries/ExecLedger.sol";
+import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {Tier} from "../../src/types/Tier.sol";
 import {ITouchstoneFactory} from "../../src/interfaces/ITouchstoneFactory.sol";
 
@@ -164,6 +166,53 @@ contract VaultHarness is TouchstoneVault {
         // the placement's mode row (NORMAL, placedByCurator), as setPositions applies it
         FeeBank.bankApply(_bank, Op.Place, "");
         return "";
+    }
+
+    // ------------------------------------------------------------------ positive-control seams (manipulation cells)
+
+    /// @dev M-5b's control: the prologue does not collect first (the action's own removal then pays the accrued fees
+    ///      into idle, inside the measured action).
+    bool public noCollectFirst;
+    /// @dev M-3's control: a fee-linked pay (s = 1): the fees collected first are paid to `feePayTo` as new shares,
+    ///      sized so that its other holdings keep their share of the fees.
+    address public feePayTo;
+    /// @dev M-ADV3-move's controls: MU-239/240 (the vault's move held to neither swap cap) and MU-241 (the move not
+    ///      counted in the epoch counter).
+    bool public moveCapsOff;
+    bool public moveCounterOff;
+
+    function setControls(bool noCollect, address payTo, bool capsOff, bool counterOff) external {
+        (noCollectFirst, feePayTo, moveCapsOff, moveCounterOff) = (noCollect, payTo, capsOff, counterOff);
+    }
+
+    function _prologue() internal override returns (Obs memory o) {
+        if (noCollectFirst) return HOOK.snapshotIfNewBlock();
+        if (feePayTo == address(0)) return super._prologue();
+        (uint160 sp,,,) = MANAGER.getSlot0(POOL_ID);
+        (uint256 nav0_,) = ExecLedger.value(_holdings(), sp);
+        o = super._prologue();
+        (uint256 nav1_,) = ExecLedger.value(_holdings(), sp);
+        uint256 S = totalSupply();
+        // the curator's holdings: its bank (bond, cohorts, matured, vested, reserve) and the shares it holds
+        uint256 b = _bankHeld() + balanceOf(feePayTo);
+        if (nav1_ > nav0_ && S > 0) {
+            // (b + m)·P/(S + m) = b·P/S + F, with P = NAV after the fees and F the fees: m = F·S²/(P·S − b·P − F·S)
+            uint256 f = nav1_ - nav0_;
+            uint256 m = FullMath.mulDiv(f * S, S, nav1_ * S - b * nav1_ - f * S);
+            if (m > 0) _mint(feePayTo, m);
+        }
+    }
+
+    function _moveCap(uint256 moveFrac) internal override {
+        if (moveCapsOff) {
+            if (!moveCounterOff) _epochSwapFrac += uint64(moveFrac);
+            return;
+        }
+        if (moveCounterOff) {
+            if (moveFrac > MAX_SWAP_ACTION || _epochSwapFrac + moveFrac > MAX_SWAP_EPOCH) revert SwapCap();
+            return;
+        }
+        super._moveCap(moveFrac);
     }
 
     // ------------------------------------------------------------------ pending action seam

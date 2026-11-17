@@ -436,10 +436,7 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
         if (paidMove > 0) {
             // [MU-243] in the token paid, at the reference
             moveFrac = ExecLedger.swapFrac(before, zm, paidMove, sRef);
-            // [MU-239] [MU-240]
-            if (moveFrac > MAX_SWAP_ACTION || _epochSwapFrac + moveFrac > MAX_SWAP_EPOCH) revert SwapCap();
-            // [MU-241]
-            _epochSwapFrac += uint64(moveFrac);
+            _moveCap(moveFrac);
         }
         // [MU-098] [MU-119] the swap (or the pre-swap) under the swap caps and counters, charged with the action
         if (ps.active) _cappedSwap(ps.zeroForOne, ps.amountIn, before, sRef, tickSpot, moveFrac);
@@ -581,9 +578,9 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
         emit Settled(_pCharge0, extra, tickMk, !ok);
     }
 
-    /// @dev Snapshot, collect first, checkpoint. The markout settlement (step 0) and the checkpoint body are added with
+    /// @dev Snapshot, collect first, checkpoint (virtual: a seam for the test harness's positive controls). The markout settlement (step 0) and the checkpoint body are added with
     ///      the curator actions and the bank; the order below is the binding one.
-    function _prologue() internal returns (Obs memory o) {
+    function _prologue() internal virtual returns (Obs memory o) {
         // [MU-027] the hook's span is closed in this block before anything reads or registers a range
         o = HOOK.snapshotIfNewBlock();
         // [MU-008] collect first: v4 pays all accrued fees on any modify, so sweep them into idle before pricing
@@ -709,6 +706,15 @@ contract TouchstoneVault is ERC20, Extsload, IUnlockCallback, ReentrancyGuardTra
     /// @dev The settlement's gas guard, `2·REF_GAS_CAP` (a seam for the test harness's control).
     function _settleGasMin() internal view virtual returns (uint256) {
         return 2 * REF_GAS_CAP;
+    }
+
+    /// @dev The vault's move held to the per-action cap (shared with the pre-swap) and the epoch cap, and counted in the
+    ///      epoch counter (a seam for the test harness's positive controls).
+    function _moveCap(uint256 moveFrac) internal virtual {
+        // [MU-239] [MU-240]
+        if (moveFrac > MAX_SWAP_ACTION || _epochSwapFrac + moveFrac > MAX_SWAP_EPOCH) revert SwapCap();
+        // [MU-241]
+        _epochSwapFrac += uint64(moveFrac);
     }
 
     /// @dev The live reference read of the vest gate (a seam for the scripted test harness).

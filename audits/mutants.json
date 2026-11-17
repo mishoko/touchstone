@@ -2846,8 +2846,8 @@
    "killer_id": "U-guard",
    "kill": "test_U_guard__moveCappedLikeASwap",
    "file": "src/TouchstoneVault.sol",
-   "find": "            if (moveFrac > MAX_SWAP_ACTION || _epochSwapFrac + moveFrac > MAX_SWAP_EPOCH) revert SwapCap();",
-   "replace": "            if (_epochSwapFrac + moveFrac > MAX_SWAP_EPOCH) revert SwapCap();",
+   "find": "        if (moveFrac > MAX_SWAP_ACTION || _epochSwapFrac + moveFrac > MAX_SWAP_EPOCH) revert SwapCap();",
+   "replace": "        if (_epochSwapFrac + moveFrac > MAX_SWAP_EPOCH) revert SwapCap();",
    "status": "KILLED",
    "basis": "587e1703ef272e0b"
   },
@@ -2858,8 +2858,8 @@
    "killer_id": "U-guard",
    "kill": "test_U_guard__moveCountsTowardTheEpochCap",
    "file": "src/TouchstoneVault.sol",
-   "find": "            if (moveFrac > MAX_SWAP_ACTION || _epochSwapFrac + moveFrac > MAX_SWAP_EPOCH) revert SwapCap();",
-   "replace": "            if (moveFrac > MAX_SWAP_ACTION) revert SwapCap();",
+   "find": "        if (moveFrac > MAX_SWAP_ACTION || _epochSwapFrac + moveFrac > MAX_SWAP_EPOCH) revert SwapCap();",
+   "replace": "        if (moveFrac > MAX_SWAP_ACTION) revert SwapCap();",
    "status": "KILLED",
    "basis": "587e1703ef272e0b"
   },
@@ -2870,7 +2870,7 @@
    "killer_id": "U-guard",
    "kill": "test_U_guard__moveCappedLikeASwap",
    "file": "src/TouchstoneVault.sol",
-   "find": "            _epochSwapFrac += uint64(moveFrac);\n",
+   "find": "        _epochSwapFrac += uint64(moveFrac);\n",
    "replace": "",
    "status": "KILLED",
    "basis": "587e1703ef272e0b"

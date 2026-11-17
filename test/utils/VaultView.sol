@@ -97,6 +97,11 @@ library VaultView {
         (breaches, mode) = (uint32(s3), uint8(s3 >> 32));
     }
 
+    /// @notice The pending action's reserve, in shares (encumbered outside every bucket until settlement).
+    function reserveShares(TouchstoneVault v) internal view returns (uint128) {
+        return uint128(_ld(v, SLOT_BANK + RING + 3) >> 88);
+    }
+
     function bankLimits(TouchstoneVault v) internal view returns (uint40 dripBlocks, uint40 releaseDelay) {
         uint256 s2 = _ld(v, SLOT_BANK + RING + 2); // forfeitTotal u128, forfeitStart u40, dripBlocks u40, releaseDelay u40
         return (uint40(s2 >> 168), uint40(s2 >> 208));

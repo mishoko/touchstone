@@ -102,16 +102,21 @@ def analyse(rows, l8):
     seeds = sorted({r["seed"] for r in rows})
     for (kind, sigma) in I.KINDS:
         b = I.bucket(kind, sigma)
-        need = {bot: I.gate_min_m(ix, b, seeds, bot) for bot in B.GATED}
+        need = {bot: I.gate_min_m(ix, b, seeds, bot, grid=MS) for bot in B.GATED}
         g = res[b]["no-observer"]
         c0 = g["control_m0"]
         dl = g["cmp"]["delayed-24h"]
         out[b] = dict(m_need=need, m_need_max=max(need.values()), control_m0=c0, mimic_p5=g["mimic_p5"],
                       mimic_mean=g["mimic_mean"], charges_yr=g["charges_yr"], actions_yr=g["actions_yr"],
                       delayed=dict(diff=dl["diff"], se=dl["se"]),
-                      observer_m_need=max(I.gate_min_m(ix, b, seeds, bot, env=True) for bot in B.GATED if bot != "lazy"))
+                      observer_m_need=max(I.gate_min_m(ix, b, seeds, bot, env=True, grid=MS) for bot in B.GATED if bot != "lazy"))
         worst = max(need, key=need.get)
-        lines.append(f"  {b}: gate minimum m {max(need.values()) * 100:.2f}%/yr (worst {worst}); observer env (reported) "
+        resid = I.affine_residual(ix, b, seeds, worst, MS[-1]) if len(MS) > 2 else 0.0
+        out[b]["affine_residual_worst"] = resid
+        extrap = " (extrapolated beyond the simulated m)" if max(need.values()) > MS[-1] else ""
+        lines.append(f"  {b}: gate minimum m {max(need.values()) * 100:.2f}%/yr{extrap} (worst {worst}; piecewise over m "
+                     f"{', '.join(f'{x * 100:g}%' for x in MS)}; the affine {{0, 1%}} fit's residual at {MS[-1] * 100:g}%: "
+                     f"{resid:+.4f} ETH); observer env (reported) "
                      f"{out[b]['observer_m_need'] * 100:.2f}%; control m=0 diff {c0[0]:+.4f} CI lo {c0[1]:+.4f}"
                      f"{' (reported)' if kind == 'hover' else ''}; mimic mean {g['mimic_mean']:+.3f} p5 {g['mimic_p5']:+.3f} ETH; "
                      f"charges {g['charges_yr']:.2f} ETH/yr, actions {g['actions_yr']:.0f}/yr; delayed-24h − mimic "

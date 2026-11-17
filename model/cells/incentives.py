@@ -133,18 +133,28 @@ def fit(rows):
     return out
 
 
-def gate_min_m(ix, b, seeds, bot, lo=0.0, hi=0.10, env=False):
-    """Smallest m (bisection) with the paired one-sided 95% CI lower bound of (edge60 − bot) > 0 on the fit seeds,
-    from the per-path affine fit net(m) = m·P + C, paired by `paired` (the same environment, no observer)."""
-    def aff(s):
-        b0, m0 = paired(ix, b, s, bot, 0.0, env)
-        b1, m1 = paired(ix, b, s, bot, 0.01, env)
-        return (m1 - m0) / 0.01, m0, (b1 - b0) / 0.01, b0
+def gate_min_m(ix, b, seeds, bot, lo=0.0, hi=0.10, env=False, grid=(0.0, 0.01)):
+    """Smallest m (bisection) with the paired one-sided 95% CI lower bound of (mimic − bot) > 0, from the per-path
+    piecewise-linear interpolation of net(m) over the simulated `grid` of m values (paired by `paired`: the same
+    environment, no observer). Beyond the last grid point the last segment is extrapolated (S17F2-01: an affine fit on
+    {0, 1%} extrapolated to 2.2% overstated the margin, because the difference is concave in m; pass every simulated m)."""
+    grid = sorted(grid)
 
-    A = [aff(s) for s in seeds]
+    def path(s):
+        return [(paired(ix, b, s, bot, m, env)) for m in grid]      # [(bot net, mimic net)] per grid m
+
+    P = [path(s) for s in seeds]
+
+    def at(pts, m):
+        for i in range(len(grid) - 1):
+            if m <= grid[i + 1] or i == len(grid) - 2:
+                w = (m - grid[i]) / (grid[i + 1] - grid[i])
+                (b0, m0), (b1, m1) = pts[i], pts[i + 1]
+                return (m0 + w * (m1 - m0)) - (b0 + w * (b1 - b0))
+        raise AssertionError
 
     def lo_ci(m):
-        return mean_ci([(pm * m + cm) - (pb * m + cb) for pm, cm, pb, cb in A])[1]
+        return mean_ci([at(pts, m) for pts in P])[1]
 
     if lo_ci(hi) <= 0:
         return math.inf
@@ -157,6 +167,18 @@ def gate_min_m(ix, b, seeds, bot, lo=0.0, hi=0.10, env=False):
         else:
             lo = mid
     return hi
+
+
+def affine_residual(ix, b, seeds, bot, m=0.022, env=False):
+    """The affine {0, 1%} prediction of mean(mimic − bot) at m minus the simulated value there (S17F2-01's check)."""
+    pred, real = [], []
+    for s in seeds:
+        b0, m0 = paired(ix, b, s, bot, 0.0, env)
+        b1, m1 = paired(ix, b, s, bot, 0.01, env)
+        bm, mm = paired(ix, b, s, bot, m, env)
+        pred.append((m0 + (m1 - m0) * m / 0.01) - (b0 + (b1 - b0) * m / 0.01))
+        real.append(mm - bm)
+    return mean_ci(pred)[0] - mean_ci(real)[0]
 
 
 # ----------------------------------------------------------------------------- test: the gate

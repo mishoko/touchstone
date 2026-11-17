@@ -91,6 +91,11 @@ def test_D_3__abi_has_no_privileged_entry_point():
     out = os.path.join(ROOT, 'out')
     if not os.path.exists(os.path.join(out, 'TouchstoneHook.sol')):
         raise AssertionError('run forge build first (D-3 reads the ABIs in out/)')
+    newest_src = max(os.path.getmtime(os.path.join(dp, f)) for dp, _, fs in os.walk(os.path.join(ROOT, 'src'))
+                     for f in fs if f.endswith('.sol'))
+    for c in D3_ENTRIES:
+        art = os.path.join(out, c + '.sol', c + '.json')
+        assert os.path.getmtime(art) >= newest_src, f'{art} is older than src/: run forge build first'
     bad = d3_violations(d3_entries(out))
     assert not bad, '\n'.join(bad)
     # controls: an added owner setter and an unlisted entry point both fail the check

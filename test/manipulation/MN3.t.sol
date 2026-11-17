@@ -11,11 +11,14 @@ import {Obs} from "../../src/types/Obs.sol";
 ///         Σ L·Δτ), the hook's frozen grid medians `med9` (the endpoint LVR term) and the vault's (L, lo, hi). A Sybil
 ///         oscillates the pool price across the vault's upper edge (50 ticks out and back), at the tier's real m,
 ///         against the no-attack world over the same 4 grids:
-///         - Lane 1, inside each block (out and back in one block, every block): the ledger's inputs are identical
-///           to the no-attack world (each block's snapshot reads the price before the round trip), and the
+///         - Lane 1, inside each block (out and back in one block, every block): the ledger's inputs (τ_v, τ_b and
+///           every frozen boundary median `frozen(g).med9` in the window) are identical to the no-attack world (each block's snapshot reads the price before the round trip), and the
 ///           coalition loses the fees.
-///         - Lane 2, across blocks (out in one block, back in the next): the only input that moves is τ_v, and only
-///           down (a forged ledger can make the curator look less in range, never more); the coalition loses.
+///         - Lane 2, across blocks (out in one block, back in the next): τ_v moves only down (a forged ledger can make
+///           the curator look less in range, never more), τ_b is unchanged, and frozen boundary medians can move (a
+///           9-block window ending on an "out" block holds 5 of 9 out): the boundaries moved and the coalition's loss
+///           per moved boundary are reported (the off-chain `suspect` flag reads such a median jump); the coalition
+///           loses.
 ///         The forgery cost (the coalition's loss per round trip and per block of τ_v moved) is reported.
 contract MN3Test is CellBase {
     struct Ledger {
@@ -23,6 +26,9 @@ contract MN3Test is CellBase {
         uint64 tauB;
         int24 med9;
         int256 wealth;
+        uint32 g0;
+        uint32 g1;
+        int24[16] frozenMed;
     }
 
     function _cellM(uint64 m) internal pure override returns (uint64) {
@@ -49,7 +55,17 @@ contract MN3Test is CellBase {
         advance(1);
         v.settle();
         Obs memory o1 = ITouchstoneHook(hook).obs();
-        g = Ledger(o1.tauV - o0.tauV, o1.tauB - o0.tauB, o1.med9, _wealth() - w0);
+        g.tauV = o1.tauV - o0.tauV;
+        g.tauB = o1.tauB - o0.tauB;
+        g.med9 = o1.med9;
+        g.wealth = _wealth() - w0;
+        (g.g0, g.g1) = (o0.gridIndex + 1, o1.gridIndex);
+        // the grid boundaries the ledger reads: the hook's frozen medians in the window
+        for (uint32 k = g.g0; k <= g.g1 && k - g.g0 < 16; ++k) {
+            (int24 med, , , bool ex) = ITouchstoneHook(hook).frozen(k);
+            assertTrue(ex, "a frozen boundary per grid");
+            g.frozenMed[k - g.g0] = med;
+        }
     }
 
     function test_M_N3__oscillationCannotForgeTheLedgerAndLoses() public {
@@ -71,6 +87,12 @@ contract MN3Test is CellBase {
         assertEq(l1.tauV, base.tauV, "lane 1: tau_v");
         assertEq(l1.tauB, base.tauB, "lane 1: tau_b");
         assertEq(l1.med9, base.med9, "lane 1: the endpoint median");
+        assertGt(base.g1, base.g0, "non-vacuous: several boundaries in the window");
+        uint256 moved;
+        for (uint256 k; k <= base.g1 - base.g0; ++k) {
+            assertEq(l1.frozenMed[k], base.frozenMed[k], "lane 1: every frozen boundary median");
+            if (l2.frozenMed[k] != base.frozenMed[k]) ++moved;
+        }
         int256 net1 = l1.wealth - base.wealth;
         assertLt(net1, 0, "lane 1 loses");
         // lane 2: tau_v only down, tau_b and the endpoint unchanged
@@ -81,5 +103,7 @@ contract MN3Test is CellBase {
         assertLt(net2, 0, "lane 2 loses");
         console.log("M-N3 forgery cost: lane 1 loss per round trip (token1 units)", uint256(-net1) / n);
         console.log("M-N3 forgery cost: lane 2 loss per block of tau_v moved", uint256(-net2) / (base.tauV - l2.tauV));
+        console.log("M-N3 lane 2: frozen boundary medians moved / in the window", moved, base.g1 - base.g0 + 1);
+        if (moved > 0) console.log("M-N3 forgery cost: lane 2 loss per boundary median moved", uint256(-net2) / moved);
     }
 }

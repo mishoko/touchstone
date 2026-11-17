@@ -129,7 +129,7 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
         // record, so the order matters again once the checkpoint mints base shares)
         _settle();
         Obs memory o = _prologue();
-        // [MU-037] every entry point checkpoints
+        // [MU-037] [MU-278] every entry point checkpoints
         (bool liveRead, int24 liveTick) = _checkpoint(o);
         // [MU-073] the mode gate runs after the prologue checkpoint, which may have moved the mode to EXITED
         if (!Ladder.allowed(_bank.mode, uint8(entry))) revert Ladder.BadMode();

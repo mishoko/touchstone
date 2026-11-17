@@ -15,6 +15,10 @@ import {ITouchstoneHook} from "../../src/interfaces/ITouchstoneHook.sol";
 ///         - Lane A, the reference out of range (the market left by 1, 5, 10 and 50%, either side): the Sybil parks
 ///           the pool one unit inside the near edge or mid-range for 3 grids. Pass: no τ_v and no base difference,
 ///           net ≤ 0, and no curator action (the charge is unchanged: none in either branch).
+///         - The reference in range with the pool in range: parking changes nothing (τ_v accrues in both branches).
+///           The reference in range with the pool out of range: a push into the range moves the pool toward the
+///           reference, so the τ_v it earns is service at the true price (the arbitrage the baseline also does);
+///           the only gap between the two is the cache's lag, which lane B measures.
 ///         - Lane B, the parking lane (disclosed): the market has just left the range and the cached reference still
 ///           reads in range. Pass: the τ_v credit is at most the blocks the cached reference stayed in range (reported
 ///           against GRID·(1 + ⌈REF_WINDOW/GRID_SEC⌉), which is 2·GRID on the
@@ -100,7 +104,7 @@ contract MN1Test is CellBase {
                     int256 net = a.wealth - b.wealth;
                     console.log("M-N1 lane A up/pct-index/park", up, i, k);
                     console.logInt(net);
-                    assertLe(net, 1, "the push loses");
+                    assertLe(net, 0, "the push loses (no action: no rounding allowance)");
                 }
                 vm.revertToState(snap);
             }

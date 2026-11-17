@@ -13,6 +13,7 @@ import {ITouchstoneHook} from "../../src/interfaces/ITouchstoneHook.sol";
 import {ExecLedger} from "../../src/libraries/ExecLedger.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
 import {PreSwap} from "../../src/types/PreSwap.sol";
+import {VaultCommon} from "../../src/TouchstoneVaultBase.sol";
 
 /// @notice The reference price on the vault (spec §3.3, §3.4, §4.6): actions read the live reference and revert when
 ///         it is unreadable; every other flow is fail-soft (base deferred into `baseOwed`); the charge's reference leg
@@ -153,7 +154,7 @@ contract VaultRefTest is LiquidPoolBase {
         advance(tier.COOLDOWN);
         assertTrue(ITouchstoneHook(hook).liveRef() != 0, "control: the TWAP moves once time passes");
         vm.prank(curator);
-        vm.expectRevert();
+        vm.expectRevert(VaultCommon.Fence.selector);
         hv.rebalanceSwap(true, 1e16, type(uint256).max);
     }
 
@@ -252,7 +253,8 @@ contract VaultRefTest is LiquidPoolBase {
         assertEq(cB, expB, "B is charged its own measure");
         uint256 gainA = naRef - nbRef;
         assertGt(cB, 0);
-        assertTrue(cB != (cB > gainA ? cB - gainA : 0), "control: a netted charge would differ");
+        // discriminating power: a rule that netted A's gain into B would give a different charge
+        assertTrue(cB != (cB > gainA ? cB - gainA : 0), "a netted charge would differ");
     }
 
     /// @notice `measure`'s floor: holdings that gain at every leg are charged 0 and burn nothing (never a credit).

@@ -863,7 +863,7 @@
    "killer_id": "U-mode",
    "kill": "test_U_mode__pendingRemovalRevertsADepositAfterThePrologue",
    "file": "src/TouchstoneVault.sol",
-   "find": "        Obs memory o = _prologue();\n        // [MU-037] every entry point checkpoints\n        (bool liveRead, int24 liveTick) = _checkpoint(o);\n        // [MU-073] the mode gate runs after the prologue checkpoint, which may have moved the mode to EXITED\n        if (!Ladder.allowed(_bank.mode, uint8(entry))) revert Ladder.BadMode();",
+   "find": "        Obs memory o = _prologue();\n        // [MU-037] [MU-278] every entry point checkpoints\n        (bool liveRead, int24 liveTick) = _checkpoint(o);\n        // [MU-073] the mode gate runs after the prologue checkpoint, which may have moved the mode to EXITED\n        if (!Ladder.allowed(_bank.mode, uint8(entry))) revert Ladder.BadMode();",
    "replace": "        // [MU-037] [MU-073]\n        if (!Ladder.allowed(_bank.mode, uint8(entry))) revert Ladder.BadMode();\n        Obs memory o = _prologue();\n        (bool liveRead, int24 liveTick) = _checkpoint(o);",
    "status": "KILLED",
    "basis": "2d25eabf508c46ad"
@@ -3262,6 +3262,54 @@
    "replace": "        return (SqrtPriceMath.getAmount0Delta(s, sb, L, true), SqrtPriceMath.getAmount1Delta(sa, s, L, false));",
    "status": "KILLED",
    "basis": "3e1c0afcd4670644"
+  },
+  {
+   "id": "MU-275",
+   "area": "reference",
+   "desc": "`armAtSeed` without its requirement of a refresh in the seed's block (a vault seeded with no reference cache)",
+   "killer_id": "U-ref-seed",
+   "kill": "test_U_ref_seed__seedRequiresASuccessfulRefresh",
+   "file": "src/TouchstoneHook.sol",
+   "find": "        if (_refCachedAt != block.number) revert RefUnreadable();",
+   "replace": "",
+   "status": "KILLED",
+   "basis": "b6819ac4fce448fb"
+  },
+  {
+   "id": "MU-276",
+   "area": "ledger",
+   "desc": "`LiquidityValue.amounts` rounds the below-range token0 amount up",
+   "killer_id": "F-1",
+   "kill": "test_F_1__liquidityValueEqualsModifyLiquidityPayout",
+   "file": "src/libraries/LiquidityValue.sol",
+   "find": "        if (s <= sa) return (SqrtPriceMath.getAmount0Delta(sa, sb, L, false), 0);",
+   "replace": "        if (s <= sa) return (SqrtPriceMath.getAmount0Delta(sa, sb, L, true), 0);",
+   "status": "KILLED",
+   "basis": "b8330f2b28927588"
+  },
+  {
+   "id": "MU-277",
+   "area": "ledger",
+   "desc": "`LiquidityValue.amounts` rounds the above-range token1 amount up",
+   "killer_id": "F-1",
+   "kill": "test_F_1__liquidityValueEqualsModifyLiquidityPayout",
+   "file": "src/libraries/LiquidityValue.sol",
+   "find": "        if (s >= sb) return (0, SqrtPriceMath.getAmount1Delta(sa, sb, L, false));",
+   "replace": "        if (s >= sb) return (0, SqrtPriceMath.getAmount1Delta(sa, sb, L, true));",
+   "status": "KILLED",
+   "basis": "b8330f2b28927588"
+  },
+  {
+   "id": "MU-278",
+   "area": "base",
+   "desc": "the deposit without its checkpoint (the pending base minted after the depositor's mint, diluting it; T16, M-10 lane B)",
+   "killer_id": "M-10",
+   "kill": "test_M_10__depositBeforeAPendingBaseMintIsPricedAfterIt",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        (bool liveRead, int24 liveTick) = _checkpoint(o);\n",
+   "replace": "        bool liveRead;\n        int24 liveTick;\n        if (entry != Entry.Deposit) (liveRead, liveTick) = _checkpoint(o);\n",
+   "status": "KILLED",
+   "basis": "46d7863ae237cc14"
   }
  ]
 }

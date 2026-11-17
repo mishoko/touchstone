@@ -291,6 +291,7 @@ contract TouchstoneHook is BaseHook, Extsload, ITouchstoneHook {
         _armed = true;
         _lastSnapBlock = uint40(block.number);
         _refresh();
+        // [MU-275] the seed requires a successful refresh in its own block
         if (_refCachedAt != block.number) revert RefUnreadable();
     }
 

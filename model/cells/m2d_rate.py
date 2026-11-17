@@ -264,7 +264,7 @@ class Swap:
         return R.Holdings(h.idle0 + self.got, h.idle1 - self.amount, h.L, h.lo, h.hi)
 
 
-def c120(a, r, ref, legs_imm, eta, sgn, swap=None, cap=CAP, clamp=None):
+def _c120(a, r, ref, legs_imm, eta, sgn, swap=None, cap=CAP, clamp=None):
     """Expected coalition net over η (sign sgn on the bias), the luckiest net, and the share of draws in which the
     settlement cap binds. The markout legs are p_mk ± FEE_TICKS; the extra charge at settlement is capped at
     cap·NAV_before (the fixed reserve); an optional clamp of p_mk to spot ± clamp is a diagnostic."""
@@ -403,7 +403,9 @@ CHECKS = {"settle_extra": 0, "settle_extra_b": 0}   # assertion counts (M2D_DIFF
 def check_settle(ctx, t, burn, swap=None):
     """Asserts `settle_var` under the full rule equal to `R.settle_extra` at tick t. With a pre-swap (lane (b)) the
     reference runs on the after holding with the fill applied to idle (`Swap.after`), the generalised rule is re-run on
-    that holding, and the additive leg (NAV_after − the swap's loss) is asserted within 1 wei of it at every leg."""
+    that holding, and the additive leg (NAV_after − the swap's loss) is asserted within 1 wei of it at every leg. That leg
+    check is arithmetic only (S17F-05): `Swap.after` keeps L, lo and hi, so it tests that value is linear in idle; the
+    real approximation (the pre-swap runs before `placement_size` and so changes L) is disclosed, not tested here."""
     after = ctx["after"] if swap is None else swap.after(ctx["after"])
     pend = dict(s0=ctx["s0"], sEnd=ctx["sEnd"], charge0=ctx["c0"], reserve=ctx["reserve"], burn0=ctx["burn0"], sAct=S_ACT)
     _, _, bs = R.settle_extra(ctx["before"], after, pend, t, FEE_TICKS, FEE, ctx["reserve_shares"])
@@ -422,13 +424,13 @@ def check_settle(ctx, t, burn, swap=None):
     CHECKS["settle_extra_b"] += 1
 
 
-def c_fee_aware(a, r, ctx, eta, sgn, cfg, leg, swap=None, check=False, eta_int=None):
+def _c_fee_aware(a, r, ctx, eta, sgn, cfg, leg, swap=None, check=False, eta_int=None, tk_shift=0):
     """Expected coalition net over η, the luckiest net and the share of draws on which the reserve caps the settlement,
     under the rule `cfg`. Integer rules are evaluated once per distinct tick_mk = r + eta_int[sgn] (the floored mean of
     the per-block integer closes); fractional rules at r + sgn·η."""
     gain = swap.loss(sqrt_at(r)) if swap else 0
     if cfg["int_tick"]:
-        tk = r + eta_int[sgn]
+        tk = r + eta_int[sgn] + tk_shift          # tk_shift: the S17F-04 bound (a fractional market tick)
         uniq, inv = np.unique(tk, return_inverse=True)
     else:
         uniq, inv = r + sgn * eta, np.arange(len(eta))
@@ -444,6 +446,24 @@ def c_fee_aware(a, r, ctx, eta, sgn, cfg, leg, swap=None, check=False, eta_int=N
     nets = np.array(vals, dtype=float)[inv]
     return float(np.mean(nets)), float(nets.max()), float(np.array(binds, dtype=float)[inv].mean())
 
+
+
+def _best_sign(f, sgn):
+    """The colluder takes the better sign of the markout bias (S17F-01): the deep pool's stale edge can sit on either
+    side of the market at the action's block, and the colluder chooses that block. Returns f(+1) or f(−1), whichever
+    has the larger expected net (ties keep `sgn`); `sgn` itself is no longer a restriction."""
+    a = f(sgn)
+    b = f(-sgn)
+    return b if b[0] > a[0] else a
+
+
+def c120(a, r, ref, legs_imm, eta, sgn, swap=None, cap=CAP, clamp=None):
+    return _best_sign(lambda s: _c120(a, r, ref, legs_imm, eta, s, swap=swap, cap=cap, clamp=clamp), sgn)
+
+
+def c_fee_aware(a, r, ctx, eta, sgn, cfg, leg, swap=None, check=False, eta_int=None, tk_shift=0):
+    return _best_sign(lambda s: _c_fee_aware(a, r, ctx, eta, s, cfg, leg, swap=swap, check=check, eta_int=eta_int,
+                                             tk_shift=tk_shift), sgn)
 
 def s0_candidates(h, r, ref, t_target):
     """The s0 search (S16F-01): (label, tick) for the reference, r ∓ FEE_TICKS and the old range's edges, each clipped
@@ -487,7 +507,7 @@ def sweep(h, r, ref, etas, cap=CAP, clamp=None, diff=False, etas_int=None):
     out = dict(sq=0, c=0.0, c_t3=0.0, c_lucky=0, sq_b=0, c_b=0.0, c_b_t3=0.0, n_att=0, n_pos_sq=0, n_pos_sq_b=0,
                bind_sum=0.0, bind_n=0, bind_b_sum=0.0, bind_b_n=0,
                fa_t3=0.0, fa_lucky=0.0, fa_b_t3=0.0, fa_bind_sum=0.0, fa_bind_b_sum=0.0, v0_diff=0.0, v0_b_diff=0.0,
-               fee_aware_s0=0.0, fee_aware_s0_sig=-1e30, fa_s0_t3=0.0, s0_n_att=0, s0_n_pos_sq=0, s0_beats=0, s0_new_pos=0,
+               fee_aware_s0=0.0, fee_aware_s0_sig=-1e30, fa_fshift_sig=-1e30, fa_s0_t3=0.0, s0_n_att=0, s0_n_pos_sq=0, s0_beats=0, s0_new_pos=0,
                s0_gain=-1e30, s0_gain_label=None, s0_wins={})
     for name, _ in VARIANTS:
         out[name] = 0.0
@@ -522,7 +542,7 @@ def sweep(h, r, ref, etas, cap=CAP, clamp=None, diff=False, etas_int=None):
                         atts.append(a)
                 for a in atts:
                     out["n_att"] += 1
-                    sgn_bias = -1 if a["tick_spot"] < r else 1     # the bias that helps: toward the pushed spot
+                    sgn_bias = -1 if a["tick_spot"] < r else 1     # a starting sign; c120/c_fee_aware take the better of both
                     # placement only
                     n, imm, (l_s, n_s), (l_r, n_r) = sq_net(a, s_ref)
                     out["sq"] = max(out["sq"], n)
@@ -558,6 +578,11 @@ def sweep(h, r, ref, etas, cap=CAP, clamp=None, diff=False, etas_int=None):
                                     base_fa = en
                                     out["fee_aware_s0"] = max(out["fee_aware_s0"], en)
                                     out["fee_aware_s0_sig"] = max(out["fee_aware_s0_sig"], en)
+                            # S17F-04 bound: a colluder that times the market's fractional tick moves the stuck closes by
+                            # up to one tick relative to the market; re-evaluate with tick_mk one tick toward the pushed spot
+                            en, _, _ = c_fee_aware(a, r, ctx, etas["gbm"], sgn_bias, RULE_FULL, leg,
+                                                   eta_int=etas_int["gbm"], tk_shift=-1 if a["tick_spot"] < r else 1)
+                            out["fa_fshift_sig"] = max(out["fa_fshift_sig"], en)
                             en, _, _ = c_fee_aware(a, r, ctx, etas["t3"], sgn_bias, RULE_FULL, leg, eta_int=etas_int["t3"])
                             out["fa_t3"] = max(out["fa_t3"], en)
                             out["fa_s0_t3"] = max(out["fa_s0_t3"], en)
@@ -826,7 +851,8 @@ def summarise_fa(rows, ablation=True):
         gmax = max(gains, default=(None, None))
         lines.append(f"  fee_aware_s0 (s0 searched; the verdict column): placements {ps0[0] * 100:.3f}% [90% CI {ps0[1] * 100:.3f}, "
                      f"{ps0[2] * 100:.3f}] ({parts0}); max cycle E[net] {max(r['fee_aware_s0'] / r['nav'] for r in g) * 1e4:.4f} bp "
-                     f"(largest signed attack E[net] {sig_max('fee_aware_s0_sig')}; fixed s0 {sig_max('fee_aware_sig')})")
+                     f"(largest signed attack E[net] {sig_max('fee_aware_s0_sig')}; fixed s0 {sig_max('fee_aware_sig')}; "
+                     f"tick_mk shifted one tick toward the pushed spot {sig_max('fa_fshift_sig')})")
         lines.append(f"  s0 search: {sum(r['s0_n_att'] for r in g)} legal searched attacks, {sum(r['s0_n_pos_sq'] for r in g)} "
                      f"sq-positive; attacks whose pushed spot the status quo filters but a searched s0 does not: "
                      f"{sum(r['s0_new_pos'] for r in g)}; where both are evaluated, a searched s0 beat the pushed spot on "
@@ -866,9 +892,22 @@ def git_meta():
         head = subprocess.run(["git", "-C", ROOT, "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
         dirty = bool(subprocess.run(["git", "-C", ROOT, "status", "--porcelain", "--untracked-files=no"],
                                     capture_output=True, text=True, check=True).stdout.strip())
+        # S17F-03: the model's own state (the repo-wide flag also sees unrelated test/ or src/ edits)
+        model_dirty = bool(subprocess.run(["git", "-C", ROOT, "status", "--porcelain", "--", "model/"],
+                                          capture_output=True, text=True, check=True).stdout.strip())
     except (OSError, subprocess.CalledProcessError):
-        head, dirty = None, None
-    return dict(commit=head, dirty=dirty)
+        head, dirty, model_dirty = None, None, None
+    return dict(commit=head, dirty=dirty, model_dirty=model_dirty, model_hash=model_hash())
+
+
+def model_hash():
+    """sha256 over model/*.py and model/cells/*.py (sorted paths and contents): what the run's numbers depend on."""
+    import glob, hashlib
+    h = hashlib.sha256()
+    for f in sorted(glob.glob(os.path.join(ROOT, "model", "*.py")) + glob.glob(os.path.join(ROOT, "model", "cells", "*.py"))):
+        h.update(os.path.relpath(f, ROOT).encode())
+        h.update(open(f, "rb").read())
+    return h.hexdigest()[:16]
 
 
 def meta_of(rows, wall_s):
@@ -881,7 +920,8 @@ def meta_of(rows, wall_s):
             largest_signed_bp=dict(c120=sig_max_bp(g, "c_sig"), c120_preswap=sig_max_bp(g, "c_b_sig"),
                                    fee_aware_fixed_s0=sig_max_bp(g, "fee_aware_sig"),
                                    fee_aware_s0_searched=sig_max_bp(g, "fee_aware_s0_sig"),
-                                   fee_aware_preswap=sig_max_bp(g, "fee_aware_b_sig")),
+                                   fee_aware_preswap=sig_max_bp(g, "fee_aware_b_sig"),
+                                   fee_aware_tick_shift_bound=sig_max_bp(g, "fa_fshift_sig")),
             s0_beats=sum(r["s0_beats"] for r in g), s0_gain_max_bp=max(gains) * 1e4 if gains else None,
             s0_new_pos=sum(r["s0_new_pos"] for r in g), s0_sq_pos=sum(r["s0_n_pos_sq"] for r in g),
             v0_diff_max_bp=max(r["v0_diff"] for r in g) * 1e4, v0_b_diff_max_bp=max(r["v0_b_diff"] for r in g) * 1e4,

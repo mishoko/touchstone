@@ -8,9 +8,11 @@ import {LiquidPoolBase} from "../utils/LiquidPoolBase.sol";
 import {Bank} from "../../src/types/Bank.sol";
 import {PreSwap} from "../../src/types/PreSwap.sol";
 
-/// @notice G-4 (spec §9.1): a curator action costs at most 1.2M gas in its worst prologue: a pending action's
+/// @notice G-4 (spec §9.1): a curator action costs at most 1.2M gas with a heavy prologue: a pending action's
 ///         settlement, a matured cohort vested through a live reference read, base minted at the tier's real m, an
-///         epoch roll, and for the placement a removal, a pre-swap and a re-add. Measured on the factory-deployed harness
+///         epoch roll, and for the placement a removal, a pre-swap and a re-add. Not included (bounded, disclosed by
+///         the headroom): a pending breach (forfeit, drip, `ackBreaches`), a gap freezing all 8 grid slots (≈ 8 × 22k)
+///         and the witness roll (P4); the measured 671k leaves 529k. Measured on the factory-deployed harness
 ///         (the production hot path plus test seams, so an upper bound), with every touched account cooled first.
 contract ActionGasTest is LiquidPoolBase {
     using StateLibrary for *;

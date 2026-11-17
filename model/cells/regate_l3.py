@@ -206,8 +206,11 @@ if __name__ == "__main__":
         commit = subprocess.run(["git", "-C", ROOT, "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
         dirty = bool(subprocess.run(["git", "-C", ROOT, "status", "--porcelain", "--untracked-files=no"], capture_output=True,
                                     text=True, check=True).stdout.strip())
+        model_dirty = bool(subprocess.run(["git", "-C", ROOT, "status", "--porcelain", "--", "model/"],
+                                          capture_output=True, text=True, check=True).stdout.strip())
     except (OSError, subprocess.CalledProcessError):
-        commit, dirty = None, None
+        commit, dirty, model_dirty = None, None, None
+    from m2d_rate import model_hash
     os.makedirs(OUT, exist_ok=True)
     tag = f"{RULE}-{first}-{n}" + ("-honest" if honest_only else "") + ("-smoke" if os.environ.get("TS_SMOKE") else "")
     with open(os.path.join(OUT, f"l3-{tag}.json"), "w") as fh:
@@ -217,7 +220,7 @@ if __name__ == "__main__":
         txt = "\n".join(lines)
     else:
         out, txt = analyse(rows, l8)
-    out["meta"] = dict(commit=commit, dirty=dirty, argv=sys.argv, wall_s=round(wall, 1), runs=len(rows), rule=RULE,
+    out["meta"] = dict(commit=commit, dirty=dirty, model_dirty=model_dirty, model_hash=model_hash(), argv=sys.argv, wall_s=round(wall, 1), runs=len(rows), rule=RULE,
                        int_closes=INT_CLOSES)
     txt = (f"L3{'' if honest_only else '/L8'} seeds {first}-{first + n - 1}, settlement {RULE} ({len(rows)} runs, {wall:.0f} s; "
            f"commit {commit}{' (uncommitted changes)' if dirty else ''})\n" + txt)

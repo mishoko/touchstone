@@ -1,0 +1,58 @@
+   0  0   32 _balances: mapping(address => uint256)
+   1  0   32 _allowances: mapping(address => mapping(address => uint256))
+   2  0   32 _totalSupply: uint256
+   3  0   32 _name: string
+   4  0   32 _symbol: string
+   5  0   16 _idle0: uint128
+   5 16   16 _idle1: uint128
+   6  0   16 _L: uint128
+   6 16    3 _lo: int24
+   6 19    3 _hi: int24
+   7  0   16 _nav0: uint128
+   7 16    8 _delta0: uint64
+   7 24    8 _tauV0: uint64
+   8  0    5 _segStart: uint40
+   8  5    4 _epoch: uint32
+   8  9    8 _epochSwapFrac: uint64
+   8 17    2 _swapCount: uint16
+   8 19    5 _tAction: uint40
+   8 24    5 _lastAction: uint40
+   9  0   16 _baseOwed: uint128
+   9 16    1 _seeded: bool
+  10  0   20 curator: address
+  11  0  320 _bank: struct Bank
+  11  0  160 _bank.cohorts: struct Cohort[5]
+  16  0   16 _bank.maturedPending: uint128
+  16 16   16 _bank.vestedUnclaimed: uint128
+  17  0   16 _bank.bondShares: uint128
+  17 16   16 _bank.forfeitPool: uint128
+  18  0   16 _bank.forfeitTotal: uint128
+  18 16    5 _bank.forfeitStart: uint40
+  18 21    5 _bank.dripBlocks: uint40
+  18 26    5 _bank.releaseDelay: uint40
+  19  0    4 _bank.breaches: uint32
+  19  4    1 _bank.mode: uint8
+  19  5    1 _bank.placedByCurator: bool
+  19  6    5 _bank.exitBlock: uint40
+  19 11   16 _bank.reserveShares: uint128
+  20  0   16 _bank.reserveBond: uint128
+  20 16    1 _bank.reserveForfeit: bool
+  21  0   64 _pBefore: struct Holdings
+  21  0   16 _pBefore.idle0: uint128
+  21 16   16 _pBefore.idle1: uint128
+  22  0   16 _pBefore.L: uint128
+  22 16    3 _pBefore.lo: int24
+  22 19    3 _pBefore.hi: int24
+  23  0   64 _pAfter: struct Holdings
+  23  0   16 _pAfter.idle0: uint128
+  23 16   16 _pAfter.idle1: uint128
+  24  0   16 _pAfter.L: uint128
+  24 16    3 _pAfter.lo: int24
+  24 19    3 _pAfter.hi: int24
+  25  0  128 _pend: struct Markout
+  25  0   16 _pend.charge0: uint128
+  25 16   16 _pend.reserve: uint128
+  26  0   20 _pend.s0: uint160
+  27  0   20 _pend.sEnd: uint160
+  28  0   16 _pend.burn0: uint128
+  28 16   16 _pend.sAct: uint128

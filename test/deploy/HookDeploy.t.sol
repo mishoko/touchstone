@@ -105,7 +105,7 @@ contract HookDeployTest is DeployBaseUnplaced {
         (, , bytes32 sH) = _predict();
         _fund(deployer);
         vm.expectRevert(err);
-        factory.deploy(_vaultCode(), _hookCode(), hookArgs, SALT_V, sH, seedParams);
+        factory.deploy(_vaultCode(), _extCode(), _hookCode(), hookArgs, SALT_V, sH, seedParams);
     }
 
     function _history(uint256 secondsOfHistory) internal {

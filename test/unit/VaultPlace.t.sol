@@ -20,6 +20,8 @@ import {Holdings} from "../../src/types/Holdings.sol";
 import {PreSwap} from "../../src/types/PreSwap.sol";
 import {Bank} from "../../src/types/Bank.sol";
 import {SettleExtraOracle} from "../utils/SettleExtraOracle.sol";
+import {IVaultEntries} from "../../src/interfaces/ITouchstoneVaultExtension.sol";
+import {VaultCommon} from "../../src/TouchstoneVaultBase.sol";
 
 /// @notice The curator's `setPositions` on the real hook over the scripted reference pool, from an unplaced vault (all
 ///         idle, about half of each token at tick 0). Expectations come from `ExecLedger` (checked bit for bit against
@@ -239,7 +241,7 @@ contract VaultPlaceTest is LiquidPoolBase, SettleExtraOracle {
     /// @notice Only the curator places.
     function test_U_guard__onlyCuratorPlaces() public {
         vm.prank(alice);
-        vm.expectRevert(TouchstoneVault.OnlyCurator.selector);
+        vm.expectRevert(VaultCommon.OnlyCurator.selector);
         hv.setPositions(-1000, 1000, _none(), 0, type(uint256).max);
     }
 
@@ -248,12 +250,12 @@ contract VaultPlaceTest is LiquidPoolBase, SettleExtraOracle {
     /// @notice Width exactly W, aligned to the spacing, containing spot and the reference (half-open at hi).
     function test_U_guard__placementRows() public {
         _setRef(50); // spot 0, the reference 50: inside the fence
-        _placeReverts(-1000, 990, _none(), 0, TouchstoneVault.Width.selector);
-        _placeReverts(-1000, 1010, _none(), 0, TouchstoneVault.Width.selector);
-        _placeReverts(-995, 1005, _none(), 0, TouchstoneVault.Alignment.selector);
-        _placeReverts(10, 2010, _none(), 0, TouchstoneVault.NotContained.selector); // spot 0 below lo
-        _placeReverts(-1990, 10, _none(), 0, TouchstoneVault.NotContained.selector); // the reference 50 at or above hi
-        _placeReverts(-1950, 50, _none(), 0, TouchstoneVault.NotContained.selector); // the reference exactly at hi
+        _placeReverts(-1000, 990, _none(), 0, VaultCommon.Width.selector);
+        _placeReverts(-1000, 1010, _none(), 0, VaultCommon.Width.selector);
+        _placeReverts(-995, 1005, _none(), 0, VaultCommon.Alignment.selector);
+        _placeReverts(10, 2010, _none(), 0, VaultCommon.NotContained.selector); // spot 0 below lo
+        _placeReverts(-1990, 10, _none(), 0, VaultCommon.NotContained.selector); // the reference 50 at or above hi
+        _placeReverts(-1950, 50, _none(), 0, VaultCommon.NotContained.selector); // the reference exactly at hi
         _place(-1940, 60, _none(), 0); // control: the same rules met
         assertGt(hv.holdings().L, 0, "placed");
     }
@@ -268,7 +270,7 @@ contract VaultPlaceTest is LiquidPoolBase, SettleExtraOracle {
         assertEq(_sqrtSpot(), _sqrt(180), "moved");
         vm.revertToState(snap);
         _setRef(0);
-        _placeReverts(-1000, 1000, _none(), _sqrt(100), TouchstoneVault.Fence.selector);
+        _placeReverts(-1000, 1000, _none(), _sqrt(100), VaultCommon.Fence.selector);
     }
 
     /// @notice An active pre-swap with `MAX_SWAPS` exhausted reverts `MaxSwaps`; the same placement without one passes.
@@ -276,7 +278,7 @@ contract VaultPlaceTest is LiquidPoolBase, SettleExtraOracle {
         hv.settle();
         _setCounters(0, tier.MAX_SWAPS);
         uint256 snap = vm.snapshotState();
-        _placeReverts(-1000, 1000, PreSwap(true, true, 1e16), 0, TouchstoneVault.MaxSwaps.selector);
+        _placeReverts(-1000, 1000, PreSwap(true, true, 1e16), 0, VaultCommon.MaxSwaps.selector);
         vm.revertToState(snap);
         _place(-1000, 1000, _none(), 0);
     }
@@ -294,7 +296,7 @@ contract VaultPlaceTest is LiquidPoolBase, SettleExtraOracle {
         assertEq(hv.scalars().swapCount, 1, "one swap");
         vm.revertToState(snap);
         _setCounters(uint64(tier.MAX_SWAP_EPOCH - f + 1), 0);
-        _placeReverts(-1000, 1000, PreSwap(true, true, uint128(amt)), 0, TouchstoneVault.SwapCap.selector);
+        _placeReverts(-1000, 1000, PreSwap(true, true, uint128(amt)), 0, VaultCommon.SwapCap.selector);
     }
 
     /// @notice Containment is checked on the pre-action spot (post-move, pre-swap): a range whose lower edge is spot
@@ -358,7 +360,7 @@ contract VaultPlaceTest is LiquidPoolBase, SettleExtraOracle {
         _credit(0, extra + 1);
         (,, d) = ExecLedger.placementSize(hv.holdings(), -1000, 1000, s0, s0);
         assertEq(d, WAD / 2 - 1, "precondition: one below");
-        _placeReverts(-1000, 1000, _none(), 0, TouchstoneVault.DeltaMin.selector);
+        _placeReverts(-1000, 1000, _none(), 0, VaultCommon.DeltaMin.selector);
     }
 
     /// @notice A placement the idle cannot fund at all (L = 0: the pre-swap spent every token1 and spot is inside the
@@ -373,7 +375,7 @@ contract VaultPlaceTest is LiquidPoolBase, SettleExtraOracle {
         BalanceDeltaQuote memory q = _quote(false, h.idle1, 10);
         assertEq(q.paid, h.idle1, "precondition: the pre-swap fills exactly");
         vm.revertToState(snap);
-        _placeReverts(-1000, 1000, PreSwap(true, false, h.idle1), 0, TouchstoneVault.DeltaMin.selector);
+        _placeReverts(-1000, 1000, PreSwap(true, false, h.idle1), 0, VaultCommon.DeltaMin.selector);
     }
 
     // ------------------------------------------------------------------ U-settle: the vault's move
@@ -388,7 +390,7 @@ contract VaultPlaceTest is LiquidPoolBase, SettleExtraOracle {
         assertEq(_sqrtSpot(), _sqrt(10), "control: the move reaches moveTo");
         vm.revertToState(snap);
         hv.setMoveOut(1e10);
-        _placeReverts(-1000, 1000, _none(), _sqrt(10), TouchstoneVault.Move.selector);
+        _placeReverts(-1000, 1000, _none(), _sqrt(10), VaultCommon.Move.selector);
     }
 
     /// @dev Replaces the third-party depth with a thin position on [0, 10): a 10-tick move up costs ≈ 0.5% of NAV.
@@ -411,7 +413,7 @@ contract VaultPlaceTest is LiquidPoolBase, SettleExtraOracle {
         uint256 lOver = FullMath.mulDiv(cap, 1 << 96, perL) * 101 / 100; // ≈ 1% above the cap
         uint256 snap = vm.snapshotState();
         lpRouter.modifyLiquidity(key, ModifyLiquidityParams(0, 10, int256(lOver), 0), "");
-        _placeReverts(-1000, 1000, _none(), _sqrt(10), TouchstoneVault.SwapCap.selector);
+        _placeReverts(-1000, 1000, _none(), _sqrt(10), VaultCommon.SwapCap.selector);
         vm.revertToState(snap);
         lpRouter.modifyLiquidity(key, ModifyLiquidityParams(0, 10, int256(lOver * 98 / 101), 0), ""); // ≈ 2% below
         vm.recordLogs();
@@ -441,7 +443,7 @@ contract VaultPlaceTest is LiquidPoolBase, SettleExtraOracle {
         snap = vm.snapshotState();
         _place(-1000, 1000, PreSwap(true, false, uint128(amt)), _sqrt(10));
         vm.revertToState(snap);
-        _placeReverts(-1000, 1000, PreSwap(true, false, uint128(amt + nav / WAD + 1)), _sqrt(10), TouchstoneVault.SwapCap.selector);
+        _placeReverts(-1000, 1000, PreSwap(true, false, uint128(amt + nav / WAD + 1)), _sqrt(10), VaultCommon.SwapCap.selector);
         // control: the same pre-swap without the move passes (the budget is the move's, not the pre-swap's own)
         _place(-1000, 1000, PreSwap(true, false, uint128(amt + nav / WAD + 1)), 0);
     }
@@ -462,7 +464,7 @@ contract VaultPlaceTest is LiquidPoolBase, SettleExtraOracle {
         uint256 lCap = FullMath.mulDiv(1e20, cap, v1);
         uint256 snap = vm.snapshotState();
         lpRouter.modifyLiquidity(key, ModifyLiquidityParams(-10, 0, int256(lCap * 101 / 100), 0), "");
-        _placeReverts(-1000, 1000, _none(), _sqrt(-10), TouchstoneVault.SwapCap.selector);
+        _placeReverts(-1000, 1000, _none(), _sqrt(-10), VaultCommon.SwapCap.selector);
         vm.revertToState(snap);
         lpRouter.modifyLiquidity(key, ModifyLiquidityParams(-10, 0, int256(lCap * 98 / 100), 0), "");
         vm.recordLogs();
@@ -490,14 +492,14 @@ contract VaultPlaceTest is LiquidPoolBase, SettleExtraOracle {
         assertEq(hv.scalars().epochSwapFrac, tier.MAX_SWAP_EPOCH, "at the epoch cap");
         vm.revertToState(snap);
         _setCounters(uint64(tier.MAX_SWAP_EPOCH - f + 1), 0);
-        _placeReverts(-1000, 1000, _none(), _sqrt(10), TouchstoneVault.SwapCap.selector);
+        _placeReverts(-1000, 1000, _none(), _sqrt(10), VaultCommon.SwapCap.selector);
     }
 
     /// @notice The move pays its input from idle: a move whose input exceeds idle reverts `SwapCap` before any claim
     ///         is burned.
     function test_U_settle__moveAboveIdleRevertsSwapCap() public {
         // 40 ticks up through 1e21 of third-party liquidity costs ≈ 2e18 token1; idle holds ≈ 1.1e18
-        _placeReverts(-1000, 1000, _none(), _sqrt(40), TouchstoneVault.SwapCap.selector);
+        _placeReverts(-1000, 1000, _none(), _sqrt(40), VaultCommon.SwapCap.selector);
     }
 
     /// @notice A move already at `moveTo` is skipped (v4 rejects a price limit already reached): the placement passes
@@ -671,8 +673,8 @@ contract VaultPlaceTest is LiquidPoolBase, SettleExtraOracle {
         assertEq(bk.reserveBond, e.burnR, "all from the bond");
         assertEq(bk.bondShares, bond0 - e.burn - e.burnR, "the bond pays the charge and the reserve");
         vm.prank(bob);
-        vm.expectRevert(TouchstoneVault.MarkoutPending.selector);
-        hv.deposit(1e18, type(uint256).max, type(uint256).max, bob);
+        vm.expectRevert(VaultCommon.MarkoutPending.selector);
+        IVaultEntries(address(hv)).deposit(1e18, type(uint256).max, type(uint256).max, bob);
         advance(2 + tier.H_MARKOUT / blocktime);
         (c0, r);
         (uint256 extra,, uint256 burnS) =

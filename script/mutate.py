@@ -45,7 +45,11 @@ LIST = os.environ.get('TS_MUTANTS_LIST') or os.path.join(ROOT, 'audits', 'mutant
 MARK = os.path.join(ROOT, 'output', 'MUTATION_IN_PROGRESS')
 WT = os.path.join(ROOT, 'output', 'mutation-wt')
 VAULT = 'src/TouchstoneVault.sol'
+EXTENSION = 'src/TouchstoneVaultExtension.sol'
+VAULT_BASE = 'src/TouchstoneVaultBase.sol'
 HOT = ('_action', '_charge', '_settle', '_cappedSwap')
+# the vault's routing into its extension (spec §4.12): in the basis of every extension mutant
+ROUTE = ('unlockCallback', '_dispatch', '_extension', '_delegate')
 HOT_AREAS = ('guards', 'ledger', 'bank')
 
 
@@ -179,6 +183,9 @@ def basis_parts(m):
         extra += sorted(os.path.relpath(os.path.join(ROOT, 'test', 'vectors', v), ROOT)
                         for v in os.listdir(os.path.join(ROOT, 'test', 'vectors')) if v.endswith('.json'))
     extra += _tree_files('src/libraries', 'src/types')
+    # the vault and its extension share one storage, one configuration and one set of helpers (spec §4.12)
+    if m['file'] in (VAULT, EXTENSION, VAULT_BASE):
+        extra.append(VAULT_BASE)
     for f in extra:
         h.update(f'dep:{f}:'.encode() + _read(f).encode())
     files += extra
@@ -186,6 +193,12 @@ def basis_parts(m):
         vs = _read(VAULT)
         for n in HOT:
             h.update(f'hot:{n}:'.encode() + _named_function(vs, n).encode())
+    if m['file'] == EXTENSION:
+        vs = _read(VAULT)
+        for n in ROUTE:
+            h.update(f'route:{n}:'.encode() + _named_function(vs, n).encode())
+        vs = vs[vs.find('fallback('):]
+        h.update(b'route:fallback:' + vs[:vs.find('\n    }\n')].encode())
     return files, h.hexdigest()[:16]
 
 

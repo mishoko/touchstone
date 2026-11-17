@@ -7,6 +7,8 @@ import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {DeployBaseUnplaced} from "./DeployBaseUnplaced.sol";
 import {MockToken} from "./Stubs.sol";
 import {TouchstoneVault} from "../../src/TouchstoneVault.sol";
+import {TouchstoneVaultExtension} from "../../src/TouchstoneVaultExtension.sol";
+import {IVaultEntries} from "../../src/interfaces/ITouchstoneVaultExtension.sol";
 
 /// @notice Test base with the real vault deployed through the factory (EMPTY range, TEST tier).
 abstract contract VaultBase is DeployBaseUnplaced {
@@ -16,6 +18,10 @@ abstract contract VaultBase is DeployBaseUnplaced {
 
     function _vaultCode() internal pure virtual override returns (bytes memory) {
         return type(TouchstoneVault).creationCode;
+    }
+
+    function _extCode() internal pure virtual override returns (bytes memory) {
+        return type(TouchstoneVaultExtension).creationCode;
     }
 
     function setUp() public virtual override {
@@ -35,12 +41,12 @@ abstract contract VaultBase is DeployBaseUnplaced {
 
     function _deposit(address who, uint256 s) internal returns (uint256 a0, uint256 a1) {
         vm.prank(who);
-        return v.deposit(s, type(uint256).max, type(uint256).max, who);
+        return IVaultEntries(address(v)).deposit(s, type(uint256).max, type(uint256).max, who);
     }
 
     function _withdraw(address who, uint256 s) internal returns (uint256 a0, uint256 a1) {
         vm.prank(who);
-        return v.withdraw(s, 0, 0, who);
+        return IVaultEntries(address(v)).withdraw(s, 0, 0, who);
     }
 }
 

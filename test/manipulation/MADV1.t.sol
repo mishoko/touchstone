@@ -9,6 +9,7 @@ import {TouchstoneVault} from "../../src/TouchstoneVault.sol";
 import {CuratorBundler} from "../../src/periphery/CuratorBundler.sol";
 import {LiquidityValue} from "../../src/libraries/LiquidityValue.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
+import {VaultCommon} from "../../src/TouchstoneVaultBase.sol";
 
 /// @notice M-ADV1 (spec §5.1 ADV-1): a needle position for leverage. Structural: every width other than W reverts
 ///         `Width`; on every legal placement δ_after ≤ 1 and the exposure β = L / L_centred ≤ 2r²/(r + 1) with
@@ -38,7 +39,7 @@ contract MADV1Test is ADV1Rows {
             abi.encodeCall(CuratorBundler.setPositions, (lo, lo + int24(int256(w)), _none(), 0, type(uint256).max))
         );
         assertFalse(ok, "a non-W width reverts");
-        assertEq(bytes4(ret), TouchstoneVault.Width.selector, "Width");
+        assertEq(bytes4(ret), VaultCommon.Width.selector, "Width");
     }
 
     /// @notice Every legal placement (any legal range in range and in both exit states): δ_after ≤ 1 and β ≤ 1.08.

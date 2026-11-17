@@ -19,6 +19,8 @@ import {Markout} from "../../src/types/Markout.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
 import {Bank, Cohort, RING} from "../../src/types/Bank.sol";
 import {SettleExtraOracle} from "../utils/SettleExtraOracle.sol";
+import {IVaultEntries} from "../../src/interfaces/ITouchstoneVaultExtension.sol";
+import {VaultCommon} from "../../src/TouchstoneVaultBase.sol";
 
 /// @notice The curator's `rebalanceSwap` and the charge path it shares with `setPositions`, on the real hook over the
 ///         scripted reference pool. The vault holds a position on [-1800, 200) around spot 0 (so most of its token0
@@ -248,7 +250,7 @@ contract VaultActionTest is LiquidPoolBase, SettleExtraOracle {
         vm.revertToState(snap);
         snap = vm.snapshotState();
         vm.prank(curator);
-        vm.expectRevert(TouchstoneVault.MaxCharge.selector);
+        vm.expectRevert(VaultCommon.MaxCharge.selector);
         hv.rebalanceSwap(true, 2e16, uint256(c0) + r - 1);
         // charge₀ alone is below the backstop: a check on charge₀ only would pass here
         assertLt(uint256(c0), uint256(c0) + r - 1, "the reserve matters");
@@ -266,8 +268,8 @@ contract VaultActionTest is LiquidPoolBase, SettleExtraOracle {
         uint128 rs = hv.bankFull().reserveShares;
         // deposits wait for the settlement
         vm.prank(bob);
-        vm.expectRevert(TouchstoneVault.MarkoutPending.selector);
-        hv.deposit(1e18, type(uint256).max, type(uint256).max, bob);
+        vm.expectRevert(VaultCommon.MarkoutPending.selector);
+        IVaultEntries(address(hv)).deposit(1e18, type(uint256).max, type(uint256).max, bob);
         advance(1);
         refPool.setTick(-30); // the window's tick: the sold token0 cheaper than at the action
         advance(tier.H_MARKOUT / blocktime);
@@ -431,7 +433,7 @@ contract VaultActionTest is LiquidPoolBase, SettleExtraOracle {
         assertEq(_obs().refTick, 0, "cache at 0");
         _setRef(200);
         vm.prank(curator);
-        vm.expectRevert(TouchstoneVault.Fence.selector);
+        vm.expectRevert(VaultCommon.Fence.selector);
         hv.rebalanceSwap(true, 1e16, type(uint256).max);
     }
 
@@ -448,7 +450,7 @@ contract VaultActionTest is LiquidPoolBase, SettleExtraOracle {
                 _swapAs(true, 1e16, type(uint256).max);
             } else {
                 vm.prank(curator);
-                vm.expectRevert(TouchstoneVault.Fence.selector);
+                vm.expectRevert(VaultCommon.Fence.selector);
                 hv.rebalanceSwap(true, 1e16, type(uint256).max);
             }
             vm.revertToState(snap);
@@ -458,7 +460,7 @@ contract VaultActionTest is LiquidPoolBase, SettleExtraOracle {
     /// @notice Only the curator acts.
     function test_U_guard__onlyCurator() public {
         vm.prank(alice);
-        vm.expectRevert(TouchstoneVault.OnlyCurator.selector);
+        vm.expectRevert(VaultCommon.OnlyCurator.selector);
         hv.rebalanceSwap(true, 1e16, type(uint256).max);
     }
 
@@ -468,7 +470,7 @@ contract VaultActionTest is LiquidPoolBase, SettleExtraOracle {
         _swapAs(true, 1e16, type(uint256).max);
         advance(tier.COOLDOWN - 1);
         vm.prank(curator);
-        vm.expectRevert(TouchstoneVault.Cooldown.selector);
+        vm.expectRevert(VaultCommon.Cooldown.selector);
         hv.rebalanceSwap(true, 1e16, type(uint256).max);
         advance(1);
         _swapAs(true, 1e16, type(uint256).max);
@@ -485,7 +487,7 @@ contract VaultActionTest is LiquidPoolBase, SettleExtraOracle {
         (bk.bondShares, bk.reserveShares, bk.reserveBond) = (bk.bondShares + bk.reserveShares, 0, 0);
         hv.setBank(bk);
         vm.prank(curator);
-        vm.expectRevert(TouchstoneVault.MarkoutPending.selector);
+        vm.expectRevert(VaultCommon.MarkoutPending.selector);
         hv.rebalanceSwap(true, 1e16, type(uint256).max);
         vm.revertToState(snap);
         advance(tier.COOLDOWN); // the nominal spacing: due, settled first
@@ -503,7 +505,7 @@ contract VaultActionTest is LiquidPoolBase, SettleExtraOracle {
         vm.revertToState(snap);
         _setCounters(0, tier.MAX_SWAPS, s.nav0, s.delta0);
         vm.prank(curator);
-        vm.expectRevert(TouchstoneVault.MaxSwaps.selector);
+        vm.expectRevert(VaultCommon.MaxSwaps.selector);
         hv.rebalanceSwap(true, 1e16, type(uint256).max);
     }
 
@@ -519,7 +521,7 @@ contract VaultActionTest is LiquidPoolBase, SettleExtraOracle {
         _swapAs(true, uint128(amt), type(uint256).max);
         vm.revertToState(snap);
         vm.prank(curator);
-        vm.expectRevert(TouchstoneVault.SwapCap.selector);
+        vm.expectRevert(VaultCommon.SwapCap.selector);
         hv.rebalanceSwap(true, uint128(amt + 1), type(uint256).max);
     }
 
@@ -536,7 +538,7 @@ contract VaultActionTest is LiquidPoolBase, SettleExtraOracle {
         vm.revertToState(snap);
         _setCounters(uint64(tier.MAX_SWAP_EPOCH - f + 1), 0, s.nav0, s.delta0);
         vm.prank(curator);
-        vm.expectRevert(TouchstoneVault.SwapCap.selector);
+        vm.expectRevert(VaultCommon.SwapCap.selector);
         hv.rebalanceSwap(true, uint128(amt), type(uint256).max);
     }
 
@@ -545,7 +547,7 @@ contract VaultActionTest is LiquidPoolBase, SettleExtraOracle {
         Holdings memory h = hv.holdings();
         assertLt(h.idle1, 1e15, "little idle token1");
         vm.prank(curator);
-        vm.expectRevert(TouchstoneVault.SwapCap.selector);
+        vm.expectRevert(VaultCommon.SwapCap.selector);
         hv.rebalanceSwap(false, h.idle1 + 1, type(uint256).max);
     }
 
@@ -740,7 +742,7 @@ contract VaultActionHighTickTest is LiquidPoolBase {
         hv.rebalanceSwap(true, uint128(amt), type(uint256).max);
         vm.revertToState(snap);
         vm.prank(curator);
-        vm.expectRevert(TouchstoneVault.SwapCap.selector);
+        vm.expectRevert(VaultCommon.SwapCap.selector);
         hv.rebalanceSwap(true, uint128(amt + 1), type(uint256).max);
     }
 

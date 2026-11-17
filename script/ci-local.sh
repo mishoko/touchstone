@@ -67,6 +67,10 @@ python3 test/static/test_static.py
 step "storage-layout snapshots"
 python3 script/storage_layout.py
 
+step "the vault extension: ABI split, identical layouts, bytecode lint (U-ext (e), (g), (h))"
+python3 script/ext_check.py --selftest
+python3 script/ext_check.py
+
 step "mutation tags"
 python3 script/mutate.py --audit
 

@@ -47,6 +47,9 @@ contract StubVault {
     }
 }
 
+/// @notice The extension's stand-in for the factory tests (the stub vault does not use it).
+contract StubExtension {}
+
 /// @notice A vault whose reported tier differs from the one it was handed.
 contract StubVaultBadTier is StubVault {
     function TIER_HASH() external view override returns (bytes32) {

@@ -51,7 +51,7 @@
  ],
  "contracts": {
   "ExecLedger": {
-   "runtime": 7702,
+   "runtime": 7716,
    "history": [
     {
      "runtime": 1936,
@@ -72,6 +72,10 @@
     {
      "runtime": 7702,
      "note": "s15 F-044: the fee-aware settlement (arbitrage fee terms, centre leg, re-priced burn, 512-bit leg choice) lives in ExecLedger (+1,700 B, a coarse-linked library); the vault's record grows by three slots (+202 B over the accepted 21,469 B)"
+    },
+    {
+     "runtime": 7716,
+     "note": "s16 lever (c), the per-vault extension (spec §4.12): seed/deposit/withdraw and the shared helpers moved to TouchstoneVaultExtension (10,841 B; projected ≈ 9,500 B before the s15 fee-aware settlement and the allow-list) by delegatecall from the vault's allow-listed fallback; vault 21,671 -> 16,597 B (projected 17,964 B with every s14 stub); factory +423 B (the extension's code hash, salt, creation and the two Pending fields)"
     }
    ]
   },
@@ -112,7 +116,7 @@
    ]
   },
   "TouchstoneFactory": {
-   "runtime": 5993,
+   "runtime": 6416,
    "history": [
     {
      "runtime": 6709,
@@ -121,6 +125,10 @@
     {
      "runtime": 5993,
      "note": "s10 size lever (1), views to the Lens: the vault drops every state view (tier, holdings, nav0, bondShares, bank, bankLimits) and the tier's storage copy; it exposes extsload and the TIER_HASH commitment the factory checks (-1,253 B); the factory reads TIER_HASH instead of the tier struct"
+    },
+    {
+     "runtime": 6416,
+     "note": "s16 lever (c), the per-vault extension (spec §4.12): seed/deposit/withdraw and the shared helpers moved to TouchstoneVaultExtension (10,841 B; projected ≈ 9,500 B before the s15 fee-aware settlement and the allow-list) by delegatecall from the vault's allow-listed fallback; vault 21,671 -> 16,597 B (projected 17,964 B with every s14 stub); factory +423 B (the extension's code hash, salt, creation and the two Pending fields)"
     }
    ]
   },
@@ -134,7 +142,7 @@
    ]
   },
   "TouchstoneVault": {
-   "runtime": 21671,
+   "runtime": 16597,
    "history": [
     {
      "runtime": 14971,
@@ -171,6 +179,10 @@
     {
      "runtime": 21671,
      "note": "s15 F-044: the fee-aware settlement (arbitrage fee terms, centre leg, re-priced burn, 512-bit leg choice) lives in ExecLedger (+1,700 B, a coarse-linked library); the vault's record grows by three slots (+202 B over the accepted 21,469 B)"
+    },
+    {
+     "runtime": 16597,
+     "note": "s16 lever (c), the per-vault extension (spec §4.12): seed/deposit/withdraw and the shared helpers moved to TouchstoneVaultExtension (10,841 B; projected ≈ 9,500 B before the s15 fee-aware settlement and the allow-list) by delegatecall from the vault's allow-listed fallback; vault 21,671 -> 16,597 B (projected 17,964 B with every s14 stub); factory +423 B (the extension's code hash, salt, creation and the two Pending fields)"
     }
    ]
   },
@@ -184,11 +196,24 @@
    ]
   },
   "CuratorBundler": {
-   "runtime": 9145,
+   "runtime": 9189,
    "history": [
     {
      "runtime": 9145,
      "note": "s12: setPositions (the removal to idle, the vault's exact-output move to moveTo with SwapCap and Move, the placement rules, the optional pre-swap through the shared capped swap, the sizing through ExecLedger.placementSize, DeltaMin, setVaultRange, Op.Place). First written as a second action function: 22,623 B (+4,236 B; the shared charge path was inlined twice). Restructured: both actions run one body with one _charge call site (rebalanceSwap encodes its swap as the pre-swap of an action with no placement) and every PoolManager delta of the vault is booked through one helper (_book): 21,057 B (+2,670 B), 57 B over the 21,000 B escalation line (escalated). CuratorBundler (periphery, outside the vault gate) recorded at 9,145 B."
+    },
+    {
+     "runtime": 9189,
+     "note": "s16 lever (c), the per-vault extension (spec §4.12): seed/deposit/withdraw and the shared helpers moved to TouchstoneVaultExtension (10,841 B; projected ≈ 9,500 B before the s15 fee-aware settlement and the allow-list) by delegatecall from the vault's allow-listed fallback; vault 21,671 -> 16,597 B (projected 17,964 B with every s14 stub); factory +423 B (the extension's code hash, salt, creation and the two Pending fields)"
+    }
+   ]
+  },
+  "TouchstoneVaultExtension": {
+   "runtime": 10841,
+   "history": [
+    {
+     "runtime": 10841,
+     "note": "s16 lever (c), the per-vault extension (spec §4.12): seed/deposit/withdraw and the shared helpers moved to TouchstoneVaultExtension (10,841 B; projected ≈ 9,500 B before the s15 fee-aware settlement and the allow-list) by delegatecall from the vault's allow-listed fallback; vault 21,671 -> 16,597 B (projected 17,964 B with every s14 stub); factory +423 B (the extension's code hash, salt, creation and the two Pending fields)"
     }
    ]
   }

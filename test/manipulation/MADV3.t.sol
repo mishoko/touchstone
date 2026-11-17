@@ -11,6 +11,7 @@ import {TouchstoneVault} from "../../src/TouchstoneVault.sol";
 import {ITouchstoneHook} from "../../src/interfaces/ITouchstoneHook.sol";
 import {VaultView} from "../utils/VaultView.sol";
 import {PreSwap} from "../../src/types/PreSwap.sol";
+import {VaultCommon} from "../../src/TouchstoneVaultBase.sol";
 
 using VaultView for TouchstoneVault;
 
@@ -292,7 +293,7 @@ contract MADV3MoveTest is MoveRows {
     function _checkMove(MoveOut memory o) internal pure {
         if (o.reverted) {
             assertTrue(
-                o.err == TouchstoneVault.SwapCap.selector || o.err == TouchstoneVault.DeltaMin.selector,
+                o.err == VaultCommon.SwapCap.selector || o.err == VaultCommon.DeltaMin.selector,
                 "only a guard reverts the move"
             );
         } else {
@@ -445,14 +446,14 @@ contract MADV3MoveTest is MoveRows {
         vm.revertToState(snap);
         o = _moveAttack(2.5e16, 12);
         assertTrue(o.reverted, "past the cap");
-        assertEq(o.err, TouchstoneVault.SwapCap.selector, "SwapCap");
+        assertEq(o.err, VaultCommon.SwapCap.selector, "SwapCap");
     }
 
     /// @notice Row 2: repeated moves across cooldowns within one epoch hit `SwapCap` once the epoch's moves would pass
     ///         `MAX_SWAP_EPOCH`.
     function test_M_ADV3_move__repeatedMovesHitTheEpochCap() public {
         (uint256 moved, uint256 n, bytes4 err) = _repeat(1.6e16, 6);
-        assertEq(err, TouchstoneVault.SwapCap.selector, "the epoch cap stops the moves");
+        assertEq(err, VaultCommon.SwapCap.selector, "the epoch cap stops the moves");
         assertLe(moved, tier.MAX_SWAP_EPOCH, "moved within the epoch cap");
         assertEq(n, 3, "three moves of 1.6% fit 5%");
     }

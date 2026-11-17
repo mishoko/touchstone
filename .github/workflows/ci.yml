@@ -72,6 +72,11 @@ jobs:
       - name: Storage-layout snapshots
         run: python3 script/storage_layout.py
 
+      - name: Vault extension (ABI split, identical layouts, bytecode lint)
+        run: |
+          python3 script/ext_check.py --selftest
+          python3 script/ext_check.py
+
       - name: Mutation tags
         run: python3 script/mutate.py --audit
 

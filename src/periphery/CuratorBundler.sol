@@ -32,6 +32,7 @@ interface ICuratorVault is IERC20 {
 /// @notice Everything `deployAndPlace` passes to the factory.
 struct DeployArgs {
     bytes vaultCode;
+    bytes extensionCode;
     bytes hookCode;
     HookArgs hookArgs;
     bytes32 saltV;
@@ -90,7 +91,7 @@ contract CuratorBundler is IUnlockCallback {
         Currency c1 = a.hookArgs.currency1;
         IERC20(Currency.unwrap(c0)).forceApprove(address(FACTORY), a.seed.a0 + a.seed.wit0);
         IERC20(Currency.unwrap(c1)).forceApprove(address(FACTORY), a.seed.a1 + a.seed.wit1);
-        (v, h) = FACTORY.deploy(a.vaultCode, a.hookCode, a.hookArgs, a.saltV, a.saltH, a.seed);
+        (v, h) = FACTORY.deploy(a.vaultCode, a.extensionCode, a.hookCode, a.hookArgs, a.saltV, a.saltH, a.seed);
         (vault, hook) = (ICuratorVault(v), ITouchstoneHook(h));
         _key = PoolKey(c0, c1, a.hookArgs.fee, a.hookArgs.tickSpacing, IHooks(h));
         ICuratorVault(v).setPositions(lo, hi, preSwap, 0, maxCharge);

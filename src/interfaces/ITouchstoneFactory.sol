@@ -31,6 +31,9 @@ struct Pending {
     address hook;
     PoolKey key;
     Tier tier;
+    /// @dev The vault's and its extension's addresses, computed before either is created (spec §4.12).
+    address vault;
+    address extension;
 }
 
 /// @notice The part of the vault the factory calls.
@@ -47,14 +50,16 @@ interface ITouchstoneFactory {
     error SeedTransfer();
 
     /// @notice The tier is emitted because the vault keeps only its hash (`TIER_HASH`): readers take it from here.
-    event Deployed(address indexed sender, address vault, address hook, Tier tier);
+    event Deployed(address indexed sender, address vault, address extension, address hook, Tier tier);
 
     function POOL_MANAGER() external view returns (address);
     function VAULT_CODE_HASH() external view returns (bytes32);
+    function EXTENSION_CODE_HASH() external view returns (bytes32);
     function HOOK_CODE_HASH() external view returns (bytes32);
     function pending() external view returns (Pending memory);
     function deploy(
         bytes calldata vaultCreationCode,
+        bytes calldata extensionCreationCode,
         bytes calldata hookCreationCode,
         HookArgs calldata hookArgs,
         bytes32 saltV,

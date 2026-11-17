@@ -9,6 +9,7 @@ import {TouchstoneFactory} from "../src/TouchstoneFactory.sol";
 import {TouchstoneHook} from "../src/TouchstoneHook.sol";
 import {HookArgs, SeedParams} from "../src/interfaces/ITouchstoneFactory.sol";
 import {TouchstoneVault} from "../src/TouchstoneVault.sol";
+import {TouchstoneVaultExtension} from "../src/TouchstoneVaultExtension.sol";
 import {CuratorBundler, DeployArgs} from "../src/periphery/CuratorBundler.sol";
 import {PreSwap} from "../src/types/PreSwap.sol";
 import {HookMining} from "./Mine.s.sol";
@@ -28,8 +29,10 @@ contract AnvilDeploy is Script {
         address sender = msg.sender;
         PoolManager manager = new PoolManager(sender);
         bytes memory vaultCode = type(TouchstoneVault).creationCode;
+        bytes memory extCode = type(TouchstoneVaultExtension).creationCode;
         bytes memory hookCode = type(TouchstoneHook).creationCode;
-        TouchstoneFactory factory = new TouchstoneFactory(address(manager), keccak256(vaultCode), keccak256(hookCode));
+        TouchstoneFactory factory =
+            new TouchstoneFactory(address(manager), keccak256(vaultCode), keccak256(extCode), keccak256(hookCode));
 
         // The hook needs a reference with history; the factory deploys the vault and the hook and seeds the vault.
         MockToken a = new MockToken("A", 18);
@@ -56,7 +59,7 @@ contract AnvilDeploy is Script {
         t0.mint(address(bundler), 2e18);
         t1.mint(address(bundler), 2e18);
         bundler.deployAndPlace(
-            DeployArgs(vaultCode, hookCode, args, saltV, saltH, seed), -1000, 1000, PreSwap(false, false, 0), type(uint256).max
+            DeployArgs(vaultCode, extCode, hookCode, args, saltV, saltH, seed), -1000, 1000, PreSwap(false, false, 0), type(uint256).max
         );
         vm.stopBroadcast();
     }

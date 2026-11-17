@@ -10,6 +10,8 @@ import {TouchstoneVault} from "../../src/TouchstoneVault.sol";
 import {ITouchstoneHook} from "../../src/interfaces/ITouchstoneHook.sol";
 import {SeedParams} from "../../src/interfaces/ITouchstoneFactory.sol";
 import {ExecLedger} from "../../src/libraries/ExecLedger.sol";
+import {IVaultEntries} from "../../src/interfaces/ITouchstoneVaultExtension.sol";
+import {VaultCommon} from "../../src/TouchstoneVaultBase.sol";
 
 using VaultView for TouchstoneVault;
 
@@ -49,8 +51,8 @@ abstract contract NavCapRows is VaultBase {
         uint256 S = v.totalSupply();
         uint256 over = FullMath.mulDivRoundingUp(uint256(CAP) + 1, S, v.nav0()) - S;
         vm.prank(alice);
-        vm.expectRevert(TouchstoneVault.NavCap.selector);
-        v.deposit(over, type(uint256).max, type(uint256).max, alice);
+        vm.expectRevert(VaultCommon.NavCap.selector);
+        IVaultEntries(address(v)).deposit(over, type(uint256).max, type(uint256).max, alice);
         _deposit(alice, over - 1);
         assertEq(v.nav0(), CAP, "NAV0 at the cap");
     }

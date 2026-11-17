@@ -13,6 +13,8 @@ import {TouchstoneVault} from "../../src/TouchstoneVault.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
 import {Entry} from "../../src/types/Entry.sol";
 import {VaultView} from "../utils/VaultView.sol";
+import {IVaultEntries} from "../../src/interfaces/ITouchstoneVaultExtension.sol";
+import {VaultCommon} from "../../src/TouchstoneVaultBase.sol";
 
 
 using VaultView for TouchstoneVault;
@@ -72,17 +74,17 @@ contract VaultReentrancyTest is VaultBase {
 
     function test_U_reent__tokenCallbackCannotReenterDeposit() public {
         _fundUser(alice, 10e18);
-        _cb().arm(vault, abi.encodeCall(TouchstoneVault.deposit, (1, type(uint256).max, type(uint256).max, alice)));
+        _cb().arm(vault, abi.encodeCall(IVaultEntries.deposit, (1, type(uint256).max, type(uint256).max, alice)));
         vm.prank(alice);
         vm.expectRevert(ReentrancyGuardTransient.ReentrancyGuardReentrantCall.selector);
-        v.deposit(1e18, type(uint256).max, type(uint256).max, alice);
+        IVaultEntries(address(v)).deposit(1e18, type(uint256).max, type(uint256).max, alice);
     }
 
     function test_U_reent__tokenCallbackCannotReenterWithdraw() public {
         _fundUser(alice, 10e18);
         _deposit(alice, 1e24);
         // the payout's transfer from the PoolManager to `alice` calls back into withdraw
-        _cb().arm(vault, abi.encodeCall(TouchstoneVault.withdraw, (1, 0, 0, alice)));
+        _cb().arm(vault, abi.encodeCall(IVaultEntries.withdraw, (1, 0, 0, alice)));
         // the PoolManager wraps the token's revert: the inner reason is the vault's reentrancy guard
         vm.prank(alice);
         vm.expectRevert(
@@ -94,7 +96,7 @@ contract VaultReentrancyTest is VaultBase {
                 abi.encodeWithSelector(CurrencyLibrary.ERC20TransferFailed.selector)
             )
         );
-        v.withdraw(1e23, 0, 0, alice);
+        IVaultEntries(address(v)).withdraw(1e23, 0, 0, alice);
     }
 
     /// @notice Every (callback entry, re-entered entry) pair among deposit and withdraw reverts on the guard.
@@ -102,8 +104,8 @@ contract VaultReentrancyTest is VaultBase {
         _fundUser(alice, 10e18);
         _deposit(alice, 1e24);
         bytes[2] memory inner = [
-            abi.encodeCall(TouchstoneVault.deposit, (1, type(uint256).max, type(uint256).max, alice)),
-            abi.encodeCall(TouchstoneVault.withdraw, (1, 0, 0, alice))
+            abi.encodeCall(IVaultEntries.deposit, (1, type(uint256).max, type(uint256).max, alice)),
+            abi.encodeCall(IVaultEntries.withdraw, (1, 0, 0, alice))
         ];
         bytes memory guard = abi.encodeWithSelector(ReentrancyGuardTransient.ReentrancyGuardReentrantCall.selector);
         for (uint256 i; i < 2; ++i) {
@@ -111,7 +113,7 @@ contract VaultReentrancyTest is VaultBase {
             _cb().arm(vault, inner[i]);
             vm.prank(alice);
             vm.expectRevert(guard);
-            v.deposit(1e18, type(uint256).max, type(uint256).max, alice);
+            IVaultEntries(address(v)).deposit(1e18, type(uint256).max, type(uint256).max, alice);
             // the callback fires on the withdrawal's payout (PoolManager -> alice): the PoolManager wraps it
             _cb().arm(vault, inner[i]);
             vm.prank(alice);
@@ -124,7 +126,7 @@ contract VaultReentrancyTest is VaultBase {
                     abi.encodeWithSelector(CurrencyLibrary.ERC20TransferFailed.selector)
                 )
             );
-            v.withdraw(1e23, 0, 0, alice);
+            IVaultEntries(address(v)).withdraw(1e23, 0, 0, alice);
         }
     }
 
@@ -148,7 +150,7 @@ contract VaultReentrancyTest is VaultBase {
         bytes[] memory p = _payloads();
         for (uint256 i; i < p.length; ++i) {
             vm.prank(bob);
-            vm.expectRevert(TouchstoneVault.OnlyPoolManager.selector);
+            vm.expectRevert(VaultCommon.OnlyPoolManager.selector);
             v.unlockCallback(p[i]);
         }
     }
@@ -158,7 +160,7 @@ contract VaultReentrancyTest is VaultBase {
         ForeignUnlocker f = new ForeignUnlocker(manager, vault);
         bytes[] memory p = _payloads();
         for (uint256 i; i < p.length; ++i) {
-            vm.expectRevert(TouchstoneVault.OnlyPoolManager.selector);
+            vm.expectRevert(VaultCommon.OnlyPoolManager.selector);
             f.go(p[i]);
         }
         assertEq(v.balanceOf(bob), 0);

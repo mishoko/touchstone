@@ -11,7 +11,7 @@ import {Tier} from "../../src/types/Tier.sol";
 import {Tiers} from "../../script/Tiers.sol";
 import {HookMining} from "../../script/Mine.s.sol";
 import {MockRefPool} from "./MockRefPool.sol";
-import {StubVault, MockToken} from "./Stubs.sol";
+import {StubVault, StubExtension, MockToken} from "./Stubs.sol";
 import {TouchstoneHook} from "../../src/TouchstoneHook.sol";
 
 /// @notice Test base: a local PoolManager, two mock tokens, a scripted reference pool, the factory, and one vault and
@@ -58,6 +58,11 @@ abstract contract DeployBaseUnplaced is Test {
         return type(StubVault).creationCode;
     }
 
+    /// @dev The extension's creation code (the stub for the factory and hook tests; `VaultBase` uses the real one).
+    function _extCode() internal pure virtual returns (bytes memory) {
+        return type(StubExtension).creationCode;
+    }
+
     /// @dev Test tokens; a suite may substitute a token with transfer callbacks.
     function _newToken(string memory n, uint8 d) internal virtual returns (MockToken) {
         return new MockToken(n, d);
@@ -92,7 +97,9 @@ abstract contract DeployBaseUnplaced is Test {
         t.REF_SQRT_PRICE = TickMath.getSqrtPriceAtTick(_seedTick());
         Tiers.check(t, bt);
         tier = t;
-        factory = new TouchstoneFactory(address(manager), keccak256(_vaultCode()), keccak256(_hookCode()));
+        factory = new TouchstoneFactory(
+            address(manager), keccak256(_vaultCode()), keccak256(_extCode()), keccak256(_hookCode())
+        );
         deployer = address(this);
         seedParams = _seedParams();
     }
@@ -129,7 +136,7 @@ abstract contract DeployBaseUnplaced is Test {
         (saltH, predictedHook) = HookMining.mine(address(factory), sender, _hookCode(), hookArgs, 0);
         _fund(sender);
         vm.prank(sender);
-        (v, h) = factory.deploy(_vaultCode(), _hookCode(), hookArgs, saltV, saltH, seedParams);
+        (v, h) = factory.deploy(_vaultCode(), _extCode(), _hookCode(), hookArgs, saltV, saltH, seedParams);
         assertEq(v, predictedVault, "vault address");
         assertEq(h, predictedHook, "hook address");
     }

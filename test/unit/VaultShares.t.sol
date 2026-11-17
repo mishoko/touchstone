@@ -8,6 +8,8 @@ import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {LiquidityValue} from "../../src/libraries/LiquidityValue.sol";
 import {VaultView} from "../utils/VaultView.sol";
+import {IVaultEntries} from "../../src/interfaces/ITouchstoneVaultExtension.sol";
+import {VaultCommon} from "../../src/TouchstoneVaultBase.sol";
 
 
 using VaultView for TouchstoneVault;
@@ -57,22 +59,22 @@ contract VaultSharesTest is VaultBase {
     function test_U_5__zeroSharesRevert() public {
         _fundUser(alice, 1e18);
         vm.prank(alice);
-        vm.expectRevert(TouchstoneVault.ZeroShares.selector);
-        v.deposit(0, type(uint256).max, type(uint256).max, alice);
+        vm.expectRevert(VaultCommon.ZeroShares.selector);
+        IVaultEntries(address(v)).deposit(0, type(uint256).max, type(uint256).max, alice);
         vm.prank(alice);
-        vm.expectRevert(TouchstoneVault.ZeroShares.selector);
-        v.withdraw(0, 0, 0, alice);
+        vm.expectRevert(VaultCommon.ZeroShares.selector);
+        IVaultEntries(address(v)).withdraw(0, 0, 0, alice);
     }
 
     function test_U_5__slippageBoundsBothWays() public {
         _fundUser(alice, 10e18);
         vm.prank(alice);
-        vm.expectRevert(TouchstoneVault.Slippage.selector);
-        v.deposit(1e24, 1e18 - 1, type(uint256).max, alice); // costs exactly 1e18 of token0
+        vm.expectRevert(VaultCommon.Slippage.selector);
+        IVaultEntries(address(v)).deposit(1e24, 1e18 - 1, type(uint256).max, alice); // costs exactly 1e18 of token0
         _deposit(alice, 1e24);
         vm.prank(alice);
-        vm.expectRevert(TouchstoneVault.Slippage.selector);
-        v.withdraw(1e24, 1e18 + 1, 0, alice); // pays exactly 1e18 of token0 (S = 2e24, idle0 = 2e18)
+        vm.expectRevert(VaultCommon.Slippage.selector);
+        IVaultEntries(address(v)).withdraw(1e24, 1e18 + 1, 0, alice); // pays exactly 1e18 of token0 (S = 2e24, idle0 = 2e18)
     }
 
     /// @notice A deposit followed by a withdrawal of the same shares never returns more than it paid.
@@ -97,8 +99,8 @@ contract VaultSharesTest is VaultBase {
         uint256 cap = v.bondShares() * 1e18 / tier.BOND_RATIO; // the largest S with S·R <= bond·WAD
         uint256 room = cap - v.totalSupply();
         vm.prank(alice);
-        vm.expectRevert(TouchstoneVault.NavCap.selector);
-        v.deposit(room + 1, type(uint256).max, type(uint256).max, alice);
+        vm.expectRevert(VaultCommon.NavCap.selector);
+        IVaultEntries(address(v)).deposit(room + 1, type(uint256).max, type(uint256).max, alice);
         _deposit(alice, room);
         assertEq(v.totalSupply(), cap);
         assertLe(v.totalSupply() * tier.BOND_RATIO, v.bondShares() * 1e18);
@@ -134,8 +136,8 @@ contract VaultSeedTest is VaultBase {
         _deployWith();
         _fundUser(alice, 10e18);
         vm.prank(alice);
-        vm.expectRevert(TouchstoneVault.NavCap.selector);
-        v.deposit(5e23 + 5e5, type(uint256).max, type(uint256).max, alice); // NAV0' = 3e18 + 1
+        vm.expectRevert(VaultCommon.NavCap.selector);
+        IVaultEntries(address(v)).deposit(5e23 + 5e5, type(uint256).max, type(uint256).max, alice); // NAV0' = 3e18 + 1
         _deposit(alice, 5e23 + 5e5 - 1); // NAV0' = 3e18
         assertEq(v.nav0(), 3e18, "rebased NAV0 at the cap");
     }
@@ -151,7 +153,7 @@ contract VaultSeedTest is VaultBase {
         // the reference price is at tick -10,000 (p ≈ 0.368): bond value ≈ 1.368e18 there, 2e18 at the seed price
         tier.REF_SQRT_PRICE = TickMath.getSqrtPriceAtTick(-10_000);
         tier.BOND_MIN = 1.5e18;
-        _expectSeedRevert(TouchstoneVault.BondMin.selector);
+        _expectSeedRevert(VaultCommon.BondMin.selector);
     }
 
     function test_U_navcap__bondMinPassesJustBelowTheBondValue() public {
@@ -169,7 +171,7 @@ contract VaultSeedTest is VaultBase {
         uint256 nav = LiquidityValue.val(seedParams.a0, seedParams.a1, ref);
         uint256 bondValue = nav * (1e24 - 1e15) / 1e24;
         tier.BOND_MIN = uint128(bondValue + 1);
-        _expectSeedRevert(TouchstoneVault.BondMin.selector);
+        _expectSeedRevert(VaultCommon.BondMin.selector);
         tier.BOND_MIN = uint128(bondValue);
         _deployWith();
         assertEq(v.totalSupply(), 1e24);
@@ -197,13 +199,13 @@ contract VaultSeedTest is VaultBase {
         uint256 d0 = (idle0 - 1) / 1e24 + 1; // the one-share slice, rounded up
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(SafeCast.SafeCastOverflowedUintDowncast.selector, 128, idle0 + d0));
-        v.deposit(1, type(uint256).max, type(uint256).max, alice);
+        IVaultEntries(address(v)).deposit(1, type(uint256).max, type(uint256).max, alice);
     }
 
     function test_U_navcap__valuelessSeedReverts() public {
         seedParams.a0 = 0;
         seedParams.a1 = 0;
-        _expectSeedRevert(TouchstoneVault.ZeroShares.selector);
+        _expectSeedRevert(VaultCommon.ZeroShares.selector);
     }
 
     function _expectSeedRevert(bytes4 sel) internal {

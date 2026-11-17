@@ -16,6 +16,8 @@ import {TouchstoneVault} from "../../src/TouchstoneVault.sol";
 import {HookArgs, SeedParams} from "../../src/interfaces/ITouchstoneFactory.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
 import {PreSwap} from "../../src/types/PreSwap.sol";
+import {IVaultEntries} from "../../src/interfaces/ITouchstoneVaultExtension.sol";
+import {VaultCommon} from "../../src/TouchstoneVaultBase.sol";
 
 using VaultView for TouchstoneVault;
 
@@ -35,7 +37,7 @@ contract CuratorBundlerTest is VaultBase {
         HookArgs memory ha = _hookArgsFor(predicted);
         (bytes32 sH,) = HookMining.mine(address(factory), address(bundler), _hookCode(), ha, 0);
         SeedParams memory sp = SeedParams({a0: 1e18, a1: 1e18, curator: address(bundler), wit0: 1e9, wit1: 1e9});
-        args = DeployArgs(_vaultCode(), _hookCode(), ha, SALT_V, sH, sp);
+        args = DeployArgs(_vaultCode(), _extCode(), _hookCode(), ha, SALT_V, sH, sp);
         token0.mint(address(bundler), 1e30); // the seed and the spot moves
         token1.mint(address(bundler), 1e30);
     }
@@ -90,8 +92,8 @@ contract CuratorBundlerTest is VaultBase {
         assertLt(bond, v.totalSupply(), "bond");
         _fundUser(alice, 1e30);
         vm.prank(alice);
-        vm.expectRevert(TouchstoneVault.MarkoutPending.selector);
-        v.deposit(1e18, type(uint256).max, type(uint256).max, alice);
+        vm.expectRevert(VaultCommon.MarkoutPending.selector);
+        IVaultEntries(address(v)).deposit(1e18, type(uint256).max, type(uint256).max, alice);
         advance(2 + tier.H_MARKOUT / blocktime);
         vm.prank(owner);
         bundler.settle();

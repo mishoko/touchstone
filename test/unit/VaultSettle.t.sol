@@ -12,6 +12,8 @@ import {Markout} from "../../src/types/Markout.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
 import {Bank, Cohort, RING} from "../../src/types/Bank.sol";
 import {SettleExtraOracle} from "../utils/SettleExtraOracle.sol";
+import {IVaultEntries} from "../../src/interfaces/ITouchstoneVaultExtension.sol";
+import {VaultCommon} from "../../src/TouchstoneVaultBase.sol";
 
 /// @notice The markout settlement in the vault (prologue step 0 and `settle()`), on the real hook over the scripted
 ///         reference pool. A pending action is written through the harness seam (the actions that record one are built
@@ -162,7 +164,7 @@ contract VaultSettleTest is LiquidPoolBase, SettleExtraOracle {
             refPool.setMode(MockRefPool.Mode(m));
             uint256 S = hv.totalSupply();
             vm.prank(alice);
-            (uint256 a0, uint256 a1) = hv.withdraw(1e21, 0, 0, alice);
+            (uint256 a0, uint256 a1) = IVaultEntries(address(hv)).withdraw(1e21, 0, 0, alice);
             assertGt(a0 + a1, 0, "paid out");
             assertEq(hv.totalSupply(), S - RES_SHARES - 1e21, "fallback burn, then the withdrawal");
             assertEq(_tAction(), 0, "settled");
@@ -174,13 +176,13 @@ contract VaultSettleTest is LiquidPoolBase, SettleExtraOracle {
     function test_U_settle__depositsBlockedWhilePendingThenSettleFirst() public {
         _pend();
         vm.prank(bob);
-        vm.expectRevert(TouchstoneVault.MarkoutPending.selector);
-        hv.deposit(1e18, type(uint256).max, type(uint256).max, bob);
+        vm.expectRevert(VaultCommon.MarkoutPending.selector);
+        IVaultEntries(address(hv)).deposit(1e18, type(uint256).max, type(uint256).max, bob);
         _scriptWindowAndRollToDue(T_MK);
         (, uint256 burnS) = _expected(T_MK);
         uint256 S = hv.totalSupply();
         vm.prank(bob);
-        hv.deposit(1e18, type(uint256).max, type(uint256).max, bob);
+        IVaultEntries(address(hv)).deposit(1e18, type(uint256).max, type(uint256).max, bob);
         assertEq(hv.totalSupply(), S - burnS + 1e18, "settled, then minted");
         assertEq(_tAction(), 0, "settled");
     }
@@ -193,7 +195,7 @@ contract VaultSettleTest is LiquidPoolBase, SettleExtraOracle {
         refPool.setTick(0);
         _pend();
         vm.prank(alice);
-        hv.withdraw(1e18, 0, 0, alice); // the checkpoint processes the breach; the settlement is not due
+        IVaultEntries(address(hv)).withdraw(1e18, 0, 0, alice); // the checkpoint processes the breach; the settlement is not due
         Bank memory b = hv.bankFull();
         assertEq(b.breaches, 1, "breach processed");
         assertEq(b.reserveShares, RES_SHARES, "reserve kept");
@@ -254,7 +256,7 @@ contract VaultSettleTest is LiquidPoolBase, SettleExtraOracle {
             vm.expectEmit(address(hv));
             emit Settled(CHARGE0, extra, ts[i], false);
             vm.prank(alice);
-            hv.withdraw(1e21, 0, 0, alice);
+            IVaultEntries(address(hv)).withdraw(1e21, 0, 0, alice);
             assertEq(_tAction(), 0, "settled");
             vm.revertToState(snap);
         }
@@ -266,7 +268,7 @@ contract VaultSettleTest is LiquidPoolBase, SettleExtraOracle {
     function test_U_settle__gasGuardRevertsBelowTwiceTheCap() public {
         _pend();
         _scriptWindowAndRollToDue(T_MK);
-        vm.expectRevert(TouchstoneVault.RefGas.selector);
+        vm.expectRevert(VaultCommon.RefGas.selector);
         hv.settle{gas: 2 * uint256(tier.REF_GAS_CAP)}();
         hv.settle{gas: 4 * uint256(tier.REF_GAS_CAP)}();
         assertEq(_tAction(), 0, "settles with enough gas");

@@ -12,6 +12,7 @@ import {Holdings} from "../../src/types/Holdings.sol";
 import {Bank, Cohort, RING} from "../../src/types/Bank.sol";
 import {Tiers} from "../../script/Tiers.sol";
 import {VaultHarness} from "./VaultHarness.sol";
+import {TouchstoneVaultExtension} from "../../src/TouchstoneVaultExtension.sol";
 
 /// @notice The scripted harness's hook: records `ackBreaches` as an event, in order with the vault's events.
 contract AckRecorder {
@@ -40,12 +41,45 @@ contract MockVaultFactory {
         return _p;
     }
 
-    /// @dev The harness's creation code arrives as calldata (embedding it would put this factory over EIP-170).
-    function deploy(bytes memory code) external returns (VaultHarness h) {
+    /// @dev The harness's and the extension's creation codes arrive as calldata (embedding them would put this
+    ///      factory over EIP-170). Both addresses are computed first and handed over in `pending`, as the factory does.
+    function deploy(bytes memory code, bytes memory extCode) external returns (VaultHarness h) {
+        return VaultHarness(deployWith(code, extCode, 0));
+    }
+
+    /// @notice A deployment with one defect for the vault constructor's consistency checks (0: none): 1 the extension
+    ///         is built for another vault (`VAULT()` mismatch); 2 the extension is built under another tier
+    ///         (`CONFIG_HASH` mismatch); 3 `pending.extension` points at an address with no code.
+    function deployWith(bytes memory code, bytes memory extCode, uint8 defect) public returns (address v) {
+        bytes32 sv = keccak256(abi.encode(msg.sender, ++_n));
+        bytes32 se = keccak256(abi.encode(sv, "ext"));
+        address vaultAddr = _addr(sv, code);
+        _p.vault = defect == 1 ? address(0xBAD) : vaultAddr;
+        _p.extension = defect == 3 ? address(0xC0DE) : _addr(se, extCode);
+        Tier memory t = _p.tier;
+        if (defect == 2) _p.tier.CURE_BLOCKS += 1;
+        address x = _create2(extCode, se);
+        (_p.vault, _p.tier) = (vaultAddr, t);
+        if (defect == 3) _p.extension = address(0xC0DE);
+        else _p.extension = x;
+        v = _create2(code, sv);
+    }
+
+    uint256 internal _n;
+
+    function _addr(bytes32 salt, bytes memory code) internal view returns (address) {
+        return address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(code))))));
+    }
+
+    function _create2(bytes memory code, bytes32 salt) internal returns (address a) {
         assembly {
-            h := create(0, add(code, 0x20), mload(code))
+            a := create2(0, add(code, 0x20), mload(code), salt)
+            if iszero(a) {
+                let p := mload(0x40)
+                returndatacopy(p, 0, returndatasize())
+                revert(p, returndatasize())
+            }
         }
-        require(address(h) != address(0), "deploy");
     }
 }
 
@@ -60,7 +94,9 @@ abstract contract ScriptedVaultBase is Test {
     function _newHarness() internal returns (VaultHarness h) {
         (Tier memory t,) = Tiers.testing();
         AckRecorder rec = new AckRecorder();
-        h = new MockVaultFactory(address(rec), t).deploy(type(VaultHarness).creationCode);
+        h = new MockVaultFactory(address(rec), t).deploy(
+            type(VaultHarness).creationCode, type(TouchstoneVaultExtension).creationCode
+        );
     }
 
     /// @dev A placed vault at block 1200 (epoch 10, TEST tier): range [-600, 600), bond 1e21, S = 1e24, NORMAL.

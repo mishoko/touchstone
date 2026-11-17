@@ -54,14 +54,15 @@ contract FactoryTest is DeployBaseUnplaced {
         (vault, hook) = _deploy(deployer, SALT_V);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         bytes32 sig = keccak256(
-            "Deployed(address,address,address,(address,uint32,int24,uint32,uint32,uint16,uint160,uint32,uint32,uint32,uint32,uint32,uint32,uint64,uint64,uint128,uint128,uint64,uint32,uint64,uint64,uint16,int24,int24,int24,uint64,uint32,uint8,uint128))"
+            "Deployed(address,address,address,address,(address,uint32,int24,uint32,uint32,uint16,uint160,uint32,uint32,uint32,uint32,uint32,uint32,uint64,uint64,uint128,uint128,uint64,uint32,uint64,uint64,uint16,int24,int24,int24,uint64,uint32,uint8,uint128))"
         );
         uint256 found;
         for (uint256 i; i < logs.length; ++i) {
             if (logs[i].emitter != address(factory) || logs[i].topics[0] != sig) continue;
             ++found;
-            (address v, address h, Tier memory t) = abi.decode(logs[i].data, (address, address, Tier));
+            (address v, address x, address h, Tier memory t) = abi.decode(logs[i].data, (address, address, address, Tier));
             assertEq(v, vault, "vault");
+            assertTrue(x != address(0) && x.code.length > 0, "extension");
             assertEq(h, hook, "hook");
             assertEq(keccak256(abi.encode(t)), keccak256(abi.encode(tier)), "the deployed tier");
             assertEq(keccak256(abi.encode(t)), StubVault(vault).TIER_HASH(), "verifies against TIER_HASH");
@@ -79,14 +80,14 @@ contract FactoryTest is DeployBaseUnplaced {
         HookArgs memory a = _hookArgsFor(address(0));
         bytes memory bad = abi.encodePacked(_vaultCode(), hex"00");
         vm.expectRevert(ITouchstoneFactory.CodeHash.selector);
-        factory.deploy(bad, _hookCode(), a, SALT_V, bytes32(0), seedParams);
+        factory.deploy(bad, _extCode(), _hookCode(), a, SALT_V, bytes32(0), seedParams);
     }
 
     function test_factory_revertsOnHookCodeHashMismatch() public {
         HookArgs memory a = _hookArgsFor(address(0));
         bytes memory bad = abi.encodePacked(_hookCode(), hex"00");
         vm.expectRevert(ITouchstoneFactory.CodeHash.selector);
-        factory.deploy(_vaultCode(), bad, a, SALT_V, bytes32(0), seedParams);
+        factory.deploy(_vaultCode(), _extCode(), bad, a, SALT_V, bytes32(0), seedParams);
     }
 
     /// A front-runner copying the deployer's salts and arguments cannot take the deployer's addresses: the salts are
@@ -100,7 +101,7 @@ contract FactoryTest is DeployBaseUnplaced {
         _fund(attacker);
         vm.prank(attacker);
         vm.expectRevert(ITouchstoneFactory.WrongArgs.selector);
-        factory.deploy(_vaultCode(), _hookCode(), a, SALT_V, sH, seedParams);
+        factory.deploy(_vaultCode(), _extCode(), _hookCode(), a, SALT_V, sH, seedParams);
         // the attacker's own deploy with the same salt values lands elsewhere
         (address av,) = _deploy(attacker, SALT_V);
         assertEq(av, attackerVault);
@@ -114,28 +115,28 @@ contract FactoryTest is DeployBaseUnplaced {
         HookArgs memory a = _hookArgsFor(v);
         a.poolManager = address(0xBEEF);
         vm.expectRevert(ITouchstoneFactory.WrongArgs.selector);
-        factory.deploy(_vaultCode(), _hookCode(), a, SALT_V, bytes32(0), seedParams);
+        factory.deploy(_vaultCode(), _extCode(), _hookCode(), a, SALT_V, bytes32(0), seedParams);
         a = _hookArgsFor(address(0xBEEF));
         vm.expectRevert(ITouchstoneFactory.WrongArgs.selector);
-        factory.deploy(_vaultCode(), _hookCode(), a, SALT_V, bytes32(0), seedParams);
+        factory.deploy(_vaultCode(), _extCode(), _hookCode(), a, SALT_V, bytes32(0), seedParams);
     }
 
     function test_factory_revertsOnNativeCurrency() public {
         HookArgs memory a = _hookArgsFor(address(0));
         a.currency0 = Currency.wrap(address(0));
         vm.expectRevert(ITouchstoneFactory.BadToken.selector);
-        factory.deploy(_vaultCode(), _hookCode(), a, SALT_V, bytes32(0), seedParams);
+        factory.deploy(_vaultCode(), _extCode(), _hookCode(), a, SALT_V, bytes32(0), seedParams);
     }
 
     function test_factory_revertsWhenVaultTierDiffers() public {
         bytes memory badVault = type(StubVaultBadTier).creationCode;
-        factory = new TouchstoneFactory(address(manager), keccak256(badVault), keccak256(_hookCode()));
+        factory = new TouchstoneFactory(address(manager), keccak256(badVault), keccak256(_extCode()), keccak256(_hookCode()));
         address v = HookMining.vaultAddress(address(factory), deployer, SALT_V, badVault);
         HookArgs memory a = _hookArgsFor(v);
         (bytes32 sH,) = HookMining.mine(address(factory), deployer, _hookCode(), a, 0);
         _fund(deployer);
         vm.expectRevert(ITouchstoneFactory.TierMismatch.selector);
-        factory.deploy(badVault, _hookCode(), a, SALT_V, sH, seedParams);
+        factory.deploy(badVault, _extCode(), _hookCode(), a, SALT_V, sH, seedParams);
     }
 
     function test_factory_hookAddressWithoutFlagsReverts() public {
@@ -151,6 +152,6 @@ contract FactoryTest is DeployBaseUnplaced {
         address h = HookMining.create2Address(address(factory), HookMining.boundSalt(deployer, bytes32(s)), initHash);
         _fund(deployer);
         vm.expectRevert(abi.encodeWithSelector(Hooks.HookAddressNotValid.selector, h));
-        factory.deploy(_vaultCode(), _hookCode(), a, SALT_V, bytes32(s), seedParams);
+        factory.deploy(_vaultCode(), _extCode(), _hookCode(), a, SALT_V, bytes32(s), seedParams);
     }
 }

@@ -7,6 +7,8 @@ import {MockRefPool} from "../utils/MockRefPool.sol";
 import {TouchstoneVault} from "../../src/TouchstoneVault.sol";
 import {ITouchstoneHook} from "../../src/interfaces/ITouchstoneHook.sol";
 import {PreSwap} from "../../src/types/PreSwap.sol";
+import {IVaultEntries} from "../../src/interfaces/ITouchstoneVaultExtension.sol";
+import {VaultCommon} from "../../src/TouchstoneVaultBase.sol";
 
 /// @notice M-1, M-2 and M-2b (spec §5.1 T1, T2): pushing the pool's price at the valuation point. M-1 pushes in the
 ///         action's own block; M-2 pushes in an earlier block and holds the price across block boundaries (the hook's
@@ -110,7 +112,7 @@ contract MPushTest is CellBase {
         if (!o.reverted && kind % 3 > 0) assertGt(o.swapped, 0, "non-vacuity: the vault's swap fills");
         if (d > 60 || d < -60) {
             assertTrue(o.reverted, "past the fence");
-            assertEq(o.err, TouchstoneVault.Fence.selector, "Fence");
+            assertEq(o.err, VaultCommon.Fence.selector, "Fence");
         }
         _assertLoses(o, "M-2");
     }
@@ -189,7 +191,7 @@ contract MPushTest is CellBase {
             assertEq(e1, ITouchstoneHook.RefUnreadable.selector, "placement: RefUnreadable");
             assertEq(e2, ITouchstoneHook.RefUnreadable.selector, "swap: RefUnreadable");
             vm.prank(alice);
-            v.withdraw(1e18, 0, 0, alice);
+            IVaultEntries(address(v)).withdraw(1e18, 0, 0, alice);
         }
     }
 

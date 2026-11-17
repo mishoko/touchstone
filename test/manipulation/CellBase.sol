@@ -22,12 +22,14 @@ import {MockToken} from "../utils/Stubs.sol";
 import {HookMining} from "../../script/Mine.s.sol";
 import {CuratorBundler, DeployArgs} from "../../src/periphery/CuratorBundler.sol";
 import {TouchstoneVault} from "../../src/TouchstoneVault.sol";
+import {TouchstoneVaultExtension} from "../../src/TouchstoneVaultExtension.sol";
 import {ITouchstoneHook} from "../../src/interfaces/ITouchstoneHook.sol";
 import {HookArgs, SeedParams} from "../../src/interfaces/ITouchstoneFactory.sol";
 import {ExecLedger} from "../../src/libraries/ExecLedger.sol";
 import {LiquidityValue} from "../../src/libraries/LiquidityValue.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
 import {PreSwap} from "../../src/types/PreSwap.sol";
+import {IVaultEntries} from "../../src/interfaces/ITouchstoneVaultExtension.sol";
 
 using VaultView for TouchstoneVault;
 
@@ -160,6 +162,11 @@ abstract contract CellBase is DeployBaseUnplaced {
         return type(TouchstoneVault).creationCode;
     }
 
+    /// @dev The real extension (the factory tests' default is a stub).
+    function _extCode() internal pure virtual override returns (bytes memory) {
+        return type(TouchstoneVaultExtension).creationCode;
+    }
+
     /// @dev The deployment's first range (centred on the seed tick by default).
     function _firstLo() internal view virtual returns (int24) {
         return _floor(_seedTick()) - int24(int256(uint256(2000))) / 2;
@@ -177,7 +184,7 @@ abstract contract CellBase is DeployBaseUnplaced {
         (bytes32 sH,) = HookMining.mine(address(factory), address(bundler), _hookCode(), ha, 0);
         SeedParams memory sp = _seedParams();
         sp.curator = address(bundler);
-        DeployArgs memory a = DeployArgs(_vaultCode(), _hookCode(), ha, SALT_V, sH, sp);
+        DeployArgs memory a = DeployArgs(_vaultCode(), _extCode(), _hookCode(), ha, SALT_V, sH, sp);
         token0.mint(address(bundler), 1e40);
         token1.mint(address(bundler), 1e40);
         int24 lo = _firstLo();
@@ -210,7 +217,7 @@ abstract contract CellBase is DeployBaseUnplaced {
         token1.approve(vault, type(uint256).max);
         uint256 cap = v.bondShares() * WAD / tier.BOND_RATIO;
         uint256 s = cap - cap / 1e6 - v.totalSupply();
-        v.deposit(s, type(uint256).max, type(uint256).max, alice);
+        IVaultEntries(address(v)).deposit(s, type(uint256).max, type(uint256).max, alice);
         vm.stopPrank();
     }
 

@@ -25,6 +25,8 @@ import {ExecLedger} from "../../../src/libraries/ExecLedger.sol";
 import {FeeBank} from "../../../src/libraries/FeeBank.sol";
 import {Ladder} from "../../../src/libraries/Ladder.sol";
 import {SettleExtraOracle} from "../../utils/SettleExtraOracle.sol";
+import {IVaultEntries} from "../../../src/interfaces/ITouchstoneVaultExtension.sol";
+import {VaultCommon} from "../../../src/TouchstoneVaultBase.sol";
 
 /// @notice The handler: deposits, withdrawals, time (snapshotted steps and silent jumps), keep-alive refreshes, the
 ///         curator's actions (`setPositions` with an optional move and pre-swap, `rebalanceSwap`), third-party swaps,
@@ -119,7 +121,7 @@ contract VaultHandler is Test, SettleExtraOracle {
         if (cap <= S) return;
         s = bound(s, 1, _min(cap - S, S / 4));
         vm.prank(a);
-        try hv.deposit(s, type(uint256).max, type(uint256).max, a) {} catch {}
+        try IVaultEntries(address(hv)).deposit(s, type(uint256).max, type(uint256).max, a) {} catch {}
     }
 
     function withdraw(uint256 who, uint256 s) external {
@@ -143,7 +145,7 @@ contract VaultHandler is Test, SettleExtraOracle {
         (uint128 posBefore,,) = manager.getPositionInfo(poolId, address(hv), h.lo, h.hi, bytes32(0));
         uint256 vestedBefore = hv.bankFull().vestedUnclaimed;
         vm.prank(a);
-        try hv.withdraw(s, 0, 0, a) {
+        try IVaultEntries(address(hv)).withdraw(s, 0, 0, a) {
             ++withdrawals;
             if (h.L > 0) ++withdrawalsWithL;
             (,,,,, uint8 mode,) = hv.bank();
@@ -274,11 +276,11 @@ contract VaultHandler is Test, SettleExtraOracle {
         } catch (bytes memory err) {
             bytes4 sel = bytes4(err);
             // value review V-1 (F-043): each guard only in the state that legitimises it, as in `place`
-            bool allowed = (sel == TouchstoneVault.Fence.selector && !x.fenceOk)
+            bool allowed = (sel == VaultCommon.Fence.selector && !x.fenceOk)
                 || (sel == ITouchstoneHook.RefUnreadable.selector && !refOk)
-                || (sel == TouchstoneVault.Cooldown.selector && x.cooling)
-                || (sel == TouchstoneVault.MaxSwaps.selector && x.swapsOut)
-                || (sel == TouchstoneVault.SwapCap.selector && (overCap || !refOk))
+                || (sel == VaultCommon.Cooldown.selector && x.cooling)
+                || (sel == VaultCommon.MaxSwaps.selector && x.swapsOut)
+                || (sel == VaultCommon.SwapCap.selector && (overCap || !refOk))
                 || (sel == FeeBank.Insolvent.selector && _coverShort())
                 // a pending record blocks an action only when the seam wrote it (a real one is due by the cooldown)
                 || (sel == FeeBank.MarkoutPending.selector && !_realPending)
@@ -360,13 +362,13 @@ contract VaultHandler is Test, SettleExtraOracle {
             _checkPlaced(h, lo, lo + tr.W_TICKS);
         } catch (bytes memory err) {
             bytes4 sel = bytes4(err);
-            bool allowed = (sel == TouchstoneVault.Fence.selector && !x.fenceOk)
+            bool allowed = (sel == VaultCommon.Fence.selector && !x.fenceOk)
                 || (sel == ITouchstoneHook.RefUnreadable.selector && !ok)
-                || (sel == TouchstoneVault.Cooldown.selector && x.cooling)
+                || (sel == VaultCommon.Cooldown.selector && x.cooling)
                 || (sel == FeeBank.MarkoutPending.selector && !_realPending)
-                || (sel == TouchstoneVault.MaxSwaps.selector && ps.active && x.swapsOut)
-                || (sel == TouchstoneVault.SwapCap.selector && (ps.active || moveTo != 0) && capOk)
-                || (sel == TouchstoneVault.DeltaMin.selector && x.deltaShort)
+                || (sel == VaultCommon.MaxSwaps.selector && ps.active && x.swapsOut)
+                || (sel == VaultCommon.SwapCap.selector && (ps.active || moveTo != 0) && capOk)
+                || (sel == VaultCommon.DeltaMin.selector && x.deltaShort)
                 || (sel == Ladder.BadMode.selector && x.mayExit)
                 // the bank's gate, only once unvested pay and the bond are below the 2× rule's floor
                 || (sel == FeeBank.Insolvent.selector && _coverShort());

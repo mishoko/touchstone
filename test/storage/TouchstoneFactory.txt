@@ -1,4 +1,4 @@
-   0  0  352 _pending: struct Pending
+   0  0  416 _pending: struct Pending
    0  0   20 _pending.hook: address
    1  0   96 _pending.key: struct PoolKey
    1  0   20 _pending.key.currency0: Currency
@@ -36,3 +36,5 @@
   10  8    4 _pending.tier.EDGE_DELAY: uint32
   10 12    1 _pending.tier.RESET_RUN: uint8
   10 13   16 _pending.tier.L_W_TARGET: uint128
+  11  0   20 _pending.vault: address
+  12  0   20 _pending.extension: address

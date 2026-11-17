@@ -11,6 +11,7 @@ applied the runner keeps the original as `<file>.mutorig` and writes `output/MUT
   python3 script/mutate.py --since <rev>    # the mutants whose file, killer files or linked libraries changed since
                                             # the git revision <rev> (the close rule), plus every --changed one
   python3 script/mutate.py -j 4 ...         # 4 parallel workers, each in its own copy under output/mutation-wt/
+                                            # (capped by the memory guard below)
   python3 script/mutate.py --full           # the full suite per mutant instead of the named killer
   python3 script/mutate.py --audit          # every // [MU-xxx] tag in src/ has a mutant and every wired mutant
                                             # has its tag in its file
@@ -34,7 +35,15 @@ internal libraries inlined into the contracts); and for a cap, charge, solvency 
 ledger, bank; in any file) the vault's hot path `_action`, `_charge`, `_settle` and `_cappedSwap`. A change elsewhere
 in a contract (another function of the vault) is not in the basis: the close rule (`--since`) re-runs every mutant
 of a changed file. Full campaigns still run at each phase close, at the freeze and after any structural
-move; the public kill rate comes from one full run at one commit."""
+move; the public kill rate comes from one full run at one commit.
+
+Memory guard: one worker's `forge test` + solc peaks near 12 GB, and on a 16 GB machine `-j 4` (~48 GB) pushed macOS
+into compressor exhaustion and a watchdog kernel panic (2026-11-17, twice). So `-j` is capped at
+(RAM - TS_MUTATE_RESERVE_GB, default 4) // TS_MUTATE_GB_PER_WORKER (default 12), minimum 1; and before each mutant
+the runner checks swap use: more than TS_MUTATE_MAX_SWAP_GROWTH_GB (default 4) above the swap in use at the start,
+or above TS_MUTATE_MAX_SWAP_GB (default 14) in total, it waits up to 2 minutes for it to drop, then
+stops handing out mutants. The unstarted ones are reported ABORTED (never counted as killed, never written by
+--write) and the run exits 1. TS_MUTATE_NO_MEM_GUARD=1 disables both checks."""
 import hashlib, json, os, re, shutil, subprocess, sys, time
 from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
@@ -320,6 +329,82 @@ def select_since(muts, rev):
 
 FLAGS = ('--audit', '--full', '--write', '--changed')
 
+# ------------------------------------------------------------------ memory guard (see the docstring)
+GUARD = os.environ.get('TS_MUTATE_NO_MEM_GUARD') != '1'
+GB = 1024 ** 3
+
+
+def _sysctl(name):
+    try:
+        return subprocess.run(['sysctl', '-n', name], capture_output=True, text=True, timeout=5).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return ''
+
+
+def ram_bytes():
+    v = _sysctl('hw.memsize')
+    if v.isdigit():
+        return int(v)
+    try:
+        return os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')
+    except (ValueError, OSError, AttributeError):
+        return 0
+
+
+def swap_used_bytes():
+    """macOS: `vm.swapusage` = 'total = 2048.00M  used = 1741.06M  free = ...'; Linux: /proc/meminfo. None = unknown."""
+    m = re.search(r'used = ([\d.]+)([MG])', _sysctl('vm.swapusage'))
+    if m:
+        return float(m.group(1)) * (GB if m.group(2) == 'G' else 1024 ** 2)
+    try:
+        info = dict(l.split(':', 1) for l in open('/proc/meminfo'))
+        return (int(info['SwapTotal'].split()[0]) - int(info['SwapFree'].split()[0])) * 1024
+    except (OSError, KeyError, ValueError):
+        return None
+
+
+def cap_jobs(jobs):
+    if not GUARD or jobs <= 1:
+        return jobs
+    ram = ram_bytes()
+    if not ram:
+        return jobs
+    per = float(os.environ.get('TS_MUTATE_GB_PER_WORKER', '12'))
+    reserve = float(os.environ.get('TS_MUTATE_RESERVE_GB', '4'))
+    cap = max(1, int((ram / GB - reserve) // per))
+    if jobs > cap:
+        print(f'mutate: memory guard: -j {jobs} needs ~{jobs * per:.0f} GB but this machine has {ram / GB:.0f} GB; '
+              f'running {cap} worker(s) (TS_MUTATE_NO_MEM_GUARD=1 to override)')
+        return cap
+    return jobs
+
+
+_SWAP_BASE = []
+
+
+def memory_ok(wait_s=120, step_s=10):
+    """False when swap stays above the limit for wait_s: the caller stops starting new forge runs. The limit is
+    relative to the swap in use when the campaign started (macOS keeps several GB swapped out at idle), plus an
+    absolute ceiling."""
+    if not GUARD:
+        return True
+    if not _SWAP_BASE:
+        _SWAP_BASE.append(swap_used_bytes() or 0)
+    growth = float(os.environ.get('TS_MUTATE_MAX_SWAP_GROWTH_GB', '4')) * GB
+    ceiling = float(os.environ.get('TS_MUTATE_MAX_SWAP_GB', '14')) * GB
+    limit = min(_SWAP_BASE[0] + growth, ceiling)
+    waited = 0
+    while True:
+        used = swap_used_bytes()
+        if used is None or used <= limit:
+            return True
+        if waited >= wait_s:
+            print(f'mutate: memory guard: swap {used / GB:.1f} GB > {limit / GB:.0f} GB for {wait_s}s; '
+                  f'not starting more mutants', flush=True)
+            return False
+        time.sleep(step_s)
+        waited += step_s
+
 
 def main(argv):
     if any(a in ('-h', '--help') for a in argv):
@@ -367,6 +452,7 @@ def main(argv):
     if not sel:
         print('mutate: no mutant selected' + (' (no basis changed)' if since or '--changed' in argv else ''))
         return 0 if (since or '--changed' in argv) else 1
+    jobs = cap_jobs(jobs)
     print(f'mutate: {len(sel)} mutants selected, {jobs} worker(s)')
     if full and any(wired(m) for m in sel):
         if forge(['--nmp', 'test/fork/*']).returncode != 0:
@@ -387,9 +473,17 @@ def main(argv):
 
     try:
         res += [(m['id'], 'PENDING', m['desc']) for m in sel if not wired(m)]
+        stop = []
+
+        def gated(m, root):
+            if stop or not memory_ok():
+                stop.append(1)
+                return (m['id'], 'ABORTED', 'memory guard: not run')
+            return run_one(m, root, full, clean_ok)
+
         if jobs <= 1:
             for m in todo:
-                res.append(run_one(m, ROOT, full, clean_ok))
+                res.append(gated(m, ROOT))
                 print(' | '.join(res[-1]), flush=True)
         else:
             roots = Queue()
@@ -405,7 +499,7 @@ def main(argv):
             def task(m):
                 root = roots.get()
                 try:
-                    r = run_one(m, root, full, clean_ok)
+                    r = gated(m, root)
                     print(' | '.join(r), flush=True)
                     return r
                 finally:
@@ -429,7 +523,7 @@ def main(argv):
     killed = sum(1 for r in res if r[1] == 'KILLED')
     print(f'killed {killed}/{len(res)}')
     if '--write' in argv:
-        st = {r[0]: r[1] for r in res}
+        st = {r[0]: r[1] for r in res if r[1] != 'ABORTED'}  # not run: keep its previous status and basis
         for m in muts:
             if m['id'] in st:
                 m['status'] = st[m['id']]

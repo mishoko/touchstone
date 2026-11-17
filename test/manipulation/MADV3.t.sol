@@ -161,8 +161,6 @@ abstract contract MoveRows is CellBase {
         v.settle();
     }
 
-    /// @dev The counterfactual: the same placement with no JIT and no move, over the same market path; the state is
-    ///      restored after.
     /// @dev The counterfactual: no JIT and no action over the same market path (the charge's own counterfactual,
     ///      NAV_before); the state is restored after. Returns the Sybil's value, the curator's shares and the depositor's
     ///      value at its end.
@@ -200,8 +198,8 @@ abstract contract MoveRows is CellBase {
 }
 
 contract MADV3MoveTest is MoveRows {
-    /// @notice Row 1 (fuzz, the registered row): one move through JIT worth up to 10% of NAV, any legal range, and a
-    ///         scripted markout 12 ticks against the purchase: a guard reverts (`SwapCap`; `DeltaMin` for a range the
+    /// @notice Row 1 at a 12-tick markout (fuzz; the registered row asks for every markout of at least 12 ticks, which
+    ///         fails from ≈ 70: see the escalated scan): one move through JIT worth up to 10% of NAV, any legal range: a guard reverts (`SwapCap`; `DeltaMin` for a range the
     ///         post-move inventory cannot fill), or the coalition loses and the depositors lose at most the reserve.
     function test_M_ADV3_move__oneMoveRevertsSwapCapOrLoses(uint256 frac, uint256 loSeed) public {
         frac = bound(frac, 1e15, 1e17);
@@ -220,9 +218,9 @@ contract MADV3MoveTest is MoveRows {
         }
     }
 
-    /// @notice Row 1 in expectation (fuzz): for a markout of 12–120 ticks, the mean of the draw against the purchase and
-    ///         its mirror loses (the settlement's guarantee is in expectation, spec §5.2). A single draw beyond ≈ 90 ticks
-    ///         within the window can net above 0 for a small move (`test_M_ADV3_move__luckiestDrawReported`).
+    /// @notice Row 1 over markouts of 12–120 ticks, the mean of the draw against the purchase and its mirror. Weak
+    ///         evidence (fix review S14-01): the up draw's loss is dominated by the arbitrage the counterfactual credits to
+    ///         the Sybil. Kept as a regression row; it is not the registered rule.
     function test_M_ADV3_move__oneMoveLosesInExpectationOverMirroredMarkouts(uint256 frac, int24 drop, uint256 loSeed)
         public
     {
@@ -243,21 +241,28 @@ contract MADV3MoveTest is MoveRows {
         up = _moveAttackAt(frac, -drop, lo);
     }
 
-    /// @notice Reported, not asserted: the luckiest single draw (the largest per-draw net over a small move, the
-    ///         ranges and markouts 90 and 120 ticks against the purchase). The positive part comes from the immediate
-    ///         charge burned in shares priced before the market move, not from the move (a larger move loses more).
-    function test_M_ADV3_move__luckiestDrawReported() public {
-        int24[2] memory dr = [int24(90), 120];
-        uint256[4] memory seeds = [uint256(0), 2, 40, 97];
+    /// @notice ESCALATED, reported and not asserted (F-044, fix review S14-01): the registered row (panel D2: net ≤ 0
+    ///         after a scripted adverse markout of at least 12 ticks) FAILS per draw from ≈ 70 ticks. The scan logs the
+    ///         largest net over sizes 0.1–1.9% of NAV × markouts 60–110 ticks × legal ranges; s14 measured up to
+    ///         ≈ +1.2e16 wei (≈ 1e-5 of NAV) at 1.9% / 110 ticks, with the reserve cap not binding. When the owner rules,
+    ///         this becomes an asserted row (or the rule changes).
+    function test_M_ADV3_move__escalatedPerDrawScanReported() public {
+        int24[4] memory ds = [int24(60), 70, 90, 110];
+        uint256[3] memory fr = [uint256(1e15), 1e16, 1.9e16];
         int256 worst = type(int256).min;
-        for (uint256 j; j < 2; ++j) {
-            for (uint256 k; k < 4; ++k) {
-                (MoveOut memory dn,) = _mirrored(1e15, dr[j], _legalLo(market + 60, market, seeds[k]));
-                if (!dn.reverted && dn.net > worst) worst = dn.net;
+        for (uint256 f; f < 3; ++f) {
+            for (uint256 j; j < 4; ++j) {
+                for (uint256 k; k < 12; ++k) {
+                    uint256 snap = vm.snapshotState();
+                    int24 c = market;
+                    MoveOut memory dn = _moveAttackAt(fr[f], ds[j], _legalLo(c + 60, c, k * 17));
+                    vm.revertToState(snap);
+                    market = c;
+                    if (!dn.reverted && dn.net > worst) worst = dn.net;
+                }
             }
         }
-        console.log("M-ADV3-move luckiest single draw: net (wei)", worst);
-        console.log("  as a fraction of NAV (1e18 = 100%)", worst > 0 ? uint256(worst) * 1e18 / _nav(_sqrt(market)) : 0);
+        console.log("M-ADV3-move per-draw scan: max net (wei)", worst);
     }
 
     /// @notice Row 1, pinned: a move just under the per-action cap (1.9% of NAV) and a 12-tick adverse markout acts,

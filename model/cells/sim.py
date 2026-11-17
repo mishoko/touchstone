@@ -146,6 +146,48 @@ def _measured_collect(pool, key, lo, hi):
 R.Pool.collect = _measured_collect
 
 
+# ----------------------------------------------------------------------------- the settlement rule and its shadow
+# The model's settlement is the fee-aware one (spec §3.4; `R.settle_extra`). For the comparison on the same paths the
+# earlier rule (holdings-only legs tick_mk ± FEE_TICKS, extra = min(reserve, max(0, loss − charge₀)), burnS =
+# min(reserveShares, ceilDiv(extra·S, NAV_now(p_mk))) at the holdings and supply at settlement) can be selected with
+# SETTLE["rule"] = "s05"; the variant with the upper leg rounded up ("s14") is computed alongside. Every settlement
+# records all three on the vault (`settle_log`), whichever rule is applied.
+_ORIG_SETTLE = R.settle_extra
+SETTLE = {"rule": "s15", "vault": None}
+
+
+def settle_holdings_only(before, after, tick_mk, fee_ticks, charge0, reserve, now_h, S, reserve_shares, up1):
+    """The settlement before the fee-aware legs -> (extra, pMk, burnS)."""
+    p_lo = R.get_sqrt_price_at_tick(max(R.MIN_TICK, min(R.MAX_TICK, tick_mk - fee_ticks)))
+    p_hi = R.get_sqrt_price_at_tick(max(R.MIN_TICK, min(R.MAX_TICK, tick_mk + fee_ticks + (1 if up1 else 0))))
+    l_lo = R.value(before, p_lo)[0] - R.value(after, p_lo)[0]
+    l_hi = R.value(before, p_hi)[0] - R.value(after, p_hi)[0]
+    loss_mk, p_mk = (l_hi, p_hi) if l_hi > l_lo else (l_lo, p_lo)
+    extra = min(reserve, max(0, loss_mk - charge0))
+    if not extra:
+        return 0, p_mk, 0
+    nav_now = R.value(now_h, p_mk)[0]
+    if not nav_now:
+        return extra, p_mk, reserve_shares
+    return extra, p_mk, min(reserve_shares, R.ceil_div(extra * S, nav_now))
+
+
+def _settle_shadow(before, after, pend, tick_mk, fee_ticks, fee_pips, reserve_shares):
+    v = SETTLE["vault"]
+    r15 = _ORIG_SETTLE(before, after, pend, tick_mk, fee_ticks, fee_pips, reserve_shares)
+    r05 = settle_holdings_only(before, after, tick_mk, fee_ticks, pend["charge0"], pend["reserve"], v.h, v.S,
+                               reserve_shares, False)
+    r14 = settle_holdings_only(before, after, tick_mk, fee_ticks, pend["charge0"], pend["reserve"], v.h, v.S,
+                               reserve_shares, True)
+    v.__dict__.setdefault("settle_log", []).append(
+        dict(x15=r15[0], b15=r15[2], x05=r05[0], b05=r05[2], x14=r14[0], b14=r14[2], sAct=pend["sAct"], S=v.S,
+             rs=reserve_shares))
+    return r15 if SETTLE["rule"] == "s15" else r05
+
+
+R.settle_extra = _settle_shadow
+
+
 def tier_with_m(m_year, base=R.MAINNET):
     t = copy.copy(base)
     t.m_perBlock = R._m_per_block(base.BLOCKTIME, int(round(m_year * R.WAD)))
@@ -177,6 +219,7 @@ class Sim:
         self.trade = 0.0            # the curator's own trading P&L (spot moves), valued at the market
         self.counts = dict(actions=0, pokes=0, pings=0, moves=0, reverts=0, arbs=0, settles=0, fallbacks=0)
         self.extras = []            # markout extras at settlement (fraction of NAV), measurement only
+        self.settle_rows = []       # per settlement: s15 / s05 / s14 extra (fraction of NAV) and burn (fraction of S)
         self.reverts = {}
         self.in_actual = 0
         self.hours = 0
@@ -287,13 +330,29 @@ class Sim:
         return t if ok else None
 
     # calls
+    def _drain_settle_log(self, nav):
+        """Moves the settlements of the last call (none if it reverted) into `settle_rows`, valued at the NAV at the
+        market before the call."""
+        log = self.v.__dict__.get("settle_log")
+        if not log:
+            return
+        for e in log:
+            self.settle_rows.append((e["x15"] / max(1, nav), e["b15"] / max(1, e["sAct"]), e["x05"] / max(1, nav),
+                                     e["b05"] / max(1, e["S"]), e["x14"] / max(1, nav), e["b14"] / max(1, e["S"]),
+                                     e["b15"] >= e["rs"] > 0))
+        log.clear()
+
     def vcall(self, name, *a, gas=None, **kw):
         self.set_pps()
+        SETTLE["vault"] = self.v
+        nav = self.v.nav(CUR["ms"])
         try:
             r = getattr(self.v, name)(*a, now=self.now, ts=self.ts()) if name != "set_positions" else \
                 self.v.set_positions(*a, self.now, self.ts(), **kw)
+            self._drain_settle_log(nav)
             return True, r
         except (R.Revert, R.MathRevert) as e:
+            self._drain_settle_log(nav)
             err = getattr(e, "err", str(e))
             self.reverts[err] = self.reverts.get(err, 0) + 1
             self.counts["reverts"] += 1
@@ -422,6 +481,17 @@ class Sim:
         self.poke()
         return self.result(policy)
 
+    def _settle_stats(self):
+        rows = self.settle_rows
+        out = dict(n=len(rows))
+        for i, k in enumerate(("x15", "b15", "x05", "b05", "x14", "b14")):
+            xs = [r[i] for r in rows]
+            out[k + "_sum"] = sum(xs)
+            out[k + "_max"] = max(xs, default=0.0)
+            out[k + "_pos"] = sum(1 for x in xs if x > 0)
+        out["cap15"] = sum(1 for r in rows if r[6])
+        return out
+
     def result(self, policy):
         v = self.v
         b = v.bank
@@ -436,5 +506,5 @@ class Sim:
                     gas=self.gas, trade=self.trade, charges=charges, fees=v.pool.__dict__.get("fees_val", 0.0), unvested_end=unvested_end,
                     net_incl_unvested=net + unvested_end, f=v.hook.tauV / elapsed, f_actual=self.in_actual / self.hours,
                     breaches=b.breaches, mode=b.mode, action_charges=self.action_charges, nav_end=v.nav(self.mkt_sqrt()) / ETH,
-                    extras=self.extras, **self.counts,
+                    extras=self.extras, settle_stats=self._settle_stats(), **self.counts,
                     revert_kinds=dict(self.reverts))

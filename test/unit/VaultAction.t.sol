@@ -126,9 +126,6 @@ contract VaultActionTest is LiquidPoolBase, SettleExtraOracle {
 
     // ------------------------------------------------------------------ U-3: the charge through the vault
 
-    /// @notice A swap is charged its shortfall at the worse leg: the burn leaves the supply, the reserve's shares are
-    ///         encumbered out of the bond, the pending record holds the holdings before and after, the charge and the
-    ///         reserve, and the `Action` event carries the charge, its leg and the bank and bond burns.
     /// @notice U-settle (s15, F-044): an action's record keeps what the fee-aware settlement needs: the pre-move spot
     ///         `s0`, the spot the action leaves `sEnd`, the charge's burn `burn0` (the supply's drop in the action) and the
     ///         supply just before it `sAct`.
@@ -148,6 +145,9 @@ contract VaultActionTest is LiquidPoolBase, SettleExtraOracle {
         assertEq(uint256(m.burn0), S0 - S1, "burn0: the supply's drop in the action");
     }
 
+    /// @notice A swap is charged its shortfall at the worse leg: the burn leaves the supply, the reserve's shares are
+    ///         encumbered out of the bond, the pending record holds the holdings before and after, the charge and the
+    ///         reserve, and the `Action` event carries the charge, its leg and the bank and bond burns.
     function test_U_3__swapChargedItsShortfallAtTheWorseLeg() public {
         _setRef(40); // spot 0 sells token0 below the reference: the reference leg is the worse one
         (Holdings memory b, uint256 S) = _prime();

@@ -399,6 +399,20 @@ def ledger_cases():
          want=lambda e, p, b: p != max([lo_(195850), sqrt_at(195850), hi_(195850)],
                                        key=lambda x: R.value(fb, x)[0] + R.arb_fee(fb, sqrt_at(T0), x, True, 500)
                                        - R.value(fa, x)[0] - R.arb_fee(fa, sqrt_at(T0 + 60), x, False, 500)))
+    # fix review r2 S15F-01: an up leg beyond a position's upper edge (the clip), the credit and the before mirror
+    edge_pos = R.Holdings(0, 0, 10 ** 16, T0 - 1000, T0 + 10)
+    adds("markout-fee-clip-upper-credit", R.Holdings(0, R.value(edge_pos, sqrt_at(T0 + 300))[0] + 10 ** 15), edge_pos,
+         T0 + 300, 10 ** 30, s0=sqrt_at(T0), s_end=sqrt_at(T0),
+         note="the after position ends below a rising leg: its credit covers only up to its upper edge",
+         want=lambda e, p, b: b > 0 and R.arb_fee(edge_pos, sqrt_at(T0), sqrt_at(T0 + 300), False, 500)
+         < R.arb_fee(R.Holdings(0, 0, 10 ** 16, T0 - 1000, T0 + 1000), sqrt_at(T0), sqrt_at(T0 + 300), False, 500))
+    adds("markout-fee-clip-upper-before", edge_pos, R.Holdings(0, 0), T0 + 300, 10 ** 30, s0=sqrt_at(T0), s_end=sqrt_at(T0),
+         note="the before position ends below a rising leg: its fee term covers only up to its upper edge",
+         want=lambda e, p, b: b > 0)
+    # S15F-04: the lower leg's NAV floors to 0 (g = 0) and the centre leg is positive: a positive leg replaces it
+    adds("markout-nb-zero-lower-leg", R.Holdings(1, 0), R.Holdings(0, 0), 0, 10 ** 30, s0=sqrt_at(0), s_end=sqrt_at(0),
+         note="nb = 0 at the lower leg (1 wei of token0 floors to 0), 1 at the centre: the centre is chosen",
+         want=lambda e, p, b: p == sqrt_at(0) and b > 0)
     b2 = R.Holdings(10 ** 12, 10 ** 20)
     a2 = R.Holdings(10 ** 12 - 10 ** 9, 10 ** 20 + R.q(10 ** 9, sqrt_at(tk)))
     adds("markout-positive-replaces-negative", b2, a2, tk, 10 ** 30,

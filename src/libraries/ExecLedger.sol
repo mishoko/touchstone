@@ -158,7 +158,7 @@ library ExecLedger {
             nai = _satAdd(nai, _arbFee(a, pd.sEnd, p, false, feePips));
             bool posi = nbi > nai;
             uint256 gi = posi ? nbi - nai : 0;
-            // [MU-249] a positive leg replaces a non-positive one; between positive legs, the larger g/nb
+            // [MU-249] [MU-261] a positive leg replaces a non-positive one; between positive legs, the larger g/nb
             if (i == 0 || (posi && (!pos || _gt512(gi, nb, g, nbi)))) (pos, g, nb, pMk) = (posi, gi, nbi, p);
         }
         if (!pos || pd.sAct == 0) return (0, pMk, 0);
@@ -175,25 +175,28 @@ library ExecLedger {
     /// @dev `F(h, s, p, up)` of spec §3.4: the LP fee `h`'s position earns from an exact-input swap that carries spot from
     ///      `s` to `p`, in token1 at `p`. Before (`up`): every rounding up. After (the credit): every rounding down, less
     ///      `(hi − lo) + 2` units of the fee's token before valuation and less `CREDIT_MARGIN` pips after.
-    function _arbFee(Holdings memory h, uint160 s, uint160 p, bool up, uint24 feePips) private pure returns (uint256) {
+    function _arbFee(Holdings memory h, uint160 s, uint160 p, bool up, uint24 feePips) internal pure returns (uint256) {
         if (h.L == 0 || p == s) return 0;
         uint160 x = s < p ? s : p;
         uint160 y = s < p ? p : s;
         uint160 sa = TickMath.getSqrtPriceAtTick(h.lo);
         uint160 sb = TickMath.getSqrtPriceAtTick(h.hi);
         if (x < sa) x = sa;
+        // [MU-260]
         if (y > sb) y = sb;
         if (y <= x) return 0;
         // [MU-253] a down move pays token0 in, an up move token1
         bool down = p < s;
         uint256 amt =
             down ? SqrtPriceMath.getAmount0Delta(x, y, h.L, up) : SqrtPriceMath.getAmount1Delta(x, y, h.L, up);
-        uint256 den = 1e6 - feePips;
         if (up) {
-            uint256 fu = FullMath.mulDivRoundingUp(amt, feePips, den);
+            // [MU-262] the before holding at the fee plus 2 pips: v4 truncates `protocolFee·lpFee/10⁶` when it composes
+            // the swap fee, so with a protocol fee on the LP earns up to ≈ 1.001 pip of rate more per unit of net input
+            uint256 fb = feePips + 2;
+            uint256 fu = FullMath.mulDivRoundingUp(amt, fb, 1e6 - fb);
             return down ? _qUp(fu, p) : fu;
         }
-        uint256 f = FullMath.mulDiv(amt, feePips, den);
+        uint256 f = FullMath.mulDiv(amt, feePips, 1e6 - feePips);
         // [MU-254] the absolute margin: v4's per-step fee growth floors
         uint256 m = uint256(int256(h.hi) - h.lo) + 2;
         f = f > m ? f - m : 0;

@@ -203,7 +203,13 @@ def arb_fee(h, s, p, up, fee_pips):
         return 0
     down = p < s
     amt = get_amount0_delta(x, y, h.L, up) if down else get_amount1_delta(x, y, h.L, up)
-    phi = ceil_div(amt * fee_pips, 10 ** 6 - fee_pips) if up else amt * fee_pips // (10 ** 6 - fee_pips)
+    if up:
+        # the before holding at the fee plus 2 pips (v4 truncates protocolFee·lpFee/10⁶ when composing the swap fee, so
+        # with a protocol fee on the LP earns up to ≈ 1.001 pip of rate more per unit of net input; spec §3.4)
+        fb = fee_pips + 2
+        phi = ceil_div(amt * fb, 10 ** 6 - fb)
+    else:
+        phi = amt * fee_pips // (10 ** 6 - fee_pips)
     if up:
         return q_up(phi, p) if down else phi
     phi = max(0, phi - ((h.hi - h.lo) + 2))

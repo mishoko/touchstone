@@ -3077,6 +3077,39 @@
    "replace": "        if (false) revert BadTier();",
    "status": "KILLED",
    "basis": "ddad0c5d0a777cf4"
+  },
+  {
+   "id": "MU-260",
+   "area": "ledger",
+   "desc": "the fee term's upper clip at the position's upper edge dropped (fix review r2 S15F-01)",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__settleExtraVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        if (y > sb) y = sb;",
+   "replace": "        if (false) y = sb;",
+   "status": "PENDING"
+  },
+  {
+   "id": "MU-261",
+   "area": "ledger",
+   "desc": "a positive leg does not replace a non-positive one when the current leg's nb is 0 (S15F-04)",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__settleExtraVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "(posi && (!pos || _gt512(gi, nb, g, nbi)))",
+   "replace": "(posi && _gt512(gi, nb, g, nbi))",
+   "status": "PENDING"
+  },
+  {
+   "id": "MU-262",
+   "area": "ledger",
+   "desc": "the before holding's fee term at the bare fee, without the 2-pip margin for v4's truncated protocol-fee composition",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__arbFeeBracketHoldsWithAProtocolFee",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "            uint256 fb = feePips + 2;",
+   "replace": "            uint256 fb = feePips;",
+   "status": "PENDING"
   }
  ]
 }

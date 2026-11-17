@@ -2231,7 +2231,7 @@ def rules_markout():
             hh = R.Holdings(0, 0, L, lo, hi)
             up = R.arb_fee(hh, sqrt_at(s_t) + 7, pp, True, 500)
             dn = R.arb_fee(hh, sqrt_at(s_t) + 7, pp, False, 500)
-            check(up + 1 >= got >= dn, "arb_fee: the closed form brackets the simulated pool's collected fee",
+            check(up >= got >= dn, "arb_fee: the closed form brackets the simulated pool's collected fee",
                   (lo, hi, s_t, p_t, L, up, got, dn))
             check(R.arb_fee(R.Holdings(10 ** 20, 10 ** 20), sqrt_at(s_t), pp, True, 500) == 0, "arb_fee: idle earns nothing")
     # FeeBank Charge/Settle: reserve composition, burn order, release targets

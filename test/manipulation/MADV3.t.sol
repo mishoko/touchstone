@@ -385,6 +385,7 @@ contract MADV3MoveTest is MoveRows {
                         }
                         if (_capped(o)) continue;
                         ++n;
+                        assertLe(o.depositorLoss, int256(o.reserve), "the depositors lose at most the reserve");
                         // the arbitrage's side: above the market for an adverse (falling) markout, below for a rise
                         uint256 w = (drop > 0) == (stop > 0) ? 0 : 1;
                         if (o.net > worst[w]) worst[w] = o.net;

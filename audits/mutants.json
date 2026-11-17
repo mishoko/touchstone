@@ -3186,8 +3186,8 @@
    "killer_id": "U-ext",
    "kill": "test_U_ext__seedOnlyOnceAndOnlyByTheFactory",
    "file": "src/TouchstoneVault.sol",
-   "find": "        if (entry == Entry.Seed) return _extension(entry, payer, args);\n        if (!_seeded) revert NotSeeded();",
-   "replace": "        if (!_seeded) revert NotSeeded();\n        if (entry == Entry.Seed) return _extension(entry, payer, args);",
+   "find": "        if (entry == Entry.Seed) return _extension(entry, payer, args);\n        if (!_seeded) revert NotSeeded(); // [MU-273] nothing but seed runs before seed",
+   "replace": "        if (!_seeded) revert NotSeeded(); // [MU-273] nothing but seed runs before seed\n        if (entry == Entry.Seed) return _extension(entry, payer, args);",
    "status": "KILLED",
    "basis": "fc8667915eee1b1a"
   },
@@ -3226,6 +3226,42 @@
    "replace": "                if (navp >= amount) {",
    "status": "KILLED",
    "basis": "4b7a4fa52e77205a"
+  },
+  {
+   "id": "MU-272",
+   "area": "base",
+   "desc": "the base mint without a fresh cache reads the reverting `liveRef` instead of `_tryRef` (flows revert on an unreadable reference)",
+   "killer_id": "U-ref-vault",
+   "kill": "test_U_ref_vault__flowsAndCheckpointsSucceedWhileActionsRevert",
+   "file": "src/TouchstoneVault.sol",
+   "find": "                (priced, pt) = _tryRef();",
+   "replace": "                (priced, pt) = (true, HOOK.liveRef());",
+   "status": "KILLED",
+   "basis": "dbcc82994e43c1a4"
+  },
+  {
+   "id": "MU-273",
+   "area": "deploy",
+   "desc": "the vault's `NotSeeded` guard dropped (entry points reachable before seed)",
+   "killer_id": "D-2",
+   "kill": "test_D_2__preSeedEntryPointsRevertAndFlagsReadUnseeded",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        if (!_seeded) revert NotSeeded(); // [MU-273] nothing but seed runs before seed",
+   "replace": "        // [MU-273] nothing but seed runs before seed",
+   "status": "KILLED",
+   "basis": "3fdde6d10da94caa"
+  },
+  {
+   "id": "MU-274",
+   "area": "ledger",
+   "desc": "`LiquidityValue.amounts` rounds the in-range token0 amount up (not a removal's payout)",
+   "killer_id": "F-1",
+   "kill": "test_F_1__liquidityValueEqualsModifyLiquidityPayout",
+   "file": "src/libraries/LiquidityValue.sol",
+   "find": "        return (SqrtPriceMath.getAmount0Delta(s, sb, L, false), SqrtPriceMath.getAmount1Delta(sa, s, L, false));",
+   "replace": "        return (SqrtPriceMath.getAmount0Delta(s, sb, L, true), SqrtPriceMath.getAmount1Delta(sa, s, L, false));",
+   "status": "KILLED",
+   "basis": "3e1c0afcd4670644"
   }
  ]
 }

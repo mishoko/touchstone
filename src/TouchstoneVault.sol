@@ -124,7 +124,7 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
         (Entry entry, address payer, bytes memory args) = abi.decode(data, (Entry, address, bytes));
         // [MU-268] seed runs at once in the extension: no step 0, prologue, checkpoint or mode gate (spec §4.6 seed)
         if (entry == Entry.Seed) return _extension(entry, payer, args);
-        if (!_seeded) revert NotSeeded();
+        if (!_seeded) revert NotSeeded(); // [MU-273] nothing but seed runs before seed
         // [MU-185] step 0, before the snapshot and collect-first (the binding order; since s15 the settlement reads only its
         // record, so the order matters again once the checkpoint mints base shares)
         _settle();
@@ -433,6 +433,7 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
             bool priced = o.refFresh;
             int24 pt = o.refTick;
             if (!priced) {
+                // [MU-272] no fresh cache: a fail-soft read (a failed one defers the base; a flow never reverts on the reference)
                 (priced, pt) = _tryRef();
                 if (priced) (liveRead, liveTick) = (true, pt);
             }

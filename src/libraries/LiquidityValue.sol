@@ -25,6 +25,7 @@ library LiquidityValue {
         uint160 sb = TickMath.getSqrtPriceAtTick(hi);
         if (s <= sa) return (SqrtPriceMath.getAmount0Delta(sa, sb, L, false), 0);
         if (s >= sb) return (0, SqrtPriceMath.getAmount1Delta(sa, sb, L, false));
+        // [MU-274] a removal's payout: rounded down
         return (SqrtPriceMath.getAmount0Delta(s, sb, L, false), SqrtPriceMath.getAmount1Delta(sa, s, L, false));
     }
 }

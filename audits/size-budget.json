@@ -142,7 +142,7 @@
    ]
   },
   "TouchstoneVault": {
-   "runtime": 16597,
+   "runtime": 17842,
    "history": [
     {
      "runtime": 14971,
@@ -183,6 +183,10 @@
     {
      "runtime": 16597,
      "note": "s16 lever (c), the per-vault extension (spec §4.12): seed/deposit/withdraw and the shared helpers moved to TouchstoneVaultExtension (10,841 B; projected ≈ 9,500 B before the s15 fee-aware settlement and the allow-list) by delegatecall from the vault's allow-listed fallback; vault 21,671 -> 16,597 B (projected 17,964 B with every s14 stub); factory +423 B (the extension's code hash, salt, creation and the two Pending fields)"
+    },
+    {
+     "runtime": 17842,
+     "note": "s16 base accrual (spec §3.5, checkpoint step 4): base amount, mint at the reference or deferral into baseOwed, sAct raised inside a markout window; vault 16,597 -> 17,842 B"
     }
    ]
   },

@@ -10,6 +10,7 @@ import {Ladder} from "../../src/libraries/Ladder.sol";
 import {Bank, RING} from "../../src/types/Bank.sol";
 import {TouchstoneVault} from "../../src/TouchstoneVault.sol";
 import {VaultView} from "../utils/VaultView.sol";
+import {Tier} from "../../src/types/Tier.sol";
 
 using VaultView for TouchstoneVault;
 
@@ -22,6 +23,12 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
     using StateLibrary for IPoolManager;
 
     VaultHandler internal handler;
+
+    /// @dev The P2 invariants check the pro-rata flows' exact payouts; base pay (spec §3.5, its own vectors and
+    ///         U-base) is off here so the handler's expected supply needs no model of the checkpoint's mint.
+    function _adjustTier(Tier memory t) internal view virtual override {
+        t.m_perBlock = 0;
+    }
 
     function setUp() public virtual override {
         super.setUp();

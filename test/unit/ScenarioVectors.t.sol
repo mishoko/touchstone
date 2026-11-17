@@ -29,6 +29,16 @@ contract ScenarioVectorsTest is VectorBase, ScriptedVaultBase {
         assertEq(ran, RUNNABLE, "runnable no-base cases");
     }
 
+    /// @notice U-base, F-6: every scenario case (base accrual, deferral into `baseOwed`, the breach's forfeit of
+    ///         pre-breach and deferred base, the mint price), bit for bit against the model.
+    function test_U_base__scenarioVectorsBitForBit() public {
+        string[] memory cs = _cases("scenario");
+        for (uint256 i; i < cs.length; ++i) {
+            _runCase(cs[i]);
+        }
+        assertEq(cs.length, 60, "scenario cases");
+    }
+
     function _mintsNoBase(string memory c) internal view returns (bool) {
         if (_u(c, ".in.state.baseOwed") != 0) return false;
         for (uint256 i; vm.keyExistsJson(c, _p(".out.steps[", i, "]")); ++i) {
@@ -218,6 +228,8 @@ contract ScenarioVectorsTest is VectorBase, ScriptedVaultBase {
                 assertEq(n, _u(c, string.concat(q, ".count")), string.concat(cid, " count"));
                 assertEq(last, _u(c, string.concat(q, ".lastBlock")), string.concat(cid, " lastBlock"));
                 assertEq(forfeited, _u(c, string.concat(q, ".forfeited")), string.concat(cid, " forfeited"));
+            } else if (_eq(name, "CheckpointDeferred")) {
+                assertEq(l.topics[0], T_DEFERRED, string.concat(cid, " CheckpointDeferred"));
             } else {
                 assertTrue(_eq(name, "Checkpoint"), string.concat(cid, " unexpected pinned event ", name));
                 assertEq(l.topics[0], T_CHECKPOINT, string.concat(cid, " Checkpoint"));

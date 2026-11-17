@@ -279,12 +279,21 @@ contract VaultActionTest is LiquidPoolBase, SettleExtraOracle {
         (uint256 extra,, uint256 burnS) =
             _settleExtra(pb, pa, hv.markout(), -30, tier.FEE_TICKS, hv.feePips(), rs);
         uint256 S = hv.totalSupply();
+        uint256 banked = _cohorts();
         vm.expectEmit(address(hv));
         emit Settled(c0, extra, -30, false);
         hv.settle();
-        assertEq(hv.totalSupply(), S - burnS, "the settlement burn");
+        // the settlement burn, plus the base the same call's checkpoint mints after it (step 0 runs first)
+        assertEq(hv.totalSupply(), S - burnS + (_cohorts() - banked), "the settlement burn");
         assertEq(hv.bankFull().reserveShares, 0, "reserve released");
         _deposit(bob, 1e18); // and deposits reopen
+    }
+
+    function _cohorts() internal view returns (uint256 c) {
+        Bank memory b = hv.bankFull();
+        for (uint256 k; k < RING; ++k) {
+            c += b.cohorts[k].shares;
+        }
     }
 
     /// @notice A second action settles the first one's due markout first (the cooldown outlasts the window), then

@@ -63,6 +63,9 @@ abstract contract DeployBaseUnplaced is Test {
         return type(StubExtension).creationCode;
     }
 
+    /// @dev A suite may adjust the tier before deployment (e.g. m = 0 where base pay is not under test).
+    function _adjustTier(Tier memory t) internal view virtual {}
+
     /// @dev Test tokens; a suite may substitute a token with transfer callbacks.
     function _newToken(string memory n, uint8 d) internal virtual returns (MockToken) {
         return new MockToken(n, d);
@@ -96,6 +99,7 @@ abstract contract DeployBaseUnplaced is Test {
         t.REF_POOL = address(refPool);
         t.REF_SQRT_PRICE = TickMath.getSqrtPriceAtTick(_seedTick());
         Tiers.check(t, bt);
+        _adjustTier(t);
         tier = t;
         factory = new TouchstoneFactory(
             address(manager), keccak256(_vaultCode()), keccak256(_extCode()), keccak256(_hookCode())

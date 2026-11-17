@@ -92,6 +92,7 @@ abstract contract VaultConfig is VaultStorage {
     uint256 internal immutable MAX_SWAPS;
     int24 internal immutable W_TICKS;
     uint256 internal immutable DELTA_MIN;
+    uint256 internal immutable M_PER_BLOCK;
     PoolId internal immutable POOL_ID;
     bytes32 public immutable TIER_HASH;
     /// @dev `keccak256(abi.encode(manager, factory, hook, key, tier))`: the vault requires its extension's to equal its own.
@@ -130,6 +131,7 @@ abstract contract VaultConfig is VaultStorage {
         MAX_SWAPS = t.MAX_SWAPS;
         W_TICKS = t.W_TICKS;
         DELTA_MIN = t.DELTA_MIN;
+        M_PER_BLOCK = t.m_perBlock;
         POOL_ID = PoolId.wrap(keccak256(abi.encode(p.key)));
     }
 }
@@ -145,6 +147,8 @@ abstract contract VaultCommon is VaultConfig {
     event Withdraw(address indexed owner, uint256 shares, uint256 out0, uint256 out1);
     event Checkpoint(uint64 tauV, uint64 tauB, uint256 nav0, uint64 delta, uint256 base, uint128 L, int24 lo, int24 hi);
     event BreachProcessed(uint32 count, uint40 lastBlock, uint256 forfeited);
+    /// @notice A checkpoint closed a base amount into `baseOwed` because no price was available.
+    event CheckpointDeferred();
     event Settled(uint256 charge0, uint256 extra, int24 tickMk, bool fallbackUsed);
     event Action(uint8 kind, uint256 charge, uint160 pStar, uint256 burnedBank, uint256 burnedBond);
 

@@ -412,6 +412,7 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
         uint32 n = o.pendingBreaches;
         // [MU-049] every checkpoint processes pending breaches
         if (n > 0) {
+            // [MU-080] [MU-097] deferred base is forfeited by a breach
             _baseOwed = 0;
             // [MU-123] every pending breach is counted and acknowledged
             uint256 forfeited = _burnBank(Op.Breach, abi.encode(n, now_));
@@ -422,10 +423,42 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
             _tauV0 = o.tauVAtLastPending;
             _segStart = o.lastPendingBlock;
         }
-        // (4) the segment [segStart, now): no base accrues before the curator can place
+        // (4) base accrual for the segment [segStart, now) (spec §3.5): only on a curator-placed range in NORMAL or
+        // BREACHED; the pre-breach part was cut by τ_v0 := τ_v at the last pending breach above
+        // [MU-034]
+        uint256 base = b.placedByCurator && b.mode != Ladder.EXITED ? _baseAmount(o.tauV - _tauV0) : 0;
+        uint256 amount = base + _baseOwed;
+        if (amount > 0) {
+            // the price: the cached reference if fresh, else a live read (none if it fails: the amount is deferred)
+            bool priced = o.refFresh;
+            int24 pt = o.refTick;
+            if (!priced) {
+                (priced, pt) = _tryRef();
+                if (priced) (liveRead, liveTick) = (true, pt);
+            }
+            bool minted;
+            if (priced) {
+                // [MU-109] NAV' at the reference, on the holdings after collect-first
+                (uint256 navp,) = ExecLedger.value(_holdings(), TickMath.getSqrtPriceAtTick(pt));
+                if (navp > amount) {
+                    uint256 shares = FullMath.mulDiv(amount, totalSupply(), navp - amount);
+                    FeeBank.bankApply(b, Op.Accrue, abi.encode(ne, shares, gateOpen));
+                    _mint(address(this), shares);
+                    // a mint inside a pending action's markout window enters its supply (S15D-07)
+                    if (_tAction != 0) _pend.sAct = _u128(uint256(_pend.sAct) + shares);
+                    // [MU-083]
+                    _baseOwed = 0;
+                    minted = true;
+                }
+            }
+            if (!minted) {
+                _baseOwed = _u128(amount);
+                emit CheckpointDeferred();
+            }
+        }
         _tauV0 = o.tauV;
         _segStart = now_;
-        emit Checkpoint(o.tauV, o.tauB, _nav0, _delta0, 0, _L, lo, hi);
+        emit Checkpoint(o.tauV, o.tauB, _nav0, _delta0, base, _L, lo, hi);
         // (5) [MU-030] vest after breach processing: vested with the gate open, else held in maturedPending
         // [MU-171] the gate decides
         if (vestable) FeeBank.bankApply(b, Op.VestTime, abi.encode(ne, gateOpen));
@@ -437,6 +470,11 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
             _epochSwapFrac = 0;
             _swapCount = 0;
         }
+    }
+
+    /// @dev The base amount for `dtau` in-range blocks: `mulDiv(mulDiv(m_perBlock, NAV₀, WAD), δ₀·dtau, WAD)`, both floor.
+    function _baseAmount(uint64 dtau) internal view returns (uint256) {
+        return FullMath.mulDiv(FullMath.mulDiv(M_PER_BLOCK, _nav0, WAD), uint256(_delta0) * dtau, WAD);
     }
 
     /// @dev Some cohort is due (`vestBlock = (e + 1 + V)·EPOCH ≤ now`) or `maturedPending > 0`.

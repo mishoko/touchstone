@@ -1029,6 +1029,9 @@ class Vault:
                     shares = mul_div(amount, self.S, navp - amount)
                     fee_bank_apply(b, "Accrue", dict(epoch=ne, shares=shares, gateOpen=gate_open))
                     self.S += shares
+                    if self.pending is not None:
+                        # a mint inside a pending action's markout window enters its supply (spec §3.4, S15D-07)
+                        self.pending["sAct"] = min(self.pending["sAct"] + shares, U128)
                     r["minted"] += shares
                     self.baseOwed = 0
                     minted = True

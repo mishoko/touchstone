@@ -176,6 +176,9 @@ abstract contract CellBase is DeployBaseUnplaced {
 
     function setUp() public virtual override {
         _setUpEnv();
+        // the cells measure an attack's own profit: base pay (spec §3.5) accrues to the curator with or without the
+        // attack, so they run with m = 0 (as designed in s14); base gaming is M-N1 and M-N2's
+        tier.m_perBlock = 0;
         W = tier.W_TICKS;
         market = _seedTick();
         bundler = new CuratorBundler(owner, factory);

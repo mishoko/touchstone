@@ -400,12 +400,13 @@
    "id": "MU-034",
    "area": "bank",
    "desc": "base accrues in EXITED",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "PENDING"
+   "killer_id": "U-base",
+   "kill": "test_U_base__noBaseWithoutAPlacementInExitedOrAtZeroDelta",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        uint256 base = b.placedByCurator && b.mode != Ladder.EXITED ? _baseAmount(o.tauV - _tauV0) : 0;",
+   "replace": "        uint256 base = b.placedByCurator ? _baseAmount(o.tauV - _tauV0) : 0;",
+   "status": "KILLED",
+   "basis": "9a7e9d46534ce45e"
   },
   {
    "id": "MU-035",
@@ -581,22 +582,22 @@
    "killer_id": "U-breach",
    "kill": "test_U_breach__anEmptyVaultBreachIsProcessedByAWithdrawal",
    "file": "src/TouchstoneVault.sol",
-   "find": "        if (n > 0) {\n            _baseOwed = 0;",
-   "replace": "        if (n > 0 && false) {\n            _baseOwed = 0;",
+   "find": "        if (n > 0) {\n            // [MU-080] [MU-097]",
+   "replace": "        if (n > 0 && false) {\n            // [MU-080] [MU-097]",
    "status": "KILLED",
-   "basis": "35826bd21ed68eea"
+   "basis": "82574e4de0b1477e"
   },
   {
    "id": "MU-050",
    "area": "ladder",
-   "desc": "pending breaches processed after accrual (P2: the step-3 writes are overwritten by step 4; re-verify at P3 with accrual, killer U-forfeit-quiet)",
-   "killer_id": "U-forfeit",
-   "kill": "test_U_forfeit__breachThenSegmentEndsAtTheCheckpoint",
+   "desc": "the pre-breach base is not cut at the last pending breach (τ_v0 := tauVAtLastPending dropped)",
+   "killer_id": "U-base",
+   "kill": "test_U_base__scenarioVectorsBitForBit",
    "file": "src/TouchstoneVault.sol",
-   "find": "            _tauV0 = o.tauVAtLastPending;\n            _segStart = o.lastPendingBlock;\n        }\n        // (4) the segment [segStart, now): no base accrues before the curator can place\n        _tauV0 = o.tauV;\n        _segStart = now_;",
-   "replace": "        }\n        _tauV0 = o.tauV;\n        _segStart = now_;\n        if (n > 0) {\n            _tauV0 = o.tauVAtLastPending;\n            _segStart = o.lastPendingBlock;\n        }",
+   "find": "            _tauV0 = o.tauVAtLastPending;\n",
+   "replace": "",
    "status": "KILLED",
-   "basis": "6dc68d5c0c5ba79c"
+   "basis": "523f38f4df969929"
   },
   {
    "id": "MU-051",
@@ -943,12 +944,13 @@
    "id": "MU-080",
    "area": "additional",
    "desc": "`baseOwed` survives a breach",
-   "killer_id": "U-forfeit",
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "PENDING"
+   "killer_id": "U-base",
+   "kill": "test_U_base__scenarioVectorsBitForBit",
+   "file": "src/TouchstoneVault.sol",
+   "find": "            // [MU-080] [MU-097] deferred base is forfeited by a breach\n            _baseOwed = 0;",
+   "replace": "            // [MU-080] [MU-097] deferred base is forfeited by a breach",
+   "status": "KILLED",
+   "basis": "523f38f4df969929"
   },
   {
    "id": "MU-081",
@@ -978,12 +980,13 @@
    "id": "MU-083",
    "area": "additional",
    "desc": "`baseOwed` minted twice or never",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "PENDING"
+   "killer_id": "U-base",
+   "kill": "test_U_base__deferredWithoutAPriceThenMinted",
+   "file": "src/TouchstoneVault.sol",
+   "find": "                    // [MU-083]\n                    _baseOwed = 0;\n",
+   "replace": "                    // [MU-083]\n",
+   "status": "KILLED",
+   "basis": "ec902b910aaf54c3"
   },
   {
    "id": "MU-084",
@@ -1144,12 +1147,13 @@
    "id": "MU-097",
    "area": "additional",
    "desc": "deferred base not forfeited by a breach",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "PENDING"
+   "killer_id": "U-base",
+   "kill": "test_U_base__scenarioVectorsBitForBit",
+   "file": "src/TouchstoneVault.sol",
+   "find": "            // [MU-080] [MU-097] deferred base is forfeited by a breach\n            _baseOwed = 0;",
+   "replace": "            // [MU-080] [MU-097] deferred base is forfeited by a breach\n            _baseOwed = _baseOwed;",
+   "status": "KILLED",
+   "basis": "523f38f4df969929"
   },
   {
    "id": "MU-098",
@@ -1287,12 +1291,13 @@
    "id": "MU-109",
    "area": "additional",
    "desc": "checkpoint NAV₀ or δ at spot",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "PENDING"
+   "killer_id": "U-base",
+   "kill": "test_U_base__scenarioVectorsBitForBit",
+   "file": "src/TouchstoneVault.sol",
+   "find": "(uint256 navp,) = ExecLedger.value(_holdings(), TickMath.getSqrtPriceAtTick(pt));",
+   "replace": "(uint256 navp,) = ExecLedger.value(_holdings(), TickMath.getSqrtPriceAtTick(o.tickSpot));",
+   "status": "KILLED",
+   "basis": "523f38f4df969929"
   },
   {
    "id": "MU-110",

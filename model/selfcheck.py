@@ -2302,6 +2302,9 @@ def rules_markout():
     rs, S0, m0 = w.v.bank.reserveShares, w.v.S, sum(r["minted"] for r in w.v.records.values())
     h_now = w.v.h.copy()
     check(pd["sAct"] > 0 and pd["burn0"] >= 0 and pd["s0"] > 0 and pd["sEnd"] > 0, "the record keeps s0, sEnd, burn0, sAct")
+    # the live record: base minted inside the window has raised its sAct since the action (spec §3.4, S15D-07)
+    check(w.v.pending["sAct"] >= pd["sAct"], "base minted inside the window only raises the record's sAct")
+    pd = w.v.pending
     exp = R.settle_extra(pd["before"], pd["after"], pd, T0 + 40, t.FEE_TICKS, w.v.pool.fee, rs)
     w.v.settle(w.block, w.ts())
     check(reads == [(t_a + BT, t_a + BT + H)], "the window is (tAction + blocktime, tAction + blocktime + H_MARKOUT]", reads)

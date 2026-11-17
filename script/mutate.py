@@ -28,10 +28,12 @@ produced no result: never counted as killed) | BAD-PATTERN (the find string is n
 non-empty and every selected mutant is KILLED.
 
 A mutant's basis is a hash of what its verdict depends on: the function containing its find string; the files that
-define its killer and the test files they import; for a mutant outside the linked libraries, every file under
-src/libraries/ and src/types/ (the coarse-linked entries and the internal libraries inlined into it); and for a cap,
-charge, solvency or settlement mutant in the vault (areas guards, ledger, bank), the hot path `_action`, `_charge`,
-`_settle` and `_cappedSwap`. Full campaigns still run at each phase close, at the freeze and after any structural
+define its killer and every test/ or script/ file they import, transitively; `foundry.toml`; the golden vectors when
+any of those files reads a file; every file under src/libraries/ and src/types/ (the coarse-linked entries and the
+internal libraries inlined into the contracts); and for a cap, charge, solvency or settlement mutant (areas guards,
+ledger, bank; in any file) the vault's hot path `_action`, `_charge`, `_settle` and `_cappedSwap`. A change elsewhere
+in a contract (another function of the vault) is not in the basis: the close rule (`--since`) re-runs every mutant
+of a changed file. Full campaigns still run at each phase close, at the freeze and after any structural
 move; the public kill rate comes from one full run at one commit."""
 import hashlib, json, os, re, shutil, subprocess, sys, time
 from concurrent.futures import ThreadPoolExecutor
@@ -138,14 +140,18 @@ def _named_function(src, name):
 
 
 def _killer_files(kill):
+    """The files defining the killer, plus every test/ or script/ file they import, transitively (src/ is covered by
+    the function, library and hot-path parts of the basis)."""
     files = [f for f in _test_files() if any(re.search(kill, n)
                                               for n in re.findall(r'function (\w+)\s*\(', _read(f)))]
-    deps = set(files)
-    for f in files:
+    deps, todo = set(files), list(files)
+    while todo:
+        f = todo.pop()
         for imp in re.findall(r'import\s+[^;]*?"(\.[^"]+)"', _read(f)):
             p = os.path.normpath(os.path.join(os.path.dirname(f), imp))
-            if p.startswith('test' + os.sep):
+            if (p.startswith('test' + os.sep) or p.startswith('script' + os.sep)) and p not in deps:
                 deps.add(p)
+                todo.append(p)
     return sorted(deps)
 
 
@@ -168,11 +174,15 @@ def basis_parts(m):
     for f in kf:
         h.update(f'killer:{f}:'.encode() + _read(f).encode())
     files += kf
-    if not m['file'].startswith('src/libraries/'):
-        for f in _tree_files('src/libraries', 'src/types'):
-            h.update(f'lib:{f}:'.encode() + _read(f).encode())
-            files.append(f)
-    if m['file'] == VAULT and m.get('area') in HOT_AREAS:
+    extra = ['foundry.toml']
+    if any('readFile' in _read(f) for f in kf):
+        extra += sorted(os.path.relpath(os.path.join(ROOT, 'test', 'vectors', v), ROOT)
+                        for v in os.listdir(os.path.join(ROOT, 'test', 'vectors')) if v.endswith('.json'))
+    extra += _tree_files('src/libraries', 'src/types')
+    for f in extra:
+        h.update(f'dep:{f}:'.encode() + _read(f).encode())
+    files += extra
+    if m.get('area') in HOT_AREAS:
         vs = _read(VAULT)
         for n in HOT:
             h.update(f'hot:{n}:'.encode() + _named_function(vs, n).encode())
@@ -283,11 +293,11 @@ def select_changed(muts):
 
 
 def select_since(muts, rev):
-    r = git('diff', '--name-only', rev, '--', 'src', 'test')
+    r = git('diff', '--name-only', rev)
     if r.returncode != 0:
         print('mutate --since:', r.stderr.strip())
         sys.exit(2)
-    changed = set(r.stdout.split()) | set(git('ls-files', '--others', '--exclude-standard', 'src', 'test').stdout.split())
+    changed = set(r.stdout.split()) | set(git('ls-files', '--others', '--exclude-standard').stdout.split())
     sel = []
     for m in muts:
         if wired(m) and (set(basis_parts(m)[0]) & changed or m.get('basis') != basis_parts(m)[1]):
@@ -322,6 +332,14 @@ def main(argv):
     doc, muts = load()
     if '--audit' in argv:
         return 0 if audit(muts) else 1
+    if os.path.exists(MARK):
+        try:
+            pid = int(open(MARK).read().strip() or 0)
+            os.kill(pid, 0)
+            print(f'mutate: another campaign (pid {pid}) is running on this tree; refusing to start')
+            return 1
+        except (ValueError, ProcessLookupError, PermissionError):
+            print('mutate: removing a stale', MARK)
     restore_leftovers()
     full = '--full' in argv
     args = [a for a in argv if not a.startswith('--')]
@@ -362,8 +380,14 @@ def main(argv):
                 print(' | '.join(res[-1]), flush=True)
         else:
             roots = Queue()
+            probe = todo[0]['kill']
             for w in range(jobs):
-                roots.put(make_worker(w))
+                root = make_worker(w)
+                # the copy must pass a clean killer before it may judge a mutant (a missing file would read as KILLED)
+                if not full and verdict(forge(['--mt', probe], cwd=root), probe, False) != 'SURVIVED':
+                    print(f'mutate: worker copy {root} fails the clean killer {probe}; refusing to run')
+                    return 1
+                roots.put(root)
 
             def task(m):
                 root = roots.get()
@@ -374,8 +398,13 @@ def main(argv):
                 finally:
                     roots.put(root)
 
-            with ThreadPoolExecutor(max_workers=jobs) as ex:
+            ex = ThreadPoolExecutor(max_workers=jobs)
+            try:
                 res += list(ex.map(task, todo))
+            except KeyboardInterrupt:
+                ex.shutdown(wait=True, cancel_futures=True)
+                raise
+            ex.shutdown(wait=True)
     finally:
         os.remove(MARK)
         if os.path.isdir(WT):

@@ -7,8 +7,9 @@ past their guards for the invariants to be checked on executed swaps, placements
   TS_NV_LOG=output/nonvacuity/inv.csv forge test --mp test/invariant/VaultP2.t.sol
   python3 script/nonvacuity.py output/nonvacuity/inv.csv
 
-The floors are about a third of the rates measured on the 256 x 128 campaign (fixed seed) when they were set: swaps
-7.8% of rebalance calls, placements 4.7% of place calls, 79 / 120 moved and 205 / 115 pre-swapped placements."""
+The floors are about a third of the rates measured on the 256 x 128 campaign (fixed seed) when they were set (s13,
+tick 0 / tick 196k): swaps 1,210 / 1,152 of 15,288 rebalance calls (7.9% / 7.5%), placements 708 / 708 of 15,114 place
+calls (4.7%), 103 / 126 moved and 204 / 120 pre-swapped placements."""
 import csv, sys
 
 FLOORS = {'swap_rate': 0.025, 'place_rate': 0.015, 'moved': 25, 'pre': 35}

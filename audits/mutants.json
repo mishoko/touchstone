@@ -10,7 +10,8 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "        return nb + naRef > nbRef + na;",
    "replace": "        return nb + naRef < nbRef + na;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "2b9ae69d4a5e9727"
   },
   {
    "id": "MU-002",
@@ -21,7 +22,8 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "        if (_worse(nb2, na2, nb, na)) (nb, na, pStar) = (nb2, na2, sqrtRef);",
    "replace": "        if (true) (nb, na, pStar) = (nb2, na2, sqrtRef);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "c92620e75cefe427"
   },
   {
    "id": "MU-003",
@@ -32,7 +34,8 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "        charge = nb > na ? nb - na : 0;",
    "replace": "        charge = nb > na ? nb - na : na - nb;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "c92620e75cefe427"
   },
   {
    "id": "MU-004",
@@ -43,7 +46,8 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "        charge = nb > na ? nb - na : 0;",
    "replace": "        charge = nb > na ? (nb - na) / 2 : 0;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "c92620e75cefe427"
   },
   {
    "id": "MU-005",
@@ -54,7 +58,8 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "if (burn > cover || burnR > cover - burn) revert Insolvent();",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "c8e14497a52e5d8c"
   },
   {
    "id": "MU-006",
@@ -65,7 +70,8 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "        burn = _shares(charge, S, navBurn);",
    "replace": "        burn = _shares(charge, S, na);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "c92620e75cefe427"
   },
   {
    "id": "MU-007",
@@ -76,7 +82,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        Holdings memory before = _holdings();\n",
    "replace": "        Holdings memory before = _pAfter;\n",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "f99012ba09873030"
   },
   {
    "id": "MU-008",
@@ -87,7 +94,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (_L > 0) _book(_modify(0));",
    "replace": "        if (false) _book(_modify(0));",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "10d132cd4e2a4f50"
   },
   {
    "id": "MU-009",
@@ -98,7 +106,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "before NAV_after\n        _collect();\n",
    "replace": "before NAV_after\n",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "ba7b6ddea70438cd"
   },
   {
    "id": "MU-010",
@@ -109,7 +118,8 @@
    "file": "src/libraries/Placement.sol",
    "find": "        if (dist > band || -dist > band) return 1;",
    "replace": "        if (dist > band) return 1;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "846559a4e864d041"
   },
   {
    "id": "MU-011",
@@ -120,7 +130,8 @@
    "file": "src/libraries/Placement.sol",
    "find": "        if (refTick < lo || refTick >= hi) return 5;",
    "replace": "        if (false) return 5;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "846559a4e864d041"
   },
   {
    "id": "MU-012",
@@ -131,7 +142,8 @@
    "file": "src/libraries/Placement.sol",
    "find": "        if (int256(hi) - int256(lo) != int256(wTicks)) return 2;",
    "replace": "        if (int256(hi) - int256(lo) < int256(wTicks)) return 2;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "846559a4e864d041"
   },
   {
    "id": "MU-013",
@@ -142,7 +154,8 @@
    "file": "src/libraries/Placement.sol",
    "find": "        if (tickSpot < lo || tickSpot >= hi) return 4;",
    "replace": "        if (tickSpot < lo || tickSpot > hi) return 4;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "846559a4e864d041"
   },
   {
    "id": "MU-014",
@@ -153,7 +166,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (la != 0 && block.number < la + COOLDOWN) revert Cooldown();\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "8517e4ff4fa57bfc"
   },
   {
    "id": "MU-015",
@@ -164,7 +178,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (_swapCount >= MAX_SWAPS) revert MaxSwaps();\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "ba7b6ddea70438cd"
   },
   {
    "id": "MU-016",
@@ -175,7 +190,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "uint256 d0 = FullMath.mulDivRoundingUp(_idle0, s, S);",
    "replace": "uint256 d0 = FullMath.mulDiv(_idle0, s, S);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "b4f50921358571ee"
   },
   {
    "id": "MU-017",
@@ -186,7 +202,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        // [MU-017] the supply before the burn\n        uint256 S = totalSupply();",
    "replace": "        // [MU-017] the supply before the burn\n        uint256 S = totalSupply() - s;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "2c5000d2d1849cf1"
   },
   {
    "id": "MU-018",
@@ -197,7 +214,8 @@
    "file": "src/libraries/Placement.sol",
    "find": "        uint256 head = l0 / 1e9 + 1;",
    "replace": "        uint256 head = 0;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "7a2bc868def6bdbc"
   },
   {
    "id": "MU-019",
@@ -208,7 +226,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "if (S2 * BOND_RATIO > uint256(_bank.bondShares) * WAD) revert NavCap();",
    "replace": "if (S2 * BOND_RATIO < uint256(_bank.bondShares) * WAD) revert NavCap();",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "b4f50921358571ee"
   },
   {
    "id": "MU-020",
@@ -219,7 +238,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "z ? tickSpot - (FEE_TICKS + BAND_SWAP) : tickSpot + (FEE_TICKS + BAND_SWAP)",
    "replace": "z ? tickSpot + (FEE_TICKS + BAND_SWAP) : tickSpot - (FEE_TICKS + BAND_SWAP)",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "ba7b6ddea70438cd"
   },
   {
    "id": "MU-021",
@@ -230,7 +250,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        // [MU-021] rebalanceSwap leaves the mode as it is\n        if (place) {",
    "replace": "        // [MU-021] rebalanceSwap leaves the mode as it is\n        if (!place) FeeBank.bankApply(_bank, Op.Place, \"\");\n        if (place) {",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "f99012ba09873030"
   },
   {
    "id": "MU-022",
@@ -241,7 +262,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (frac + used > MAX_SWAP_ACTION || _epochSwapFrac + frac > MAX_SWAP_EPOCH) revert SwapCap();\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "ba7b6ddea70438cd"
   },
   {
    "id": "MU-023",
@@ -252,7 +274,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "if (S2 * BOND_RATIO > uint256(_bank.bondShares) * WAD) revert NavCap();",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "b4f50921358571ee"
   },
   {
    "id": "MU-024",
@@ -263,7 +286,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (PoolId.unwrap(key.toId()) != PoolId.unwrap(POOL_ID)) revert WrongPool();",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "5aa57667bd5e8e17"
   },
   {
    "id": "MU-025",
@@ -274,7 +298,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (msg.sender != VAULT) revert OnlyVault();",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "7ecdc226b4d1b927"
   },
   {
    "id": "MU-026",
@@ -285,7 +310,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "// [MU-026] initialization by anyone but the hook's own constructor reverts\n        revert HookNotImplemented();",
    "replace": "// [MU-026] initialization by anyone but the hook's own constructor reverts\n        return IHooks.beforeInitialize.selector;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "f7e0272017b959c4"
   },
   {
    "id": "MU-027",
@@ -296,7 +322,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        o = HOOK.snapshotIfNewBlock();\n        // [MU-008]",
    "replace": "        o = HOOK.obs();\n        // [MU-008]",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "b409249c9a0e2975"
   },
   {
    "id": "MU-028",
@@ -307,7 +334,8 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "c.epoch > b.cohorts[best].epoch",
    "replace": "c.epoch < b.cohorts[best].epoch",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "14e841d814b6a873"
   },
   {
    "id": "MU-029",
@@ -318,7 +346,8 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "uint256 m = need < b.maturedPending ? need : b.maturedPending;",
    "replace": "uint256 vu = need < b.vestedUnclaimed ? need : b.vestedUnclaimed; b.vestedUnclaimed -= uint128(vu); need -= vu; fromBank += vu; uint256 m = need < b.maturedPending ? need : b.maturedPending;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "08b8eea2daea3ab1"
   },
   {
    "id": "MU-030",
@@ -329,7 +358,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        // (3) pending breaches, before any accrual or vesting\n",
    "replace": "        if (vestable) FeeBank.bankApply(b, Op.VestTime, abi.encode(ne, gateOpen));\n        // (3) pending breaches, before any accrual or vesting\n",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "5e62e40d32e9d56e"
   },
   {
    "id": "MU-031",
@@ -340,7 +370,8 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "if (b.dripBlocks == 0) {",
    "replace": "if (true) {",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "afabb621741eca76"
   },
   {
    "id": "MU-032",
@@ -351,7 +382,8 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "b.forfeitPool = _sat(uint256(b.forfeitPool) + forfeited);",
    "replace": "b.bondShares = _sat(uint256(b.bondShares) + forfeited);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "b2de8813ba8f4157"
   },
   {
    "id": "MU-033",
@@ -362,7 +394,7 @@
    "file": null,
    "find": null,
    "replace": null,
-   "status": "pending"
+   "status": "PENDING"
   },
   {
    "id": "MU-034",
@@ -373,7 +405,7 @@
    "file": null,
    "find": null,
    "replace": null,
-   "status": "pending"
+   "status": "PENDING"
   },
   {
    "id": "MU-035",
@@ -384,7 +416,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "bool creditV = refIn && !_emptyRange &&",
    "replace": "bool creditV = !_emptyRange &&",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "3f85fba4c637d1a2"
   },
   {
    "id": "MU-036",
@@ -395,7 +428,7 @@
    "file": null,
    "find": null,
    "replace": null,
-   "status": "pending"
+   "status": "PENDING"
   },
   {
    "id": "MU-037",
@@ -406,7 +439,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        (bool liveRead, int24 liveTick) = _checkpoint(o);\n",
    "replace": "        bool liveRead;\n        int24 liveTick;\n        if (entry != Entry.Deposit) (liveRead, liveTick) = _checkpoint(o);\n",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "be922276a70af195"
   },
   {
    "id": "MU-038",
@@ -417,7 +451,8 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "return x > type(uint128).max ? type(uint128).max : uint128(x);",
    "replace": "require(x <= type(uint128).max); return uint128(x);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "c2dd855b4297f61c"
   },
   {
    "id": "MU-039",
@@ -428,7 +463,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "j * c <= newOut && n < 3",
    "replace": "j * c < newOut && n < 3",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "c321f49a23735a9b"
   },
   {
    "id": "MU-040",
@@ -439,7 +475,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "bool refIn = lo <= ref && ref < hi;",
    "replace": "bool refIn = lo <= tick && tick < hi;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "07ff5a1f4f73f6ff"
   },
   {
    "id": "MU-041",
@@ -450,7 +487,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "uint256 end = now_ < freshEnd ? now_ : freshEnd;",
    "replace": "uint256 end = now_;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "07ff5a1f4f73f6ff"
   },
   {
    "id": "MU-042",
@@ -461,7 +499,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "int24 m = MedianOracle.med9(_ring, _head, _count);",
    "replace": "_insert(now_, tick);\n                int24 m = MedianOracle.med9(_ring, _head, _count);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "9b1518b99ee1cf2b"
   },
   {
    "id": "MU-043",
@@ -472,7 +511,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "        _resetStreak = 0;\n        _outBlocks = 0;\n        emit RangeRegistered",
    "replace": "        emit RangeRegistered",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "c97d22fbd7263803"
   },
   {
    "id": "MU-044",
@@ -483,7 +523,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            if (deltaAfter < DELTA_MIN) revert DeltaMin();",
    "replace": "            if (deltaAfter <= DELTA_MIN) revert DeltaMin();",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "cc402908c59d9b1c"
   },
   {
    "id": "MU-045",
@@ -494,7 +535,8 @@
    "file": "src/libraries/Ladder.sol",
    "find": "uint256 internal constant OPEN_EXITED = (1 << uint256(Entry.Withdraw))",
    "replace": "uint256 internal constant OPEN_EXITED = (1 << uint256(Entry.Deposit)) | (1 << uint256(Entry.TopUpBond)) | (1 << uint256(Entry.Withdraw))",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "aea6db3569702a39"
   },
   {
    "id": "MU-046",
@@ -505,7 +547,8 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "if (b.mode != Ladder.EXITED) revert Ladder.BadMode();",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "cc01fca2c7f7bbb7"
   },
   {
    "id": "MU-047",
@@ -516,7 +559,8 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "forfeited = _forfeitAll(b, now_);",
    "replace": "forfeited = ev == Ladder.EV_RETIRE ? 0 : _forfeitAll(b, now_);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "55b2915e151e8b37"
   },
   {
    "id": "MU-048",
@@ -527,7 +571,8 @@
    "file": "src/libraries/Ladder.sol",
    "find": "if (nb >= REMOVAL) return",
    "replace": "if (nb >= REMOVAL + 1) return",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "cae06f53e5b68699"
   },
   {
    "id": "MU-049",
@@ -538,7 +583,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (n > 0) {\n            _baseOwed = 0;",
    "replace": "        if (n > 0 && false) {\n            _baseOwed = 0;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "3f85ba8062883924"
   },
   {
    "id": "MU-050",
@@ -549,7 +595,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            _tauV0 = o.tauVAtLastPending;\n            _segStart = o.lastPendingBlock;\n        }\n        // (4) the segment [segStart, now): no base accrues before the curator can place\n        _tauV0 = o.tauV;\n        _segStart = now_;",
    "replace": "        }\n        _tauV0 = o.tauV;\n        _segStart = now_;\n        if (n > 0) {\n            _tauV0 = o.tauVAtLastPending;\n            _segStart = o.lastPendingBlock;\n        }",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "9dac8dc86493ff56"
   },
   {
    "id": "MU-051",
@@ -560,7 +607,7 @@
    "file": null,
    "find": null,
    "replace": null,
-   "status": "pending"
+   "status": "PENDING"
   },
   {
    "id": "MU-052",
@@ -571,7 +618,7 @@
    "file": null,
    "find": null,
    "replace": null,
-   "status": "pending"
+   "status": "PENDING"
   },
   {
    "id": "MU-053",
@@ -582,7 +629,8 @@
    "file": "src/libraries/Ladder.sol",
    "find": "if (nb >= REMOVAL) return",
    "replace": "if (nb == REMOVAL) return",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "cae06f53e5b68699"
   },
   {
    "id": "MU-054",
@@ -593,7 +641,7 @@
    "file": null,
    "find": null,
    "replace": null,
-   "status": "pending"
+   "status": "PENDING"
   },
   {
    "id": "MU-055",
@@ -604,7 +652,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "_nav0 = _u128(rebased);",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "12cd48aa72d97be1"
   },
   {
    "id": "MU-056",
@@ -615,7 +664,7 @@
    "file": null,
    "find": null,
    "replace": null,
-   "status": "pending"
+   "status": "PENDING"
   },
   {
    "id": "MU-057",
@@ -626,7 +675,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "creditV ? _satAdd(tauV0, cr) : tauV0,",
    "replace": "creditV ? _satAdd(tauV0, trunc) : tauV0,",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "9b1518b99ee1cf2b"
   },
   {
    "id": "MU-058",
@@ -637,7 +687,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (read) (ok, t) = _readAnchor(k);",
    "replace": "if (read) {\n            (ok, t) = _readAnchor(k);\n            _commit(ok, t, k);\n            read = false;\n        }",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "07ff5a1f4f73f6ff"
   },
   {
    "id": "MU-059",
@@ -648,7 +699,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "_latch(oldOut, newOut, last);",
    "replace": "_latch(0, newOut, last);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "07ff5a1f4f73f6ff"
   },
   {
    "id": "MU-060",
@@ -659,7 +711,7 @@
    "file": null,
    "find": null,
    "replace": null,
-   "status": "pending"
+   "status": "PENDING"
   },
   {
    "id": "MU-061",
@@ -670,7 +722,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (streak >= RESET_RUN) {",
    "replace": "if (streak >= 1) {",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "eaaca591ad2054b0"
   },
   {
    "id": "MU-062",
@@ -681,7 +734,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            if (deltaAfter < DELTA_MIN) revert DeltaMin();",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "cc402908c59d9b1c"
   },
   {
    "id": "MU-063",
@@ -692,7 +746,7 @@
    "file": null,
    "find": null,
    "replace": null,
-   "status": "pending"
+   "status": "PENDING"
   },
   {
    "id": "MU-064",
@@ -703,7 +757,8 @@
    "file": "src/libraries/Ladder.sol",
    "find": "OPEN_EXITED = (1 << uint256(Entry.Withdraw)) | (1 << uint256(Entry.Claim))",
    "replace": "OPEN_EXITED = (1 << uint256(Entry.Withdraw))",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "aea6db3569702a39"
   },
   {
    "id": "MU-065",
@@ -714,7 +769,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "ModifyLiquidityParams(nlo, nhi, int256(uint256(lw)), _witSalt(epoch))",
    "replace": "ModifyLiquidityParams(nlo, nhi, int256(uint256(lw)), _witSalt(0))",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "9bb212f82de862b0"
   },
   {
    "id": "MU-066",
@@ -725,7 +781,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "_idle0 = SafeCast.toUint128(a0);",
    "replace": "_idle0 = SafeCast.toUint128(a0 + wit0);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "2e6cc3d8723092ed"
   },
   {
    "id": "MU-067",
@@ -736,7 +793,7 @@
    "file": null,
    "find": null,
    "replace": null,
-   "status": "pending"
+   "status": "PENDING"
   },
   {
    "id": "MU-068",
@@ -747,7 +804,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "            _gapSinceVerify = false;\n            emit GapCleared(1);",
    "replace": "            emit GapCleared(1);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "eaaca591ad2054b0"
   },
   {
    "id": "MU-069",
@@ -758,7 +816,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "!o.gapSinceVerify && ",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "9dac8dc86493ff56"
   },
   {
    "id": "MU-070",
@@ -769,7 +828,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "gateOpen = liveRead && lo <= liveTick && liveTick < hi;",
    "replace": "gateOpen = true;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "9dac8dc86493ff56"
   },
   {
    "id": "MU-071",
@@ -780,7 +840,8 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "if (exited) {",
    "replace": "if (exited || mode == Ladder.EXITED) {",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "55b2915e151e8b37"
   },
   {
    "id": "MU-072",
@@ -791,7 +852,8 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "uint256(b.exitBlock) + b.releaseDelay",
    "replace": "uint256(b.exitBlock) + b.dripBlocks",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "cc01fca2c7f7bbb7"
   },
   {
    "id": "MU-073",
@@ -802,7 +864,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        Obs memory o = _prologue();\n        // [MU-037] every entry point checkpoints\n        (bool liveRead, int24 liveTick) = _checkpoint(o);\n        // [MU-073] the mode gate runs after the prologue checkpoint, which may have moved the mode to EXITED\n        if (!Ladder.allowed(_bank.mode, uint8(entry))) revert Ladder.BadMode();",
    "replace": "        // [MU-037] [MU-073]\n        if (!Ladder.allowed(_bank.mode, uint8(entry))) revert Ladder.BadMode();\n        Obs memory o = _prologue();\n        (bool liveRead, int24 liveTick) = _checkpoint(o);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "fd68522cda16431d"
   },
   {
    "id": "MU-074",
@@ -813,7 +876,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "_bank.dripBlocks = DRIP_BLOCKS;",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "2e6cc3d8723092ed"
   },
   {
    "id": "MU-075",
@@ -824,7 +888,8 @@
    "file": "src/periphery/CuratorBundler.sol",
    "find": "        if (msg.sender != OWNER) revert OnlyOwner();",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "51931accfe8da861"
   },
   {
    "id": "MU-076",
@@ -835,7 +900,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        return HOOK.tryRef();",
    "replace": "        return (true, HOOK.obs().refTick);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "71ec80f88ff5acb8"
   },
   {
    "id": "MU-077",
@@ -846,7 +912,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "bool refIn = lo <= ref && ref < hi;",
    "replace": "bool refIn = _emptyRange || (lo <= ref && ref < hi);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "07ff5a1f4f73f6ff"
   },
   {
    "id": "MU-078",
@@ -857,7 +924,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (b.maturedPending > 0) return true;\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "3db348f64b44167e"
   },
   {
    "id": "MU-079",
@@ -868,7 +936,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (now_ > freshEnd) {",
    "replace": "if (now_ >= freshEnd) {",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "07ff5a1f4f73f6ff"
   },
   {
    "id": "MU-080",
@@ -879,7 +948,7 @@
    "file": null,
    "find": null,
    "replace": null,
-   "status": "pending"
+   "status": "PENDING"
   },
   {
    "id": "MU-081",
@@ -890,7 +959,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "        _gapSinceVerify = false;\n        emit GapCleared(0);",
    "replace": "        emit GapCleared(0);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "c97d22fbd7263803"
   },
   {
    "id": "MU-082",
@@ -901,7 +971,8 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "            vested += b.maturedPending;\n            b.maturedPending = 0;",
    "replace": "            vested += 0;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "c1175b336d2ac40e"
   },
   {
    "id": "MU-083",
@@ -912,7 +983,7 @@
    "file": null,
    "find": null,
    "replace": null,
-   "status": "pending"
+   "status": "PENDING"
   },
   {
    "id": "MU-084",
@@ -923,7 +994,8 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "if (forfeited > 0) {",
    "replace": "if (true) {",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "98651796aee24be4"
   },
   {
    "id": "MU-085",
@@ -934,7 +1006,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "uint256 end = now_ < freshEnd ? now_ : freshEnd;",
    "replace": "uint256 end = (now_ < freshEnd || (read && ok)) ? now_ : freshEnd;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "07ff5a1f4f73f6ff"
   },
   {
    "id": "MU-086",
@@ -945,7 +1018,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "            _gapSinceVerify = true;\n            emit GapSet",
    "replace": "            emit GapSet",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "07ff5a1f4f73f6ff"
   },
   {
    "id": "MU-087",
@@ -956,7 +1030,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (_vaultLo <= t && t < _vaultHi) {",
    "replace": "if (_vaultLo <= t && t < _vaultHi) {\n            _gapSinceVerify = false;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "eaaca591ad2054b0"
   },
   {
    "id": "MU-088",
@@ -967,7 +1042,8 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "uint256 m = need < b.maturedPending ? need : b.maturedPending;",
    "replace": "uint256 m = 0;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "5f8add9e4337b850"
   },
   {
    "id": "MU-089",
@@ -978,7 +1054,8 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "forfeited = _forfeitAll(b, now_);",
    "replace": "uint128 keep = ev == Ladder.EV_RETIRE ? b.maturedPending : 0; b.maturedPending -= keep; forfeited = _forfeitAll(b, now_); b.maturedPending = keep;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "55b2915e151e8b37"
   },
   {
    "id": "MU-090",
@@ -989,7 +1066,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "        _outBlocks = 0;\n        emit RangeRegistered(lo, hi, liveTick);",
    "replace": "        _outBlocks = 0;\n        _pendingBreaches = 0;\n        emit RangeRegistered(lo, hi, liveTick);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "c97d22fbd7263803"
   },
   {
    "id": "MU-091",
@@ -1000,7 +1078,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "_pendingBreaches = n >= p ? 0 : p - n;",
    "replace": "_pendingBreaches = 0;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "af89e8c6dc262a64"
   },
   {
    "id": "MU-092",
@@ -1011,7 +1090,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "(tick > lo || (tick == lo && sqrtP > TickMath.getSqrtPriceAtTick(lo)))",
    "replace": "(tick >= lo)",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "07ff5a1f4f73f6ff"
   },
   {
    "id": "MU-093",
@@ -1022,7 +1102,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "o.refFresh && !o.emptyRange",
    "replace": "!o.emptyRange",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "9dac8dc86493ff56"
   },
   {
    "id": "MU-094",
@@ -1033,7 +1114,8 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "            if (gate) {\n                vested = s.shares;",
    "replace": "            if (true) {\n                vested = s.shares;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "96181fd22b216c8b"
   },
   {
    "id": "MU-095",
@@ -1044,7 +1126,8 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "forfeited = _forfeitAll(b, now_);",
    "replace": "uint128 keep = ev == Ladder.EV_BREACH ? b.maturedPending : 0; b.maturedPending -= keep; forfeited = _forfeitAll(b, now_); b.maturedPending = keep;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "55b2915e151e8b37"
   },
   {
    "id": "MU-096",
@@ -1055,7 +1138,7 @@
    "file": null,
    "find": null,
    "replace": null,
-   "status": "pending"
+   "status": "PENDING"
   },
   {
    "id": "MU-097",
@@ -1066,7 +1149,7 @@
    "file": null,
    "find": null,
    "replace": null,
-   "status": "pending"
+   "status": "PENDING"
   },
   {
    "id": "MU-098",
@@ -1077,7 +1160,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (ps.active) _cappedSwap(ps.zeroForOne, ps.amountIn, before, sRef, tickSpot, moveFrac);",
    "replace": "        if (ps.active) {\n            if (place) (_swapCount, _epochSwapFrac) = (0, 0);\n            _cappedSwap(ps.zeroForOne, ps.amountIn, before, sRef, tickSpot, moveFrac);\n        }",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "cc402908c59d9b1c"
   },
   {
    "id": "MU-099",
@@ -1088,7 +1172,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "_writeCache(liveTick, _anchor());",
    "replace": "_writeCache(_refTick, _anchor());",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "c97d22fbd7263803"
   },
   {
    "id": "MU-100",
@@ -1099,7 +1184,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (gasleft() < REFRESH_GAS_MIN) revert RefGas();",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "b90a030d724390d1"
   },
   {
    "id": "MU-101",
@@ -1110,7 +1196,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (d < 0 && d % w != 0) --q;",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "b95404aed1a5a0e9"
   },
   {
    "id": "MU-102",
@@ -1121,7 +1208,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "ok := and(s, eq(returndatasize(), 0x100))",
    "replace": "ok := s",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "b95404aed1a5a0e9"
   },
   {
    "id": "MU-103",
@@ -1132,7 +1220,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "let s := staticcall(cap, pool, p, 0x84, p, 0x100)",
    "replace": "let s := staticcall(cap, pool, p, 0x84, 0, 0)\n            returndatacopy(p, 0, returndatasize())",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "b95404aed1a5a0e9"
   },
   {
    "id": "MU-104",
@@ -1143,7 +1232,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (card < t.MIN_CARD) revert BadRef();",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "473dd2291020ef04"
   },
   {
    "id": "MU-105",
@@ -1154,7 +1244,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "return uint32(block.timestamp / GRID_SEC);",
    "replace": "return uint32(block.number / GRID);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "8250a5ecdf3deed6"
   },
   {
    "id": "MU-106",
@@ -1165,7 +1256,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "lo <= o.refTick && o.refTick < hi && vestable",
    "replace": "vestable",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "9dac8dc86493ff56"
   },
   {
    "id": "MU-107",
@@ -1176,7 +1268,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "for (uint256 j = oldOut / c + 1; j * c <= newOut",
    "replace": "for (uint256 j = oldOut / c + 1; j == 1 && j * c <= newOut",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "c321f49a23735a9b"
   },
   {
    "id": "MU-108",
@@ -1187,7 +1280,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "liveRead ? liveTick : HOOK.liveRef();",
    "replace": "liveRead ? liveTick : HOOK.obs().refTick;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "9d75bc6f1ff22abe"
   },
   {
    "id": "MU-109",
@@ -1198,7 +1292,7 @@
    "file": null,
    "find": null,
    "replace": null,
-   "status": "pending"
+   "status": "PENDING"
   },
   {
    "id": "MU-110",
@@ -1209,7 +1303,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "        if (k > _refGrid) {",
    "replace": "        if (k >= _refGrid) {",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "b90a030d724390d1"
   },
   {
    "id": "MU-111",
@@ -1220,7 +1315,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "return _readRef(block.timestamp - uint256(k) * GRID_SEC);",
    "replace": "return _readRef(0);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "1d60183fdb4faeac"
   },
   {
    "id": "MU-112",
@@ -1231,7 +1327,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "        _snapshot();\n        _refresh();",
    "replace": "        _refresh();\n        _snapshot();",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "c3e9874c413a37ad"
   },
   {
    "id": "MU-113",
@@ -1242,7 +1339,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (read) (ok, t) = _readAnchor(k);",
    "replace": "if (read) {\n            (ok, t) = _readAnchor(k);\n            if (!ok) revert RefUnreadable();\n        }",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "19b3d0ced0e9d7b5"
   },
   {
    "id": "MU-114",
@@ -1253,7 +1351,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (r.token0() != Currency.unwrap(a.currency0) || r.token1() != Currency.unwrap(a.currency1)) revert BadRef();",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "03c8126aca55928d"
   },
   {
    "id": "MU-115",
@@ -1264,7 +1363,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "uint256 streak;",
    "replace": "uint256 streak = _resetStreak;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "eaaca591ad2054b0"
   },
   {
    "id": "MU-116",
@@ -1275,7 +1375,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "streak = _refGrid + 1 == k ? _resetStreak + 1 : 1;",
    "replace": "streak = _resetStreak + 1;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "eaaca591ad2054b0"
   },
   {
    "id": "MU-117",
@@ -1286,7 +1387,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "ExecLedger.swapFrac(before, z, amountIn, sRef);",
    "replace": "ExecLedger.swapFrac(before, z, amountIn, TickMath.getSqrtPriceAtTick(tickSpot));",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "70134f99366b0278"
   },
   {
    "id": "MU-118",
@@ -1297,7 +1399,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "ExecLedger.value(_holdings(), REF_SQRT_PRICE)",
    "replace": "ExecLedger.value(_holdings(), TickMath.getSqrtPriceAtTick(HOOK.obs().tickSpot))",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "2e6cc3d8723092ed"
   },
   {
    "id": "MU-119",
@@ -1308,7 +1411,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (ps.active) _cappedSwap(ps.zeroForOne, ps.amountIn, before, sRef, tickSpot, moveFrac);",
    "replace": "        if (ps.active) _cappedSwap(ps.zeroForOne, ps.amountIn, before, sRef, tickSpot, moveFrac);\n        if (place && ps.active) before = _holdings();",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "cc402908c59d9b1c"
   },
   {
    "id": "MU-120",
@@ -1319,7 +1423,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "        _armed = true;\n",
    "replace": "\n",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "32a135e43b64e1ec"
   },
   {
    "id": "MU-121",
@@ -1330,7 +1435,7 @@
    "file": null,
    "find": null,
    "replace": null,
-   "status": "pending"
+   "status": "PENDING"
   },
   {
    "id": "MU-122",
@@ -1341,7 +1446,7 @@
    "file": null,
    "find": null,
    "replace": null,
-   "status": "pending"
+   "status": "PENDING"
   },
   {
    "id": "MU-123",
@@ -1352,7 +1457,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "_burnBank(Op.Breach, abi.encode(n, now_))",
    "replace": "_burnBank(Op.Breach, abi.encode(uint32(1), now_))",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "9dac8dc86493ff56"
   },
   {
    "id": "MU-124",
@@ -1363,7 +1469,8 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "b.forfeitPool = _sat(uint256(b.forfeitPool) + forfeited);",
    "replace": "b.forfeitPool = _sat(forfeited);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "98651796aee24be4"
   },
   {
    "id": "MU-125",
@@ -1374,7 +1481,8 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "        (nb2, na2) = _legs(before, after_, sqrtRef);",
    "replace": "        (nb2, na2) = (nb, na);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "6d068d34db0a3794"
   },
   {
    "id": "MU-126",
@@ -1385,7 +1493,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "return _window(uint32(secondsAgo) + REF_WINDOW, uint32(secondsAgo));",
    "replace": "return _window(uint32(secondsAgo) + 12, uint32(secondsAgo));",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "8d7fb4805f6c7d18"
   },
   {
    "id": "MU-127",
@@ -1396,7 +1505,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "if (!ok) revert RefUnreadable();\n    }\n\n    function tryRef()",
    "replace": "\n    }\n\n    function tryRef()",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "29a583da4220c523"
   },
   {
    "id": "MU-128",
@@ -1407,7 +1517,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "address public immutable REF_POOL;",
    "replace": "address public REF_POOL;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "87cecb037917427a"
   },
   {
    "id": "MU-129",
@@ -1418,7 +1529,8 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "        return FullMath.mulDivRoundingUp(x, S, nav);",
    "replace": "        return FullMath.mulDiv(x, S, nav);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "addfbfba05807cb1"
   },
   {
    "id": "MU-130",
@@ -1429,7 +1541,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "if (FullMath.mulDiv(navRef, S_SEED - DEAD, S_SEED) < BOND_MIN) revert BondMin();",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "2e6cc3d8723092ed"
   },
   {
    "id": "MU-131",
@@ -1440,7 +1553,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "try this.witnessStep(epoch) returns (uint256 a, uint256 b, uint128 l) {\n            (fg0, fg1, lw) = (a, b, l);\n            // the flag describes the live witness: a failed roll leaves both unchanged\n            _witnessFallback = fallbackUsed;\n        } catch {}",
    "replace": "(fg0, fg1, lw) = this.witnessStep(epoch);\n        _witnessFallback = fallbackUsed;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "f92b12acca78acc0"
   },
   {
    "id": "MU-132",
@@ -1451,7 +1565,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            _epochSwapFrac = 0;\n            _swapCount = 0;\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "9dac8dc86493ff56"
   },
   {
    "id": "MU-133",
@@ -1462,7 +1577,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "ExecLedger.swapFrac(before, z, amountIn, sRef);",
    "replace": "ExecLedger.swapFrac(Holdings(0, _nav0, 0, 0, 0), z, amountIn, sRef);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "70134f99366b0278"
   },
   {
    "id": "MU-134",
@@ -1473,7 +1589,7 @@
    "file": null,
    "find": null,
    "replace": null,
-   "status": "pending"
+   "status": "PENDING"
   },
   {
    "id": "MU-135",
@@ -1484,7 +1600,8 @@
    "file": "src/TouchstoneFactory.sol",
    "find": "bytes32 sv = keccak256(abi.encode(msg.sender, saltV));",
    "replace": "bytes32 sv = saltV;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "cfee0cd627602ef4"
   },
   {
    "id": "MU-136",
@@ -1495,7 +1612,8 @@
    "file": "src/libraries/Placement.sol",
    "find": "        if (tickSpot < lo || tickSpot >= hi) return 4;",
    "replace": "        if (false) return 4;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "75837bf31ee9f876"
   },
   {
    "id": "MU-137",
@@ -1506,7 +1624,8 @@
    "file": "src/libraries/Placement.sol",
    "find": "        if (FullMath.mulDiv(amount0, inter, 1 << 128) >= d) return type(uint128).max;",
    "replace": "        if (false) return type(uint128).max;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "8fa5343379853db3"
   },
   {
    "id": "MU-138",
@@ -1517,7 +1636,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "// [MU-138] donations to the pool revert\n        revert HookNotImplemented();",
    "replace": "// [MU-138] donations to the pool revert\n        return IHooks.beforeDonate.selector;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "37b9d26c220063f0"
   },
   {
    "id": "MU-139",
@@ -1528,7 +1648,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "// [MU-139] the markout read covers exactly (now - a, now - b]\n        return _window(a, b);",
    "replace": "// [MU-139] the markout read covers exactly (now - a, now - b]\n        return _readRef(b);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "34b151450beaefb2"
   },
   {
    "id": "MU-140",
@@ -1539,7 +1660,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "&& (tick < hi - 1 || (tick == hi - 1",
    "replace": "&& (tick < hi || (tick == hi - 1",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "07ff5a1f4f73f6ff"
   },
   {
    "id": "MU-141",
@@ -1550,7 +1672,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "|| t.RESET_RUN < 2) revert BadTier();",
    "replace": ") revert BadTier();",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "533b537abf1d10d8"
   },
   {
    "id": "MU-142",
@@ -1561,7 +1684,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "< uint256(t.EDGE_DELAY) + 3 * uint256(t.GRID) + t.REF_WINDOW / (t.GRID_SEC / t.GRID)",
    "replace": "< 0",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "533b537abf1d10d8"
   },
   {
    "id": "MU-143",
@@ -1572,7 +1696,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "t.GRID_SEC == 0 || t.GRID_SEC % t.GRID != 0 ||",
    "replace": "t.GRID_SEC == 0 ||",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "533b537abf1d10d8"
   },
   {
    "id": "MU-144",
@@ -1583,7 +1708,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "t.W_TICKS <= 0 || t.W_TICKS % (2 * a.tickSpacing) != 0",
    "replace": "t.W_TICKS <= 0",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "03c8126aca55928d"
   },
   {
    "id": "MU-145",
@@ -1594,7 +1720,8 @@
    "file": "src/libraries/MedianOracle.sol",
    "find": "// [MU-145] the lower median of the newest min(count, 9) entries\n            return a[(n - 1) / 2];",
    "replace": "// [MU-145] the lower median of the newest min(count, 9) entries\n            return a[n / 2];",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "27ced5b28d5b5a5e"
   },
   {
    "id": "MU-146",
@@ -1605,7 +1732,8 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "        (uint256 nb2, uint256 na2) = _legs(before, after_, sqrtS0);",
    "replace": "        (uint256 nb2, uint256 na2) = (nb, na);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "c92620e75cefe427"
   },
   {
    "id": "MU-147",
@@ -1616,7 +1744,8 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "        ok = burn <= cover && burnR <= cover - burn;",
    "replace": "        ok = burn <= cover;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "c92620e75cefe427"
   },
   {
    "id": "MU-148",
@@ -1627,7 +1756,8 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "        pMk = TickMath.getSqrtPriceAtTick(_clamp(int256(tickMk) - feeTicks));",
    "replace": "        pMk = TickMath.getSqrtPriceAtTick(_clamp(int256(tickMk)));",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "360ccc3e72c7f932"
   },
   {
    "id": "MU-149",
@@ -1638,7 +1768,8 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "        if (extra > reserve) extra = reserve;",
    "replace": "        if (false) extra = reserve;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "360ccc3e72c7f932"
   },
   {
    "id": "MU-150",
@@ -1649,7 +1780,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        uint256 burnS = b.reserveShares;",
    "replace": "        uint256 burnS = 0;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "93ee3a453c3ed15e"
   },
   {
    "id": "MU-151",
@@ -1660,7 +1792,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        uint256 a = block.timestamp - tA - BLOCKTIME;",
    "replace": "        uint256 a = block.timestamp - tA;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "93ee3a453c3ed15e"
   },
   {
    "id": "MU-152",
@@ -1671,7 +1804,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        // [MU-152] no deposit while a curator action awaits its markout settlement\n        if (_tAction != 0) revert MarkoutPending();",
    "replace": "        // [MU-152] no deposit while a curator action awaits its markout settlement\n        if (false) revert MarkoutPending();",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "ed7650efc572c0f9"
   },
   {
    "id": "MU-153",
@@ -1682,7 +1816,8 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "if (b.reserveShares > 0) b.reserveForfeit = true;",
    "replace": "if (b.reserveShares > 0) { b.bondShares += b.reserveBond; b.reserveShares = 0; b.reserveBond = 0; }",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "86b141bcc0eabd7b"
   },
   {
    "id": "MU-154",
@@ -1693,7 +1828,8 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "uint256 fromNb = x < nonbond ? x : nonbond;",
    "replace": "uint256 fromNb = x > b.reserveBond ? x - b.reserveBond : 0;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "faa7badcaf55c832"
   },
   {
    "id": "MU-155",
@@ -1704,7 +1840,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        _charge(uint8(entry), before, s0, sSpot, sRef, maxCharge);",
    "replace": "        _charge(uint8(entry), before, sSpot, sSpot, sRef, maxCharge);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "587e1703ef272e0b"
   },
   {
    "id": "MU-156",
@@ -1715,7 +1852,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (charge + reserve > maxCharge) revert MaxCharge();\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "3e158f29434ffad4"
   },
   {
    "id": "MU-157",
@@ -1726,7 +1864,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "if (navAfter > NAV_MAX) revert NavCap();",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "b4f50921358571ee"
   },
   {
    "id": "MU-158",
@@ -1737,7 +1876,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "if (msg.sender != address(MANAGER)) revert OnlyPoolManager();",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "c46204559d867c9f"
   },
   {
    "id": "MU-159",
@@ -1748,7 +1888,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "uint256 d0 = FullMath.mulDivRoundingUp(_idle0, s, S);",
    "replace": "uint256 d0 = FullMath.mulDivRoundingUp(MANAGER.balanceOf(address(this), C0.toId()), s, S);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "ae94db6a4a5b1b85"
   },
   {
    "id": "MU-160",
@@ -1759,7 +1900,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "    function withdraw(uint256 shares, uint256 min0, uint256 min1, address to)\n        external\n        nonReentrant",
    "replace": "    function withdraw(uint256 shares, uint256 min0, uint256 min1, address to)\n        external",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "5c2a5b1ef9b4418a"
   },
   {
    "id": "MU-161",
@@ -1770,7 +1912,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "if (FullMath.mulDiv(navRef, S_SEED - DEAD, S_SEED) < BOND_MIN) revert BondMin();",
    "replace": "if (FullMath.mulDiv(navRef, S_SEED - DEAD, S_SEED) <= BOND_MIN) revert BondMin();",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "fed6bbbbd7d2584b"
   },
   {
    "id": "MU-162",
@@ -1781,7 +1924,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "uint256 dL = FullMath.mulDivRoundingUp(_L, s, S);",
    "replace": "uint256 dL = FullMath.mulDiv(_L, s, S);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "6b62d9427cff4d2a"
   },
   {
    "id": "MU-163",
@@ -1792,7 +1936,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "uint256 dL = FullMath.mulDiv(_L, s, S);",
    "replace": "uint256 dL = FullMath.mulDivRoundingUp(_L, s, S);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "12aa9954e81c7942"
   },
   {
    "id": "MU-164",
@@ -1803,7 +1948,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "o.refTick < hi && vestable) {",
    "replace": "o.refTick < hi) {",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "9dac8dc86493ff56"
   },
   {
    "id": "MU-165",
@@ -1814,7 +1960,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "o.refFresh && !o.emptyRange && ",
    "replace": "o.refFresh && ",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "9dac8dc86493ff56"
   },
   {
    "id": "MU-166",
@@ -1825,7 +1972,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            HOOK.ackBreaches(n);\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "9dac8dc86493ff56"
   },
   {
    "id": "MU-167",
@@ -1836,7 +1984,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (burned > 0) _burn(address(this), burned);\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "d1be9a1ad182d3db"
   },
   {
    "id": "MU-168",
@@ -1847,7 +1996,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (b.forfeitPool > 0) _burnBank(Op.Drip, abi.encode(now_));\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "9dac8dc86493ff56"
   },
   {
    "id": "MU-169",
@@ -1858,7 +2008,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "uint256(b.cohorts[k].epoch) + 1 + V) return true;",
    "replace": "uint256(b.cohorts[k].epoch) + V) return true;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "7d57156adc3c83ae"
   },
   {
    "id": "MU-170",
@@ -1869,7 +2020,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            _epoch = ne;\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "9dac8dc86493ff56"
   },
   {
    "id": "MU-171",
@@ -1880,7 +2032,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "Op.VestTime, abi.encode(ne, gateOpen))",
    "replace": "Op.VestTime, abi.encode(ne, true))",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "9dac8dc86493ff56"
   },
   {
    "id": "MU-172",
@@ -1891,7 +2044,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (entry == Entry.Settle) return \"\";\n        revert Ladder.BadMode();",
    "replace": "        if (entry == Entry.Settle) return \"\";\n        return _withdraw(payer, args);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "a12a9670aabb9896"
   },
   {
    "id": "MU-173",
@@ -1902,7 +2056,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (burned > 0) _burn(address(this), burned);",
    "replace": "        if (burned > 0) _burn(address(this), burned + 1);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "d1be9a1ad182d3db"
   },
   {
    "id": "MU-174",
@@ -1913,7 +2068,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (burned > 0) _burn(address(this), burned);",
    "replace": "        if (burned > 0) _burn(address(this), burned - 1);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "d1be9a1ad182d3db"
   },
   {
    "id": "MU-175",
@@ -1924,7 +2080,8 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "        uint160 pHi = TickMath.getSqrtPriceAtTick(_clamp(int256(tickMk) + feeTicks + 1));",
    "replace": "        uint160 pHi = TickMath.getSqrtPriceAtTick(_clamp(int256(tickMk) + feeTicks));",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "360ccc3e72c7f932"
   },
   {
    "id": "MU-176",
@@ -1935,7 +2092,8 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "        if (t > TickMath.MAX_TICK) return TickMath.MAX_TICK;",
    "replace": "        if (false) return TickMath.MAX_TICK;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "bba19650d40477d3"
   },
   {
    "id": "MU-177",
@@ -1946,7 +2104,8 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "        ok = burn <= cover && burnR <= cover - burn;",
    "replace": "        ok = burn + burnR <= cover;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "c92620e75cefe427"
   },
   {
    "id": "MU-178",
@@ -1957,7 +2116,8 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "        if (_worse(nb2, na2, nb, na)) (nb, na, pStar) = (nb2, na2, sqrtS0);",
    "replace": "        if (!_worse(nb, na, nb2, na2)) (nb, na, pStar) = (nb2, na2, sqrtS0);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "c92620e75cefe427"
   },
   {
    "id": "MU-179",
@@ -1968,7 +2128,8 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "        extra = loss > charge0 ? loss - charge0 : 0;",
    "replace": "        extra = loss;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "360ccc3e72c7f932"
   },
   {
    "id": "MU-180",
@@ -1979,7 +2140,8 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "        // [MU-180] the burn price is the smallest NAV_after over the legs\n        if (na2 < navBurn) navBurn = na2;",
    "replace": "        // [MU-180] the burn price is the smallest NAV_after over the legs\n        if (false) navBurn = na2;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "c92620e75cefe427"
   },
   {
    "id": "MU-181",
@@ -1990,7 +2152,8 @@
    "file": "src/libraries/Placement.sol",
    "find": "        return l < type(uint128).max ? l : type(uint128).max;",
    "replace": "        return l;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "5ab1a0ec98d0b4ba"
   },
   {
    "id": "MU-182",
@@ -2001,7 +2164,8 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "        if (_mulHi(reserveShares, navNow) < S && extra > FullMath.mulDiv(reserveShares, navNow, S)) {",
    "replace": "        if (extra > FullMath.mulDiv(reserveShares, navNow, S)) {",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "360ccc3e72c7f932"
   },
   {
    "id": "MU-183",
@@ -2012,7 +2176,8 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "        navBurn = na;\n",
    "replace": "        navBurn = type(uint256).max;\n",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "c92620e75cefe427"
   },
   {
    "id": "MU-184",
@@ -2023,7 +2188,8 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "        if (_mulHi(reserveShares, navNow) < S && extra",
    "replace": "        if (_mulHi(reserveShares, navNow) <= S && extra",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "360ccc3e72c7f932"
   },
   {
    "id": "MU-185",
@@ -2034,7 +2200,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        _settle();\n        Obs memory o = _prologue();",
    "replace": "        Obs memory o = _prologue();\n        _settle();",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "4bb59f1d71a659c8"
   },
   {
    "id": "MU-186",
@@ -2045,7 +2212,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (gasleft() < _settleGasMin()) revert RefGas();",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "93ee3a453c3ed15e"
   },
   {
    "id": "MU-187",
@@ -2056,7 +2224,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "abi.encode(burnS, uint32(block.number / EPOCH), uint40(block.number))",
    "replace": "abi.encode(burnS, _epoch, uint40(block.number))",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "93ee3a453c3ed15e"
   },
   {
    "id": "MU-188",
@@ -2067,7 +2236,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "block.timestamp < tA + 2 * BLOCKTIME + H_MARKOUT",
    "replace": "block.timestamp < tA + BLOCKTIME + H_MARKOUT",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "93ee3a453c3ed15e"
   },
   {
    "id": "MU-189",
@@ -2078,7 +2248,8 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "                    b.maturedPending = _sat(uint256(b.maturedPending) + s.shares);",
    "replace": "                    b.vestedUnclaimed = _sat(uint256(b.vestedUnclaimed) + s.shares);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "faa7badcaf55c832"
   },
   {
    "id": "MU-190",
@@ -2089,7 +2260,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "abi.encode(burnS, uint32(block.number / EPOCH), uint40(block.number))",
    "replace": "abi.encode(burnS, uint32(block.number / EPOCH), uint40(block.timestamp))",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "93ee3a453c3ed15e"
   },
   {
    "id": "MU-191",
@@ -2100,7 +2272,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        _tAction = 0;\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "93ee3a453c3ed15e"
   },
   {
    "id": "MU-192",
@@ -2111,7 +2284,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "if (charge + reserve > maxCharge) revert MaxCharge();",
    "replace": "if (charge > maxCharge) revert MaxCharge();",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "3e158f29434ffad4"
   },
   {
    "id": "MU-193",
@@ -2122,7 +2296,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "int24 ref = liveRead ? liveTick : HOOK.liveRef();",
    "replace": "int24 ref = liveRead || liveTick == 0 ? liveTick : HOOK.liveRef();",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "f99012ba09873030"
   },
   {
    "id": "MU-194",
@@ -2133,7 +2308,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        _delta0 = delta;\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "3e158f29434ffad4"
   },
   {
    "id": "MU-195",
@@ -2144,7 +2320,8 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "(uint256 navSpot,) = _value(before, sqrtSpot);",
    "replace": "(uint256 navSpot,) = _value(after_, sqrtSpot);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "1125e0691bc3b78b"
   },
   {
    "id": "MU-196",
@@ -2155,7 +2332,8 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "(uint256 navSpot,) = _value(before, sqrtSpot);",
    "replace": "(uint256 navSpot,) = _value(before, sqrtRef);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "1125e0691bc3b78b"
   },
   {
    "id": "MU-197",
@@ -2166,7 +2344,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "abi.encode(burn, burnR)",
    "replace": "abi.encode(burnR, burn)",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "3e158f29434ffad4"
   },
   {
    "id": "MU-198",
@@ -2177,7 +2356,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "abi.encode(burn, burnR)",
    "replace": "abi.encode(burn, uint256(0))",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "3e158f29434ffad4"
   },
   {
    "id": "MU-199",
@@ -2188,7 +2368,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "abi.encode(burn, burnR)",
    "replace": "abi.encode(uint256(0), burnR)",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "3e158f29434ffad4"
   },
   {
    "id": "MU-200",
@@ -2199,7 +2380,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (_L > 0) _book(_modify(0));",
    "replace": "        _book(_modify(0));",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "a740be35461f4a3b"
   },
   {
    "id": "MU-201",
@@ -2210,7 +2392,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "ExecLedger.swapFrac(before, z, paid, sRef)",
    "replace": "ExecLedger.swapFrac(before, z, amountIn, sRef)",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "ba7b6ddea70438cd"
   },
   {
    "id": "MU-202",
@@ -2221,7 +2404,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (amountIn > (z ? _idle0 : _idle1)) revert SwapCap();\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "ba7b6ddea70438cd"
   },
   {
    "id": "MU-203",
@@ -2232,7 +2416,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        _nav0 = _u128(nav);\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "3e158f29434ffad4"
   },
   {
    "id": "MU-204",
@@ -2243,7 +2428,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "(uint40(block.timestamp), before, after_, _u128(charge), _u128(reserve))",
    "replace": "(uint40(0), before, after_, _u128(charge), _u128(reserve))",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "3e158f29434ffad4"
   },
   {
    "id": "MU-205",
@@ -2254,7 +2440,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        _lastAction = uint40(block.number);\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "3e158f29434ffad4"
   },
   {
    "id": "MU-206",
@@ -2265,7 +2452,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "if (dist > REF_BAND || -dist > REF_BAND) revert Fence();",
    "replace": "if (dist > REF_BAND) revert Fence();",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "8517e4ff4fa57bfc"
   },
   {
    "id": "MU-207",
@@ -2276,7 +2464,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        ++_swapCount;\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "ba7b6ddea70438cd"
   },
   {
    "id": "MU-208",
@@ -2287,7 +2476,8 @@
    "file": "src/libraries/ExecLedger.sol",
    "find": "(nav, pos) = _value(after_, sqrtRef);",
    "replace": "(nav, pos) = _value(after_, sqrtSpot);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "1125e0691bc3b78b"
   },
   {
    "id": "MU-209",
@@ -2298,7 +2488,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "if (frac + used > MAX_SWAP_ACTION || _epochSwapFrac + frac > MAX_SWAP_EPOCH) revert SwapCap();",
    "replace": "if (frac + used > MAX_SWAP_ACTION) revert SwapCap();",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "ba7b6ddea70438cd"
   },
   {
    "id": "MU-210",
@@ -2309,7 +2500,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "int24 ref = liveRead ? liveTick : HOOK.liveRef();",
    "replace": "int24 ref = HOOK.liveRef();",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "f99012ba09873030"
   },
   {
    "id": "MU-211",
@@ -2320,7 +2512,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        _burn(address(this), burned);\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "3e158f29434ffad4"
   },
   {
    "id": "MU-212",
@@ -2331,7 +2524,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (dist > REF_BAND || -dist > REF_BAND) revert Fence();\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "8517e4ff4fa57bfc"
   },
   {
    "id": "MU-213",
@@ -2342,7 +2536,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "emit Action(kind, charge, pStar, bankBurn, bondBurn);",
    "replace": "emit Action(kind, charge, pStar, bondBurn, bankBurn);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "3e158f29434ffad4"
   },
   {
    "id": "MU-214",
@@ -2353,7 +2548,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "_u128(charge), _u128(reserve))",
    "replace": "_u128(charge), _u128(charge))",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "3e158f29434ffad4"
   },
   {
    "id": "MU-215",
@@ -2364,7 +2560,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "(uint40(block.timestamp), before, after_,",
    "replace": "(uint40(block.timestamp), after_, before,",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "3e158f29434ffad4"
   },
   {
    "id": "MU-216",
@@ -2375,7 +2572,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "so one still pending is not due\n        if (_tAction != 0) revert MarkoutPending();\n",
    "replace": "so one still pending is not due\n",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "8517e4ff4fa57bfc"
   },
   {
    "id": "MU-217",
@@ -2386,7 +2584,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "z ? tickSpot - (FEE_TICKS + BAND_SWAP) : tickSpot + (FEE_TICKS + BAND_SWAP)",
    "replace": "z ? tickSpot - FEE_TICKS : tickSpot + FEE_TICKS",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "ba7b6ddea70438cd"
   },
   {
    "id": "MU-218",
@@ -2397,7 +2596,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        // [MU-218] idle moves by the amounts actually swapped\n        _book(d);",
    "replace": "        // [MU-218] idle moves by the amounts actually swapped\n        _book(d);\n        if (z) _idle0 -= amountIn - uint128(-d.amount0());\n        else _idle1 -= amountIn - uint128(-d.amount1());",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "ba7b6ddea70438cd"
   },
   {
    "id": "MU-219",
@@ -2408,7 +2608,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            _removeToIdle();\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "587e1703ef272e0b"
   },
   {
    "id": "MU-220",
@@ -2419,7 +2620,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            if (moveTo != 0 && moveTo != s0) {",
    "replace": "            if (moveTo != 0) {",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "587e1703ef272e0b"
   },
   {
    "id": "MU-221",
@@ -2430,7 +2632,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "                zm = moveTo < s0;",
    "replace": "                zm = moveTo > s0;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "587e1703ef272e0b"
   },
   {
    "id": "MU-222",
@@ -2441,7 +2644,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "                if (paidMove > (zm ? _idle0 : _idle1)) revert SwapCap();\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "587e1703ef272e0b"
   },
   {
    "id": "MU-223",
@@ -2452,7 +2656,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (moveTo != 0 && sSpot != moveTo) revert Move();\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "587e1703ef272e0b"
   },
   {
    "id": "MU-224",
@@ -2463,7 +2668,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        _guards(tickSpot, ref);",
    "replace": "        _guards(TickMath.getTickAtSqrtPrice(s0), ref);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "587e1703ef272e0b"
   },
   {
    "id": "MU-225",
@@ -2474,7 +2680,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        uint64 deltaAfter;\n",
    "replace": "        uint64 deltaAfter;\n        if (place) {\n            (, int24 tAfter,,) = MANAGER.getSlot0(POOL_ID);\n            if (Placement.check(lo, hi, tAfter, ref, REF_BAND, W_TICKS, SPACING) != 0) revert NotContained();\n        }\n",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "587e1703ef272e0b"
   },
   {
    "id": "MU-226",
@@ -2485,7 +2692,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            if (code == 2) revert Width();\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "587e1703ef272e0b"
   },
   {
    "id": "MU-227",
@@ -2496,7 +2704,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            if (code == 3) revert Alignment();\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "587e1703ef272e0b"
   },
   {
    "id": "MU-228",
@@ -2507,7 +2716,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            (uint160 sNow,,,) = MANAGER.getSlot0(POOL_ID);",
    "replace": "            uint160 sNow = sSpot;",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "587e1703ef272e0b"
   },
   {
    "id": "MU-229",
@@ -2518,7 +2728,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "                _book(_modify(int256(uint256(L))));",
    "replace": "                L += L / 1e9 + 1;\n                _book(_modify(int256(uint256(L))));",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "587e1703ef272e0b"
   },
   {
    "id": "MU-230",
@@ -2529,7 +2740,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            HOOK.setVaultRange(lo, hi, ref);",
    "replace": "            HOOK.setVaultRange(lo + SPACING, hi, ref);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "cc402908c59d9b1c"
   },
   {
    "id": "MU-231",
@@ -2540,7 +2752,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            HOOK.setVaultRange(lo, hi, ref);",
    "replace": "            HOOK.setVaultRange(lo, hi + SPACING, ref);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "cc402908c59d9b1c"
   },
   {
    "id": "MU-232",
@@ -2551,7 +2764,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            HOOK.setVaultRange(lo, hi, ref);",
    "replace": "            HOOK.setVaultRange(lo, hi, tickSpot);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "cc402908c59d9b1c"
   },
   {
    "id": "MU-233",
@@ -2562,7 +2776,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            FeeBank.bankApply(_bank, Op.Place, \"\");",
    "replace": "            FeeBank.bankApply(_bank, Op.Claim, \"\");",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "cc402908c59d9b1c"
   },
   {
    "id": "MU-234",
@@ -2573,7 +2788,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            FeeBank.bankApply(_bank, Op.Place, \"\");",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "cc402908c59d9b1c"
   },
   {
    "id": "MU-235",
@@ -2584,7 +2800,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            if (L > 0) {",
    "replace": "            if (true) {",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "587e1703ef272e0b"
   },
   {
    "id": "MU-236",
@@ -2595,7 +2812,8 @@
    "file": "src/periphery/CuratorBundler.sol",
    "find": "        if (msg.sender != address(MANAGER)) revert OnlyPoolManager();",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "689ba318c5621614"
   },
   {
    "id": "MU-237",
@@ -2606,7 +2824,8 @@
    "file": "src/periphery/CuratorBundler.sol",
    "find": "        if (dist > int256(uint256(tol)) || -dist > int256(uint256(tol))) revert Tolerance();",
    "replace": "        if (dist > int256(uint256(tol))) revert Tolerance();",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "89d3011f55141c43"
   },
   {
    "id": "MU-238",
@@ -2617,7 +2836,8 @@
    "file": "src/periphery/CuratorBundler.sol",
    "find": "        if (address(vault) != address(0)) revert Deployed();",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "adaf951aabf7e34e"
   },
   {
    "id": "MU-239",
@@ -2628,7 +2848,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            if (moveFrac > MAX_SWAP_ACTION || _epochSwapFrac + moveFrac > MAX_SWAP_EPOCH) revert SwapCap();",
    "replace": "            if (_epochSwapFrac + moveFrac > MAX_SWAP_EPOCH) revert SwapCap();",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "587e1703ef272e0b"
   },
   {
    "id": "MU-240",
@@ -2639,7 +2860,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            if (moveFrac > MAX_SWAP_ACTION || _epochSwapFrac + moveFrac > MAX_SWAP_EPOCH) revert SwapCap();",
    "replace": "            if (moveFrac > MAX_SWAP_ACTION) revert SwapCap();",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "587e1703ef272e0b"
   },
   {
    "id": "MU-241",
@@ -2650,7 +2872,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            _epochSwapFrac += uint64(moveFrac);\n",
    "replace": "",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "587e1703ef272e0b"
   },
   {
    "id": "MU-242",
@@ -2661,7 +2884,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (frac + used > MAX_SWAP_ACTION || _epochSwapFrac + frac > MAX_SWAP_EPOCH) revert SwapCap();",
    "replace": "        if (frac > MAX_SWAP_ACTION || _epochSwapFrac + frac > MAX_SWAP_EPOCH) revert SwapCap();",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "49084d37bf6ff1a8"
   },
   {
    "id": "MU-243",
@@ -2672,7 +2896,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "            moveFrac = ExecLedger.swapFrac(before, zm, paidMove, sRef);",
    "replace": "            moveFrac = ExecLedger.swapFrac(before, !zm, paidMove, sRef);",
-   "status": "KILLED"
+   "status": "KILLED",
+   "basis": "587e1703ef272e0b"
   }
  ]
 }

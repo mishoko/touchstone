@@ -259,7 +259,7 @@ contract VaultHandler is Test {
                 frac = ExecLedger.swapFrac(h, z, amt, TickMath.getSqrtPriceAtTick(ref));
             }
         }
-        bool overCap = frac > tr.MAX_SWAP_ACTION || hv.scalars().epochSwapFrac + frac > tr.MAX_SWAP_EPOCH;
+        bool overCap = frac > tr.MAX_SWAP_ACTION || _epochUsed(tr) + frac > tr.MAX_SWAP_EPOCH;
         (, bool due, bool ok) = _expectedSettleBurn();
         vm.prank(hv.curator());
         try hv.rebalanceSwap(z, uint128(amt), type(uint256).max) {
@@ -344,7 +344,7 @@ contract VaultHandler is Test {
         bool capOk = moveTo != 0 || !ok;
         if (!capOk && ps.active) {
             uint256 f = ExecLedger.swapFrac(h, ps.zeroForOne, ps.amountIn, TickMath.getSqrtPriceAtTick(ref));
-            capOk = f > tr.MAX_SWAP_ACTION || hv.scalars().epochSwapFrac + f > tr.MAX_SWAP_EPOCH;
+            capOk = f > tr.MAX_SWAP_ACTION || _epochUsed(tr) + f > tr.MAX_SWAP_EPOCH;
         }
         ++placeCalls;
         (, bool due, bool okS) = _expectedSettleBurn();
@@ -393,6 +393,16 @@ contract VaultHandler is Test {
         bool mayExit;
     }
 
+    /// @dev The action's prologue rolls the epoch first when `block.number / EPOCH` exceeds the vault's epoch (fix review
+    ///      S13-04): the swap counters the action then sees are zero.
+    function _rolls(Tier memory tr) internal view returns (bool) {
+        return vm.getBlockNumber() / tr.EPOCH > hv.scalars().epoch;
+    }
+
+    function _epochUsed(Tier memory tr) internal view returns (uint256) {
+        return _rolls(tr) ? 0 : hv.scalars().epochSwapFrac;
+    }
+
     function _placeExpect(
         Tier memory tr,
         Holdings memory h,
@@ -409,7 +419,8 @@ contract VaultHandler is Test {
         x.fenceOk = ok && dist <= tr.REF_BAND && -dist <= tr.REF_BAND;
         uint256 la = hv.lastAction();
         x.cooling = la != 0 && vm.getBlockNumber() < la + tr.COOLDOWN;
-        x.swapsOut = hv.scalars().swapCount >= tr.MAX_SWAPS;
+        // the prologue rolls the epoch (and restarts both swap counters) when block.number / EPOCH has moved on
+        x.swapsOut = !_rolls(tr) && hv.scalars().swapCount >= tr.MAX_SWAPS;
         (,,,,, uint8 mode,) = hv.bank();
         x.mayExit = mode == Ladder.EXITED || hook.obs().pendingBreaches > 0;
         // δ_after on the idle the removal leaves (fees swept first) at this spot and the live reference; a move or a

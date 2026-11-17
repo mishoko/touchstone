@@ -23,19 +23,36 @@ contract M2dTest is CellBase {
     function test_M_2d__oneShotPushAndPlacementLoses(uint8 st, int24 d, uint256 loSeed, uint8 mode, uint8 kIdx)
         public
     {
+        _assertLoses(_oneShot(st, int24(bound(d, 20, 60)), loSeed, mode, kIdx), "M-2d one-shot");
+    }
+
+    /// @dev One one-shot row (shared by the fuzz row and its acted-share loop): exit state `1 + st % 2`, a push of `d`
+    ///      (negated when `mode` is odd), an in-range legal range (`mode % 3 == 0`) or an edge target, depth `KS[kIdx]`.
+    function _oneShot(uint256 st, int24 d, uint256 loSeed, uint8 mode, uint256 kIdx) internal returns (Out memory o) {
         _pickState(1 + st % 2);
-        d = int24(bound(d, 20, 60));
         if (mode & 1 == 1) d = -d;
         _thirdPartyDepth(KS[kIdx % 5]);
-        Out memory o;
         if (mode % 3 == 0) {
             int24 s = market + d;
-            o = _attackPlace(_sqrt(s), _legalLo(s, market, loSeed), _none(), 0);
-        } else {
-            (uint160 ps, int24 lo) = _edge(d, mode % 3 == 2);
-            o = _attackPlace(ps, lo, _none(), 0);
+            return _attackPlace(_sqrt(s), _legalLo(s, market, loSeed), _none(), 0);
         }
-        _assertLoses(o, "M-2d one-shot");
+        (uint160 ps, int24 lo) = _edge(d, mode % 3 == 2);
+        return _attackPlace(ps, lo, _none(), 0);
+    }
+
+    /// @notice The one-shot fuzz row's acted share (fix review S14-06): 36 deterministic draws over the same axes (state,
+    ///         push, range or edge target, depth); every row loses, and most act.
+    function test_M_2d__oneShotRowsAct() public {
+        uint256 acted;
+        for (uint256 i; i < 36; ++i) {
+            uint256 snap = vm.snapshotState();
+            Out memory o = _oneShot(i, int24(int256(20 + (i * 7) % 41)), i * 7919, uint8(i % 6), (i / 6) % 5);
+            _assertLoses(o, "M-2d one-shot");
+            if (!o.reverted && o.charge0 + o.extra > 0) ++acted;
+            vm.revertToState(snap);
+        }
+        console.log("M-2d one-shot rows acted and charged of 36", acted);
+        assertGe(acted, 18, "non-vacuity: at least half the one-shot rows act");
     }
 
     /// @notice Lag lane (fuzz): the reference lags the market by up to 60 ticks either side; spot pushed anywhere within
@@ -79,6 +96,36 @@ contract M2dTest is CellBase {
         }
         console.log("M-2d lag grid: rows acted and charged", acted, "of 72");
         assertGe(acted, 24, "non-vacuity");
+    }
+
+    /// @notice Positive control of the lag lane (fix review S14-03; spec §8 G0 item 1b, "reference leg off ⇒ rate > 0"):
+    ///         the lag grid with the markout reading the lagging reference instead of the market (`_refFollows(ref)`:
+    ///         the markout legs off, nothing else changed). The best row profits, so the markout legs are what make the
+    ///         lane lose.
+    function test_M_2d__ctlLagLaneWithoutMarkoutProfits() public {
+        int24[3] memory ls = [int24(20), 40, 60];
+        int256 best = type(int256).min;
+        for (uint256 st; st < 3; ++st) {
+            uint256 snap = vm.snapshotState();
+            _pickState(st);
+            uint256 snap2 = vm.snapshotState();
+            for (uint256 i; i < 3; ++i) {
+                for (uint256 sg; sg < 4; ++sg) {
+                    for (uint256 e; e < 2; ++e) {
+                        int24 lag = sg % 2 == 0 ? ls[i] : -ls[i];
+                        int24 ref = market - lag;
+                        _refFollows(ref);
+                        int24 s = ref + (sg < 2 ? int24(60) : int24(-60));
+                        Out memory o = _attackPlace(_sqrt(s), _legalLo(s, ref, e == 0 ? 0 : 1e9), _none(), 0);
+                        if (!o.reverted && o.net > best) best = o.net;
+                        vm.revertToState(snap2);
+                    }
+                }
+            }
+            vm.revertToState(snap);
+        }
+        console.log("M-2d lag-lane control: best net (wei)", best);
+        assertGt(best, 0, "control: without the markout at the market the lag lane profits");
     }
 
     /// @dev The reference reads `ref` over its TWAP window up to now and the market from the next block.

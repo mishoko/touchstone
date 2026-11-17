@@ -3,27 +3,25 @@ pragma solidity 0.8.26;
 
 import {ExecLedger} from "../../src/libraries/ExecLedger.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
+import {Markout} from "../../src/types/Markout.sol";
 
 /// @notice `ExecLedger.settleExtra` reads the pending record through storage pointers (the vault passes its own); a
-///         test that uses it as an oracle on in-memory holdings stores them here first.
+///         test that uses it as an oracle on in-memory values stores them here first.
 abstract contract SettleExtraOracle {
     Holdings internal _oracleBefore;
     Holdings internal _oracleAfter;
+    Markout internal _oracleMarkout;
 
     function _settleExtra(
         Holdings memory before,
         Holdings memory after_,
+        Markout memory m,
         int24 tickMk,
         int24 feeTicks,
-        uint256 charge0,
-        uint256 reserve,
-        Holdings memory now_,
-        uint256 S,
+        uint24 feePips,
         uint256 reserveShares
     ) internal returns (uint256 extra, uint160 pMk, uint256 burnS) {
-        (_oracleBefore, _oracleAfter) = (before, after_);
-        return ExecLedger.settleExtra(
-            _oracleBefore, _oracleAfter, tickMk, feeTicks, charge0, reserve, now_, S, reserveShares
-        );
+        (_oracleBefore, _oracleAfter, _oracleMarkout) = (before, after_, m);
+        return ExecLedger.settleExtra(_oracleBefore, _oracleAfter, _oracleMarkout, tickMk, feeTicks, feePips, reserveShares);
     }
 }

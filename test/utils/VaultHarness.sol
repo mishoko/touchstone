@@ -10,6 +10,9 @@ import {LiquidityAmounts} from "@uniswap/v4-periphery/src/libraries/LiquidityAmo
 import {TouchstoneVault} from "../../src/TouchstoneVault.sol";
 import {Obs} from "../../src/types/Obs.sol";
 import {Entry} from "../../src/types/Entry.sol";
+import {Markout} from "../../src/types/Markout.sol";
+import {SettleS14} from "./SettleS14.sol";
+import {Op} from "../../src/types/Bank.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
 import {Bank, Op, RING} from "../../src/types/Bank.sol";
 import {FeeBank} from "../../src/libraries/FeeBank.sol";
@@ -224,6 +227,30 @@ contract VaultHarness is TouchstoneVault {
         gasGuardOff = off;
     }
 
+    /// @dev The positive control of M-ADV3-move (F-044): the s14 settlement in place of the fee-aware one.
+    bool internal _settleS14;
+
+    function setSettleS14(bool on) external {
+        _settleS14 = on;
+    }
+
+    /// @dev The production settlement, or (control) the s14 arithmetic on the same record, window read and bank op.
+    function _settle() internal override {
+        if (!_settleS14) return super._settle();
+        uint256 tA = _tAction;
+        if (tA == 0 || block.timestamp < tA + 2 * BLOCKTIME + H_MARKOUT) return;
+        uint256 a = block.timestamp - tA - BLOCKTIME;
+        (bool ok, int24 tickMk) = HOOK.tryWindow(uint32(a), uint32(a - H_MARKOUT));
+        uint256 burnS = _bank.reserveShares;
+        if (ok) {
+            (, burnS) = SettleS14.settleExtra(
+                _pBefore, _pAfter, tickMk, FEE_TICKS, _pend.charge0, _pend.reserve, _holdings(), totalSupply(), burnS
+            );
+        }
+        _tAction = 0;
+        _burnBank(Op.Settle, abi.encode(burnS, uint32(block.number / EPOCH), uint40(block.number)));
+    }
+
     function _settleGasMin() internal view override returns (uint256) {
         return gasGuardOff ? 0 : super._settleGasMin();
     }
@@ -232,7 +259,22 @@ contract VaultHarness is TouchstoneVault {
     function setPending(uint40 tA, Holdings calldata before, Holdings calldata after_, uint128 charge0, uint128 reserve)
         external
     {
-        (_tAction, _pBefore, _pAfter, _pCharge0, _pReserve) = (tA, before, after_, charge0, reserve);
+        (_tAction, _pBefore, _pAfter) = (tA, before, after_);
+        // the fee terms' start spots at the current spot, no immediate burn, the live supply (`setMarkout` overrides)
+        (uint160 sp,,,) = MANAGER.getSlot0(POOL_ID);
+        _pend = Markout(charge0, reserve, sp, sp, 0, _u128(totalSupply()));
+    }
+
+    function setMarkout(Markout calldata m) external {
+        _pend = m;
+    }
+
+    function markout() external view returns (Markout memory) {
+        return _pend;
+    }
+
+    function feePips() external view returns (uint24) {
+        return FEE;
     }
 
     function pendingAction()
@@ -240,7 +282,7 @@ contract VaultHarness is TouchstoneVault {
         view
         returns (uint40 tA, Holdings memory before, Holdings memory after_, uint128 charge0, uint128 reserve)
     {
-        return (_tAction, _pBefore, _pAfter, _pCharge0, _pReserve);
+        return (_tAction, _pBefore, _pAfter, _pend.charge0, _pend.reserve);
     }
 
     // ------------------------------------------------------------------ scripted checkpoint

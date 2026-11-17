@@ -6,6 +6,8 @@ import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {Holdings} from "../types/Holdings.sol";
 import {LiquidityValue} from "./LiquidityValue.sol";
 import {Placement} from "./Placement.sol";
+import {Markout} from "../types/Markout.sol";
+import {SqrtPriceMath} from "@uniswap/v4-core/src/libraries/SqrtPriceMath.sol";
 
 /// @title ExecLedger
 /// @notice The execution ledger, a coarse-linked external library: valuation (`value`), the immediate charge of a
@@ -14,6 +16,8 @@ import {Placement} from "./Placement.sol";
 ///         token1 units; every function is pure.
 library ExecLedger {
     uint256 internal constant WAD = 1e18;
+    /// @dev The relative margin on the after holding's fee credit, in pips (spec §3.4).
+    uint256 internal constant CREDIT_MARGIN = 1000;
 
     /// @notice NAV of `h` at sqrt price `sqrtP` and the value of its position alone, both in token1 units (floor).
     function value(Holdings calldata h, uint160 sqrtP) external pure returns (uint256 nav, uint256 posValue) {
@@ -118,50 +122,107 @@ library ExecLedger {
         ok = burn <= cover && burnR <= cover - burn;
     }
 
-    /// @notice The markout settlement's extra charge with a successful window read: the worse of the legs
-    ///         `sqrtAt(max(MIN_TICK, tickMk − feeTicks))` and `sqrtAt(min(MAX_TICK, tickMk + feeTicks + 1))` (the upper
-    ///         leg rounded up, since `tickMk` is the floor of the window's mean; the lower leg on a tie), net of the
-    ///         immediate charge and capped at the reserve; the reserve shares to burn, rounded up at `NAV(now, pMk)`
-    ///         and capped at `reserveShares` (all of them if that NAV is 0 and extra > 0). No revert path on the legs.
+    /// @notice The markout settlement with a successful window read (spec §3.4, the fee-aware settlement): at each leg
+    ///         `sqrtAt(max(MIN_TICK, tickMk − feeTicks))`, `sqrtAt(tickMk)`, `sqrtAt(min(MAX_TICK, tickMk + feeTicks + 1))`
+    ///         the holdings before (from `s0`, every rounding up) and after (from `sEnd`, every rounding down, less the
+    ///         credit margins) are valued with the arbitrage fee their positions earn while spot is carried to the leg;
+    ///         the leg with the largest loss fraction `g/nb` is chosen; the burn re-prices the whole charge there:
+    ///         `burnS = min(reserveShares, max(0, ceilDiv(loss·sAct, nb) − burn0))`, and `extra` is its value
+    ///         `burnS·nb/sAct`. No revert path for valid holdings, prices and a static fee below 10⁶.
     function settleExtra(
         Holdings storage before,
         Holdings storage after_,
+        Markout storage pend,
         int24 tickMk,
         int24 feeTicks,
-        uint256 charge0,
-        uint256 reserve,
-        Holdings calldata now_,
-        uint256 S,
+        uint24 feePips,
         uint256 reserveShares
     ) external view returns (uint256 extra, uint160 pMk, uint256 burnS) {
-        // `view`: the pending record is read here, through the vault's storage pointers (the vault's size lever; solc
-        // does not class a read through a storage-reference parameter as a state read and suggests `pure`)
+        // `view`: the pending record is read here, through the vault's storage pointers (the vault's size lever)
         Holdings memory b = before;
         // [MU-245]
         Holdings memory a = after_;
-        // [MU-148] the legs sit FEE_TICKS outside the markout tick
-        // [MU-175] the upper leg is rounded up; [MU-176] both legs are clamped to the tick range
-        pMk = TickMath.getSqrtPriceAtTick(_clamp(int256(tickMk) - feeTicks));
-        uint160 pHi = TickMath.getSqrtPriceAtTick(_clamp(int256(tickMk) + feeTicks + 1));
-        (uint256 nb, uint256 na) = _legs(b, a, pMk);
-        (uint256 nb2, uint256 na2) = _legs(b, a, pHi);
-        if (_worse(nb2, na2, nb, na)) (nb, na, pMk) = (nb2, na2, pHi);
-        uint256 loss = nb > na ? nb - na : 0;
-        // [MU-149] [MU-179] net of the immediate charge, capped at the reserve
-        extra = loss > charge0 ? loss - charge0 : 0;
-        if (extra > reserve) extra = reserve;
-        if (extra == 0) return (0, pMk, 0);
-        (uint256 navNow,) = _value(now_, pMk);
-        if (navNow == 0) return (extra, pMk, reserveShares);
-        // overflow-free cap: ceilDiv(extra·S, navNow) > reserveShares ⇔ extra > floor(reserveShares·navNow/S). When that
-        // floor exceeds 2^256 the cap cannot bind, and then extra·S/navNow < 1 for uint128 extra and reserveShares (the
-        // two quotients multiply to extra·reserveShares < 2^256), so the rounded-up division below never overflows.
-        if (S == 0) return (extra, pMk, 0);
-        // [MU-182] [MU-184] the cap's division is taken only when it fits (strictly: equality overflows)
-        if (_mulHi(reserveShares, navNow) < S && extra > FullMath.mulDiv(reserveShares, navNow, S)) {
-            return (extra, pMk, reserveShares);
+        Markout memory pd = pend;
+        // the chosen leg: (g > 0, |g|, nb, p)
+        bool pos;
+        uint256 g;
+        uint256 nb;
+        for (uint256 i; i < 3; ++i) {
+            // [MU-148] [MU-175] [MU-176] [MU-246] lower (FEE_TICKS out, clamped), centre, upper (rounded up, clamped)
+            int256 t = i == 0 ? int256(tickMk) - feeTicks : (i == 1 ? int256(tickMk) : int256(tickMk) + feeTicks + 1);
+            uint160 p = TickMath.getSqrtPriceAtTick(_clamp(t));
+            (uint256 nbi,) = _value(b, p);
+            (uint256 nai,) = _value(a, p);
+            // [MU-247] the before holding's arbitrage fee, rounded up; [MU-248] the after holding's credit, rounded down
+            nbi = _satAdd(nbi, _arbFee(b, pd.s0, p, true, feePips));
+            nai = _satAdd(nai, _arbFee(a, pd.sEnd, p, false, feePips));
+            bool posi = nbi > nai;
+            uint256 gi = posi ? nbi - nai : 0;
+            // [MU-249] a positive leg replaces a non-positive one; between positive legs, the larger g/nb
+            if (i == 0 || (posi && (!pos || _gt512(gi, nb, g, nbi)))) (pos, g, nb, pMk) = (posi, gi, nbi, p);
         }
-        burnS = FullMath.mulDivRoundingUp(extra, S, navNow);
+        if (!pos || pd.sAct == 0) return (0, pMk, 0);
+        // [MU-250] [MU-182] the whole charge re-priced at the leg, rounded up; the quotient is ≤ sAct because g ≤ nb
+        uint256 req = FullMath.mulDivRoundingUp(g, pd.sAct, nb);
+        // [MU-179] net of the immediate burn
+        burnS = req > pd.burn0 ? req - pd.burn0 : 0;
+        // [MU-149] capped by the reserve's shares
+        if (burnS > reserveShares) burnS = reserveShares;
+        // [MU-252] the burn's value
+        extra = FullMath.mulDiv(burnS, nb, pd.sAct);
+    }
+
+    /// @dev `F(h, s, p, up)` of spec §3.4: the LP fee `h`'s position earns from an exact-input swap that carries spot from
+    ///      `s` to `p`, in token1 at `p`. Before (`up`): every rounding up. After (the credit): every rounding down, less
+    ///      `(hi − lo) + 2` units of the fee's token before valuation and less `CREDIT_MARGIN` pips after.
+    function _arbFee(Holdings memory h, uint160 s, uint160 p, bool up, uint24 feePips) private pure returns (uint256) {
+        if (h.L == 0 || p == s) return 0;
+        uint160 x = s < p ? s : p;
+        uint160 y = s < p ? p : s;
+        uint160 sa = TickMath.getSqrtPriceAtTick(h.lo);
+        uint160 sb = TickMath.getSqrtPriceAtTick(h.hi);
+        if (x < sa) x = sa;
+        if (y > sb) y = sb;
+        if (y <= x) return 0;
+        // [MU-253] a down move pays token0 in, an up move token1
+        bool down = p < s;
+        uint256 amt =
+            down ? SqrtPriceMath.getAmount0Delta(x, y, h.L, up) : SqrtPriceMath.getAmount1Delta(x, y, h.L, up);
+        uint256 den = 1e6 - feePips;
+        if (up) {
+            uint256 fu = FullMath.mulDivRoundingUp(amt, feePips, den);
+            return down ? _qUp(fu, p) : fu;
+        }
+        uint256 f = FullMath.mulDiv(amt, feePips, den);
+        // [MU-254] the absolute margin: v4's per-step fee growth floors
+        uint256 m = uint256(int256(h.hi) - h.lo) + 2;
+        f = f > m ? f - m : 0;
+        if (down) f = LiquidityValue.q(f, p);
+        // [MU-255] the relative margin
+        return FullMath.mulDiv(f, 1e6 - CREDIT_MARGIN, 1e6);
+    }
+
+    /// @dev `q` rounded up.
+    function _qUp(uint256 x, uint160 s) private pure returns (uint256) {
+        if (s <= type(uint128).max) return FullMath.mulDivRoundingUp(uint256(s) * s, x, 1 << 192);
+        return FullMath.mulDivRoundingUp(FullMath.mulDivRoundingUp(s, s, 1 << 64), x, 1 << 128);
+    }
+
+    function _satAdd(uint256 a, uint256 b) private pure returns (uint256) {
+        unchecked {
+            uint256 c = a + b;
+            return c < a ? type(uint256).max : c;
+        }
+    }
+
+    /// @dev `a·b > c·d` over 512-bit products. [MU-184]
+    function _gt512(uint256 a, uint256 b, uint256 c, uint256 d) private pure returns (bool) {
+        uint256 h1 = _mulHi(a, b);
+        uint256 h2 = _mulHi(c, d);
+        if (h1 != h2) return h1 > h2;
+        unchecked {
+            return a * b > c * d;
+        }
     }
 
     /// @notice `Placement.size` for the vault's actions (coarse-linked, so the sizing code lives outside the vault).

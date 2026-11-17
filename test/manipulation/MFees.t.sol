@@ -107,20 +107,24 @@ contract M3Test is FeeRows {
         }
     }
 
-    /// @notice The swap's charge with the wash equals the charge without it (to 1 wei).
-    function test_M_3__rebalanceSwapChargeUnchangedByTheWash(uint8 w, bool deep) public {
-        w = uint8(w % 3);
-        if (deep) _thirdPartyDepth(1e18);
-        uint256 snap = vm.snapshotState();
-        (bool r1,) = _try(_callSwap(true, _amt0(2e16)));
-        (uint256 cNo,) = _pendingCharge();
-        vm.revertToState(snap);
-        _wash(XS[w], NS[w], true);
-        (bool r2,) = _try(_callSwap(true, _amt0(2e16)));
-        (uint256 cWash,) = _pendingCharge();
-        assertFalse(r1 || r2, "both swaps act");
-        assertGt(cNo, 0, "charged");
-        assertApproxEqAbs(cWash, cNo, 1, "the charge does not depend on the wash");
+    /// @notice The swap's charge with the wash equals the charge without it (to 1 wei), for each of the three washes
+    ///         at third-party depth 0 and 1 (a loop: the domain has six values).
+    function test_M_3__rebalanceSwapChargeUnchangedByTheWash() public {
+        for (uint256 i; i < 6; ++i) {
+            uint256 snap0 = vm.snapshotState();
+            if (i >= 3) _thirdPartyDepth(1e18);
+            uint256 snap = vm.snapshotState();
+            (bool r1,) = _try(_callSwap(true, _amt0(2e16)));
+            (uint256 cNo,) = _pendingCharge();
+            vm.revertToState(snap);
+            _wash(XS[i % 3], NS[i % 3], true);
+            (bool r2,) = _try(_callSwap(true, _amt0(2e16)));
+            (uint256 cWash,) = _pendingCharge();
+            assertFalse(r1 || r2, "both swaps act");
+            assertGt(cNo, 0, "charged");
+            assertApproxEqAbs(cWash, cNo, 1, "the charge does not depend on the wash");
+            vm.revertToState(snap0);
+        }
     }
 }
 
@@ -152,6 +156,13 @@ contract M3CtlTest is FeeRows {
 ///         into idle before NAV_before, so the charge covers the action's realised loss at the market (fees on both
 ///         sides).
 contract M5bTest is FeeRows {
+    /// @dev Third-party depth 0.3× the vault's L, so the re-ratio's pre-swap fills once the vault's own position is
+    ///      removed (fix review S14-02: without it the pre-swap filled nothing).
+    function setUp() public virtual override {
+        super.setUp();
+        _thirdPartyDepth(0.3e18);
+    }
+
     /// @notice Fuzz: the fee-rich segment's size, the new range, the pre-swap's size (up to 2% of NAV) and side.
     function test_M_5b__chargeCoversTheRealisedLossOverAFeeRichSegment(uint8 n, uint256 loSeed, uint256 frac, bool z)
         public
@@ -159,8 +170,9 @@ contract M5bTest is FeeRows {
         _wash(40, 1 + uint256(n) % 40, false);
         frac = bound(frac, 0, 2e16);
         PreSwap memory ps = frac == 0 ? _none() : PreSwap(true, z, _amount(z, frac));
-        (bool rev, uint256 charge, uint256 realised) = _reRatio(_legalLo(market, market, loSeed), ps);
+        (bool rev, uint256 charge, uint256 realised, uint256 swapped) = _reRatio(_legalLo(market, market, loSeed), ps);
         if (rev) return;
+        if (frac > 0) assertGt(swapped, 0, "non-vacuity: the pre-swap fills");
         assertGe(charge + 1, realised, "M-5b: the charge covers the realised loss");
     }
 
@@ -168,9 +180,10 @@ contract M5bTest is FeeRows {
     function test_M_5b__pinnedFeeRichReRatio() public {
         _wash(40, 40, false);
         assertGt(_navWithFees(), _nav(_sqrt(market)), "fees accrued");
-        (bool rev, uint256 charge, uint256 realised) =
+        (bool rev, uint256 charge, uint256 realised, uint256 swapped) =
             _reRatio(_floor(market) + 30 - W, PreSwap(true, true, _amount(true, 2e16)));
         assertFalse(rev, "acts");
+        assertGt(swapped, 0, "the pre-swap fills");
         assertGt(realised, 0, "a realised loss");
         assertGe(charge + 1, realised, "M-5b: the charge covers the realised loss");
         console.log("M-5b: charge, realised loss", charge, realised);
@@ -185,10 +198,13 @@ contract M5bTest is FeeRows {
 
     /// @dev The re-placement on `[lo, lo + W)`; returns its charge (immediate plus the markout's extra) and the realised
     ///      loss: NAV at the market with the uncollected fees before, minus NAV at the market after.
-    function _reRatio(int24 lo, PreSwap memory ps) internal returns (bool rev, uint256 charge, uint256 realised) {
+    function _reRatio(int24 lo, PreSwap memory ps)
+        internal
+        returns (bool rev, uint256 charge, uint256 realised, uint256 swapped)
+    {
         uint256 navB = _navWithFees();
-        (rev,) = _try(_callPlace(lo, ps, 0));
-        if (rev) return (true, 0, 0);
+        (rev,, swapped) = _tryRec(_callPlace(lo, ps, 0));
+        if (rev) return (true, 0, 0, 0);
         (charge,) = _pendingCharge();
         uint256 navA = _navWithFees();
         realised = navB > navA ? navB - navA : 0;
@@ -204,14 +220,16 @@ contract M5bCtlTest is FeeRows {
     }
 
     function test_M_5b__ctlNoCollectFirstUndercharges() public {
+        _thirdPartyDepth(0.3e18);
         _wash(40, 40, false);
         VaultHarness(vault).setControls(true, address(0), false, false);
         uint256 navB = _navWithFees();
         uint256 v1 = FullMath.mulDiv(_nav(_sqrt(market)), 2e16, WAD);
         uint160 sp = _sqrt(market);
         uint128 amt = uint128(FullMath.mulDiv(FullMath.mulDiv(v1, 1 << 96, sp), 1 << 96, sp));
-        (bool rev,) = _try(_callPlace(_floor(market) + 30 - W, PreSwap(true, true, amt), 0));
+        (bool rev,, uint256 swapped) = _tryRec(_callPlace(_floor(market) + 30 - W, PreSwap(true, true, amt), 0));
         assertFalse(rev, "acts");
+        assertGt(swapped, 0, "the control's pre-swap fills");
         (uint256 charge,) = _pendingCharge();
         uint256 navA = _navWithFees();
         uint256 realised = navB - navA;

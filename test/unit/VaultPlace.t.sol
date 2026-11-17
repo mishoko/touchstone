@@ -15,6 +15,7 @@ import {ITouchstoneHook} from "../../src/interfaces/ITouchstoneHook.sol";
 import {ExecLedger} from "../../src/libraries/ExecLedger.sol";
 import {FeeBank} from "../../src/libraries/FeeBank.sol";
 import {Ladder} from "../../src/libraries/Ladder.sol";
+import {Markout} from "../../src/types/Markout.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
 import {PreSwap} from "../../src/types/PreSwap.sol";
 import {Bank} from "../../src/types/Bank.sol";
@@ -673,9 +674,9 @@ contract VaultPlaceTest is LiquidPoolBase, SettleExtraOracle {
         vm.expectRevert(TouchstoneVault.MarkoutPending.selector);
         hv.deposit(1e18, type(uint256).max, type(uint256).max, bob);
         advance(2 + tier.H_MARKOUT / blocktime);
-        (uint256 extra,, uint256 burnS) = _settleExtra(
-            pb, pa, tier.REF_BAND, tier.FEE_TICKS, c0, r, hv.holdings(), hv.totalSupply(), bk.reserveShares
-        );
+        (c0, r);
+        (uint256 extra,, uint256 burnS) =
+            _settleExtra(pb, pa, hv.markout(), tier.REF_BAND, tier.FEE_TICKS, hv.feePips(), bk.reserveShares);
         extra;
         hv.settle();
         bk = hv.bankFull();

@@ -4,6 +4,8 @@ pragma solidity 0.8.26;
 import {Vm} from "forge-std/Test.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {ITouchstoneHook} from "../../src/interfaces/ITouchstoneHook.sol";
+import {Tiers} from "../../script/Tiers.sol";
+import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {TouchstoneHook} from "../../src/TouchstoneHook.sol";
 import {HookArgs} from "../../src/interfaces/ITouchstoneFactory.sol";
 import {MedianOracle} from "../../src/libraries/MedianOracle.sol";
@@ -515,6 +517,43 @@ contract HookTest is HookBase {
         bytes memory ok = abi.encodePacked(type(TouchstoneHook).creationCode, abi.encode(_args(t, VAULT)));
         (bytes32 s0,) = d.mine(ok);
         assertTrue(d.deploy(ok, s0) != address(0));
+    }
+
+    /// @notice D-4 (s15, F-044): the hook rejects a key whose LP fee is dynamic (the flag 0x800000) or 100% and more,
+    ///         since the vault's settlement prices the arbitrage fee at the key's fee; control: the static 500-pip key
+    ///         deploys. Every shipped tier's `FEE_TICKS` is the smallest t with 1.0001^t ≥ 1 + fee/10⁶ at that fee.
+    function test_D_4__hookRejectsADynamicFeeKey() public {
+        Create2Deployer d = new Create2Deployer();
+        uint24[3] memory bad = [uint24(0x800000), 1_000_000, 1_000_001];
+        for (uint256 i; i < 3; ++i) {
+            HookArgs memory a = _args(tier, VAULT);
+            a.fee = bad[i];
+            bytes memory init = abi.encodePacked(type(TouchstoneHook).creationCode, abi.encode(a));
+            (bytes32 salt,) = d.mine(init);
+            vm.expectRevert(ITouchstoneHook.BadTier.selector);
+            d.deploy(init, salt);
+        }
+        HookArgs memory okArgs = _args(tier, VAULT);
+        okArgs.fee = 999_999;
+        bytes memory ok = abi.encodePacked(type(TouchstoneHook).creationCode, abi.encode(okArgs));
+        (bytes32 s0,) = d.mine(ok);
+        assertTrue(d.deploy(ok, s0) != address(0), "control: a static fee deploys");
+        // FEE_TICKS against the pool fee (500 pips) on every shipped tier
+        (Tier memory m,) = Tiers.mainnet();
+        (Tier memory dm,) = Tiers.demo();
+        (Tier memory ts,) = Tiers.testing();
+        int24[3] memory ft = [m.FEE_TICKS, dm.FEE_TICKS, ts.FEE_TICKS];
+        for (uint256 i; i < 3; ++i) {
+            // 1.0001^t ≥ 1 + 500/10⁶ ⇔ sqrtAt(t)² ≥ (1 + 5e-4)·2^192, and not at t − 1
+            assertGe(_priceX(ft[i]), 1.0005e18, "FEE_TICKS reaches the fee");
+            assertLt(_priceX(ft[i] - 1), 1.0005e18, "FEE_TICKS is the smallest such t");
+        }
+    }
+
+    /// @dev 1.0001^t in WAD (from the sqrt price at tick t).
+    function _priceX(int24 t) internal pure returns (uint256) {
+        uint256 sp = TickMath.getSqrtPriceAtTick(t);
+        return FullMath.mulDiv(sp * sp, 1e18, 1 << 192);
     }
 
     function test_U_clock_park__parkedPriceDoesNotStopTheClock() public {

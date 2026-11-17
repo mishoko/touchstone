@@ -67,9 +67,14 @@ contract MPinnedN4Row1Test is PinnedRow {
         _report(_attackPlace(_sqrt(195408), 194450, _none(), 0), "n4 #1");
     }
 
-    function test_M_2d__pinnedPythonWorstOneShotRow(uint8 kIdx) public {
-        _thirdPartyDepth(KS[kIdx % 5]);
-        _report(_attackPlace(_sqrt(195408), 194450, _none(), 0), "m2d #1");
+    /// @notice The same row at each of the five third-party depths (a loop: the domain has five values).
+    function test_M_2d__pinnedPythonWorstOneShotRow() public {
+        for (uint256 k; k < 5; ++k) {
+            uint256 snap = vm.snapshotState();
+            _thirdPartyDepth(KS[k]);
+            _report(_attackPlace(_sqrt(195408), 194450, _none(), 0), "m2d #1");
+            vm.revertToState(snap);
+        }
     }
 }
 
@@ -168,9 +173,10 @@ contract MPinnedADV3Row3Test is PinnedRow {
     }
 }
 
-/// @notice m2dc's worst colluder rows (the M-2d lag lane under the markout-settled charge): the market at 197,400 in
-///         the old range, the reference lagging at 197,404 / 197,416 / 197,424, the placement on [197,400, 199,400)
-///         with spot pushed one unit above its lower edge (Python's exact target), the markout at the market.
+/// @notice m2dc's third row by expected net (every m2dc fixture row is an exactness row, class 3; rows 1 and 2 are
+///         pinned below): the market at 197,400 in the old range, the reference lagging at 197,404 (with 197,416 and
+///         197,424 as extra lags), the placement on [197,400, 199,400) with spot pushed one unit above its lower edge,
+///         the markout at the market.
 contract MPinnedM2dcTest is PinnedRow {
     function _row() internal pure override returns (int24, int24, uint256, uint256, uint128) {
         return (196560, 197400, 2362, 967875153375, 460160134679503719);
@@ -196,3 +202,56 @@ contract MPinnedM2dcTest is PinnedRow {
         refPool.setPath(st, tk);
     }
 }
+
+/// @notice m2dc's rows 1 and 2 by expected net (fix review S14-05): the market just above the old range's upper edge,
+///         the reference lagging below it; Python's op sequence: a push to the row's `u` (above the market), the
+///         curator's placement whose own move takes spot down to one unit inside the old range's upper edge, on the range ending at
+///         that edge, then the unwind to the market and the markout there.
+abstract contract PinnedM2dcEdgeRow is PinnedRow {
+    /// @dev The row's (refTick, u, the move's target tick = the new range's upper edge).
+    function _ops() internal pure virtual returns (int24 ref, int24 u, int24 edge);
+
+    function _pinnedEdgeRow(string memory name) internal {
+        (int24 ref, int24 u, int24 edge) = _ops();
+        uint32[] memory st = new uint32[](2);
+        int24[] memory tk = new int24[](2);
+        (st[0], tk[0]) = (uint32(vm.getBlockTimestamp() - 2 hours), ref);
+        (st[1], tk[1]) = (uint32(vm.getBlockTimestamp() + 1), market);
+        refPool.setPath(st, tk);
+        // the move stops one unit inside the new range's upper edge (Python's exact `s_spot`)
+        _report(_attackPlace(_sqrt(u), edge - W, _none(), _sqrt(edge) - 1), name);
+    }
+}
+
+/// @notice m2dc row 1: old range [191,720, 193,720), market 193,722, reference 193,706, u 193,723, move to 193,710,
+///         range [191,710, 193,710); Python's expected net −258,842,723.
+contract MPinnedM2dcRow1Test is PinnedM2dcEdgeRow {
+    function _row() internal pure override returns (int24, int24, uint256, uint256, uint128) {
+        return (191720, 193722, 3050, 500000000983, 466562211038170673);
+    }
+
+    function _ops() internal pure override returns (int24, int24, int24) {
+        return (193706, 193723, 193710);
+    }
+
+    function test_M_2d__pinnedPythonM2dcRow1() public {
+        _pinnedEdgeRow("m2dc #1");
+    }
+}
+
+/// @notice m2dc row 2: old range [194,110, 196,110), market 196,135, reference 196,109, u 196,140, move to 196,110,
+///         range [194,110, 196,110); Python's expected net −329,477,665.
+contract MPinnedM2dcRow2Test is PinnedM2dcEdgeRow {
+    function _row() internal pure override returns (int24, int24, uint256, uint256, uint128) {
+        return (194110, 196135, 3061, 500000000497, 527613821670171886);
+    }
+
+    function _ops() internal pure override returns (int24, int24, int24) {
+        return (196109, 196140, 196110);
+    }
+
+    function test_M_2d__pinnedPythonM2dcRow2() public {
+        _pinnedEdgeRow("m2dc #2");
+    }
+}
+

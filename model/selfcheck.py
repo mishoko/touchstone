@@ -3,6 +3,7 @@
 Each check asserts a rule of the specification; a failing check names it. Run:
     python3 model/reference.py --selfcheck
 """
+from fractions import Fraction
 import random
 
 import reference as R
@@ -2182,23 +2183,57 @@ def rules_markout():
               "measure_c: burn and burnR at one price, the smallest NAV_after over the legs")
         check(R.measure(h, h2, sp, sr, S, 10 ** 30, 0)[:4] == R.measure_c(h, h2, sp, sp, sr, 0, S, 10 ** 30, 0)[:4],
               "the two-leg measure is measure_c with s0 = spot and no reserve")
-    # settle_extra: legs p_mk − FEE_TICKS and p_mk + FEE_TICKS + 1 (upper leg rounded up), extra capped by the reserve,
-    # burnS capped by reserveShares; legs clamped to the tick range
+    # settle_extra (s15, the fee-aware settlement): three legs (p_mk − FEE_TICKS, p_mk, p_mk + FEE_TICKS + 1), each
+    # holding valued with the arbitrage fee its position earns from its start spot to the leg, the leg chosen by g/nb,
+    # the burn re-priced at the markout (other holders whole at that leg), extra = the burn's value.
     h = R.Holdings(10 ** 21, 10 ** 21)
     h2 = R.Holdings(10 ** 21 + 10 ** 18, 10 ** 21 - 3 * 10 ** 15)
+    S_act = 10 ** 24
     for tk in (T0 - 300, T0 - 50, T0, T0 + 50, T0 + 300):
-        for res in (0, 10 ** 14, 10 ** 30):
-            ex, pm, bs = R.settle_extra(h, h2, tk, 5, 0, res, h2, 10 ** 24, 10 ** 20)
-            lo_, hi_ = sqrt_at(tk - 5), sqrt_at(tk + 6)
-            l_lo = R.value(h, lo_)[0] - R.value(h2, lo_)[0]
-            l_hi = R.value(h, hi_)[0] - R.value(h2, hi_)[0]
-            lm, pp = (l_hi, hi_) if l_hi > l_lo else (l_lo, lo_)
-            check(ex == min(res, max(0, lm)) and pm == pp, "settle_extra: the worse markout leg, capped at the reserve")
-            exp = 0 if ex == 0 else min(10 ** 20, R.ceil_div(ex * 10 ** 24, R.value(h2, pm)[0]))
-            check(bs == exp, "settle_extra: burnS = min(reserveShares, ceilDiv(extra·S, NAV_now(p_mk)))", (bs, exp))
+        for burn0 in (0, 10 ** 17, 10 ** 22):
+            for rsh in (0, 10 ** 18, 10 ** 22):
+                pend = dict(s0=sqrt_at(T0), sEnd=sqrt_at(T0), charge0=0, reserve=0, burn0=burn0, sAct=S_act)
+                ex, pm, bs = R.settle_extra(h, h2, pend, tk, 5, 500, rsh)
+                legs = []
+                for x in (sqrt_at(tk - 5), sqrt_at(tk), sqrt_at(tk + 6)):
+                    nb = R.value(h, x)[0]
+                    legs.append((nb - R.value(h2, x)[0], nb, x))
+                pos = [l for l in legs if l[0] > 0]
+                # the leg needing the most shares: the largest g/nb (by exact fractions), the earliest on ties
+                want = max(pos, key=lambda l: (Fraction(l[0], l[1]), -legs.index(l))) if pos else legs[0]
+                check(pm == want[2], "settle_extra: the leg with the largest loss fraction g/nb (idle holdings)", (tk, pm))
+                loss = max(0, want[0])
+                req = 0 if loss == 0 else -(-loss * S_act // want[1])
+                exp_bs = min(rsh, max(0, req - burn0))
+                check(bs == exp_bs, "settle_extra: burnS = min(reserveShares, ceilDiv(loss·S_act, nb) − burn0)", (bs, exp_bs))
+                check(ex == (exp_bs * want[1] // S_act), "settle_extra: extra is the burn's value at nb/S_act", (ex, bs))
+                if exp_bs < rsh and loss > 0:
+                    B = burn0 + bs
+                    check(B >= burn0 and (S_act - B) * want[1] <= S_act * (want[1] - loss),
+                          "settle_extra: uncapped, the other holders are whole at the chosen leg")
     for tk in (R.MAX_TICK, R.MAX_TICK - 5, R.MIN_TICK, R.MIN_TICK + 4):   # clamped legs never leave the tick range
-        ex, pm, bs = R.settle_extra(h, h2, tk, 5, 0, 10 ** 30, h2, 10 ** 24, 10 ** 20)
+        pend = dict(s0=sqrt_at(T0), sEnd=sqrt_at(T0), charge0=0, reserve=0, burn0=0, sAct=S_act)
+        ex, pm, bs = R.settle_extra(h, h2, pend, tk, 5, 500, 10 ** 20)
         check(sqrt_at(R.MIN_TICK) <= pm <= sqrt_at(R.MAX_TICK), "settle_extra: legs clamped at the tick bounds", tk)
+    # F against the pool simulation: an arbitrage through a lone position from s to p (both directions; in range,
+    # partial overlap, a one-tick overlap, out of range): F(…, up) ≥ the fees the position collects ≥ the credit
+    for (lo, hi, s_t, p_t) in ((T0 - 1000, T0 + 1000, T0 + 60, T0 - 110), (T0 - 1000, T0 + 1000, T0 - 50, T0 + 170),
+                               (T0 - 60, T0 + 1940, T0 + 60, T0 - 110), (T0 - 60, T0 + 1940, T0 - 59, T0 - 300),
+                               (T0 + 200, T0 + 2200, T0 + 60, T0 - 110), (T0 - 10, T0 + 10, T0 + 300, T0 - 300),
+                               (T0 - 2000, T0, T0 - 40, T0 + 500)):
+        for L in (10 ** 18, 10 ** 22, 7 * 10 ** 24):
+            pool = R.Pool(sqrt_at(s_t) + 7, 500)
+            pool.modify("lp", lo, hi, L)
+            pool.push_to(sqrt_at(p_t))
+            f0, f1 = pool.collect("lp", lo, hi)
+            pp = sqrt_at(p_t)
+            got = R.q(f0, pp) + f1
+            hh = R.Holdings(0, 0, L, lo, hi)
+            up = R.arb_fee(hh, sqrt_at(s_t) + 7, pp, True, 500)
+            dn = R.arb_fee(hh, sqrt_at(s_t) + 7, pp, False, 500)
+            check(up + 1 >= got >= dn, "arb_fee: the closed form brackets the simulated pool's collected fee",
+                  (lo, hi, s_t, p_t, L, up, got, dn))
+            check(R.arb_fee(R.Holdings(10 ** 20, 10 ** 20), sqrt_at(s_t), pp, True, 500) == 0, "arb_fee: idle earns nothing")
     # FeeBank Charge/Settle: reserve composition, burn order, release targets
     b = R.Bank()
     b.cohorts[7 % R.RING] = [7, 100]
@@ -2266,7 +2301,8 @@ def rules_markout():
     w.step(1)
     rs, S0, m0 = w.v.bank.reserveShares, w.v.S, sum(r["minted"] for r in w.v.records.values())
     h_now = w.v.h.copy()
-    exp = R.settle_extra(pd["before"], pd["after"], T0 + 40, t.FEE_TICKS, pd["charge0"], pd["reserve"], h_now, S0, rs)
+    check(pd["sAct"] > 0 and pd["burn0"] >= 0 and pd["s0"] > 0 and pd["sEnd"] > 0, "the record keeps s0, sEnd, burn0, sAct")
+    exp = R.settle_extra(pd["before"], pd["after"], pd, T0 + 40, t.FEE_TICKS, w.v.pool.fee, rs)
     w.v.settle(w.block, w.ts())
     check(reads == [(t_a + BT, t_a + BT + H)], "the window is (tAction + blocktime, tAction + blocktime + H_MARKOUT]", reads)
     minted = sum(r["minted"] for r in w.v.records.values()) - m0

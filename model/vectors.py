@@ -181,11 +181,17 @@ def ledger_cases():
                                         reserve=reserve, S=S_, unvested=unv_, bond=bond_),
                              "out": dict(charge=c, pStar=p, navBurn=n, burn=b, burnR=br, ok=ok)}))
 
-    def adds(tag, before, after, tick_mk, charge0, reserve, now_h, S_, rshares, note=""):
-        ex, pm, bs = R.settle_extra(before, after, tick_mk, 5, charge0, reserve, now_h, S_, rshares)
+    def adds(tag, before, after, tick_mk, rshares, s0=None, s_end=None, burn0=0, s_act=S, fee=500, note="", want=None):
+        """A settleExtra case (s15 form). `want(ex, pm, bs)` asserts the case shows what its name says."""
+        s0 = sqrt_at(T0) if s0 is None else s0
+        s_end = s0 if s_end is None else s_end
+        pend = dict(s0=s0, sEnd=s_end, charge0=7, reserve=11, burn0=burn0, sAct=s_act)
+        ex, pm, bs = R.settle_extra(before, after, pend, tick_mk, 5, fee, rshares)
+        if want:
+            assert want(ex, pm, bs), (tag, ex, pm, bs)
         cases.append(dict(id=f"ledger-{len(cases):03d}-{tag}", fn="ExecLedger.settleExtra",
-                          **{"in": dict(before=before.d(), after=after.d(), tickMk=tick_mk, feeTicks=5, charge0=charge0,
-                                        reserve=reserve, now=now_h.d(), S=S_, reserveShares=rshares),
+                          **{"in": dict(before=before.d(), after=after.d(), pend=pend, tickMk=tick_mk, feeTicks=5,
+                                        feePips=fee, reserveShares=rshares),
                              "out": dict(extra=ex, pMk=pm, burnS=bs)}))
 
     def addv(tag, h, s):
@@ -346,21 +352,58 @@ def ledger_cases():
         note="charge 0: burn 0, burnR = ceilDiv(reserve·S, NAV')", expect=("spot", False, True))
     add("reserve-nav-zero", R.Holdings(10, 10), R.Holdings(), sqrt_at(T0), sqrt_at(T0), reserve=1,
         note="NAV' = 0: burn and burnR saturate; ok = false")
-    for tk, cg, res, tag in ((T0 + 40, 0, 10 ** 30, "markout-uncapped"), (T0 + 40, 0, 10 ** 15, "markout-capped"),
-                             (T0 - 200, 0, 10 ** 30, "markout-other-side"), (T0 + 40, 10 ** 30, 10 ** 30, "markout-below-charge0")):
-        adds(tag, g0, g1, tk, cg, res, g1, S, 10 ** 20)
-    adds("markout-burn-capped-by-reserve-shares", g0, g1, T0 + 40, 0, 10 ** 30, g1, S, 1)
-    adds("markout-nav-now-zero", g0, g1, T0 + 40, 0, 10 ** 30, R.Holdings(), S, 7, note="NAV_now = 0: burn every reserve share")
-    adds("markout-zero-extra-nav-zero", g0, g1, T0 + 40, 10 ** 30, 10 ** 30, R.Holdings(), S, 7, note="extra 0: burn nothing even at NAV_now = 0")
-    adds("markout-reserve-one-wei", g0, g1, T0 + 40, 0, 1, g1, S, 10 ** 20, note="extra capped at 1 wei: one share-rounded burn")
+    lo_ = lambda tk: sqrt_at(max(R.MIN_TICK, tk - 5))
+    hi_ = lambda tk: sqrt_at(min(R.MAX_TICK, tk + 6))
     sold = R.Holdings(g0.idle0 - 10 ** 9, g0.idle1 + 3 * 10 ** 15)
-    adds("markout-upper-leg", g0, sold, T0 + 40, 0, 10 ** 30, sold, S, 10 ** 20, note="the vault sold token0: the upper leg is worse")
-    adds("markout-tie-lower-leg", g0, g0.copy(), T0 + 40, 0, 10 ** 30, g0, S, 10 ** 20, note="equal legs: pMk = the lower leg")
-    # v2.34 (s09 D9-01, D9-02): the round-up upper leg and the clamps at the tick bounds
-    adds("markout-clamp-max-tick", g0, sold, R.MAX_TICK, 0, 10 ** 30, sold, S, 10 ** 20, note="tickMk at MAX_TICK: both legs clamped")
-    adds("markout-clamp-near-max", g0, sold, R.MAX_TICK - 5, 0, 10 ** 30, sold, S, 10 ** 20, note="upper leg tickMk + 6 clamped to MAX_TICK")
-    adds("markout-clamp-min-tick", g0, sold, R.MIN_TICK, 0, 10 ** 30, sold, S, 10 ** 20, note="tickMk at MIN_TICK: the lower leg clamped")
-    adds("markout-upper-leg-rounded-up", g0, sold, T0 - 6, 0, 10 ** 30, sold, S, 10 ** 20, note="the upper leg sits at tickMk + FEE_TICKS + 1")
+    adds("markout-uncapped", g0, g1, T0 + 40, 10 ** 30, want=lambda e, p, b: b > 0 and e > 0)
+    adds("markout-other-side", g0, g1, T0 - 200, 10 ** 30)
+    adds("markout-burn-capped-by-reserve-shares", g0, g1, T0 + 40, 1, want=lambda e, p, b: b == 1)
+    adds("markout-burn0-covers", g0, g1, T0 + 40, 10 ** 30, burn0=10 ** 30, note="the immediate burn already covers it: burnS 0",
+         want=lambda e, p, b: b == 0 and e == 0)
+    adds("markout-burn0-partly", g0, g1, T0 + 40, 10 ** 30, burn0=10 ** 18, want=lambda e, p, b: b > 0)
+    adds("markout-sact-zero", g0, g1, T0 + 40, 10 ** 30, s_act=0, want=lambda e, p, b: b == 0 and e == 0)
+    adds("markout-upper-leg", g0, sold, T0 + 40, 10 ** 30, note="the vault sold token0: the upper leg is worse",
+         want=lambda e, p, b: p == hi_(T0 + 40))
+    adds("markout-tie-lower-leg", g0, g0.copy(), T0 + 40, 10 ** 30, note="no loss: pMk = the lower leg, burn 0",
+         want=lambda e, p, b: p == lo_(T0 + 40) and b == 0)
+    adds("markout-clamp-max-tick", g0, sold, R.MAX_TICK, 10 ** 30, note="tickMk at MAX_TICK: the legs clamped")
+    adds("markout-clamp-near-max", g0, sold, R.MAX_TICK - 5, 10 ** 30, note="upper leg tickMk + 6 clamped to MAX_TICK")
+    adds("markout-clamp-min-tick", g0, sold, R.MIN_TICK, 10 ** 30, note="tickMk at MIN_TICK: the lower leg clamped")
+    adds("markout-upper-leg-rounded-up", g0, sold, T0 - 6, 10 ** 30, note="the upper leg sits at tickMk + FEE_TICKS + 1",
+         want=lambda e, p, b: p == sqrt_at(T0))
+    # s15 (F-044): the fee terms, the centre leg, the leg by g/nb, a positive leg replacing a non-positive one
+    tk = T0 - 110
+    wide = R.Holdings(0, 0, 10 ** 16, T0 - 1000, T0 + 1000)
+    xs, ys = R.position_amounts(10 ** 16, T0 - 1000, T0 + 1000, sqrt_at(tk))
+    shallow = R.Holdings(0, 0, 5 * 10 ** 15, T0 - 60, T0 + 1940)
+    no_fee = R.settle_extra(wide, shallow, dict(s0=sqrt_at(T0), sEnd=sqrt_at(T0 + 60), charge0=0, reserve=0, burn0=0, sAct=S),
+                            tk, 5, 0, 10 ** 30)
+    adds("markout-fee-foregone", wide, shallow, tk, 10 ** 30, s0=sqrt_at(T0), s_end=sqrt_at(T0 + 60),
+         note="the old position earns more arbitrage fee over the move than the new one: charged",
+         want=lambda e, p, b: e > no_fee[0])
+    rich = R.Holdings(0, R.value(wide, sqrt_at(tk))[0] - R.value(shallow, sqrt_at(tk))[0] + 10 ** 16, 5 * 10 ** 15, T0 - 60, T0 + 1940)
+    adds("markout-fee-credit", rich, wide, tk, 10 ** 30, s0=sqrt_at(T0 + 60), s_end=sqrt_at(T0),
+         note="the new position earns more arbitrage fee: the credit lowers the charge",
+         want=lambda e, p, b: 0 < e < R.settle_extra(rich, wide, dict(s0=sqrt_at(T0 + 60), sEnd=sqrt_at(T0), charge0=0, reserve=0,
+                                                                     burn0=0, sAct=S), tk, 5, 0, 10 ** 30)[0])
+    adds("markout-fee-dynamic-pips", wide, shallow, tk, 10 ** 30, s0=sqrt_at(T0), s_end=sqrt_at(T0 + 60), fee=3000)
+    xa = xs - xs * 725 // 100000
+    nbm = R.value(wide, sqrt_at(tk))[0] + R.arb_fee(wide, sqrt_at(T0), sqrt_at(tk), True, 500)
+    centre = R.Holdings(xa, nbm - R.q(xa, sqrt_at(tk)) - 10 ** 10, 0, 0, 0)
+    adds("markout-centre-leg", wide, centre, tk, 10 ** 30, s0=sqrt_at(T0), s_end=sqrt_at(T0),
+         note="the loss peaks at the market: the centre leg wins", want=lambda e, p, b: p == sqrt_at(tk))
+    fb = R.Holdings(10 ** 9, 10 ** 17, 10 ** 15, T0 - 1000, T0 + 1000)
+    fa = R.Holdings(0, 10 ** 17, 5 * 10 ** 14, 196050, 198050)
+    adds("markout-leg-by-fraction", fb, fa, 195850, 10 ** 30, s0=sqrt_at(T0), s_end=sqrt_at(T0 + 60),
+         note="the leg with the largest g is not the one with the largest g/nb",
+         want=lambda e, p, b: p != max([lo_(195850), sqrt_at(195850), hi_(195850)],
+                                       key=lambda x: R.value(fb, x)[0] + R.arb_fee(fb, sqrt_at(T0), x, True, 500)
+                                       - R.value(fa, x)[0] - R.arb_fee(fa, sqrt_at(T0 + 60), x, False, 500)))
+    b2 = R.Holdings(10 ** 12, 10 ** 20)
+    a2 = R.Holdings(10 ** 12 - 10 ** 9, 10 ** 20 + R.q(10 ** 9, sqrt_at(tk)))
+    adds("markout-positive-replaces-negative", b2, a2, tk, 10 ** 30,
+         note="the lower leg a gain, the upper a loss: the upper leg is chosen",
+         want=lambda e, p, b: p == hi_(tk) and b > 0)
     add("charge-zero-nav-zero", R.Holdings(), R.Holdings(), sqrt_at(T0), sqrt_at(T0), note="no loss and no NAV: burn 0, ok")
     add("spot-unique-max-loss", ga, gs, sqrt_at(8000), sqrt_at(2000), s0=sqrt_at(0), reserve=10 ** 18,
         note="a token0 sale priced highest at spot: the spot leg is the unique largest loss (and the gate fails)", expect=("spot", True, False))
@@ -397,17 +440,18 @@ LEDGER_CONV = {
                "type(uint256).max when navBurn = 0 and charge > 0); burnR = ceilDiv((charge + reserve)*S, "
                "navBurn) - burn (type(uint256).max when saturated); ok = burn + burnR <= unvested + bond, evaluated without "
                "overflow (both may be type(uint256).max).",
-    "settleExtra": "legs sqrtAt(max(MIN_TICK, tickMk - feeTicks)) then sqrtAt(min(MAX_TICK, tickMk + feeTicks + 1)) (the upper "
-                   "leg rounded up; the later replaces only if strictly larger); no revert for valid ticks and uint128 reserve and "
-                   "reserveShares; "
-                   "extra = min(reserve, max(0, loss_mk - charge0)); burnS = 0 if extra = 0, reserveShares if "
-                   "NAV(now, pMk) = 0, else min(reserveShares, ceilDiv(extra*S, NAV(now, pMk))).",
+    "settleExtra": "(s15, the fee-aware settlement) legs, in order, sqrtAt(max(MIN_TICK, tickMk - feeTicks)), sqrtAt(tickMk), "
+                   "sqrtAt(min(MAX_TICK, tickMk + feeTicks + 1)); nb = NAV(before, p) + F(before, pend.s0, p, up); na = "
+                   "NAV(after, p) + F(after, pend.sEnd, p, down); g = nb - na; a leg with g > 0 replaces one with g <= 0, "
+                   "between positive legs a later one replaces when g_new*nb_cur > g_cur*nb_new; loss = max(0, g); burnS = "
+                   "min(reserveShares, max(0, ceilDiv(loss*sAct, nb) - burn0)); extra = mulDiv(burnS, nb, sAct) (0 when "
+                   "sAct = 0). F per spec §3.4 (feePips the pool's LP fee).",
     "NAV": "NAV(s) = q(idle0 + x_pos(s), s) + idle1 + y_pos(s); positions per Appendix A with roundUp = false.",
     "value": "ExecLedger.value(h, sqrtP) = (NAV(sqrtP), val(x_pos, y_pos, sqrtP)).",
     "holdings": "Holdings {idle0, idle1, L, lo, hi}; before/after are inputs.",
     "fields": "ExecLedger.measure in {before, after, sqrtS0, sqrtSpot, sqrtRef, reserve, S, unvested, bond} out {charge, "
-              "pStar, navBurn, burn, burnR, ok}; ExecLedger.settleExtra in {before, after, tickMk, feeTicks, charge0, "
-              "reserve, now, S, reserveShares} out {extra, pMk, burnS}; ExecLedger.value in {h, sqrtP} out {nav, posValue}; Holdings = {idle0, idle1, "
+              "pStar, navBurn, burn, burnR, ok}; ExecLedger.settleExtra in {before, after, pend {s0, sEnd, "
+              "charge0, reserve, burn0, sAct}, tickMk, feeTicks, feePips, reserveShares} out {extra, pMk, burnS}; ExecLedger.value in {h, sqrtP} out {nav, posValue}; Holdings = {idle0, idle1, "
               "L, lo, hi}.",
 }
 

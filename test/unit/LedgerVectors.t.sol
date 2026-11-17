@@ -5,6 +5,7 @@ import {VectorBase} from "../utils/VectorBase.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {ExecLedger} from "../../src/libraries/ExecLedger.sol";
+import {Markout} from "../../src/types/Markout.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
 import {SettleExtraOracle} from "../utils/SettleExtraOracle.sol";
 
@@ -39,13 +40,15 @@ contract LedgerVectorsTest is VectorBase, SettleExtraOracle {
     }
 
     function _settleKeys(string memory c) internal view {
-        string[] memory k = new string[](9);
-        (k[0], k[1], k[2], k[3], k[4]) = ("before", "after", "tickMk", "feeTicks", "charge0");
-        (k[5], k[6], k[7], k[8]) = ("reserve", "now", "S", "reserveShares");
+        string[] memory k = new string[](7);
+        (k[0], k[1], k[2], k[3]) = ("before", "after", "pend", "tickMk");
+        (k[4], k[5], k[6]) = ("feeTicks", "feePips", "reserveShares");
         _keys(c, ".in", k);
         _hk(c, ".in.before");
         _hk(c, ".in.after");
-        _hk(c, ".in.now");
+        string[] memory m = new string[](6);
+        (m[0], m[1], m[2], m[3], m[4], m[5]) = ("s0", "sEnd", "charge0", "reserve", "burn0", "sAct");
+        _keys(c, ".in.pend", m);
         _keys(c, ".out", _l3("extra", "pMk", "burnS"));
     }
 
@@ -102,15 +105,21 @@ contract LedgerVectorsTest is VectorBase, SettleExtraOracle {
             if (!_eq(_s(c, ".fn"), "ExecLedger.settleExtra")) continue;
             _settleKeys(c);
             // the library reads the pending record through storage pointers, as the vault passes it
+            Markout memory mk = Markout(
+                uint128(_u(c, ".in.pend.charge0")),
+                uint128(_u(c, ".in.pend.reserve")),
+                uint160(_u(c, ".in.pend.s0")),
+                uint160(_u(c, ".in.pend.sEnd")),
+                uint128(_u(c, ".in.pend.burn0")),
+                uint128(_u(c, ".in.pend.sAct"))
+            );
             (uint256 extra, uint160 pMk, uint256 burnS) = _settleExtra(
                 _h(c, ".in.before"),
                 _h(c, ".in.after"),
+                mk,
                 int24(_i(c, ".in.tickMk")),
                 int24(_i(c, ".in.feeTicks")),
-                _u(c, ".in.charge0"),
-                _u(c, ".in.reserve"),
-                _h(c, ".in.now"),
-                _u(c, ".in.S"),
+                uint24(_u(c, ".in.feePips")),
                 _u(c, ".in.reserveShares")
             );
             assertEq(extra, _u(c, ".out.extra"), string.concat(cid, " extra"));
@@ -123,34 +132,38 @@ contract LedgerVectorsTest is VectorBase, SettleExtraOracle {
 
     // ------------------------------------------------------------------ properties
 
-    /// @notice The upper markout leg sits one tick above `tickMk + feeTicks` (the floor of the window's mean is
-    ///         rounded up): a sale of token0 is priced there, not at `tickMk + feeTicks`.
-    function test_U_settle__upperLegIsRoundedUp() public {
-        Holdings memory b = Holdings(1e21, 1e21, 0, 0, 0);
-        Holdings memory a = Holdings(1e21 - 1e18, 1e21 + 1e18, 0, 0, 0); // sold 1 token0 for 1 token1
-        (, uint160 pMk,) = _settleExtra(b, a, 100, 5, 0, type(uint128).max, a, 1e24, 1e20);
-        assertEq(pMk, TickMath.getSqrtPriceAtTick(106), "upper leg at tickMk + feeTicks + 1");
+    /// @dev A record with both start spots at tick 0, no immediate burn and supply `sAct`.
+    function _mk(uint128 sAct) internal pure returns (Markout memory) {
+        uint160 p = TickMath.getSqrtPriceAtTick(0);
+        return Markout(0, 0, p, p, 0, sAct);
     }
 
-    /// @notice The settlement never reverts on its legs or its share math: any markout tick, any fee margin, a
-    ///         position with L > 0 and uint128 supply, reserve and reserve shares (clamped legs, an overflow-free cap).
+    /// @notice The settlement never reverts on its legs, its fee terms or its share math: any markout tick, fee band,
+    ///         static fee, start spots, immediate burn, supply and reserve shares, with positions on both sides; the burn
+    ///         never exceeds the reserve's shares and the leg stays in the tick range.
     function testFuzz_U_settle__legsClampedNeverRevert(
         int24 tickMk,
-        uint16 fee,
-        uint128 res,
+        uint16 band,
+        uint24 fee,
         uint128 S,
         uint128 rs,
         uint128 L,
-        int24 c
+        int24 c,
+        uint160 s0,
+        uint160 sEnd,
+        uint128 burn0
     ) public {
         tickMk = int24(bound(tickMk, TickMath.MIN_TICK, TickMath.MAX_TICK));
         c = int24(bound(c, TickMath.MIN_TICK, TickMath.MAX_TICK - 2000)) / 10 * 10;
+        fee = uint24(bound(fee, 0, 999_999));
+        s0 = uint160(bound(s0, TickMath.MIN_SQRT_PRICE, TickMath.MAX_SQRT_PRICE));
+        sEnd = uint160(bound(sEnd, TickMath.MIN_SQRT_PRICE, TickMath.MAX_SQRT_PRICE));
         Holdings memory b = Holdings(1e21, 1e21, L, c, c + 2000);
         Holdings memory a = Holdings(1e21 - 1e18, 1e21 + 1e17, L / 2, c, c + 2000);
-        (uint256 extra, uint160 pMk, uint256 burnS) =
-            _settleExtra(b, a, tickMk, int24(uint24(fee)), 0, res, a, S, rs);
-        assertLe(extra, res, "extra <= reserve");
+        (, uint160 pMk, uint256 burnS) =
+            _settleExtra(b, a, Markout(0, 0, s0, sEnd, burn0, S), tickMk, int24(uint24(band)), fee, rs);
         assertLe(burnS, rs, "burnS <= reserveShares");
+        assertLe(burnS, S, "burnS <= sAct");
         assertGe(pMk, TickMath.MIN_SQRT_PRICE, "pMk in range");
         assertLe(pMk, TickMath.getSqrtPriceAtTick(TickMath.MAX_TICK), "pMk at most the price of MAX_TICK");
     }
@@ -160,33 +173,32 @@ contract LedgerVectorsTest is VectorBase, SettleExtraOracle {
     function test_U_settle__legsClampAtBothTickBounds() public {
         Holdings memory b = Holdings(1e21, 1e21, 0, 0, 0);
         Holdings memory a = Holdings(1e21 - 1e18, 1e21 + 1e17, 0, 0, 0);
-        (, uint160 pMk,) = _settleExtra(b, a, 887270, 192, 0, 1242, a, 1e24, 1e20);
+        (, uint160 pMk,) = _settleExtra(b, a, _mk(1e24), 887270, 192, 500, 1e20);
         assertEq(pMk, TickMath.MAX_SQRT_PRICE, "upper leg clamped to MAX_TICK");
-        (, pMk,) = _settleExtra(b, b, -887272, 255, 0, 1, b, 1e24, 1e20);
+        (, pMk,) = _settleExtra(b, b, _mk(1e24), -887272, 255, 500, 1e20);
         assertEq(pMk, TickMath.MIN_SQRT_PRICE, "a tie keeps the lower leg, clamped to MIN_TICK");
     }
 
-    /// @notice The settlement's share cap never overflows: at supply 1, a price near the top of the range and uint128
-    ///         reserve shares, `reserveShares·NAV_now/S` exceeds 2^256 (the counterexample of the s9 exploration run).
-    function test_U_settle__burnCapDoesNotOverflowAtTinySupply() public {
+    /// @notice The share count never exceeds the supply before the action (`g ≤ nb`): at supply 1 and a price near the
+    ///         top of the range the burn is at most one share (the s9 overflow row of the old conversion, kept as a pin).
+    function test_U_settle__burnAtTinySupplyIsAtMostTheSupply() public {
         uint128 L = 2184764868214510588;
         Holdings memory b = Holdings(1e21, 1e21, L, 0, 2000);
         Holdings memory a = Holdings(1e21 - 1e18, 1e21 + 1e17, L / 2, 0, 2000);
         (uint256 extra,, uint256 burnS) =
-            _settleExtra(b, a, 484120, 1, 0, 2, a, 1, 4994973406871068607839876929312525582);
-        assertEq(extra, 2, "extra capped at the reserve");
+            _settleExtra(b, a, _mk(1), 484120, 1, 500, 4994973406871068607839876929312525582);
         assertEq(burnS, 1, "one share at supply 1");
+        assertGt(extra, 0, "the burn's value");
     }
 
-    /// @notice The share cap's fit check at equality (fix review r2 F10-02): with `S` equal to the high word of
-    ///         `reserveShares·NAV_now`, the cap's division would overflow, so it is skipped and one share is burned.
-    function test_U_settle__burnCapAtFitBoundary() public {
+    /// @notice At the largest supply and the largest reserve shares the re-priced burn does not overflow.
+    function test_U_settle__burnAtMaxSupplyDoesNotOverflow() public {
         Holdings memory b = Holdings(1e21, 1e21, 0, 0, 0);
         Holdings memory a = Holdings(1e21 - 1e18, 1e21 + 1e17, 0, 0, 0);
         (uint256 extra,, uint256 burnS) =
-            _settleExtra(b, a, 500000, 1, 0, 1e18, a, 15186, type(uint128).max);
-        assertEq(extra, 1e18, "extra capped at the reserve");
-        assertEq(burnS, 1, "the cap cannot bind; one share");
+            _settleExtra(b, a, _mk(type(uint128).max), 500000, 1, 500, type(uint128).max);
+        assertGt(burnS, 0, "a burn");
+        assertGt(extra, 0, "its value");
     }
 
     /// @notice F9-02 (owner): when every leg is a gain, the burns are priced at the smallest NAV_after over the legs,

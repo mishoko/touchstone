@@ -16,6 +16,7 @@ import {MockToken} from "../../utils/Stubs.sol";
 import {ExpectedFlows} from "../../utils/ExpectedFlows.sol";
 import {ITouchstoneHook} from "../../../src/interfaces/ITouchstoneHook.sol";
 import {TouchstoneVault} from "../../../src/TouchstoneVault.sol";
+import {Markout} from "../../../src/types/Markout.sol";
 import {Holdings} from "../../../src/types/Holdings.sol";
 import {PreSwap} from "../../../src/types/PreSwap.sol";
 import {Tier} from "../../../src/types/Tier.sol";
@@ -547,7 +548,8 @@ contract VaultHandler is Test, SettleExtraOracle {
         (ok, tick) = hook.tryWindow(uint32(x), uint32(x - H));
         uint256 rs = hv.bankFull().reserveShares;
         if (!ok) return (rs, true, false);
-        (,, burnS) = _settleExtra(b, a, tick, hv.tier().FEE_TICKS, c0, r, hv.holdings(), hv.totalSupply(), rs);
+        (c0, r);
+        (,, burnS) = _settleExtra(b, a, hv.markout(), tick, hv.tier().FEE_TICKS, hv.feePips(), rs);
         if (burnS > rs) burnS = rs;
     }
 

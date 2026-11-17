@@ -132,6 +132,9 @@ contract TouchstoneHook is BaseHook, Extsload, ITouchstoneHook {
         ) revert BadTier();
         // [MU-144] the witness range [c - W/2, c + W/2) is W wide and aligned to the pool's tick spacing
         if (t.W_TICKS <= 0 || t.W_TICKS % (2 * a.tickSpacing) != 0) revert BadTier();
+        // [MU-259] a static LP fee: the vault's settlement prices the arbitrage fee at the key's fee (the dynamic-fee
+        // flag, and any fee of 100% or more, is rejected)
+        if (a.fee >= 1_000_000) revert BadTier();
         IUniswapV3PoolOracle r = IUniswapV3PoolOracle(t.REF_POOL);
         // [MU-114] the reference prices the same pair in the same orientation
         if (r.token0() != Currency.unwrap(a.currency0) || r.token1() != Currency.unwrap(a.currency1)) revert BadRef();

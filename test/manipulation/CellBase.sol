@@ -130,6 +130,9 @@ abstract contract CellBase is DeployBaseUnplaced {
         uint256 charge0;
         uint256 extra;
         int256 sybil;
+        /// the vault's own swap volume in the action (Σ |amount0| of the PoolManager's `Swap` events it sent: the
+        /// placement's move and pre-swap, or `rebalanceSwap`); 0 when the action swapped nothing
+        uint256 swapped;
     }
 
     // ------------------------------------------------------------------ configuration
@@ -303,17 +306,40 @@ abstract contract CellBase is DeployBaseUnplaced {
         (nav,) = ExecLedger.value(_h(), sp);
     }
 
+    /// @notice The vault's real NAV at the market: its holdings as they are (the position's amounts at the pool's actual
+    ///         spot, plus idle) valued at the market price. Equal to `_nav(_sqrt(market))` when spot is at the market;
+    ///         an arbitrage that stops elsewhere leaves the position's amounts at that spot (design review S15D-02).
+    function _navReal() internal view returns (uint256) {
+        Holdings memory h = _h();
+        (uint160 sp,) = _spot();
+        (uint256 x, uint256 y) = LiquidityValue.amounts(h.L, h.lo, h.hi, sp);
+        return LiquidityValue.val(uint256(h.idle0) + x, uint256(h.idle1) + y, _sqrt(market));
+    }
+
     /// @notice The coalition's wealth at the market price: the Sybil's tokens plus the curator's shares.
     function _wealth() internal view returns (int256) {
         uint160 sp = _sqrt(market);
         uint256 s = LiquidityValue.val(token0.balanceOf(address(syb)), token1.balanceOf(address(syb)), sp);
-        uint256 c = FullMath.mulDiv(_curatorShares(), _nav(sp), v.totalSupply());
+        uint256 c = FullMath.mulDiv(_curatorShares(), _navReal(), v.totalSupply());
         return int256(s) + int256(c);
     }
 
     /// @notice The Sybil's tokens at the market price.
     function _sybilValue() internal view returns (int256) {
         return int256(LiquidityValue.val(token0.balanceOf(address(syb)), token1.balanceOf(address(syb)), _sqrt(market)));
+    }
+
+    /// @notice `_try` that also returns the vault's own swap volume in the call (Σ |amount0| of its `Swap` events).
+    function _tryRec(bytes memory call) internal returns (bool reverted, bytes4 err, uint256 swapped) {
+        vm.recordLogs();
+        (reverted, err) = _try(call);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bytes32 sig = keccak256("Swap(bytes32,address,int128,int128,uint160,uint128,int24,uint24)");
+        for (uint256 i; i < logs.length; ++i) {
+            if (logs[i].topics[0] != sig || address(uint160(uint256(logs[i].topics[2]))) != vault) continue;
+            (int128 a0,,,,,) = abi.decode(logs[i].data, (int128, int128, uint160, uint128, int24, uint24));
+            swapped += uint256(uint128(a0 < 0 ? -a0 : a0));
+        }
     }
 
     /// @notice A curator call through the bundler; returns (reverted, selector).
@@ -370,6 +396,30 @@ abstract contract CellBase is DeployBaseUnplaced {
         _refFollows(market);
     }
 
+    /// @dev A measure opened before the attack's first step (`_beginMeasure`), used by the next `_attackPlace` or
+    ///      `_attackSwap` in place of the one they open themselves: a push held across blocks is then inside the
+    ///      measure (its cost against third-party depth counts; fix review S14-02/08).
+    bool internal preMeasured;
+    int256 internal pmW;
+    int256 internal pmS;
+    uint256 internal pmC;
+
+    function _beginMeasure() internal {
+        v.settle();
+        (preMeasured, pmW, pmS, pmC) = (true, _wealth(), _sybilValue(), _curatorShares());
+    }
+
+    /// @dev The measure's start: the pre-opened one if any (consumed), else opened now.
+    function _openMeasure() internal returns (int256 w0, int256 s0, uint256 c0) {
+        if (preMeasured) {
+            preMeasured = false;
+            v.settle();
+            return (pmW, pmS, pmC);
+        }
+        v.settle();
+        return (_wealth(), _sybilValue(), _curatorShares());
+    }
+
     /// @dev An optional JIT position the Sybil holds around the next `_attackPlace` (0: none).
     int24 internal jitLo;
     int24 internal jitHi;
@@ -379,14 +429,11 @@ abstract contract CellBase is DeployBaseUnplaced {
     ///         `[lo, lo + W)` through the bundler, the Sybil unwinds spot to the market, the markout settles; the
     ///         coalition's net at the market price.
     function _attackPlace(uint160 pushTarget, int24 lo, PreSwap memory ps, uint160 moveTo) internal returns (Out memory o) {
-        v.settle();
-        int256 w0 = _wealth();
-        int256 s0 = _sybilValue();
-        uint256 c0 = _curatorShares();
+        (int256 w0, int256 s0, uint256 c0) = _openMeasure();
         if (pushTarget != 0) syb.pushTo(pushTarget);
         (int24 jlo, int24 jhi, uint256 J) = (jitLo, jitHi, jitL);
         if (J > 0) syb.lp(jlo, jhi, int256(J));
-        (o.reverted, o.err) = _try(_callPlace(lo, ps, moveTo));
+        (o.reverted, o.err, o.swapped) = _tryRec(_callPlace(lo, ps, moveTo));
         if (!o.reverted) (o.charge0,) = _pendingCharge();
         if (J > 0) syb.lp(jlo, jhi, -int256(J));
         syb.pushTo(_sqrt(market));
@@ -404,7 +451,7 @@ abstract contract CellBase is DeployBaseUnplaced {
     /// @notice The value at the market price of the curator's shares burned between `before` and `after_` (negative
     ///         when the curator's shares grew).
     function _burnedValue(uint256 before, uint256 after_) internal view returns (int256) {
-        uint256 nav = _nav(_sqrt(market));
+        uint256 nav = _navReal();
         uint256 S = v.totalSupply();
         if (before >= after_) return int256(FullMath.mulDiv(before - after_, nav, S));
         return -int256(FullMath.mulDiv(after_ - before, nav, S));
@@ -417,13 +464,10 @@ abstract contract CellBase is DeployBaseUnplaced {
         internal
         returns (Out memory o)
     {
-        v.settle();
-        int256 w0 = _wealth();
-        int256 s0 = _sybilValue();
-        uint256 c0 = _curatorShares();
+        (int256 w0, int256 s0, uint256 c0) = _openMeasure();
         if (pushTarget != 0) syb.pushTo(pushTarget);
         if (J > 0) syb.lp(jlo, jhi, int256(J));
-        (o.reverted, o.err) = _try(_callSwap(z, amt));
+        (o.reverted, o.err, o.swapped) = _tryRec(_callSwap(z, amt));
         if (!o.reverted) (o.charge0,) = _pendingCharge();
         if (J > 0) syb.lp(jlo, jhi, -int256(J));
         syb.pushTo(_sqrt(market));

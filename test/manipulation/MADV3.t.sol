@@ -145,10 +145,18 @@ abstract contract MoveRows is CellBase {
         uint256 extra;
         int256 sybilDelta;
         int24 lo;
+        /// the vault's real loss against the counterfactual at the end (NAV at the market, before any burn matters):
+        /// the test's own oracle for whether the settlement is capped (`vaultLoss > charge0 + reserve`)
+        int256 vaultLoss;
     }
 
+    /// @dev Where the arbitrage after the action stops, in ticks from the market (0: at the market), in both worlds.
+    int24 internal stopOff;
+    /// @dev The counterfactual's own stop when it differs (`type(int24).min`: the same as `stopOff`).
+    int24 internal baseStop = type(int24).min;
+
     function _aliceValue() internal view returns (int256) {
-        return int256(FullMath.mulDiv(v.balanceOf(alice), _nav(_sqrt(market)), v.totalSupply()));
+        return int256(FullMath.mulDiv(v.balanceOf(alice), _navReal(), v.totalSupply()));
     }
 
     /// @notice The path common to the attack and its counterfactual: the market drops `drop` ticks, an arbitrageur
@@ -156,20 +164,23 @@ abstract contract MoveRows is CellBase {
     function _afterPath(int24 drop) internal returns (uint256 extra) {
         int24 c = market;
         market = c - drop;
-        syb.pushTo(_sqrt(market));
+        syb.pushTo(_sqrt(market + stopOff));
         extra = _settleDueExtra();
         v.settle();
     }
 
     /// @dev The counterfactual: no JIT and no action over the same market path (the charge's own counterfactual,
-    ///      NAV_before); the state is restored after. Returns the Sybil's value, the curator's shares and the depositor's
-    ///      value at its end.
-    function _baseline(int24 drop) internal returns (int256 sB, uint256 cB, int256 aB) {
+    ///      NAV_before); the state is restored after. Returns the Sybil's value, the curator's shares, the depositor's
+    ///      value and the vault's real NAV at its end.
+    function _baseline(int24 drop) internal returns (int256 sB, uint256 cB, int256 aB, int256 nB) {
         uint256 snap = vm.snapshotState();
         int24 c = market;
+        int24 so = stopOff;
+        if (baseStop != type(int24).min) stopOff = baseStop;
         _dropAfter(drop);
         _afterPath(drop);
-        (sB, cB, aB) = (_sybilValue(), _curatorShares(), _aliceValue());
+        stopOff = so;
+        (sB, cB, aB, nB) = (_sybilValue(), _curatorShares(), _aliceValue(), int256(_navReal()));
         vm.revertToState(snap);
         market = c;
     }
@@ -178,11 +189,37 @@ abstract contract MoveRows is CellBase {
         return _moveAttackAt(frac, drop, _midLo(market + 60, market));
     }
 
+    /// @dev The counterfactual's end values (`_baseline`), computed once per (markout, stop) by the scans.
+    struct Base {
+        int256 sB;
+        uint256 cB;
+        int256 aB;
+        int256 nB;
+    }
+
+    /// @dev The counterfactual for `drop` from the current state (settled first, as every row is), with `stopOff`
+    ///      (and `baseStop`) as set; the state is unchanged after.
+    function _baseFor(int24 drop) internal returns (Base memory b) {
+        uint256 snap = vm.snapshotState();
+        int24 c = market;
+        v.settle();
+        (b.sB, b.cB, b.aB, b.nB) = _baseline(drop);
+        vm.revertToState(snap);
+        market = c;
+    }
+
     function _moveAttackAt(uint256 frac, int24 drop, int24 lo) internal returns (MoveOut memory o) {
+        v.settle();
+        (int256 sB, uint256 cB, int256 aB, int256 nB) = _baseline(drop);
+        return _moveAttackWith(frac, drop, lo, Base(sB, cB, aB, nB));
+    }
+
+    /// @dev The attack against a counterfactual already computed for the same start state, markout and stop.
+    function _moveAttackWith(uint256 frac, int24 drop, int24 lo, Base memory base) internal returns (MoveOut memory o) {
         v.settle();
         int24 c = market;
         uint128 J = _jitFor(frac);
-        (int256 sB, uint256 cB, int256 aB) = _baseline(drop);
+        (int256 sB, uint256 cB, int256 aB, int256 nB) = (base.sB, base.cB, base.aB, base.nB);
         // the attack
         _dropAfter(drop);
         syb.lp(c, c + 60, int256(uint256(J)));
@@ -194,15 +231,61 @@ abstract contract MoveRows is CellBase {
         o.net = o.sybilDelta - _burnedValue(cB, _curatorShares());
         o.depositorLoss = aB - _aliceValue();
         o.lo = lo;
+        o.vaultLoss = nB - int256(_navReal());
+    }
+
+    /// @dev The test's oracle: the settlement cannot cover the row (the reserve caps it).
+    function _capped(MoveOut memory o) internal pure returns (bool) {
+        return o.vaultLoss > int256(o.charge0 + o.reserve);
+    }
+
+    /// @dev Twelve legal ranges for spot `c + 60` and the reference `c`, spread evenly from one extreme to the other.
+    function _rangeAt(int24 c, uint256 k) internal view returns (int24) {
+        int24 loMin = _floor(c + 60) + TICK_SPACING - W;
+        int24 loMax = _floor(c);
+        uint256 n = uint256(int256((loMax - loMin) / TICK_SPACING));
+        return loMin + int24(int256(n * k / 11)) * TICK_SPACING;
+    }
+
+    /// @dev One row from the start state, restored after.
+    function _row(uint256 frac, int24 drop, uint256 k, int24 stop) internal returns (MoveOut memory o) {
+        uint256 snap = vm.snapshotState();
+        int24 c = market;
+        stopOff = stop;
+        o = _moveAttackAt(frac, drop, _rangeAt(c, k));
+        vm.revertToState(snap);
+        market = c;
+        stopOff = 0;
+    }
+
+    /// @dev The counterfactual for a row with the attack stopping at `stop` and the counterfactual at `bStop`.
+    function _baseAt(int24 drop, int24 stop, int24 bStop) internal returns (Base memory b) {
+        (stopOff, baseStop) = (stop, bStop);
+        b = _baseFor(drop);
+        (stopOff, baseStop) = (int24(0), type(int24).min);
+    }
+
+    /// @dev `_row` against a precomputed counterfactual (`_baseAt` with the same markout and stops).
+    function _rowB(uint256 frac, int24 drop, uint256 k, int24 stop, Base memory b) internal returns (MoveOut memory o) {
+        uint256 snap = vm.snapshotState();
+        int24 c = market;
+        stopOff = stop;
+        o = _moveAttackWith(frac, drop, _rangeAt(c, k), b);
+        vm.revertToState(snap);
+        market = c;
+        stopOff = 0;
     }
 }
 
 contract MADV3MoveTest is MoveRows {
-    /// @notice Row 1 at a 12-tick markout (fuzz; the registered row asks for every markout of at least 12 ticks, which
-    ///         fails from ≈ 70: see the escalated scan): one move through JIT worth up to 10% of NAV, any legal range: a guard reverts (`SwapCap`; `DeltaMin` for a range the
-    ///         post-move inventory cannot fill), or the coalition loses and the depositors lose at most the reserve.
+    /// @notice Row 1 at a 12-tick markout (fuzz over sizes up to just past the per-action cap and any legal range; the
+    ///         full per-draw rule is the scan below; the cap itself is pinned in `oneMovePinned` and U-guard): a guard
+    ///         reverts (`SwapCap`; `DeltaMin` for a range the post-move inventory cannot fill), or the coalition loses and
+    ///         the depositors lose at most the reserve. At 12 ticks the charge alone decides: the caps-off control at 12
+    ///         ticks still loses (fix review S14-04).
+    /// forge-config: default.fuzz.runs = 64
     function test_M_ADV3_move__oneMoveRevertsSwapCapOrLoses(uint256 frac, uint256 loSeed) public {
-        frac = bound(frac, 1e15, 1e17);
+        frac = bound(frac, 1e15, 2.5e16);
         _checkMove(_moveAttackAt(frac, 12, _legalLo(market + 60, market, loSeed)));
     }
 
@@ -218,51 +301,134 @@ contract MADV3MoveTest is MoveRows {
         }
     }
 
-    /// @notice Row 1 over markouts of 12–120 ticks, the mean of the draw against the purchase and its mirror. Weak
-    ///         evidence (fix review S14-01): the up draw's loss is dominated by the arbitrage the counterfactual credits to
-    ///         the Sybil. Kept as a regression row; it is not the registered rule.
-    function test_M_ADV3_move__oneMoveLosesInExpectationOverMirroredMarkouts(uint256 frac, int24 drop, uint256 loSeed)
-        public
-    {
-        frac = bound(frac, 1e15, 1e17);
-        drop = int24(bound(drop, 12, 120));
-        int24 lo = _legalLo(market + 60, market, loSeed);
-        (MoveOut memory dn, MoveOut memory up) = _mirrored(frac, drop, lo);
-        if (dn.reverted || up.reverted) return;
-        assertLe((dn.net + up.net) / 2, 1, "M-ADV3-move: the mean over mirrored markouts must lose");
-    }
+    int24[12] internal MKS = [int24(12), 30, 60, 90, 120, 150, 180, 240, 300, 400, 500, 600];
+    uint256[3] internal SIZES = [uint256(1e15), 1e16, 1.9e16];
 
-    function _mirrored(uint256 frac, int24 drop, int24 lo) internal returns (MoveOut memory dn, MoveOut memory up) {
-        uint256 snap = vm.snapshotState();
-        int24 c = market;
-        dn = _moveAttackAt(frac, drop, lo);
-        vm.revertToState(snap);
-        market = c;
-        up = _moveAttackAt(frac, -drop, lo);
-    }
-
-    /// @notice ESCALATED, reported and not asserted (F-044, fix review S14-01): the registered row (panel D2: net ≤ 0
-    ///         after a scripted adverse markout of at least 12 ticks) FAILS per draw from ≈ 70 ticks. The scan logs the
-    ///         largest net over sizes 0.1–1.9% of NAV × markouts 60–110 ticks × legal ranges; s14 measured up to
-    ///         ≈ +1.2e16 wei (≈ 1e-5 of NAV) at 1.9% / 110 ticks, with the reserve cap not binding. When the owner rules,
-    ///         this becomes an asserted row (or the rule changes).
-    function test_M_ADV3_move__escalatedPerDrawScanReported() public {
-        int24[4] memory ds = [int24(60), 70, 90, 110];
-        uint256[3] memory fr = [uint256(1e15), 1e16, 1.9e16];
-        int256 worst = type(int256).min;
-        for (uint256 f; f < 3; ++f) {
-            for (uint256 j; j < 4; ++j) {
-                for (uint256 k; k < 12; ++k) {
-                    uint256 snap = vm.snapshotState();
-                    int24 c = market;
-                    MoveOut memory dn = _moveAttackAt(fr[f], ds[j], _legalLo(c + 60, c, k * 17));
-                    vm.revertToState(snap);
-                    market = c;
-                    if (!dn.reverted && dn.net > worst) worst = dn.net;
+    /// @notice D2 per draw (owner ruling s15: bounded to the uncapped region; spec §9.1). Sizes 0.1, 1 and 1.9% of NAV ×
+    ///         both directions × twelve legal ranges × markouts from 12 ticks to twice the (size, direction)'s break-even
+    ///         (or 600) × the arbitrage's stop on each settlement leg: at the market and at the leg on the arbitrage's side
+    ///         (between the post-action spot and the market) in both worlds; at the leg past the market (an overshoot)
+    ///         in the attack, with the counterfactual stopping at the market, its best response. On every row the
+    ///         oracle finds uncapped, the coalition nets ≤ 1 wei (the defence's check; the depositors' loss ≤ the reserve
+    ///         also holds, but follows from the oracle's filter); a guard is the only revert. Reported: each break-even
+    ///         and the capped rows' worst net (the disclosed tail). The counterfactual is computed once per (markout,
+    ///         stop) and shared by the rows (it does not depend on the size or the range).
+    function test_M_ADV3_move__perDrawUncappedOnLegLoses() public {
+        uint256 uncapped;
+        int256 worstCapped = type(int256).min;
+        int256 worstUncapped = type(int256).min;
+        int24[3][2] memory be;
+        for (uint256 j; j < 12; ++j) {
+            for (uint256 d; d < 2; ++d) {
+                int24 drop = d == 0 ? MKS[j] : -MKS[j];
+                int24 near = drop > 0 ? tier.FEE_TICKS + 1 : -tier.FEE_TICKS;
+                int24 over = drop > 0 ? -tier.FEE_TICKS : tier.FEE_TICKS + 1;
+                for (uint256 st; st < 3; ++st) {
+                    // st 0: the market; 1: the leg on the arbitrage's side; 2: the overshoot leg (baseline at mk)
+                    int24 stop = st == 0 ? int24(0) : (st == 1 ? near : over);
+                    Base memory b = _baseAt(drop, stop, st == 2 ? int24(0) : type(int24).min);
+                    for (uint256 f; f < 3; ++f) {
+                        if (be[d][f] != 0 && MKS[j] > 2 * be[d][f]) continue;
+                        for (uint256 k; k < 12; ++k) {
+                            MoveOut memory o = _rowB(SIZES[f], drop, k, stop, b);
+                            if (o.reverted) {
+                                _checkMove(o);
+                                continue;
+                            }
+                            if (_capped(o)) {
+                                if (be[d][f] == 0) be[d][f] = MKS[j];
+                                if (o.net > worstCapped) worstCapped = o.net;
+                                continue;
+                            }
+                            ++uncapped;
+                            if (o.net > worstUncapped) worstUncapped = o.net;
+                            assertLe(o.net, 1, "M-ADV3-move per draw: the attack must lose money (uncapped, on a leg)");
+                            assertLe(o.depositorLoss, int256(o.reserve), "the depositors lose at most the reserve");
+                        }
+                    }
                 }
             }
         }
-        console.log("M-ADV3-move per-draw scan: max net (wei)", worst);
+        for (uint256 f; f < 3; ++f) {
+            console.log(
+                string.concat(
+                    "M-ADV3-move size ", vm.toString(SIZES[f]), ": break-even markout, adverse / favourable (0: none to 600) ",
+                    vm.toString(int256(be[0][f])), " / ", vm.toString(int256(be[1][f]))
+                )
+            );
+        }
+        console.log("M-ADV3-move uncapped on-leg rows", uncapped);
+        console.log("  worst uncapped net (wei)", worstUncapped);
+        console.log("  worst capped net (wei; the disclosed tail)", worstCapped);
+        assertGe(uncapped, 1000, "non-vacuity: uncapped rows");
+    }
+
+    /// @dev One reported stop class: rows over the first six markouts (one direction or both), sizes, every third range;
+    ///      a guard is the only revert; returns the uncapped rows' count and worst net (split by the arbitrage's side when
+    ///      `split`: [0] the arbitrage's side, [1] past the market).
+    function _reported(int24 stopAdverse, int24 stopFavourable, int24 bStop, bool both)
+        internal
+        returns (uint256 n, int256[2] memory worst)
+    {
+        worst = [type(int256).min, type(int256).min];
+        for (uint256 j; j < 6; ++j) {
+            for (uint256 d; d < (both ? 2 : 1); ++d) {
+                int24 drop = d == 0 ? MKS[j] : -MKS[j];
+                int24 stop = d == 0 ? stopAdverse : stopFavourable;
+                Base memory b = _baseAt(drop, stop, bStop);
+                for (uint256 f; f < 3; ++f) {
+                    for (uint256 k; k < 12; k += 3) {
+                        MoveOut memory o = _rowB(SIZES[f], drop, k, stop, b);
+                        if (o.reverted) {
+                            _checkMove(o);
+                            continue;
+                        }
+                        if (_capped(o)) continue;
+                        ++n;
+                        // the arbitrage's side: above the market for an adverse (falling) markout, below for a rise
+                        uint256 w = (drop > 0) == (stop > 0) ? 0 : 1;
+                        if (o.net > worst[w]) worst[w] = o.net;
+                    }
+                }
+            }
+        }
+    }
+
+    /// @notice Reported (not claimed), with a ratchet on the measured worst: both worlds' arbitrage overshooting the
+    ///         market to the far leg, which costs the arbitrageur in both. s15 measured ≤ ≈ 9.1e14 wei, all from the
+    ///         counterfactual's own overshoot (with it stopping at the market every row loses: the scan above).
+    function test_M_ADV3_move__bothWorldsOvershootReported() public {
+        (uint256 n, int256[2] memory w) = _reported(-tier.FEE_TICKS, tier.FEE_TICKS + 1, type(int24).min, true);
+        console.log("M-ADV3-move both worlds overshooting: uncapped rows", n);
+        console.logInt(w[1]);
+        assertGe(n, 50, "non-vacuity");
+        assertLe(w[1], 1e15, "ratchet: the measured worst (s15)");
+    }
+
+    /// @notice Reported, with a ratchet: the arbitrage stopping inside the fee band off a leg (`mk ± 3`) in both worlds.
+    ///         s15: on the arbitrage's side every row loses (worst ≈ −2.5e14, asserted ≤ 1 wei); past the market ≤ ≈ 3.7e14.
+    function test_M_ADV3_move__offLegStopsReported() public {
+        (uint256 n1, int256[2] memory a) = _reported(3, -3, type(int24).min, true);
+        (uint256 n2, int256[2] memory b) = _reported(-3, 3, type(int24).min, true);
+        console.log("M-ADV3-move off-leg stops (mk +/- 3): uncapped rows", n1 + n2);
+        console.log("  worst net, the arbitrage's side / past the market (wei):");
+        console.logInt(a[0]);
+        console.logInt(b[1]);
+        assertGe(n1 + n2, 100, "non-vacuity");
+        assertLe(a[0], 1, "the arbitrage's side, off a leg, loses");
+        assertLe(b[1], 4e14, "ratchet: past the market (s15)");
+    }
+
+    /// @notice Reported, with a ratchet: a protocol fee of 1,000 pips switched on, so a rational arbitrage stops ≈ 15
+    ///         ticks short of the market on its side (disclosed in spec §5.2). s15 measured ≤ ≈ 4.2e15 wei.
+    function test_M_ADV3_move__protocolFeeStopsReported() public {
+        manager.setProtocolFeeController(address(this));
+        manager.setProtocolFee(key, uint24(1000) | (uint24(1000) << 12));
+        (uint256 n, int256[2] memory w) = _reported(15, -15, type(int24).min, true);
+        console.log("M-ADV3-move protocol-fee stops: uncapped rows", n);
+        console.logInt(w[0]);
+        assertGe(n, 50, "non-vacuity");
+        assertLe(w[0], 5e15, "ratchet: the measured worst (s15)");
     }
 
     /// @notice Row 1, pinned: a move just under the per-action cap (1.9% of NAV) and a 12-tick adverse markout acts,
@@ -334,6 +500,22 @@ contract MADV3MoveCtlTest is MoveRows {
         assertGt(o.depositorLoss, int256(o.reserve), "control: the depositors lose more than the reserve");
         assertGt(o.net, 0, "control: the coalition profits");
         console.log("M-ADV3-move control: net, depositors' loss (wei)", uint256(o.net), uint256(o.depositorLoss));
+    }
+
+    /// @notice Control for the per-draw row (F-044): the s14 settlement (holdings-only outer legs, the immediate charge
+    ///         netted at face value) on the uncapped on-leg rows at 1.9% of NAV and a 110-tick adverse markout: the
+    ///         coalition profits on at least one range (s14 measured +1.23e16 wei), so the fee-aware settlement is what
+    ///         makes the per-draw row lose.
+    function test_M_ADV3_move__ctlS14SettlementProfitsPerDraw() public {
+        VaultHarness(vault).setSettleS14(true);
+        int256 best = type(int256).min;
+        for (uint256 k; k < 12; ++k) {
+            MoveOut memory o = _row(1.9e16, 110, k, 0);
+            if (o.reverted || _capped(o)) continue;
+            if (o.net > best) best = o.net;
+        }
+        console.log("M-ADV3-move control (s14 settlement): best uncapped net (wei)", best);
+        assertGt(best, 0, "control: the s14 settlement lets the coalition profit");
     }
 
     /// @notice Control for row 2 (MU-241 applied): the moves are not counted, so they continue past the epoch cap.

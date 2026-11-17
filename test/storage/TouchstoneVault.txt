@@ -49,5 +49,10 @@
   24  0   16 _pAfter.L: uint128
   24 16    3 _pAfter.lo: int24
   24 19    3 _pAfter.hi: int24
-  25  0   16 _pCharge0: uint128
-  25 16   16 _pReserve: uint128
+  25  0  128 _pend: struct Markout
+  25  0   16 _pend.charge0: uint128
+  25 16   16 _pend.reserve: uint128
+  26  0   20 _pend.s0: uint160
+  27  0   20 _pend.sEnd: uint160
+  28  0   16 _pend.burn0: uint128
+  28 16   16 _pend.sAct: uint128

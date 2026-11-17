@@ -180,24 +180,65 @@ def measure(before, after, sqrt_spot, sqrt_ref, S, unvested, bond):
     return c, p, n, b, ok
 
 
-def settle_extra(before, after, tick_mk, fee_ticks, charge0, reserve, now_h, S, reserve_shares):
-    """ExecLedger.settleExtra (repair C settlement with a successful window read) -> (extra, pMk, burnS).
-    Legs sqrtAt(max(MIN_TICK, tick_mk − fee_ticks)) then sqrtAt(min(MAX_TICK, tick_mk + fee_ticks + 1)) (the upper leg is
-    rounded up: tryWindow returns the floor of the mean tick, owner R1-02, v2.34; the later replaces only on a strictly larger
-    loss); extra = min(reserve, max(0, loss_mk − charge0)); burnS = min(reserveShares, ceilDiv(extra·S,
-    NAV_now(pMk))) at the holdings now; reserveShares if NAV_now(pMk) = 0 and extra > 0; 0 if extra = 0."""
-    p_lo = get_sqrt_price_at_tick(max(MIN_TICK, min(MAX_TICK, tick_mk - fee_ticks)))
-    p_hi = get_sqrt_price_at_tick(max(MIN_TICK, min(MAX_TICK, tick_mk + fee_ticks + 1)))
-    l_lo = value(before, p_lo)[0] - value(after, p_lo)[0]
-    l_hi = value(before, p_hi)[0] - value(after, p_hi)[0]
-    loss_mk, p_mk = (l_hi, p_hi) if l_hi > l_lo else (l_lo, p_lo)
-    extra = min(reserve, max(0, loss_mk - charge0))
-    if not extra:
+CREDIT_MARGIN = 1000   # pips: the relative margin on the after holding's fee credit (spec §3.4, s15)
+
+
+def q_up(x, s):
+    """The quote form rounded up (the before holding's fee term, spec §3.4 s15)."""
+    if s <= U128:
+        return mul_div_up(s * s, x, 1 << 192)
+    return mul_div_up(mul_div_up(s, s, 1 << 64), x, 1 << 128)
+
+
+def arb_fee(h, s, p, up, fee_pips):
+    """F(h, s, p, up) of spec §3.4 (s15): the LP fee h's position earns from an exact-input swap that carries spot
+    from sqrt price s to p, valued in token1 at p. `up`: the before holding (every rounding up); otherwise the after
+    holding's credit (every rounding down, less (hi − lo) + 2 units of the fee's token before valuation and less
+    CREDIT_MARGIN pips after)."""
+    if h.L == 0 or p == s:
+        return 0
+    x = max(min(s, p), get_sqrt_price_at_tick(h.lo))
+    y = min(max(s, p), get_sqrt_price_at_tick(h.hi))
+    if y <= x:
+        return 0
+    down = p < s
+    amt = get_amount0_delta(x, y, h.L, up) if down else get_amount1_delta(x, y, h.L, up)
+    phi = ceil_div(amt * fee_pips, 10 ** 6 - fee_pips) if up else amt * fee_pips // (10 ** 6 - fee_pips)
+    if up:
+        return q_up(phi, p) if down else phi
+    phi = max(0, phi - ((h.hi - h.lo) + 2))
+    v = q(phi, p) if down else phi
+    return v * (10 ** 6 - CREDIT_MARGIN) // 10 ** 6
+
+
+def settle_extra(before, after, pend, tick_mk, fee_ticks, fee_pips, reserve_shares):
+    """ExecLedger.settleExtra, the fee-aware settlement with a successful window read (spec §3.4, s15) ->
+    (extra, pMk, burnS). `pend`: dict(s0, sEnd, charge0, reserve, burn0, sAct).
+    Legs, in order: sqrtAt(max(MIN_TICK, tick_mk − fee_ticks)), sqrtAt(tick_mk), sqrtAt(min(MAX_TICK, tick_mk +
+    fee_ticks + 1)). At each leg nb = NAV(before, p) + F(before, s0, p, up), na = NAV(after, p) + F(after, sEnd, p,
+    down), g = nb − na. The chosen leg: a leg with g > 0 replaces a current one with g ≤ 0; between positive legs a
+    later one replaces when g_new·nb_cur > g_cur·nb_new. loss = max(0, g). burnS = min(reserveShares, max(0,
+    ceilDiv(loss·sAct, nb) − burn0)); extra = mulDiv(burnS, nb, sAct) (0 when sAct = 0)."""
+    legs = [max(MIN_TICK, tick_mk - fee_ticks), max(MIN_TICK, min(MAX_TICK, tick_mk)), min(MAX_TICK, tick_mk + fee_ticks + 1)]
+    best = None
+    for t in legs:
+        p = get_sqrt_price_at_tick(t)
+        nb = value(before, p)[0] + arb_fee(before, pend["s0"], p, True, fee_pips)
+        na = value(after, p)[0] + arb_fee(after, pend["sEnd"], p, False, fee_pips)
+        g = nb - na
+        if best is None:
+            best = (g, nb, p)
+            continue
+        gc, nbc, _ = best
+        if g > 0 and (gc <= 0 or g * nbc > gc * nb):
+            best = (g, nb, p)
+    g, nb, p_mk = best
+    loss = max(0, g)
+    if loss == 0 or pend["sAct"] == 0:
         return 0, p_mk, 0
-    nav_now = value(now_h, p_mk)[0]
-    if not nav_now:
-        return extra, p_mk, reserve_shares
-    return extra, p_mk, min(reserve_shares, ceil_div(extra * S, nav_now))
+    req = ceil_div(loss * pend["sAct"], nb)
+    burn_s = min(reserve_shares, max(0, req - pend["burn0"]))
+    return mul_div(burn_s, nb, pend["sAct"]), p_mk, burn_s
 
 
 # ================================================================ Placement
@@ -1016,8 +1057,8 @@ class Vault:
         ok, tick = self.hook.try_window(ts, a, a - t.H_MARKOUT)
         b = self.bank
         if ok:
-            extra, p_mk, burn_s = settle_extra(pd["before"], pd["after"], tick, t.FEE_TICKS, pd["charge0"], pd["reserve"],
-                                               self.h, self.S, b.reserveShares)
+            extra, p_mk, burn_s = settle_extra(pd["before"], pd["after"], pd, tick, t.FEE_TICKS, self.pool.fee,
+                                               b.reserveShares)
         else:
             extra, burn_s = pd["reserve"], b.reserveShares
         burned, _, rel_bond, rel_nb = fee_bank_apply(b, "Settle", dict(burnS=burn_s, epoch=now // t.EPOCH, now=now))
@@ -1189,6 +1230,7 @@ class Vault:
             raise Revert("Insolvent")
         if charge + reserve > max_charge:
             raise Revert("MaxCharge")
+        s_act = self.S
         bb, _, bank_b, bond_b = fee_bank_apply(self.bank, "Charge", dict(burn=burn, burnR=burn_r))
         self.S -= bb
         r = self.rec(self.epoch)
@@ -1196,7 +1238,9 @@ class Vault:
         r["bankBurned"] += bank_b
         r["bondBurned"] += bond_b
         self.events.append(("Action", kind, charge, p_star, bank_b, bond_b))
-        self.pending = dict(tAction=ts, before=before.copy(), after=self.h.copy(), charge0=charge, reserve=reserve)
+        # s15: the record also keeps the spots the fee terms start from, the charge's burn and the supply before it
+        self.pending = dict(tAction=ts, before=before.copy(), after=self.h.copy(), charge0=charge, reserve=reserve,
+                            s0=s0, sEnd=self.pool.s, burn0=bb, sAct=min(s_act, U128))
         return charge, p_star, burn
 
     NO_PRESWAP = {"active": False, "zeroForOne": False, "amountIn": 0}

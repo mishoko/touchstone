@@ -15,6 +15,7 @@ import {ITouchstoneHook} from "../../src/interfaces/ITouchstoneHook.sol";
 import {ExecLedger} from "../../src/libraries/ExecLedger.sol";
 import {FeeBank} from "../../src/libraries/FeeBank.sol";
 import {Ladder} from "../../src/libraries/Ladder.sol";
+import {Markout} from "../../src/types/Markout.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
 import {Bank, Cohort, RING} from "../../src/types/Bank.sol";
 import {SettleExtraOracle} from "../utils/SettleExtraOracle.sol";
@@ -128,6 +129,25 @@ contract VaultActionTest is LiquidPoolBase, SettleExtraOracle {
     /// @notice A swap is charged its shortfall at the worse leg: the burn leaves the supply, the reserve's shares are
     ///         encumbered out of the bond, the pending record holds the holdings before and after, the charge and the
     ///         reserve, and the `Action` event carries the charge, its leg and the bank and bond burns.
+    /// @notice U-settle (s15, F-044): an action's record keeps what the fee-aware settlement needs: the pre-move spot
+    ///         `s0`, the spot the action leaves `sEnd`, the charge's burn `burn0` (the supply's drop in the action) and the
+    ///         supply just before it `sAct`.
+    function test_U_settle__recordKeepsTheSpotsTheBurnAndTheSupply() public {
+        _setRef(40); // the swap sells token0 below the reference: a positive charge
+        (, uint256 S0) = _prime();
+        uint160 spBefore = _sqrtSpot();
+        _swapAs(true, 2e16, type(uint256).max);
+        Markout memory m = hv.markout();
+        uint160 spAfter = _sqrtSpot();
+        uint256 S1 = hv.totalSupply();
+        assertEq(m.s0, spBefore, "s0: the pre-move spot");
+        assertEq(m.sEnd, spAfter, "sEnd: the spot the action left");
+        assertTrue(m.s0 != m.sEnd, "the swap moved spot");
+        assertGt(m.burn0, 0, "the charge burned shares");
+        assertEq(m.sAct, S0, "sAct: the supply before the charge's burn");
+        assertEq(uint256(m.burn0), S0 - S1, "burn0: the supply's drop in the action");
+    }
+
     function test_U_3__swapChargedItsShortfallAtTheWorseLeg() public {
         _setRef(40); // spot 0 sells token0 below the reference: the reference leg is the worse one
         (Holdings memory b, uint256 S) = _prime();
@@ -255,7 +275,7 @@ contract VaultActionTest is LiquidPoolBase, SettleExtraOracle {
         advance(1);
         assertEq(vm.getBlockTimestamp(), tA + 2 * blocktime + tier.H_MARKOUT, "due");
         (uint256 extra,, uint256 burnS) =
-            _settleExtra(pb, pa, -30, tier.FEE_TICKS, c0, r, hv.holdings(), hv.totalSupply(), rs);
+            _settleExtra(pb, pa, hv.markout(), -30, tier.FEE_TICKS, hv.feePips(), rs);
         uint256 S = hv.totalSupply();
         vm.expectEmit(address(hv));
         emit Settled(c0, extra, -30, false);

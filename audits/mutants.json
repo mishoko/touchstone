@@ -11,7 +11,7 @@
    "find": "        return nb + naRef > nbRef + na;",
    "replace": "        return nb + naRef < nbRef + na;",
    "status": "KILLED",
-   "basis": "811de1741ede41d2"
+   "basis": "2a3853ed4b984243"
   },
   {
    "id": "MU-002",
@@ -23,7 +23,7 @@
    "find": "        if (_worse(nb2, na2, nb, na)) (nb, na, pStar) = (nb2, na2, sqrtRef);",
    "replace": "        if (true) (nb, na, pStar) = (nb2, na2, sqrtRef);",
    "status": "KILLED",
-   "basis": "68759990a12bbe82"
+   "basis": "2b5ed44c2d3df2f7"
   },
   {
    "id": "MU-003",
@@ -35,7 +35,7 @@
    "find": "        charge = nb > na ? nb - na : 0;",
    "replace": "        charge = nb > na ? nb - na : na - nb;",
    "status": "KILLED",
-   "basis": "68759990a12bbe82"
+   "basis": "2b5ed44c2d3df2f7"
   },
   {
    "id": "MU-004",
@@ -47,7 +47,7 @@
    "find": "        charge = nb > na ? nb - na : 0;",
    "replace": "        charge = nb > na ? (nb - na) / 2 : 0;",
    "status": "KILLED",
-   "basis": "68759990a12bbe82"
+   "basis": "2b5ed44c2d3df2f7"
   },
   {
    "id": "MU-005",
@@ -59,7 +59,7 @@
    "find": "if (burn > cover || burnR > cover - burn) revert Insolvent();",
    "replace": "",
    "status": "KILLED",
-   "basis": "cf934c48c08f1b8e"
+   "basis": "be9f842b1b56f6dd"
   },
   {
    "id": "MU-006",
@@ -71,7 +71,7 @@
    "find": "        burn = _shares(charge, S, navBurn);",
    "replace": "        burn = _shares(charge, S, na);",
    "status": "KILLED",
-   "basis": "68759990a12bbe82"
+   "basis": "2b5ed44c2d3df2f7"
   },
   {
    "id": "MU-007",
@@ -83,7 +83,7 @@
    "find": "        Holdings memory before = _holdings();\n",
    "replace": "        Holdings memory before = _pAfter;\n",
    "status": "KILLED",
-   "basis": "4a01ccc3fdd2c10a"
+   "basis": "583a91494a36f6f4"
   },
   {
    "id": "MU-008",
@@ -95,7 +95,7 @@
    "find": "        if (_L > 0) _book(_modify(0));",
    "replace": "        if (false) _book(_modify(0));",
    "status": "KILLED",
-   "basis": "c2de9cb5096e36d1"
+   "basis": "7a6bf35576d85250"
   },
   {
    "id": "MU-009",
@@ -107,7 +107,7 @@
    "find": "before NAV_after\n        _collect();\n",
    "replace": "before NAV_after\n",
    "status": "KILLED",
-   "basis": "b8d9946ebf880bea"
+   "basis": "58debdd3d028b6bb"
   },
   {
    "id": "MU-010",
@@ -119,7 +119,7 @@
    "find": "        if (dist > band || -dist > band) return 1;",
    "replace": "        if (dist > band) return 1;",
    "status": "KILLED",
-   "basis": "8d88e51105ceb942"
+   "basis": "69d6dc3bedc5351a"
   },
   {
    "id": "MU-011",
@@ -131,7 +131,7 @@
    "find": "        if (refTick < lo || refTick >= hi) return 5;",
    "replace": "        if (false) return 5;",
    "status": "KILLED",
-   "basis": "8d88e51105ceb942"
+   "basis": "69d6dc3bedc5351a"
   },
   {
    "id": "MU-012",
@@ -143,7 +143,7 @@
    "find": "        if (int256(hi) - int256(lo) != int256(wTicks)) return 2;",
    "replace": "        if (int256(hi) - int256(lo) < int256(wTicks)) return 2;",
    "status": "KILLED",
-   "basis": "8d88e51105ceb942"
+   "basis": "69d6dc3bedc5351a"
   },
   {
    "id": "MU-013",
@@ -155,7 +155,7 @@
    "find": "        if (tickSpot < lo || tickSpot >= hi) return 4;",
    "replace": "        if (tickSpot < lo || tickSpot > hi) return 4;",
    "status": "KILLED",
-   "basis": "8d88e51105ceb942"
+   "basis": "69d6dc3bedc5351a"
   },
   {
    "id": "MU-014",
@@ -167,7 +167,7 @@
    "find": "        if (la != 0 && block.number < la + COOLDOWN) revert Cooldown();\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "2de9e742845b2472"
+   "basis": "758033406db1a284"
   },
   {
    "id": "MU-015",
@@ -179,7 +179,7 @@
    "find": "        if (_swapCount >= MAX_SWAPS) revert MaxSwaps();\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "b8d9946ebf880bea"
+   "basis": "58debdd3d028b6bb"
   },
   {
    "id": "MU-016",
@@ -191,7 +191,7 @@
    "find": "uint256 d0 = FullMath.mulDivRoundingUp(_idle0, s, S);",
    "replace": "uint256 d0 = FullMath.mulDiv(_idle0, s, S);",
    "status": "KILLED",
-   "basis": "4a5aa57de3860782"
+   "basis": "e2c9fdeb62448037"
   },
   {
    "id": "MU-017",
@@ -203,7 +203,7 @@
    "find": "        // [MU-017] the supply before the burn\n        uint256 S = totalSupply();",
    "replace": "        // [MU-017] the supply before the burn\n        uint256 S = totalSupply() - s;",
    "status": "KILLED",
-   "basis": "23dbc2d87debd52b"
+   "basis": "5a08afec6b1670c2"
   },
   {
    "id": "MU-018",
@@ -215,7 +215,7 @@
    "find": "        uint256 head = l0 / 1e9 + 1;",
    "replace": "        uint256 head = 0;",
    "status": "KILLED",
-   "basis": "2e85e68f683112a0"
+   "basis": "334f81535e3c8642"
   },
   {
    "id": "MU-019",
@@ -227,7 +227,7 @@
    "find": "if (S2 * BOND_RATIO > uint256(_bank.bondShares) * WAD) revert NavCap();",
    "replace": "if (S2 * BOND_RATIO < uint256(_bank.bondShares) * WAD) revert NavCap();",
    "status": "KILLED",
-   "basis": "4a5aa57de3860782"
+   "basis": "e2c9fdeb62448037"
   },
   {
    "id": "MU-020",
@@ -239,7 +239,7 @@
    "find": "z ? tickSpot - (FEE_TICKS + BAND_SWAP) : tickSpot + (FEE_TICKS + BAND_SWAP)",
    "replace": "z ? tickSpot + (FEE_TICKS + BAND_SWAP) : tickSpot - (FEE_TICKS + BAND_SWAP)",
    "status": "KILLED",
-   "basis": "b8d9946ebf880bea"
+   "basis": "58debdd3d028b6bb"
   },
   {
    "id": "MU-021",
@@ -251,7 +251,7 @@
    "find": "        // [MU-021] rebalanceSwap leaves the mode as it is\n        if (place) {",
    "replace": "        // [MU-021] rebalanceSwap leaves the mode as it is\n        if (!place) FeeBank.bankApply(_bank, Op.Place, \"\");\n        if (place) {",
    "status": "KILLED",
-   "basis": "4a01ccc3fdd2c10a"
+   "basis": "583a91494a36f6f4"
   },
   {
    "id": "MU-022",
@@ -263,7 +263,7 @@
    "find": "        if (frac + used > MAX_SWAP_ACTION || _epochSwapFrac + frac > MAX_SWAP_EPOCH) revert SwapCap();\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "b8d9946ebf880bea"
+   "basis": "58debdd3d028b6bb"
   },
   {
    "id": "MU-023",
@@ -275,7 +275,7 @@
    "find": "if (S2 * BOND_RATIO > uint256(_bank.bondShares) * WAD) revert NavCap();",
    "replace": "",
    "status": "KILLED",
-   "basis": "4a5aa57de3860782"
+   "basis": "e2c9fdeb62448037"
   },
   {
    "id": "MU-024",
@@ -287,7 +287,7 @@
    "find": "if (PoolId.unwrap(key.toId()) != PoolId.unwrap(POOL_ID)) revert WrongPool();",
    "replace": "",
    "status": "KILLED",
-   "basis": "250e7d53bf38f31f"
+   "basis": "d92f55d722a6af7d"
   },
   {
    "id": "MU-025",
@@ -299,7 +299,7 @@
    "find": "if (msg.sender != VAULT) revert OnlyVault();",
    "replace": "",
    "status": "KILLED",
-   "basis": "3051e6149d061ae5"
+   "basis": "b0c89776076a67f6"
   },
   {
    "id": "MU-026",
@@ -311,7 +311,7 @@
    "find": "// [MU-026] initialization by anyone but the hook's own constructor reverts\n        revert HookNotImplemented();",
    "replace": "// [MU-026] initialization by anyone but the hook's own constructor reverts\n        return IHooks.beforeInitialize.selector;",
    "status": "KILLED",
-   "basis": "af132f8884c2129f"
+   "basis": "747341ed0cc3ed2e"
   },
   {
    "id": "MU-027",
@@ -323,7 +323,7 @@
    "find": "        o = HOOK.snapshotIfNewBlock();\n        // [MU-008]",
    "replace": "        o = HOOK.obs();\n        // [MU-008]",
    "status": "KILLED",
-   "basis": "2ee5469ba6f04659"
+   "basis": "0cc5108d546afee2"
   },
   {
    "id": "MU-028",
@@ -335,7 +335,7 @@
    "find": "c.epoch > b.cohorts[best].epoch",
    "replace": "c.epoch < b.cohorts[best].epoch",
    "status": "KILLED",
-   "basis": "9aa34532a6e0dba5"
+   "basis": "c49f0c8e9b6f676f"
   },
   {
    "id": "MU-029",
@@ -347,7 +347,7 @@
    "find": "uint256 m = need < b.maturedPending ? need : b.maturedPending;",
    "replace": "uint256 vu = need < b.vestedUnclaimed ? need : b.vestedUnclaimed; b.vestedUnclaimed -= uint128(vu); need -= vu; fromBank += vu; uint256 m = need < b.maturedPending ? need : b.maturedPending;",
    "status": "KILLED",
-   "basis": "b8658b0bfb92a252"
+   "basis": "ed2745c2861ced1d"
   },
   {
    "id": "MU-030",
@@ -359,7 +359,7 @@
    "find": "        // (3) pending breaches, before any accrual or vesting\n",
    "replace": "        if (vestable) FeeBank.bankApply(b, Op.VestTime, abi.encode(ne, gateOpen));\n        // (3) pending breaches, before any accrual or vesting\n",
    "status": "KILLED",
-   "basis": "4486c233d2095daf"
+   "basis": "41e83549ac775a76"
   },
   {
    "id": "MU-031",
@@ -371,7 +371,7 @@
    "find": "if (b.dripBlocks == 0) {",
    "replace": "if (true) {",
    "status": "KILLED",
-   "basis": "961eef97ac04c83e"
+   "basis": "ed6b62bf99042040"
   },
   {
    "id": "MU-032",
@@ -383,7 +383,7 @@
    "find": "b.forfeitPool = _sat(uint256(b.forfeitPool) + forfeited);",
    "replace": "b.bondShares = _sat(uint256(b.bondShares) + forfeited);",
    "status": "KILLED",
-   "basis": "fc8f8773c1ddfcdb"
+   "basis": "f9490ffaa47dd4e4"
   },
   {
    "id": "MU-033",
@@ -417,7 +417,7 @@
    "find": "bool creditV = refIn && !_emptyRange &&",
    "replace": "bool creditV = !_emptyRange &&",
    "status": "KILLED",
-   "basis": "57a7c48c1a59e56c"
+   "basis": "48032cf910bd6da2"
   },
   {
    "id": "MU-036",
@@ -440,7 +440,7 @@
    "find": "        (bool liveRead, int24 liveTick) = _checkpoint(o);\n",
    "replace": "        bool liveRead;\n        int24 liveTick;\n        if (entry != Entry.Deposit) (liveRead, liveTick) = _checkpoint(o);\n",
    "status": "KILLED",
-   "basis": "33fc7e6d998d4840"
+   "basis": "ce957d9955a963d2"
   },
   {
    "id": "MU-038",
@@ -452,7 +452,7 @@
    "find": "return x > type(uint128).max ? type(uint128).max : uint128(x);",
    "replace": "require(x <= type(uint128).max); return uint128(x);",
    "status": "KILLED",
-   "basis": "b03b8d6100a8a38f"
+   "basis": "53ec5312a842c9e5"
   },
   {
    "id": "MU-039",
@@ -464,7 +464,7 @@
    "find": "j * c <= newOut && n < 3",
    "replace": "j * c < newOut && n < 3",
    "status": "KILLED",
-   "basis": "051ce4642bcf203f"
+   "basis": "c933e6ed537c3deb"
   },
   {
    "id": "MU-040",
@@ -476,7 +476,7 @@
    "find": "bool refIn = lo <= ref && ref < hi;",
    "replace": "bool refIn = lo <= tick && tick < hi;",
    "status": "KILLED",
-   "basis": "12cb0a2a6507b839"
+   "basis": "8458f2a90e0549df"
   },
   {
    "id": "MU-041",
@@ -488,7 +488,7 @@
    "find": "uint256 end = now_ < freshEnd ? now_ : freshEnd;",
    "replace": "uint256 end = now_;",
    "status": "KILLED",
-   "basis": "12cb0a2a6507b839"
+   "basis": "8458f2a90e0549df"
   },
   {
    "id": "MU-042",
@@ -500,7 +500,7 @@
    "find": "int24 m = MedianOracle.med9(_ring, _head, _count);",
    "replace": "_insert(now_, tick);\n                int24 m = MedianOracle.med9(_ring, _head, _count);",
    "status": "KILLED",
-   "basis": "71b802b7cd7a0568"
+   "basis": "d9cc7eddd1c2902b"
   },
   {
    "id": "MU-043",
@@ -512,7 +512,7 @@
    "find": "        _resetStreak = 0;\n        _outBlocks = 0;\n        emit RangeRegistered",
    "replace": "        emit RangeRegistered",
    "status": "KILLED",
-   "basis": "453fadd57ee11ea6"
+   "basis": "e421f26e8d3f3020"
   },
   {
    "id": "MU-044",
@@ -524,7 +524,7 @@
    "find": "            if (deltaAfter < DELTA_MIN) revert DeltaMin();",
    "replace": "            if (deltaAfter <= DELTA_MIN) revert DeltaMin();",
    "status": "KILLED",
-   "basis": "8763c3f0a41eb4e8"
+   "basis": "2db940a498525166"
   },
   {
    "id": "MU-045",
@@ -536,7 +536,7 @@
    "find": "uint256 internal constant OPEN_EXITED = (1 << uint256(Entry.Withdraw))",
    "replace": "uint256 internal constant OPEN_EXITED = (1 << uint256(Entry.Deposit)) | (1 << uint256(Entry.TopUpBond)) | (1 << uint256(Entry.Withdraw))",
    "status": "KILLED",
-   "basis": "ce7c33da9d3644c3"
+   "basis": "f4eb4abd34b898c1"
   },
   {
    "id": "MU-046",
@@ -548,7 +548,7 @@
    "find": "if (b.mode != Ladder.EXITED) revert Ladder.BadMode();",
    "replace": "",
    "status": "KILLED",
-   "basis": "50bb3b2bbec4daae"
+   "basis": "9ddbe3fbe97520e2"
   },
   {
    "id": "MU-047",
@@ -560,7 +560,7 @@
    "find": "forfeited = _forfeitAll(b, now_);",
    "replace": "forfeited = ev == Ladder.EV_RETIRE ? 0 : _forfeitAll(b, now_);",
    "status": "KILLED",
-   "basis": "2920019dbbc32f1f"
+   "basis": "1fb245b906ccdb5d"
   },
   {
    "id": "MU-048",
@@ -572,7 +572,7 @@
    "find": "if (nb >= REMOVAL) return",
    "replace": "if (nb >= REMOVAL + 1) return",
    "status": "KILLED",
-   "basis": "ff777fe1171441f5"
+   "basis": "bbb419f5008b0906"
   },
   {
    "id": "MU-049",
@@ -584,7 +584,7 @@
    "find": "        if (n > 0) {\n            _baseOwed = 0;",
    "replace": "        if (n > 0 && false) {\n            _baseOwed = 0;",
    "status": "KILLED",
-   "basis": "223720c3f4a56fe1"
+   "basis": "edc65b024dffdc63"
   },
   {
    "id": "MU-050",
@@ -596,7 +596,7 @@
    "find": "            _tauV0 = o.tauVAtLastPending;\n            _segStart = o.lastPendingBlock;\n        }\n        // (4) the segment [segStart, now): no base accrues before the curator can place\n        _tauV0 = o.tauV;\n        _segStart = now_;",
    "replace": "        }\n        _tauV0 = o.tauV;\n        _segStart = now_;\n        if (n > 0) {\n            _tauV0 = o.tauVAtLastPending;\n            _segStart = o.lastPendingBlock;\n        }",
    "status": "KILLED",
-   "basis": "19c3bc31c34e50b9"
+   "basis": "0427d4a730b3be86"
   },
   {
    "id": "MU-051",
@@ -630,7 +630,7 @@
    "find": "if (nb >= REMOVAL) return",
    "replace": "if (nb == REMOVAL) return",
    "status": "KILLED",
-   "basis": "ff777fe1171441f5"
+   "basis": "bbb419f5008b0906"
   },
   {
    "id": "MU-054",
@@ -653,7 +653,7 @@
    "find": "_nav0 = _u128(rebased);",
    "replace": "",
    "status": "KILLED",
-   "basis": "673a0459fcd24043"
+   "basis": "d3fda0d0e828d11e"
   },
   {
    "id": "MU-056",
@@ -676,7 +676,7 @@
    "find": "creditV ? _satAdd(tauV0, cr) : tauV0,",
    "replace": "creditV ? _satAdd(tauV0, trunc) : tauV0,",
    "status": "KILLED",
-   "basis": "71b802b7cd7a0568"
+   "basis": "d9cc7eddd1c2902b"
   },
   {
    "id": "MU-058",
@@ -688,7 +688,7 @@
    "find": "if (read) (ok, t) = _readAnchor(k);",
    "replace": "if (read) {\n            (ok, t) = _readAnchor(k);\n            _commit(ok, t, k);\n            read = false;\n        }",
    "status": "KILLED",
-   "basis": "12cb0a2a6507b839"
+   "basis": "8458f2a90e0549df"
   },
   {
    "id": "MU-059",
@@ -700,7 +700,7 @@
    "find": "_latch(oldOut, newOut, last);",
    "replace": "_latch(0, newOut, last);",
    "status": "KILLED",
-   "basis": "12cb0a2a6507b839"
+   "basis": "8458f2a90e0549df"
   },
   {
    "id": "MU-060",
@@ -723,7 +723,7 @@
    "find": "if (streak >= RESET_RUN) {",
    "replace": "if (streak >= 1) {",
    "status": "KILLED",
-   "basis": "5399d215fc5d7b52"
+   "basis": "1635e433a6cd7339"
   },
   {
    "id": "MU-062",
@@ -735,7 +735,7 @@
    "find": "            if (deltaAfter < DELTA_MIN) revert DeltaMin();",
    "replace": "",
    "status": "KILLED",
-   "basis": "8763c3f0a41eb4e8"
+   "basis": "2db940a498525166"
   },
   {
    "id": "MU-063",
@@ -758,7 +758,7 @@
    "find": "OPEN_EXITED = (1 << uint256(Entry.Withdraw)) | (1 << uint256(Entry.Claim))",
    "replace": "OPEN_EXITED = (1 << uint256(Entry.Withdraw))",
    "status": "KILLED",
-   "basis": "ce7c33da9d3644c3"
+   "basis": "f4eb4abd34b898c1"
   },
   {
    "id": "MU-065",
@@ -770,7 +770,7 @@
    "find": "ModifyLiquidityParams(nlo, nhi, int256(uint256(lw)), _witSalt(epoch))",
    "replace": "ModifyLiquidityParams(nlo, nhi, int256(uint256(lw)), _witSalt(0))",
    "status": "KILLED",
-   "basis": "e5b687e3df2b576a"
+   "basis": "82a81b53a12862bc"
   },
   {
    "id": "MU-066",
@@ -782,7 +782,7 @@
    "find": "_idle0 = SafeCast.toUint128(a0);",
    "replace": "_idle0 = SafeCast.toUint128(a0 + wit0);",
    "status": "KILLED",
-   "basis": "38e2abea08c623ae"
+   "basis": "1a8f3f4cf674e00d"
   },
   {
    "id": "MU-067",
@@ -805,7 +805,7 @@
    "find": "            _gapSinceVerify = false;\n            emit GapCleared(1);",
    "replace": "            emit GapCleared(1);",
    "status": "KILLED",
-   "basis": "5399d215fc5d7b52"
+   "basis": "1635e433a6cd7339"
   },
   {
    "id": "MU-069",
@@ -817,7 +817,7 @@
    "find": "!o.gapSinceVerify && ",
    "replace": "",
    "status": "KILLED",
-   "basis": "19c3bc31c34e50b9"
+   "basis": "0427d4a730b3be86"
   },
   {
    "id": "MU-070",
@@ -829,7 +829,7 @@
    "find": "gateOpen = liveRead && lo <= liveTick && liveTick < hi;",
    "replace": "gateOpen = true;",
    "status": "KILLED",
-   "basis": "19c3bc31c34e50b9"
+   "basis": "0427d4a730b3be86"
   },
   {
    "id": "MU-071",
@@ -841,7 +841,7 @@
    "find": "if (exited) {",
    "replace": "if (exited || mode == Ladder.EXITED) {",
    "status": "KILLED",
-   "basis": "2920019dbbc32f1f"
+   "basis": "1fb245b906ccdb5d"
   },
   {
    "id": "MU-072",
@@ -853,7 +853,7 @@
    "find": "uint256(b.exitBlock) + b.releaseDelay",
    "replace": "uint256(b.exitBlock) + b.dripBlocks",
    "status": "KILLED",
-   "basis": "50bb3b2bbec4daae"
+   "basis": "9ddbe3fbe97520e2"
   },
   {
    "id": "MU-073",
@@ -865,7 +865,7 @@
    "find": "        Obs memory o = _prologue();\n        // [MU-037] every entry point checkpoints\n        (bool liveRead, int24 liveTick) = _checkpoint(o);\n        // [MU-073] the mode gate runs after the prologue checkpoint, which may have moved the mode to EXITED\n        if (!Ladder.allowed(_bank.mode, uint8(entry))) revert Ladder.BadMode();",
    "replace": "        // [MU-037] [MU-073]\n        if (!Ladder.allowed(_bank.mode, uint8(entry))) revert Ladder.BadMode();\n        Obs memory o = _prologue();\n        (bool liveRead, int24 liveTick) = _checkpoint(o);",
    "status": "KILLED",
-   "basis": "33b138e438a4c33c"
+   "basis": "c77af3f0c04daf35"
   },
   {
    "id": "MU-074",
@@ -877,7 +877,7 @@
    "find": "_bank.dripBlocks = DRIP_BLOCKS;",
    "replace": "",
    "status": "KILLED",
-   "basis": "38e2abea08c623ae"
+   "basis": "1a8f3f4cf674e00d"
   },
   {
    "id": "MU-075",
@@ -889,7 +889,7 @@
    "find": "        if (msg.sender != OWNER) revert OnlyOwner();",
    "replace": "",
    "status": "KILLED",
-   "basis": "f98d65a82db815f1"
+   "basis": "248a6185f4297151"
   },
   {
    "id": "MU-076",
@@ -901,7 +901,7 @@
    "find": "        return HOOK.tryRef();",
    "replace": "        return (true, HOOK.obs().refTick);",
    "status": "KILLED",
-   "basis": "a02be910055a63a5"
+   "basis": "3941280367a055bb"
   },
   {
    "id": "MU-077",
@@ -913,7 +913,7 @@
    "find": "bool refIn = lo <= ref && ref < hi;",
    "replace": "bool refIn = _emptyRange || (lo <= ref && ref < hi);",
    "status": "KILLED",
-   "basis": "12cb0a2a6507b839"
+   "basis": "8458f2a90e0549df"
   },
   {
    "id": "MU-078",
@@ -925,7 +925,7 @@
    "find": "        if (b.maturedPending > 0) return true;\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "a1d817dbe3e74ab7"
+   "basis": "4e6e5a280033e941"
   },
   {
    "id": "MU-079",
@@ -937,7 +937,7 @@
    "find": "if (now_ > freshEnd) {",
    "replace": "if (now_ >= freshEnd) {",
    "status": "KILLED",
-   "basis": "12cb0a2a6507b839"
+   "basis": "8458f2a90e0549df"
   },
   {
    "id": "MU-080",
@@ -960,7 +960,7 @@
    "find": "        _gapSinceVerify = false;\n        emit GapCleared(0);",
    "replace": "        emit GapCleared(0);",
    "status": "KILLED",
-   "basis": "453fadd57ee11ea6"
+   "basis": "e421f26e8d3f3020"
   },
   {
    "id": "MU-082",
@@ -972,7 +972,7 @@
    "find": "            vested += b.maturedPending;\n            b.maturedPending = 0;",
    "replace": "            vested += 0;",
    "status": "KILLED",
-   "basis": "b8ab68f7f80078ca"
+   "basis": "fd13c3733fef2e04"
   },
   {
    "id": "MU-083",
@@ -995,7 +995,7 @@
    "find": "if (forfeited > 0) {",
    "replace": "if (true) {",
    "status": "KILLED",
-   "basis": "d37fd649be3b9add"
+   "basis": "06a52dcaa4dbb214"
   },
   {
    "id": "MU-085",
@@ -1007,7 +1007,7 @@
    "find": "uint256 end = now_ < freshEnd ? now_ : freshEnd;",
    "replace": "uint256 end = (now_ < freshEnd || (read && ok)) ? now_ : freshEnd;",
    "status": "KILLED",
-   "basis": "12cb0a2a6507b839"
+   "basis": "8458f2a90e0549df"
   },
   {
    "id": "MU-086",
@@ -1019,7 +1019,7 @@
    "find": "            _gapSinceVerify = true;\n            emit GapSet",
    "replace": "            emit GapSet",
    "status": "KILLED",
-   "basis": "12cb0a2a6507b839"
+   "basis": "8458f2a90e0549df"
   },
   {
    "id": "MU-087",
@@ -1031,7 +1031,7 @@
    "find": "if (_vaultLo <= t && t < _vaultHi) {",
    "replace": "if (_vaultLo <= t && t < _vaultHi) {\n            _gapSinceVerify = false;",
    "status": "KILLED",
-   "basis": "5399d215fc5d7b52"
+   "basis": "1635e433a6cd7339"
   },
   {
    "id": "MU-088",
@@ -1043,7 +1043,7 @@
    "find": "uint256 m = need < b.maturedPending ? need : b.maturedPending;",
    "replace": "uint256 m = 0;",
    "status": "KILLED",
-   "basis": "72f5ee1ef8eca896"
+   "basis": "3ccb779773cfb709"
   },
   {
    "id": "MU-089",
@@ -1055,7 +1055,7 @@
    "find": "forfeited = _forfeitAll(b, now_);",
    "replace": "uint128 keep = ev == Ladder.EV_RETIRE ? b.maturedPending : 0; b.maturedPending -= keep; forfeited = _forfeitAll(b, now_); b.maturedPending = keep;",
    "status": "KILLED",
-   "basis": "2920019dbbc32f1f"
+   "basis": "1fb245b906ccdb5d"
   },
   {
    "id": "MU-090",
@@ -1067,7 +1067,7 @@
    "find": "        _outBlocks = 0;\n        emit RangeRegistered(lo, hi, liveTick);",
    "replace": "        _outBlocks = 0;\n        _pendingBreaches = 0;\n        emit RangeRegistered(lo, hi, liveTick);",
    "status": "KILLED",
-   "basis": "453fadd57ee11ea6"
+   "basis": "e421f26e8d3f3020"
   },
   {
    "id": "MU-091",
@@ -1079,7 +1079,7 @@
    "find": "_pendingBreaches = n >= p ? 0 : p - n;",
    "replace": "_pendingBreaches = 0;",
    "status": "KILLED",
-   "basis": "1cac5fb0f0b4611d"
+   "basis": "1495966ba93e8ff2"
   },
   {
    "id": "MU-092",
@@ -1091,7 +1091,7 @@
    "find": "(tick > lo || (tick == lo && sqrtP > TickMath.getSqrtPriceAtTick(lo)))",
    "replace": "(tick >= lo)",
    "status": "KILLED",
-   "basis": "12cb0a2a6507b839"
+   "basis": "8458f2a90e0549df"
   },
   {
    "id": "MU-093",
@@ -1103,7 +1103,7 @@
    "find": "o.refFresh && !o.emptyRange",
    "replace": "!o.emptyRange",
    "status": "KILLED",
-   "basis": "19c3bc31c34e50b9"
+   "basis": "0427d4a730b3be86"
   },
   {
    "id": "MU-094",
@@ -1115,7 +1115,7 @@
    "find": "            if (gate) {\n                vested = s.shares;",
    "replace": "            if (true) {\n                vested = s.shares;",
    "status": "KILLED",
-   "basis": "2ec45b3676b938e1"
+   "basis": "9decd8ea7a4e2b6e"
   },
   {
    "id": "MU-095",
@@ -1127,7 +1127,7 @@
    "find": "forfeited = _forfeitAll(b, now_);",
    "replace": "uint128 keep = ev == Ladder.EV_BREACH ? b.maturedPending : 0; b.maturedPending -= keep; forfeited = _forfeitAll(b, now_); b.maturedPending = keep;",
    "status": "KILLED",
-   "basis": "2920019dbbc32f1f"
+   "basis": "1fb245b906ccdb5d"
   },
   {
    "id": "MU-096",
@@ -1161,7 +1161,7 @@
    "find": "        if (ps.active) _cappedSwap(ps.zeroForOne, ps.amountIn, before, sRef, tickSpot, moveFrac);",
    "replace": "        if (ps.active) {\n            if (place) (_swapCount, _epochSwapFrac) = (0, 0);\n            _cappedSwap(ps.zeroForOne, ps.amountIn, before, sRef, tickSpot, moveFrac);\n        }",
    "status": "KILLED",
-   "basis": "8763c3f0a41eb4e8"
+   "basis": "2db940a498525166"
   },
   {
    "id": "MU-099",
@@ -1173,7 +1173,7 @@
    "find": "_writeCache(liveTick, _anchor());",
    "replace": "_writeCache(_refTick, _anchor());",
    "status": "KILLED",
-   "basis": "453fadd57ee11ea6"
+   "basis": "e421f26e8d3f3020"
   },
   {
    "id": "MU-100",
@@ -1185,7 +1185,7 @@
    "find": "if (gasleft() < REFRESH_GAS_MIN) revert RefGas();",
    "replace": "",
    "status": "KILLED",
-   "basis": "8b6f19a9f6c819c5"
+   "basis": "bad106eecec749f2"
   },
   {
    "id": "MU-101",
@@ -1197,7 +1197,7 @@
    "find": "if (d < 0 && d % w != 0) --q;",
    "replace": "",
    "status": "KILLED",
-   "basis": "e4151e5d507801c3"
+   "basis": "0a6a3e2e2acdaf20"
   },
   {
    "id": "MU-102",
@@ -1209,7 +1209,7 @@
    "find": "ok := and(s, eq(returndatasize(), 0x100))",
    "replace": "ok := s",
    "status": "KILLED",
-   "basis": "e4151e5d507801c3"
+   "basis": "0a6a3e2e2acdaf20"
   },
   {
    "id": "MU-103",
@@ -1221,7 +1221,7 @@
    "find": "let s := staticcall(cap, pool, p, 0x84, p, 0x100)",
    "replace": "let s := staticcall(cap, pool, p, 0x84, 0, 0)\n            returndatacopy(p, 0, returndatasize())",
    "status": "KILLED",
-   "basis": "e4151e5d507801c3"
+   "basis": "0a6a3e2e2acdaf20"
   },
   {
    "id": "MU-104",
@@ -1233,7 +1233,7 @@
    "find": "if (card < t.MIN_CARD) revert BadRef();",
    "replace": "",
    "status": "KILLED",
-   "basis": "c954cc5191880ad1"
+   "basis": "b92d6605df4f7bfd"
   },
   {
    "id": "MU-105",
@@ -1245,7 +1245,7 @@
    "find": "return uint32(block.timestamp / GRID_SEC);",
    "replace": "return uint32(block.number / GRID);",
    "status": "KILLED",
-   "basis": "d72396164195b7b1"
+   "basis": "57695be7e055f43f"
   },
   {
    "id": "MU-106",
@@ -1257,7 +1257,7 @@
    "find": "lo <= o.refTick && o.refTick < hi && vestable",
    "replace": "vestable",
    "status": "KILLED",
-   "basis": "19c3bc31c34e50b9"
+   "basis": "0427d4a730b3be86"
   },
   {
    "id": "MU-107",
@@ -1269,7 +1269,7 @@
    "find": "for (uint256 j = oldOut / c + 1; j * c <= newOut",
    "replace": "for (uint256 j = oldOut / c + 1; j == 1 && j * c <= newOut",
    "status": "KILLED",
-   "basis": "051ce4642bcf203f"
+   "basis": "c933e6ed537c3deb"
   },
   {
    "id": "MU-108",
@@ -1281,7 +1281,7 @@
    "find": "liveRead ? liveTick : HOOK.liveRef();",
    "replace": "liveRead ? liveTick : HOOK.obs().refTick;",
    "status": "KILLED",
-   "basis": "3c7ef0062151f70f"
+   "basis": "124cafa8d5aba9b3"
   },
   {
    "id": "MU-109",
@@ -1304,7 +1304,7 @@
    "find": "        if (k > _refGrid) {",
    "replace": "        if (k >= _refGrid) {",
    "status": "KILLED",
-   "basis": "8b6f19a9f6c819c5"
+   "basis": "bad106eecec749f2"
   },
   {
    "id": "MU-111",
@@ -1316,7 +1316,7 @@
    "find": "return _readRef(block.timestamp - uint256(k) * GRID_SEC);",
    "replace": "return _readRef(0);",
    "status": "KILLED",
-   "basis": "b75e1e061157e94a"
+   "basis": "fe951d892932f45a"
   },
   {
    "id": "MU-112",
@@ -1328,7 +1328,7 @@
    "find": "        _snapshot();\n        _refresh();",
    "replace": "        _refresh();\n        _snapshot();",
    "status": "KILLED",
-   "basis": "f45bbf51ef05684d"
+   "basis": "5cbf22f9f0a0479f"
   },
   {
    "id": "MU-113",
@@ -1340,7 +1340,7 @@
    "find": "if (read) (ok, t) = _readAnchor(k);",
    "replace": "if (read) {\n            (ok, t) = _readAnchor(k);\n            if (!ok) revert RefUnreadable();\n        }",
    "status": "KILLED",
-   "basis": "446e1736f808c7a0"
+   "basis": "89ea622247c5d65f"
   },
   {
    "id": "MU-114",
@@ -1352,7 +1352,7 @@
    "find": "if (r.token0() != Currency.unwrap(a.currency0) || r.token1() != Currency.unwrap(a.currency1)) revert BadRef();",
    "replace": "",
    "status": "KILLED",
-   "basis": "408940bfc8924ae4"
+   "basis": "d43aa6192c2b48ce"
   },
   {
    "id": "MU-115",
@@ -1364,7 +1364,7 @@
    "find": "uint256 streak;",
    "replace": "uint256 streak = _resetStreak;",
    "status": "KILLED",
-   "basis": "5399d215fc5d7b52"
+   "basis": "1635e433a6cd7339"
   },
   {
    "id": "MU-116",
@@ -1376,7 +1376,7 @@
    "find": "streak = _refGrid + 1 == k ? _resetStreak + 1 : 1;",
    "replace": "streak = _resetStreak + 1;",
    "status": "KILLED",
-   "basis": "5399d215fc5d7b52"
+   "basis": "1635e433a6cd7339"
   },
   {
    "id": "MU-117",
@@ -1388,7 +1388,7 @@
    "find": "ExecLedger.swapFrac(before, z, amountIn, sRef);",
    "replace": "ExecLedger.swapFrac(before, z, amountIn, TickMath.getSqrtPriceAtTick(tickSpot));",
    "status": "KILLED",
-   "basis": "d7e8b85b35ce0729"
+   "basis": "bed3e08ac3df0ddc"
   },
   {
    "id": "MU-118",
@@ -1400,7 +1400,7 @@
    "find": "ExecLedger.value(_holdings(), REF_SQRT_PRICE)",
    "replace": "ExecLedger.value(_holdings(), TickMath.getSqrtPriceAtTick(HOOK.obs().tickSpot))",
    "status": "KILLED",
-   "basis": "38e2abea08c623ae"
+   "basis": "1a8f3f4cf674e00d"
   },
   {
    "id": "MU-119",
@@ -1412,7 +1412,7 @@
    "find": "        if (ps.active) _cappedSwap(ps.zeroForOne, ps.amountIn, before, sRef, tickSpot, moveFrac);",
    "replace": "        if (ps.active) _cappedSwap(ps.zeroForOne, ps.amountIn, before, sRef, tickSpot, moveFrac);\n        if (place && ps.active) before = _holdings();",
    "status": "KILLED",
-   "basis": "8763c3f0a41eb4e8"
+   "basis": "2db940a498525166"
   },
   {
    "id": "MU-120",
@@ -1424,7 +1424,7 @@
    "find": "        _armed = true;\n",
    "replace": "\n",
    "status": "KILLED",
-   "basis": "154731b1be77475a"
+   "basis": "73aebaf543f43c88"
   },
   {
    "id": "MU-121",
@@ -1458,7 +1458,7 @@
    "find": "_burnBank(Op.Breach, abi.encode(n, now_))",
    "replace": "_burnBank(Op.Breach, abi.encode(uint32(1), now_))",
    "status": "KILLED",
-   "basis": "19c3bc31c34e50b9"
+   "basis": "0427d4a730b3be86"
   },
   {
    "id": "MU-124",
@@ -1470,7 +1470,7 @@
    "find": "b.forfeitPool = _sat(uint256(b.forfeitPool) + forfeited);",
    "replace": "b.forfeitPool = _sat(forfeited);",
    "status": "KILLED",
-   "basis": "d37fd649be3b9add"
+   "basis": "06a52dcaa4dbb214"
   },
   {
    "id": "MU-125",
@@ -1482,7 +1482,7 @@
    "find": "        (nb2, na2) = _legs(before, after_, sqrtRef);",
    "replace": "        (nb2, na2) = (nb, na);",
    "status": "KILLED",
-   "basis": "e87a9eabded4ddc1"
+   "basis": "0e7112f98bb0d491"
   },
   {
    "id": "MU-126",
@@ -1494,7 +1494,7 @@
    "find": "return _window(uint32(secondsAgo) + REF_WINDOW, uint32(secondsAgo));",
    "replace": "return _window(uint32(secondsAgo) + 12, uint32(secondsAgo));",
    "status": "KILLED",
-   "basis": "d951f8b02a5307f0"
+   "basis": "c6807c35f2abf835"
   },
   {
    "id": "MU-127",
@@ -1506,7 +1506,7 @@
    "find": "if (!ok) revert RefUnreadable();\n    }\n\n    function tryRef()",
    "replace": "\n    }\n\n    function tryRef()",
    "status": "KILLED",
-   "basis": "fe31ebff47b580db"
+   "basis": "5b4b5617a837bf00"
   },
   {
    "id": "MU-128",
@@ -1518,7 +1518,7 @@
    "find": "address public immutable REF_POOL;",
    "replace": "address public REF_POOL;",
    "status": "KILLED",
-   "basis": "a66ff86cb6d2dc77"
+   "basis": "bf977d211190d444"
   },
   {
    "id": "MU-129",
@@ -1530,7 +1530,7 @@
    "find": "        return FullMath.mulDivRoundingUp(x, S, nav);",
    "replace": "        return FullMath.mulDiv(x, S, nav);",
    "status": "KILLED",
-   "basis": "0df787a9ec0f3418"
+   "basis": "dd933bcb1436da41"
   },
   {
    "id": "MU-130",
@@ -1542,7 +1542,7 @@
    "find": "if (FullMath.mulDiv(navRef, S_SEED - DEAD, S_SEED) < BOND_MIN) revert BondMin();",
    "replace": "",
    "status": "KILLED",
-   "basis": "38e2abea08c623ae"
+   "basis": "1a8f3f4cf674e00d"
   },
   {
    "id": "MU-131",
@@ -1554,7 +1554,7 @@
    "find": "try this.witnessStep(epoch) returns (uint256 a, uint256 b, uint128 l) {\n            (fg0, fg1, lw) = (a, b, l);\n            // the flag describes the live witness: a failed roll leaves both unchanged\n            _witnessFallback = fallbackUsed;\n        } catch {}",
    "replace": "(fg0, fg1, lw) = this.witnessStep(epoch);\n        _witnessFallback = fallbackUsed;",
    "status": "KILLED",
-   "basis": "8861b9b010195ed3"
+   "basis": "db16a30cc5e75c50"
   },
   {
    "id": "MU-132",
@@ -1566,7 +1566,7 @@
    "find": "            _epochSwapFrac = 0;\n            _swapCount = 0;\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "19c3bc31c34e50b9"
+   "basis": "0427d4a730b3be86"
   },
   {
    "id": "MU-133",
@@ -1578,7 +1578,7 @@
    "find": "ExecLedger.swapFrac(before, z, amountIn, sRef);",
    "replace": "ExecLedger.swapFrac(Holdings(0, _nav0, 0, 0, 0), z, amountIn, sRef);",
    "status": "KILLED",
-   "basis": "d7e8b85b35ce0729"
+   "basis": "bed3e08ac3df0ddc"
   },
   {
    "id": "MU-134",
@@ -1601,7 +1601,7 @@
    "find": "bytes32 sv = keccak256(abi.encode(msg.sender, saltV));",
    "replace": "bytes32 sv = saltV;",
    "status": "KILLED",
-   "basis": "c51f017c29e0fab5"
+   "basis": "17a8a611297e6417"
   },
   {
    "id": "MU-136",
@@ -1613,7 +1613,7 @@
    "find": "        if (tickSpot < lo || tickSpot >= hi) return 4;",
    "replace": "        if (false) return 4;",
    "status": "KILLED",
-   "basis": "4cdf3bc00ae36aaa"
+   "basis": "eb0bf503da9bb5d5"
   },
   {
    "id": "MU-137",
@@ -1625,7 +1625,7 @@
    "find": "        if (FullMath.mulDiv(amount0, inter, 1 << 128) >= d) return type(uint128).max;",
    "replace": "        if (false) return type(uint128).max;",
    "status": "KILLED",
-   "basis": "13e9d27995bbcf8d"
+   "basis": "30690fbf79119a99"
   },
   {
    "id": "MU-138",
@@ -1637,7 +1637,7 @@
    "find": "// [MU-138] donations to the pool revert\n        revert HookNotImplemented();",
    "replace": "// [MU-138] donations to the pool revert\n        return IHooks.beforeDonate.selector;",
    "status": "KILLED",
-   "basis": "e9f1d7fa87880f13"
+   "basis": "bbf8dc7362e153cb"
   },
   {
    "id": "MU-139",
@@ -1649,7 +1649,7 @@
    "find": "// [MU-139] the markout read covers exactly (now - a, now - b]\n        return _window(a, b);",
    "replace": "// [MU-139] the markout read covers exactly (now - a, now - b]\n        return _readRef(b);",
    "status": "KILLED",
-   "basis": "ec2f7a45fc10338c"
+   "basis": "3f2e4731cfe88741"
   },
   {
    "id": "MU-140",
@@ -1661,7 +1661,7 @@
    "find": "&& (tick < hi - 1 || (tick == hi - 1",
    "replace": "&& (tick < hi || (tick == hi - 1",
    "status": "KILLED",
-   "basis": "12cb0a2a6507b839"
+   "basis": "8458f2a90e0549df"
   },
   {
    "id": "MU-141",
@@ -1673,7 +1673,7 @@
    "find": "|| t.RESET_RUN < 2) revert BadTier();",
    "replace": ") revert BadTier();",
    "status": "KILLED",
-   "basis": "1c5e350d4017a2e0"
+   "basis": "ddad0c5d0a777cf4"
   },
   {
    "id": "MU-142",
@@ -1685,7 +1685,7 @@
    "find": "< uint256(t.EDGE_DELAY) + 3 * uint256(t.GRID) + t.REF_WINDOW / (t.GRID_SEC / t.GRID)",
    "replace": "< 0",
    "status": "KILLED",
-   "basis": "1c5e350d4017a2e0"
+   "basis": "ddad0c5d0a777cf4"
   },
   {
    "id": "MU-143",
@@ -1697,7 +1697,7 @@
    "find": "t.GRID_SEC == 0 || t.GRID_SEC % t.GRID != 0 ||",
    "replace": "t.GRID_SEC == 0 ||",
    "status": "KILLED",
-   "basis": "1c5e350d4017a2e0"
+   "basis": "ddad0c5d0a777cf4"
   },
   {
    "id": "MU-144",
@@ -1709,7 +1709,7 @@
    "find": "t.W_TICKS <= 0 || t.W_TICKS % (2 * a.tickSpacing) != 0",
    "replace": "t.W_TICKS <= 0",
    "status": "KILLED",
-   "basis": "408940bfc8924ae4"
+   "basis": "d43aa6192c2b48ce"
   },
   {
    "id": "MU-145",
@@ -1721,7 +1721,7 @@
    "find": "// [MU-145] the lower median of the newest min(count, 9) entries\n            return a[(n - 1) / 2];",
    "replace": "// [MU-145] the lower median of the newest min(count, 9) entries\n            return a[n / 2];",
    "status": "KILLED",
-   "basis": "dc0100f0886162c0"
+   "basis": "a6fd8a8043639951"
   },
   {
    "id": "MU-146",
@@ -1733,7 +1733,7 @@
    "find": "        (uint256 nb2, uint256 na2) = _legs(before, after_, sqrtS0);",
    "replace": "        (uint256 nb2, uint256 na2) = (nb, na);",
    "status": "KILLED",
-   "basis": "68759990a12bbe82"
+   "basis": "2b5ed44c2d3df2f7"
   },
   {
    "id": "MU-147",
@@ -1745,31 +1745,31 @@
    "find": "        ok = burn <= cover && burnR <= cover - burn;",
    "replace": "        ok = burn <= cover;",
    "status": "KILLED",
-   "basis": "68759990a12bbe82"
+   "basis": "2b5ed44c2d3df2f7"
   },
   {
    "id": "MU-148",
    "area": "ledger",
-   "desc": "markout legs without `FEE_TICKS`",
+   "desc": "the lower markout leg without `FEE_TICKS`",
    "killer_id": "U-settle",
    "kill": "test_U_settle__settleExtraVectorsBitForBit",
    "file": "src/libraries/ExecLedger.sol",
-   "find": "        pMk = TickMath.getSqrtPriceAtTick(_clamp(int256(tickMk) - feeTicks));",
-   "replace": "        pMk = TickMath.getSqrtPriceAtTick(_clamp(int256(tickMk)));",
+   "find": "i == 0 ? int256(tickMk) - feeTicks :",
+   "replace": "i == 0 ? int256(tickMk) :",
    "status": "KILLED",
-   "basis": "2675a7c582dfb77c"
+   "basis": "59923b1294d49671"
   },
   {
    "id": "MU-149",
    "area": "ledger",
-   "desc": "the settlement's extra uncapped or not net of the immediate charge",
+   "desc": "the settlement's burn not capped by the reserve's shares (s15 form)",
    "killer_id": "U-settle",
    "kill": "test_U_settle__settleExtraVectorsBitForBit",
    "file": "src/libraries/ExecLedger.sol",
-   "find": "        if (extra > reserve) extra = reserve;",
-   "replace": "        if (false) extra = reserve;",
+   "find": "        if (burnS > reserveShares) burnS = reserveShares;",
+   "replace": "        if (false) burnS = reserveShares;",
    "status": "KILLED",
-   "basis": "2675a7c582dfb77c"
+   "basis": "59923b1294d49671"
   },
   {
    "id": "MU-150",
@@ -1781,7 +1781,7 @@
    "find": "        uint256 burnS = b.reserveShares;",
    "replace": "        uint256 burnS = 0;",
    "status": "KILLED",
-   "basis": "975e19c3d2e1d8fd"
+   "basis": "9faeb348cefa7f42"
   },
   {
    "id": "MU-151",
@@ -1793,7 +1793,7 @@
    "find": "        uint256 a = block.timestamp - tA - BLOCKTIME;",
    "replace": "        uint256 a = block.timestamp - tA;",
    "status": "KILLED",
-   "basis": "975e19c3d2e1d8fd"
+   "basis": "9faeb348cefa7f42"
   },
   {
    "id": "MU-152",
@@ -1805,7 +1805,7 @@
    "find": "        // [MU-152] no deposit while a curator action awaits its markout settlement\n        if (_tAction != 0) revert MarkoutPending();",
    "replace": "        // [MU-152] no deposit while a curator action awaits its markout settlement\n        if (false) revert MarkoutPending();",
    "status": "KILLED",
-   "basis": "3feaa63bf5e34504"
+   "basis": "c58795efdccf3aef"
   },
   {
    "id": "MU-153",
@@ -1817,7 +1817,7 @@
    "find": "if (b.reserveShares > 0) b.reserveForfeit = true;",
    "replace": "if (b.reserveShares > 0) { b.bondShares += b.reserveBond; b.reserveShares = 0; b.reserveBond = 0; }",
    "status": "KILLED",
-   "basis": "1eafa22190caa34a"
+   "basis": "398362bf640a2b9d"
   },
   {
    "id": "MU-154",
@@ -1829,7 +1829,7 @@
    "find": "uint256 fromNb = x < nonbond ? x : nonbond;",
    "replace": "uint256 fromNb = x > b.reserveBond ? x - b.reserveBond : 0;",
    "status": "KILLED",
-   "basis": "9e782e5294bd9c31"
+   "basis": "a8aface84e1fd004"
   },
   {
    "id": "MU-155",
@@ -1841,7 +1841,7 @@
    "find": "        _charge(uint8(entry), before, s0, sSpot, sRef, maxCharge);",
    "replace": "        _charge(uint8(entry), before, sSpot, sSpot, sRef, maxCharge);",
    "status": "KILLED",
-   "basis": "4a823ef224b460c1"
+   "basis": "319a057edf5d3c62"
   },
   {
    "id": "MU-156",
@@ -1853,7 +1853,7 @@
    "find": "        if (charge + reserve > maxCharge) revert MaxCharge();\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "93c496ab87706076"
+   "basis": "d7734845bdf36ba1"
   },
   {
    "id": "MU-157",
@@ -1865,7 +1865,7 @@
    "find": "if (navAfter > NAV_MAX) revert NavCap();",
    "replace": "",
    "status": "KILLED",
-   "basis": "4a5aa57de3860782"
+   "basis": "e2c9fdeb62448037"
   },
   {
    "id": "MU-158",
@@ -1877,7 +1877,7 @@
    "find": "if (msg.sender != address(MANAGER)) revert OnlyPoolManager();",
    "replace": "",
    "status": "KILLED",
-   "basis": "1a351494c2e2acfc"
+   "basis": "66b6fc6a070893cb"
   },
   {
    "id": "MU-159",
@@ -1889,7 +1889,7 @@
    "find": "uint256 d0 = FullMath.mulDivRoundingUp(_idle0, s, S);",
    "replace": "uint256 d0 = FullMath.mulDivRoundingUp(MANAGER.balanceOf(address(this), C0.toId()), s, S);",
    "status": "KILLED",
-   "basis": "6e79318d84b7b888"
+   "basis": "b2b3af0e4131f22f"
   },
   {
    "id": "MU-160",
@@ -1901,7 +1901,7 @@
    "find": "    function withdraw(uint256 shares, uint256 min0, uint256 min1, address to)\n        external\n        nonReentrant",
    "replace": "    function withdraw(uint256 shares, uint256 min0, uint256 min1, address to)\n        external",
    "status": "KILLED",
-   "basis": "92611b9b142bfe6e"
+   "basis": "949ba8edb4503cf8"
   },
   {
    "id": "MU-161",
@@ -1913,7 +1913,7 @@
    "find": "if (FullMath.mulDiv(navRef, S_SEED - DEAD, S_SEED) < BOND_MIN) revert BondMin();",
    "replace": "if (FullMath.mulDiv(navRef, S_SEED - DEAD, S_SEED) <= BOND_MIN) revert BondMin();",
    "status": "KILLED",
-   "basis": "e8dbdd5a5de09673"
+   "basis": "898da692450c744c"
   },
   {
    "id": "MU-162",
@@ -1925,7 +1925,7 @@
    "find": "uint256 dL = FullMath.mulDivRoundingUp(_L, s, S);",
    "replace": "uint256 dL = FullMath.mulDiv(_L, s, S);",
    "status": "KILLED",
-   "basis": "1aee3df25924b3e9"
+   "basis": "50c98cc6fdc881a0"
   },
   {
    "id": "MU-163",
@@ -1937,7 +1937,7 @@
    "find": "uint256 dL = FullMath.mulDiv(_L, s, S);",
    "replace": "uint256 dL = FullMath.mulDivRoundingUp(_L, s, S);",
    "status": "KILLED",
-   "basis": "954fd4f8d029a8ab"
+   "basis": "47098f2a7a658e52"
   },
   {
    "id": "MU-164",
@@ -1949,7 +1949,7 @@
    "find": "o.refTick < hi && vestable) {",
    "replace": "o.refTick < hi) {",
    "status": "KILLED",
-   "basis": "19c3bc31c34e50b9"
+   "basis": "0427d4a730b3be86"
   },
   {
    "id": "MU-165",
@@ -1961,7 +1961,7 @@
    "find": "o.refFresh && !o.emptyRange && ",
    "replace": "o.refFresh && ",
    "status": "KILLED",
-   "basis": "19c3bc31c34e50b9"
+   "basis": "0427d4a730b3be86"
   },
   {
    "id": "MU-166",
@@ -1973,7 +1973,7 @@
    "find": "            HOOK.ackBreaches(n);\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "19c3bc31c34e50b9"
+   "basis": "0427d4a730b3be86"
   },
   {
    "id": "MU-167",
@@ -1985,7 +1985,7 @@
    "find": "        if (burned > 0) _burn(address(this), burned);\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "7a7a5c876381c5f5"
+   "basis": "1c3b5ba9b395a191"
   },
   {
    "id": "MU-168",
@@ -1997,7 +1997,7 @@
    "find": "        if (b.forfeitPool > 0) _burnBank(Op.Drip, abi.encode(now_));\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "19c3bc31c34e50b9"
+   "basis": "0427d4a730b3be86"
   },
   {
    "id": "MU-169",
@@ -2009,7 +2009,7 @@
    "find": "uint256(b.cohorts[k].epoch) + 1 + V) return true;",
    "replace": "uint256(b.cohorts[k].epoch) + V) return true;",
    "status": "KILLED",
-   "basis": "8d614bedbfcd5a95"
+   "basis": "a658ae2afbb5a5de"
   },
   {
    "id": "MU-170",
@@ -2021,7 +2021,7 @@
    "find": "            _epoch = ne;\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "19c3bc31c34e50b9"
+   "basis": "0427d4a730b3be86"
   },
   {
    "id": "MU-171",
@@ -2033,7 +2033,7 @@
    "find": "Op.VestTime, abi.encode(ne, gateOpen))",
    "replace": "Op.VestTime, abi.encode(ne, true))",
    "status": "KILLED",
-   "basis": "19c3bc31c34e50b9"
+   "basis": "0427d4a730b3be86"
   },
   {
    "id": "MU-172",
@@ -2045,7 +2045,7 @@
    "find": "        if (entry == Entry.Settle) return \"\";\n        revert Ladder.BadMode();",
    "replace": "        if (entry == Entry.Settle) return \"\";\n        return _withdraw(payer, args);",
    "status": "KILLED",
-   "basis": "f436a404cf71ef4c"
+   "basis": "8fce33bd32db80e9"
   },
   {
    "id": "MU-173",
@@ -2057,7 +2057,7 @@
    "find": "        if (burned > 0) _burn(address(this), burned);",
    "replace": "        if (burned > 0) _burn(address(this), burned + 1);",
    "status": "KILLED",
-   "basis": "7a7a5c876381c5f5"
+   "basis": "1c3b5ba9b395a191"
   },
   {
    "id": "MU-174",
@@ -2069,7 +2069,7 @@
    "find": "        if (burned > 0) _burn(address(this), burned);",
    "replace": "        if (burned > 0) _burn(address(this), burned - 1);",
    "status": "KILLED",
-   "basis": "7a7a5c876381c5f5"
+   "basis": "1c3b5ba9b395a191"
   },
   {
    "id": "MU-175",
@@ -2078,10 +2078,10 @@
    "killer_id": "U-settle",
    "kill": "test_U_settle__settleExtraVectorsBitForBit",
    "file": "src/libraries/ExecLedger.sol",
-   "find": "        uint160 pHi = TickMath.getSqrtPriceAtTick(_clamp(int256(tickMk) + feeTicks + 1));",
-   "replace": "        uint160 pHi = TickMath.getSqrtPriceAtTick(_clamp(int256(tickMk) + feeTicks));",
+   "find": "int256(tickMk) + feeTicks + 1)",
+   "replace": "int256(tickMk) + feeTicks)",
    "status": "KILLED",
-   "basis": "2675a7c582dfb77c"
+   "basis": "59923b1294d49671"
   },
   {
    "id": "MU-176",
@@ -2093,7 +2093,7 @@
    "find": "        if (t > TickMath.MAX_TICK) return TickMath.MAX_TICK;",
    "replace": "        if (false) return TickMath.MAX_TICK;",
    "status": "KILLED",
-   "basis": "1c110d0ffa6f4e04"
+   "basis": "4a9bf50d2484e1e5"
   },
   {
    "id": "MU-177",
@@ -2105,7 +2105,7 @@
    "find": "        ok = burn <= cover && burnR <= cover - burn;",
    "replace": "        ok = burn + burnR <= cover;",
    "status": "KILLED",
-   "basis": "68759990a12bbe82"
+   "basis": "2b5ed44c2d3df2f7"
   },
   {
    "id": "MU-178",
@@ -2117,19 +2117,19 @@
    "find": "        if (_worse(nb2, na2, nb, na)) (nb, na, pStar) = (nb2, na2, sqrtS0);",
    "replace": "        if (!_worse(nb, na, nb2, na2)) (nb, na, pStar) = (nb2, na2, sqrtS0);",
    "status": "KILLED",
-   "basis": "68759990a12bbe82"
+   "basis": "2b5ed44c2d3df2f7"
   },
   {
    "id": "MU-179",
    "area": "ledger",
-   "desc": "the settlement's extra not net of the immediate charge (s09; MU-149's second half)",
+   "desc": "the settlement's burn not net of the immediate burn `burn0` (s15 form; was: the extra not net of charge0)",
    "killer_id": "U-settle",
    "kill": "test_U_settle__settleExtraVectorsBitForBit",
    "file": "src/libraries/ExecLedger.sol",
-   "find": "        extra = loss > charge0 ? loss - charge0 : 0;",
-   "replace": "        extra = loss;",
+   "find": "        burnS = req > pd.burn0 ? req - pd.burn0 : 0;",
+   "replace": "        burnS = req;",
    "status": "KILLED",
-   "basis": "2675a7c582dfb77c"
+   "basis": "59923b1294d49671"
   },
   {
    "id": "MU-180",
@@ -2141,7 +2141,7 @@
    "find": "        // [MU-180] the burn price is the smallest NAV_after over the legs\n        if (na2 < navBurn) navBurn = na2;",
    "replace": "        // [MU-180] the burn price is the smallest NAV_after over the legs\n        if (false) navBurn = na2;",
    "status": "KILLED",
-   "basis": "68759990a12bbe82"
+   "basis": "2b5ed44c2d3df2f7"
   },
   {
    "id": "MU-181",
@@ -2153,19 +2153,19 @@
    "find": "        return l < type(uint128).max ? l : type(uint128).max;",
    "replace": "        return l;",
    "status": "KILLED",
-   "basis": "d1ca2cbdae44cb03"
+   "basis": "a3473ebe3c810d0e"
   },
   {
    "id": "MU-182",
    "area": "ledger",
-   "desc": "the settlement's share cap divides without the fit check (s09 exploration counterexample)",
+   "desc": "the re-priced burn rounded down (s15; was: the s09 share cap's fit check, code removed)",
    "killer_id": "U-settle",
-   "kill": "test_U_settle__burnCapDoesNotOverflowAtTinySupply",
+   "kill": "test_U_settle__settleExtraVectorsBitForBit",
    "file": "src/libraries/ExecLedger.sol",
-   "find": "        if (_mulHi(reserveShares, navNow) < S && extra > FullMath.mulDiv(reserveShares, navNow, S)) {",
-   "replace": "        if (extra > FullMath.mulDiv(reserveShares, navNow, S)) {",
+   "find": "        uint256 req = FullMath.mulDivRoundingUp(g, pd.sAct, nb);",
+   "replace": "        uint256 req = FullMath.mulDiv(g, pd.sAct, nb);",
    "status": "KILLED",
-   "basis": "2675a7c582dfb77c"
+   "basis": "59923b1294d49671"
   },
   {
    "id": "MU-183",
@@ -2177,31 +2177,30 @@
    "find": "        navBurn = na;\n",
    "replace": "        navBurn = type(uint256).max;\n",
    "status": "KILLED",
-   "basis": "68759990a12bbe82"
+   "basis": "2b5ed44c2d3df2f7"
   },
   {
    "id": "MU-184",
    "area": "ledger",
-   "desc": "the settlement cap's fit check at `<=` (s09 fix review r2 F10-02)",
+   "desc": "the 512-bit leg comparison on the high words only (s15; was: the s09 cap fit check at `<=`, code removed)",
    "killer_id": "U-settle",
-   "kill": "test_U_settle__burnCapAtFitBoundary",
+   "kill": "test_U_settle__settleExtraVectorsBitForBit",
    "file": "src/libraries/ExecLedger.sol",
-   "find": "        if (_mulHi(reserveShares, navNow) < S && extra",
-   "replace": "        if (_mulHi(reserveShares, navNow) <= S && extra",
+   "find": "        if (h1 != h2) return h1 > h2;",
+   "replace": "        return h1 > h2;",
    "status": "KILLED",
-   "basis": "2675a7c582dfb77c"
+   "basis": "9bb6860b1181f25a"
   },
   {
    "id": "MU-185",
    "area": "ledger",
-   "desc": "the settlement runs after the snapshot and collect-first (wrong supply or holdings; s09 D9-04)",
+   "desc": "the settlement runs after the snapshot and collect-first (s09 D9-04). EQUIVALENT since s15: the fee-aware settlement reads only its record (no live holdings or supply), and the checkpoint mints nothing before base accrual; re-wired with base accrual (s17), whose mints inside the window must enter the record's sAct (S15D-07)",
    "killer_id": "U-settle",
-   "kill": "test_U_settle__settlesTheDelayedWindowAtTheFirstDueBlock",
+   "kill": "pending",
    "file": "src/TouchstoneVault.sol",
    "find": "        _settle();\n        Obs memory o = _prologue();",
    "replace": "        Obs memory o = _prologue();\n        _settle();",
-   "status": "KILLED",
-   "basis": "7229be972f0f9d79"
+   "status": "PENDING"
   },
   {
    "id": "MU-186",
@@ -2213,7 +2212,7 @@
    "find": "        if (gasleft() < _settleGasMin()) revert RefGas();",
    "replace": "",
    "status": "KILLED",
-   "basis": "975e19c3d2e1d8fd"
+   "basis": "9faeb348cefa7f42"
   },
   {
    "id": "MU-187",
@@ -2225,7 +2224,7 @@
    "find": "abi.encode(burnS, uint32(block.number / EPOCH), uint40(block.number))",
    "replace": "abi.encode(burnS, _epoch, uint40(block.number))",
    "status": "KILLED",
-   "basis": "975e19c3d2e1d8fd"
+   "basis": "9faeb348cefa7f42"
   },
   {
    "id": "MU-188",
@@ -2237,7 +2236,7 @@
    "find": "block.timestamp < tA + 2 * BLOCKTIME + H_MARKOUT",
    "replace": "block.timestamp < tA + BLOCKTIME + H_MARKOUT",
    "status": "KILLED",
-   "basis": "975e19c3d2e1d8fd"
+   "basis": "9faeb348cefa7f42"
   },
   {
    "id": "MU-189",
@@ -2249,7 +2248,7 @@
    "find": "                    b.maturedPending = _sat(uint256(b.maturedPending) + s.shares);",
    "replace": "                    b.vestedUnclaimed = _sat(uint256(b.vestedUnclaimed) + s.shares);",
    "status": "KILLED",
-   "basis": "9e782e5294bd9c31"
+   "basis": "a8aface84e1fd004"
   },
   {
    "id": "MU-190",
@@ -2261,7 +2260,7 @@
    "find": "abi.encode(burnS, uint32(block.number / EPOCH), uint40(block.number))",
    "replace": "abi.encode(burnS, uint32(block.number / EPOCH), uint40(block.timestamp))",
    "status": "KILLED",
-   "basis": "975e19c3d2e1d8fd"
+   "basis": "9faeb348cefa7f42"
   },
   {
    "id": "MU-191",
@@ -2273,7 +2272,7 @@
    "find": "        _tAction = 0;\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "975e19c3d2e1d8fd"
+   "basis": "9faeb348cefa7f42"
   },
   {
    "id": "MU-192",
@@ -2285,7 +2284,7 @@
    "find": "if (charge + reserve > maxCharge) revert MaxCharge();",
    "replace": "if (charge > maxCharge) revert MaxCharge();",
    "status": "KILLED",
-   "basis": "93c496ab87706076"
+   "basis": "d7734845bdf36ba1"
   },
   {
    "id": "MU-193",
@@ -2297,7 +2296,7 @@
    "find": "int24 ref = liveRead ? liveTick : HOOK.liveRef();",
    "replace": "int24 ref = liveRead || liveTick == 0 ? liveTick : HOOK.liveRef();",
    "status": "KILLED",
-   "basis": "4a01ccc3fdd2c10a"
+   "basis": "583a91494a36f6f4"
   },
   {
    "id": "MU-194",
@@ -2309,7 +2308,7 @@
    "find": "        _delta0 = delta;\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "93c496ab87706076"
+   "basis": "d7734845bdf36ba1"
   },
   {
    "id": "MU-195",
@@ -2321,7 +2320,7 @@
    "find": "(uint256 navSpot,) = _value(before, sqrtSpot);",
    "replace": "(uint256 navSpot,) = _value(after_, sqrtSpot);",
    "status": "KILLED",
-   "basis": "62f5b876c8e48409"
+   "basis": "7da2548457f01dd1"
   },
   {
    "id": "MU-196",
@@ -2333,7 +2332,7 @@
    "find": "(uint256 navSpot,) = _value(before, sqrtSpot);",
    "replace": "(uint256 navSpot,) = _value(before, sqrtRef);",
    "status": "KILLED",
-   "basis": "62f5b876c8e48409"
+   "basis": "7da2548457f01dd1"
   },
   {
    "id": "MU-197",
@@ -2345,7 +2344,7 @@
    "find": "abi.encode(burn, burnR)",
    "replace": "abi.encode(burnR, burn)",
    "status": "KILLED",
-   "basis": "93c496ab87706076"
+   "basis": "d7734845bdf36ba1"
   },
   {
    "id": "MU-198",
@@ -2357,7 +2356,7 @@
    "find": "abi.encode(burn, burnR)",
    "replace": "abi.encode(burn, uint256(0))",
    "status": "KILLED",
-   "basis": "93c496ab87706076"
+   "basis": "d7734845bdf36ba1"
   },
   {
    "id": "MU-199",
@@ -2369,7 +2368,7 @@
    "find": "abi.encode(burn, burnR)",
    "replace": "abi.encode(uint256(0), burnR)",
    "status": "KILLED",
-   "basis": "93c496ab87706076"
+   "basis": "d7734845bdf36ba1"
   },
   {
    "id": "MU-200",
@@ -2381,7 +2380,7 @@
    "find": "        if (_L > 0) _book(_modify(0));",
    "replace": "        _book(_modify(0));",
    "status": "KILLED",
-   "basis": "57453cac1096be9b"
+   "basis": "e35509e993b98897"
   },
   {
    "id": "MU-201",
@@ -2393,7 +2392,7 @@
    "find": "ExecLedger.swapFrac(before, z, paid, sRef)",
    "replace": "ExecLedger.swapFrac(before, z, amountIn, sRef)",
    "status": "KILLED",
-   "basis": "b8d9946ebf880bea"
+   "basis": "58debdd3d028b6bb"
   },
   {
    "id": "MU-202",
@@ -2405,7 +2404,7 @@
    "find": "        if (amountIn > (z ? _idle0 : _idle1)) revert SwapCap();\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "b8d9946ebf880bea"
+   "basis": "58debdd3d028b6bb"
   },
   {
    "id": "MU-203",
@@ -2417,7 +2416,7 @@
    "find": "        _nav0 = _u128(nav);\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "93c496ab87706076"
+   "basis": "d7734845bdf36ba1"
   },
   {
    "id": "MU-204",
@@ -2426,10 +2425,10 @@
    "killer_id": "U-settle",
    "kill": "test_U_3__swapChargedItsShortfallAtTheWorseLeg",
    "file": "src/TouchstoneVault.sol",
-   "find": "(uint40(block.timestamp), before, after_, _u128(charge), _u128(reserve))",
-   "replace": "(uint40(0), before, after_, _u128(charge), _u128(reserve))",
+   "find": "(_tAction, _pBefore, _pAfter) = (uint40(block.timestamp), before, after_);",
+   "replace": "(_tAction, _pBefore, _pAfter) = (uint40(0), before, after_);",
    "status": "KILLED",
-   "basis": "93c496ab87706076"
+   "basis": "d7734845bdf36ba1"
   },
   {
    "id": "MU-205",
@@ -2441,7 +2440,7 @@
    "find": "        _lastAction = uint40(block.number);\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "93c496ab87706076"
+   "basis": "d7734845bdf36ba1"
   },
   {
    "id": "MU-206",
@@ -2453,7 +2452,7 @@
    "find": "if (dist > REF_BAND || -dist > REF_BAND) revert Fence();",
    "replace": "if (dist > REF_BAND) revert Fence();",
    "status": "KILLED",
-   "basis": "2de9e742845b2472"
+   "basis": "758033406db1a284"
   },
   {
    "id": "MU-207",
@@ -2465,7 +2464,7 @@
    "find": "        ++_swapCount;\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "b8d9946ebf880bea"
+   "basis": "58debdd3d028b6bb"
   },
   {
    "id": "MU-208",
@@ -2477,7 +2476,7 @@
    "find": "(nav, pos) = _value(after_, sqrtRef);",
    "replace": "(nav, pos) = _value(after_, sqrtSpot);",
    "status": "KILLED",
-   "basis": "62f5b876c8e48409"
+   "basis": "7da2548457f01dd1"
   },
   {
    "id": "MU-209",
@@ -2489,7 +2488,7 @@
    "find": "if (frac + used > MAX_SWAP_ACTION || _epochSwapFrac + frac > MAX_SWAP_EPOCH) revert SwapCap();",
    "replace": "if (frac + used > MAX_SWAP_ACTION) revert SwapCap();",
    "status": "KILLED",
-   "basis": "b8d9946ebf880bea"
+   "basis": "58debdd3d028b6bb"
   },
   {
    "id": "MU-210",
@@ -2501,7 +2500,7 @@
    "find": "int24 ref = liveRead ? liveTick : HOOK.liveRef();",
    "replace": "int24 ref = HOOK.liveRef();",
    "status": "KILLED",
-   "basis": "4a01ccc3fdd2c10a"
+   "basis": "583a91494a36f6f4"
   },
   {
    "id": "MU-211",
@@ -2513,7 +2512,7 @@
    "find": "        _burn(address(this), burned);\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "93c496ab87706076"
+   "basis": "d7734845bdf36ba1"
   },
   {
    "id": "MU-212",
@@ -2525,7 +2524,7 @@
    "find": "        if (dist > REF_BAND || -dist > REF_BAND) revert Fence();\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "2de9e742845b2472"
+   "basis": "758033406db1a284"
   },
   {
    "id": "MU-213",
@@ -2537,7 +2536,7 @@
    "find": "emit Action(kind, charge, pStar, bankBurn, bondBurn);",
    "replace": "emit Action(kind, charge, pStar, bondBurn, bankBurn);",
    "status": "KILLED",
-   "basis": "93c496ab87706076"
+   "basis": "d7734845bdf36ba1"
   },
   {
    "id": "MU-214",
@@ -2546,10 +2545,10 @@
    "killer_id": "U-3",
    "kill": "test_U_3__swapChargedItsShortfallAtTheWorseLeg",
    "file": "src/TouchstoneVault.sol",
-   "find": "_u128(charge), _u128(reserve))",
-   "replace": "_u128(charge), _u128(charge))",
+   "find": "_pend = Markout(_u128(charge), _u128(reserve),",
+   "replace": "_pend = Markout(_u128(charge), _u128(charge),",
    "status": "KILLED",
-   "basis": "93c496ab87706076"
+   "basis": "d7734845bdf36ba1"
   },
   {
    "id": "MU-215",
@@ -2558,10 +2557,10 @@
    "killer_id": "U-3",
    "kill": "test_U_3__swapChargedItsShortfallAtTheWorseLeg",
    "file": "src/TouchstoneVault.sol",
-   "find": "(uint40(block.timestamp), before, after_,",
-   "replace": "(uint40(block.timestamp), after_, before,",
+   "find": "(uint40(block.timestamp), before, after_);",
+   "replace": "(uint40(block.timestamp), after_, before);",
    "status": "KILLED",
-   "basis": "93c496ab87706076"
+   "basis": "d7734845bdf36ba1"
   },
   {
    "id": "MU-216",
@@ -2573,7 +2572,7 @@
    "find": "so one still pending is not due\n        if (_tAction != 0) revert MarkoutPending();\n",
    "replace": "so one still pending is not due\n",
    "status": "KILLED",
-   "basis": "2de9e742845b2472"
+   "basis": "758033406db1a284"
   },
   {
    "id": "MU-217",
@@ -2585,7 +2584,7 @@
    "find": "z ? tickSpot - (FEE_TICKS + BAND_SWAP) : tickSpot + (FEE_TICKS + BAND_SWAP)",
    "replace": "z ? tickSpot - FEE_TICKS : tickSpot + FEE_TICKS",
    "status": "KILLED",
-   "basis": "b8d9946ebf880bea"
+   "basis": "58debdd3d028b6bb"
   },
   {
    "id": "MU-218",
@@ -2597,7 +2596,7 @@
    "find": "        // [MU-218] idle moves by the amounts actually swapped\n        _book(d);",
    "replace": "        // [MU-218] idle moves by the amounts actually swapped\n        _book(d);\n        if (z) _idle0 -= amountIn - uint128(-d.amount0());\n        else _idle1 -= amountIn - uint128(-d.amount1());",
    "status": "KILLED",
-   "basis": "b8d9946ebf880bea"
+   "basis": "58debdd3d028b6bb"
   },
   {
    "id": "MU-219",
@@ -2609,7 +2608,7 @@
    "find": "            _removeToIdle();\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "4a823ef224b460c1"
+   "basis": "319a057edf5d3c62"
   },
   {
    "id": "MU-220",
@@ -2621,7 +2620,7 @@
    "find": "            if (moveTo != 0 && moveTo != s0) {",
    "replace": "            if (moveTo != 0) {",
    "status": "KILLED",
-   "basis": "4a823ef224b460c1"
+   "basis": "319a057edf5d3c62"
   },
   {
    "id": "MU-221",
@@ -2633,7 +2632,7 @@
    "find": "                zm = moveTo < s0;",
    "replace": "                zm = moveTo > s0;",
    "status": "KILLED",
-   "basis": "4a823ef224b460c1"
+   "basis": "319a057edf5d3c62"
   },
   {
    "id": "MU-222",
@@ -2645,7 +2644,7 @@
    "find": "                if (paidMove > (zm ? _idle0 : _idle1)) revert SwapCap();\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "4a823ef224b460c1"
+   "basis": "319a057edf5d3c62"
   },
   {
    "id": "MU-223",
@@ -2657,7 +2656,7 @@
    "find": "        if (moveTo != 0 && sSpot != moveTo) revert Move();\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "4a823ef224b460c1"
+   "basis": "319a057edf5d3c62"
   },
   {
    "id": "MU-224",
@@ -2669,7 +2668,7 @@
    "find": "        _guards(tickSpot, ref);",
    "replace": "        _guards(TickMath.getTickAtSqrtPrice(s0), ref);",
    "status": "KILLED",
-   "basis": "4a823ef224b460c1"
+   "basis": "319a057edf5d3c62"
   },
   {
    "id": "MU-225",
@@ -2681,7 +2680,7 @@
    "find": "        uint64 deltaAfter;\n",
    "replace": "        uint64 deltaAfter;\n        if (place) {\n            (, int24 tAfter,,) = MANAGER.getSlot0(POOL_ID);\n            if (Placement.check(lo, hi, tAfter, ref, REF_BAND, W_TICKS, SPACING) != 0) revert NotContained();\n        }\n",
    "status": "KILLED",
-   "basis": "4a823ef224b460c1"
+   "basis": "319a057edf5d3c62"
   },
   {
    "id": "MU-226",
@@ -2693,7 +2692,7 @@
    "find": "            if (code == 2) revert Width();\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "4a823ef224b460c1"
+   "basis": "319a057edf5d3c62"
   },
   {
    "id": "MU-227",
@@ -2705,7 +2704,7 @@
    "find": "            if (code == 3) revert Alignment();\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "4a823ef224b460c1"
+   "basis": "319a057edf5d3c62"
   },
   {
    "id": "MU-228",
@@ -2717,7 +2716,7 @@
    "find": "            (uint160 sNow,,,) = MANAGER.getSlot0(POOL_ID);",
    "replace": "            uint160 sNow = sSpot;",
    "status": "KILLED",
-   "basis": "4a823ef224b460c1"
+   "basis": "319a057edf5d3c62"
   },
   {
    "id": "MU-229",
@@ -2729,7 +2728,7 @@
    "find": "                _book(_modify(int256(uint256(L))));",
    "replace": "                L += L / 1e9 + 1;\n                _book(_modify(int256(uint256(L))));",
    "status": "KILLED",
-   "basis": "4a823ef224b460c1"
+   "basis": "319a057edf5d3c62"
   },
   {
    "id": "MU-230",
@@ -2741,7 +2740,7 @@
    "find": "            HOOK.setVaultRange(lo, hi, ref);",
    "replace": "            HOOK.setVaultRange(lo + SPACING, hi, ref);",
    "status": "KILLED",
-   "basis": "8763c3f0a41eb4e8"
+   "basis": "2db940a498525166"
   },
   {
    "id": "MU-231",
@@ -2753,7 +2752,7 @@
    "find": "            HOOK.setVaultRange(lo, hi, ref);",
    "replace": "            HOOK.setVaultRange(lo, hi + SPACING, ref);",
    "status": "KILLED",
-   "basis": "8763c3f0a41eb4e8"
+   "basis": "2db940a498525166"
   },
   {
    "id": "MU-232",
@@ -2765,7 +2764,7 @@
    "find": "            HOOK.setVaultRange(lo, hi, ref);",
    "replace": "            HOOK.setVaultRange(lo, hi, tickSpot);",
    "status": "KILLED",
-   "basis": "8763c3f0a41eb4e8"
+   "basis": "2db940a498525166"
   },
   {
    "id": "MU-233",
@@ -2777,7 +2776,7 @@
    "find": "            FeeBank.bankApply(_bank, Op.Place, \"\");",
    "replace": "            FeeBank.bankApply(_bank, Op.Claim, \"\");",
    "status": "KILLED",
-   "basis": "8763c3f0a41eb4e8"
+   "basis": "2db940a498525166"
   },
   {
    "id": "MU-234",
@@ -2789,7 +2788,7 @@
    "find": "            FeeBank.bankApply(_bank, Op.Place, \"\");",
    "replace": "",
    "status": "KILLED",
-   "basis": "8763c3f0a41eb4e8"
+   "basis": "2db940a498525166"
   },
   {
    "id": "MU-235",
@@ -2801,7 +2800,7 @@
    "find": "            if (L > 0) {",
    "replace": "            if (true) {",
    "status": "KILLED",
-   "basis": "4a823ef224b460c1"
+   "basis": "319a057edf5d3c62"
   },
   {
    "id": "MU-236",
@@ -2813,7 +2812,7 @@
    "find": "        if (msg.sender != address(MANAGER)) revert OnlyPoolManager();",
    "replace": "",
    "status": "KILLED",
-   "basis": "b1494a8df14852de"
+   "basis": "a455671961c7b68c"
   },
   {
    "id": "MU-237",
@@ -2825,7 +2824,7 @@
    "find": "        if (dist > int256(uint256(tol)) || -dist > int256(uint256(tol))) revert Tolerance();",
    "replace": "        if (dist > int256(uint256(tol))) revert Tolerance();",
    "status": "KILLED",
-   "basis": "6cf3570b819924b0"
+   "basis": "63051a4a8ff34c84"
   },
   {
    "id": "MU-238",
@@ -2837,7 +2836,7 @@
    "find": "        if (address(vault) != address(0)) revert Deployed();",
    "replace": "",
    "status": "KILLED",
-   "basis": "4504011f1f9c7304"
+   "basis": "b7af868238847238"
   },
   {
    "id": "MU-239",
@@ -2849,7 +2848,7 @@
    "find": "        if (moveFrac > MAX_SWAP_ACTION || _epochSwapFrac + moveFrac > MAX_SWAP_EPOCH) revert SwapCap();",
    "replace": "        if (_epochSwapFrac + moveFrac > MAX_SWAP_EPOCH) revert SwapCap();",
    "status": "KILLED",
-   "basis": "6e7fcee7e633ff5c"
+   "basis": "535df8f0c4271805"
   },
   {
    "id": "MU-240",
@@ -2861,7 +2860,7 @@
    "find": "        if (moveFrac > MAX_SWAP_ACTION || _epochSwapFrac + moveFrac > MAX_SWAP_EPOCH) revert SwapCap();",
    "replace": "        if (moveFrac > MAX_SWAP_ACTION) revert SwapCap();",
    "status": "KILLED",
-   "basis": "6e7fcee7e633ff5c"
+   "basis": "535df8f0c4271805"
   },
   {
    "id": "MU-241",
@@ -2873,7 +2872,7 @@
    "find": "        _epochSwapFrac += uint64(moveFrac);\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "6e7fcee7e633ff5c"
+   "basis": "535df8f0c4271805"
   },
   {
    "id": "MU-242",
@@ -2885,7 +2884,7 @@
    "find": "        if (frac + used > MAX_SWAP_ACTION || _epochSwapFrac + frac > MAX_SWAP_EPOCH) revert SwapCap();",
    "replace": "        if (frac > MAX_SWAP_ACTION || _epochSwapFrac + frac > MAX_SWAP_EPOCH) revert SwapCap();",
    "status": "KILLED",
-   "basis": "39da37143f15b042"
+   "basis": "d8ac5332925099b6"
   },
   {
    "id": "MU-243",
@@ -2897,7 +2896,7 @@
    "find": "            moveFrac = ExecLedger.swapFrac(before, zm, paidMove, sRef);",
    "replace": "            moveFrac = ExecLedger.swapFrac(before, !zm, paidMove, sRef);",
    "status": "KILLED",
-   "basis": "4a823ef224b460c1"
+   "basis": "319a057edf5d3c62"
   },
   {
    "id": "MU-244",
@@ -2906,10 +2905,10 @@
    "killer_id": "U-settle",
    "kill": "test_U_settle__settlesTheDelayedWindowAtTheFirstDueBlock",
    "file": "src/TouchstoneVault.sol",
-   "find": "                _pBefore, _pAfter, tickMk, FEE_TICKS, _pCharge0, extra, _holdings(), totalSupply(), burnS",
-   "replace": "                _pAfter, _pAfter, tickMk, FEE_TICKS, _pCharge0, extra, _holdings(), totalSupply(), burnS",
+   "find": "ExecLedger.settleExtra(_pBefore, _pAfter, _pend,",
+   "replace": "ExecLedger.settleExtra(_pAfter, _pAfter, _pend,",
    "status": "KILLED",
-   "basis": "975e19c3d2e1d8fd"
+   "basis": "9faeb348cefa7f42"
   },
   {
    "id": "MU-245",
@@ -2921,7 +2920,163 @@
    "find": "        Holdings memory a = after_;",
    "replace": "        Holdings memory a = before;",
    "status": "KILLED",
-   "basis": "2675a7c582dfb77c"
+   "basis": "59923b1294d49671"
+  },
+  {
+   "id": "MU-246",
+   "area": "ledger",
+   "desc": "the centre markout leg dropped (it equals the lower leg)",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__settleExtraVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "(i == 1 ? int256(tickMk) :",
+   "replace": "(i == 1 ? int256(tickMk) - feeTicks :",
+   "status": "KILLED",
+   "basis": "59923b1294d49671"
+  },
+  {
+   "id": "MU-247",
+   "area": "ledger",
+   "desc": "the before holding's arbitrage fee term dropped (F-044's mechanism)",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__settleExtraVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "nbi = _satAdd(nbi, _arbFee(b, pd.s0, p, true, feePips));",
+   "replace": "nbi = nbi;",
+   "status": "KILLED",
+   "basis": "59923b1294d49671"
+  },
+  {
+   "id": "MU-248",
+   "area": "ledger",
+   "desc": "the after holding's fee credit rounded up, without its margins",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__settleExtraVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "_arbFee(a, pd.sEnd, p, false, feePips)",
+   "replace": "_arbFee(a, pd.sEnd, p, true, feePips)",
+   "status": "KILLED",
+   "basis": "59923b1294d49671"
+  },
+  {
+   "id": "MU-249",
+   "area": "ledger",
+   "desc": "the settlement leg chosen by the largest loss instead of the largest loss fraction g/nb",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__settleExtraVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "_gt512(gi, nb, g, nbi)",
+   "replace": "gi > g",
+   "status": "KILLED",
+   "basis": "59923b1294d49671"
+  },
+  {
+   "id": "MU-250",
+   "area": "ledger",
+   "desc": "the burn re-priced at the after NAV instead of the counterfactual nb",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__settleExtraVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "FullMath.mulDivRoundingUp(g, pd.sAct, nb);",
+   "replace": "FullMath.mulDivRoundingUp(g, pd.sAct, nb - g);",
+   "status": "KILLED",
+   "basis": "59923b1294d49671"
+  },
+  {
+   "id": "MU-252",
+   "area": "ledger",
+   "desc": "the settlement's extra emitted as the loss instead of the burn's value",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__settleExtraVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        extra = FullMath.mulDiv(burnS, nb, pd.sAct);",
+   "replace": "        extra = g;",
+   "status": "KILLED",
+   "basis": "59923b1294d49671"
+  },
+  {
+   "id": "MU-253",
+   "area": "ledger",
+   "desc": "the arbitrage fee in the wrong token (the move's direction inverted)",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__settleExtraVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        bool down = p < s;",
+   "replace": "        bool down = p > s;",
+   "status": "KILLED",
+   "basis": "e575e459a0d098c8"
+  },
+  {
+   "id": "MU-254",
+   "area": "ledger",
+   "desc": "the credit's absolute margin dropped",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__settleExtraVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        f = f > m ? f - m : 0;",
+   "replace": "        f = f;",
+   "status": "KILLED",
+   "basis": "e575e459a0d098c8"
+  },
+  {
+   "id": "MU-255",
+   "area": "ledger",
+   "desc": "the credit's relative margin `CREDIT_MARGIN` dropped",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__settleExtraVectorsBitForBit",
+   "file": "src/libraries/ExecLedger.sol",
+   "find": "        return FullMath.mulDiv(f, 1e6 - CREDIT_MARGIN, 1e6);",
+   "replace": "        return f;",
+   "status": "KILLED",
+   "basis": "e575e459a0d098c8"
+  },
+  {
+   "id": "MU-256",
+   "area": "ledger",
+   "desc": "the record's supply read after the charge's burn",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__recordKeepsTheSpotsTheBurnAndTheSupply",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        uint256 sAct = totalSupply();",
+   "replace": "        uint256 sAct = totalSupply() - burned;",
+   "status": "KILLED",
+   "basis": "d7734845bdf36ba1"
+  },
+  {
+   "id": "MU-257",
+   "area": "ledger",
+   "desc": "the record's end spot taken as the pre-move spot",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__recordKeepsTheSpotsTheBurnAndTheSupply",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        (uint160 sEnd,,,) = MANAGER.getSlot0(POOL_ID);",
+   "replace": "        uint160 sEnd = s0;",
+   "status": "KILLED",
+   "basis": "d7734845bdf36ba1"
+  },
+  {
+   "id": "MU-258",
+   "area": "ledger",
+   "desc": "the record's start spots swapped",
+   "killer_id": "U-settle",
+   "kill": "test_U_settle__recordKeepsTheSpotsTheBurnAndTheSupply",
+   "file": "src/TouchstoneVault.sol",
+   "find": "_pend = Markout(_u128(charge), _u128(reserve), s0, sEnd,",
+   "replace": "_pend = Markout(_u128(charge), _u128(reserve), sEnd, s0,",
+   "status": "KILLED",
+   "basis": "d7734845bdf36ba1"
+  },
+  {
+   "id": "MU-259",
+   "area": "guards",
+   "desc": "the hook accepts a dynamic or ≥100% fee key (the settlement prices the fee at the key's fee)",
+   "killer_id": "D-4",
+   "kill": "test_D_4__hookRejectsADynamicFeeKey",
+   "file": "src/TouchstoneHook.sol",
+   "find": "        if (a.fee >= 1_000_000) revert BadTier();",
+   "replace": "        if (false) revert BadTier();",
+   "status": "KILLED",
+   "basis": "ddad0c5d0a777cf4"
   }
  ]
 }

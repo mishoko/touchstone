@@ -7,6 +7,8 @@ import {LiquidPoolBase} from "../utils/LiquidPoolBase.sol";
 import {MockRefPool} from "../utils/MockRefPool.sol";
 import {TouchstoneVault} from "../../src/TouchstoneVault.sol";
 import {ExecLedger} from "../../src/libraries/ExecLedger.sol";
+import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
+import {Markout} from "../../src/types/Markout.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
 import {Bank, Cohort, RING} from "../../src/types/Bank.sol";
 import {SettleExtraOracle} from "../utils/SettleExtraOracle.sol";
@@ -54,6 +56,12 @@ contract VaultSettleTest is LiquidPoolBase, SettleExtraOracle {
         (bk.reserveShares, bk.reserveBond, bk.reserveForfeit) = (RES_SHARES, RES_BOND, false);
         hv.setBank(bk);
         hv.setPending(uint40(tA), b, a, CHARGE0, RESERVE);
+        // the record a real action leaves: the immediate charge burned at the action's price, the supply before it
+        uint160 sp = hv.markout().s0; // setPending's default: the current spot
+        uint256 S = hv.totalSupply();
+        (uint256 navA,) = ExecLedger.value(a, sp);
+        uint256 burn0 = FullMath.mulDivRoundingUp(CHARGE0, S, navA);
+        hv.setMarkout(Markout(CHARGE0, RESERVE, sp, sp, uint128(burn0), uint128(S + burn0)));
     }
 
     /// @notice The scripted reference: `T_MK` over the window (tA + bt, tA + bt + H], `T_AFTER` after it; rolls to
@@ -68,9 +76,7 @@ contract VaultSettleTest is LiquidPoolBase, SettleExtraOracle {
     }
 
     function _expected(int24 tMk) internal returns (uint256 extra, uint256 burnS) {
-        (extra,, burnS) = _settleExtra(
-            pBefore, pAfter, tMk, tier.FEE_TICKS, CHARGE0, RESERVE, hv.holdings(), hv.totalSupply(), RES_SHARES
-        );
+        (extra,, burnS) = _settleExtra(pBefore, pAfter, hv.markout(), tMk, tier.FEE_TICKS, hv.feePips(), RES_SHARES);
     }
 
     function _tAction() internal view returns (uint40 t) {
@@ -80,7 +86,7 @@ contract VaultSettleTest is LiquidPoolBase, SettleExtraOracle {
     // ------------------------------------------------------------------ U-settle
 
     /// @notice Settled at the first due block on the delayed window's tick: the extra charge net of the immediate one,
-    ///         burned at the markout leg's NAV on the pre-collect supply and holdings; the bond part returns to the bond,
+    ///         re-priced at the markout leg (net of the immediate burn, on the record's supply); the bond part returns to the bond,
     ///         the rest of the non-bond part enters the current epoch's cohort; the record clears.
     function test_U_settle__settlesTheDelayedWindowAtTheFirstDueBlock() public {
         _pend();

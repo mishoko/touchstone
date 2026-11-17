@@ -1,6 +1,6 @@
 {
  "schema": "touchstone-vectors/1",
- "modelHash": "9dc547808ca34d8a",
+ "modelHash": "33f54a1e658bfb46",
  "conventions": {
   "fn": "HookHarness.events: the hook (TouchstoneHook with an internal virtual _slot0() seam and a scripted MockRefPool) is constructed fresh per case; in.witness sets witLo/witHi by a harness setter; then each event of in.events runs in order at vm.roll(block) / vm.warp(ts) with the pool slot0 = (sqrtPrice, tick).",
   "events": "each event is {op: {block, ts, sqrtPrice, tick, ref, ...}}; op \u2208 snapshot (snapshotIfNewBlock), refreshRef, refresh (the internal _refresh: steps 1 and 5 only, exposed by the harness), arm (armAtSeed; the vault's seed snapshot is a separate preceding event), setVaultRange {lo, hi, liveTick} (called as the vault), ackBreaches {n} (called as the vault). `ref` is what every MockRefPool observe returns during that event: a TWAP tick, or \"fail\" (the call reverts inside the mock).",

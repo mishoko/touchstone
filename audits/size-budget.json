@@ -51,7 +51,7 @@
  ],
  "contracts": {
   "ExecLedger": {
-   "runtime": 6002,
+   "runtime": 7702,
    "history": [
     {
      "runtime": 1936,
@@ -68,6 +68,10 @@
     {
      "runtime": 6002,
      "note": "s11: rebalanceSwap (fence, cooldown, MAX_SWAPS, caps at the reference, SwapCap, adverse limit, settlement through claims, collect after the swap) and the charge path shared by both actions (Op.Charge, the pending record, the epilogue re-base); +4,133 B as first written, then lever (2b): ExecLedger.actionCharge and swapFrac replace four value calls and measure (-743 B); ExecLedger grows by those two entries"
+    },
+    {
+     "runtime": 7702,
+     "note": "s15 F-044: the fee-aware settlement (arbitrage fee terms, centre leg, re-priced burn, 512-bit leg choice) lives in ExecLedger (+1,700 B, a coarse-linked library); the vault's record grows by three slots (+202 B over the accepted 21,469 B)"
     }
    ]
   },
@@ -130,7 +134,7 @@
    ]
   },
   "TouchstoneVault": {
-   "runtime": 21469,
+   "runtime": 21671,
    "history": [
     {
      "runtime": 14971,
@@ -163,6 +167,10 @@
     {
      "runtime": 21469,
      "note": "s12 fix review r1 F13-01: the vault's move counts as a swap (its input valued at the reference shares the per-action cap with the pre-swap and is added to the epoch counter): +412 B, vault 21,469 B."
+    },
+    {
+     "runtime": 21671,
+     "note": "s15 F-044: the fee-aware settlement (arbitrage fee terms, centre leg, re-priced burn, 512-bit leg choice) lives in ExecLedger (+1,700 B, a coarse-linked library); the vault's record grows by three slots (+202 B over the accepted 21,469 B)"
     }
    ]
   },

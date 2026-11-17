@@ -1,13 +1,13 @@
 {
  "schema": "touchstone-vectors/1",
- "modelHash": "9dc547808ca34d8a",
+ "modelHash": "33f54a1e658bfb46",
  "conventions": {
   "measure": "loss_p = NAV_before(p) - NAV_after(p) for p in (sqrtSpot, sqrtS0, sqrtRef), a later leg replacing only on a strictly larger loss; charge = max(0, max loss); pStar = argmax (sqrtSpot on a tie, incl. charge 0); pStar is the argmax of the signed loss also when every leg is a gain; navBurn = min over the three legs of NAV_after(p); burn = ceilDiv(charge*S, navBurn) (0 when charge = 0; type(uint256).max when navBurn = 0 and charge > 0); burnR = ceilDiv((charge + reserve)*S, navBurn) - burn (type(uint256).max when saturated); ok = burn + burnR <= unvested + bond, evaluated without overflow (both may be type(uint256).max).",
-  "settleExtra": "legs sqrtAt(max(MIN_TICK, tickMk - feeTicks)) then sqrtAt(min(MAX_TICK, tickMk + feeTicks + 1)) (the upper leg rounded up; the later replaces only if strictly larger); no revert for valid ticks and uint128 reserve and reserveShares; extra = min(reserve, max(0, loss_mk - charge0)); burnS = 0 if extra = 0, reserveShares if NAV(now, pMk) = 0, else min(reserveShares, ceilDiv(extra*S, NAV(now, pMk))).",
+  "settleExtra": "(s15, the fee-aware settlement) legs, in order, sqrtAt(max(MIN_TICK, tickMk - feeTicks)), sqrtAt(tickMk), sqrtAt(min(MAX_TICK, tickMk + feeTicks + 1)); nb = NAV(before, p) + F(before, pend.s0, p, up); na = NAV(after, p) + F(after, pend.sEnd, p, down); g = nb - na; a leg with g > 0 replaces one with g <= 0, between positive legs a later one replaces when g_new*nb_cur > g_cur*nb_new; loss = max(0, g); burnS = min(reserveShares, max(0, ceilDiv(loss*sAct, nb) - burn0)); extra = mulDiv(burnS, nb, sAct) (0 when sAct = 0). F per spec \u00a73.4 (feePips the pool's LP fee).",
   "NAV": "NAV(s) = q(idle0 + x_pos(s), s) + idle1 + y_pos(s); positions per Appendix A with roundUp = false.",
   "value": "ExecLedger.value(h, sqrtP) = (NAV(sqrtP), val(x_pos, y_pos, sqrtP)).",
   "holdings": "Holdings {idle0, idle1, L, lo, hi}; before/after are inputs.",
-  "fields": "ExecLedger.measure in {before, after, sqrtS0, sqrtSpot, sqrtRef, reserve, S, unvested, bond} out {charge, pStar, navBurn, burn, burnR, ok}; ExecLedger.settleExtra in {before, after, tickMk, feeTicks, charge0, reserve, now, S, reserveShares} out {extra, pMk, burnS}; ExecLedger.value in {h, sqrtP} out {nav, posValue}; Holdings = {idle0, idle1, L, lo, hi}."
+  "fields": "ExecLedger.measure in {before, after, sqrtS0, sqrtSpot, sqrtRef, reserve, S, unvested, bond} out {charge, pStar, navBurn, burn, burnR, ok}; ExecLedger.settleExtra in {before, after, pend {s0, sEnd, charge0, reserve, burn0, sAct}, tickMk, feeTicks, feePips, reserveShares} out {extra, pMk, burnS}; ExecLedger.value in {h, sqrtP} out {nav, posValue}; Holdings = {idle0, idle1, L, lo, hi}."
  },
  "cases": [
   {
@@ -1043,28 +1043,27 @@
      "lo": "194320",
      "hi": "196320"
     },
+    "pend": {
+     "s0": "1446042728370400211848465323367120",
+     "sEnd": "1446042728370400211848465323367120",
+     "charge0": "7",
+     "reserve": "11",
+     "burn0": "0",
+     "sAct": "1000000000000000000000000"
+    },
     "tickMk": "196290",
     "feeTicks": "5",
-    "charge0": "0",
-    "reserve": "1000000000000000000000000000000",
-    "now": {
-     "idle0": "10550543265",
-     "idle1": "600000000294",
-     "L": "346075993638199299",
-     "lo": "194320",
-     "hi": "196320"
-    },
-    "S": "1000000000000000000000000",
-    "reserveShares": "100000000000000000000"
+    "feePips": "500",
+    "reserveShares": "1000000000000000000000000000000"
    },
    "out": {
-    "extra": "9885751054947906",
+    "extra": "4357062958434053",
     "pMk": "1448575391948286113616816103941623",
-    "burnS": "16294945801572531789"
+    "burnS": "7181745471404516233"
    }
   },
   {
-   "id": "ledger-030-markout-capped",
+   "id": "ledger-030-markout-other-side",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -1081,66 +1080,27 @@
      "lo": "194320",
      "hi": "196320"
     },
-    "tickMk": "196290",
-    "feeTicks": "5",
-    "charge0": "0",
-    "reserve": "1000000000000000",
-    "now": {
-     "idle0": "10550543265",
-     "idle1": "600000000294",
-     "L": "346075993638199299",
-     "lo": "194320",
-     "hi": "196320"
-    },
-    "S": "1000000000000000000000000",
-    "reserveShares": "100000000000000000000"
-   },
-   "out": {
-    "extra": "1000000000000000",
-    "pMk": "1448575391948286113616816103941623",
-    "burnS": "1648326536952067697"
-   }
-  },
-  {
-   "id": "ledger-031-markout-other-side",
-   "fn": "ExecLedger.settleExtra",
-   "in": {
-    "before": {
-     "idle0": "20000000000",
-     "idle1": "600000000000000000000",
-     "L": "0",
-     "lo": "0",
-     "hi": "0"
-    },
-    "after": {
-     "idle0": "10550543265",
-     "idle1": "600000000294",
-     "L": "346075993638199299",
-     "lo": "194320",
-     "hi": "196320"
+    "pend": {
+     "s0": "1446042728370400211848465323367120",
+     "sEnd": "1446042728370400211848465323367120",
+     "charge0": "7",
+     "reserve": "11",
+     "burn0": "0",
+     "sAct": "1000000000000000000000000"
     },
     "tickMk": "196050",
     "feeTicks": "5",
-    "charge0": "0",
-    "reserve": "1000000000000000000000000000000",
-    "now": {
-     "idle0": "10550543265",
-     "idle1": "600000000294",
-     "L": "346075993638199299",
-     "lo": "194320",
-     "hi": "196320"
-    },
-    "S": "1000000000000000000000000",
-    "reserveShares": "100000000000000000000"
+    "feePips": "500",
+    "reserveShares": "1000000000000000000000000000000"
    },
    "out": {
-    "extra": "1097530007279366363",
+    "extra": "1065670143158559574",
     "pMk": "1431297227452816722744544005862376",
-    "burnS": "100000000000000000000"
+    "burnS": "1757002899353275383122"
    }
   },
   {
-   "id": "ledger-032-markout-below-charge0",
+   "id": "ledger-031-markout-burn-capped-by-reserve-shares",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -1157,66 +1117,27 @@
      "lo": "194320",
      "hi": "196320"
     },
-    "tickMk": "196290",
-    "feeTicks": "5",
-    "charge0": "1000000000000000000000000000000",
-    "reserve": "1000000000000000000000000000000",
-    "now": {
-     "idle0": "10550543265",
-     "idle1": "600000000294",
-     "L": "346075993638199299",
-     "lo": "194320",
-     "hi": "196320"
-    },
-    "S": "1000000000000000000000000",
-    "reserveShares": "100000000000000000000"
-   },
-   "out": {
-    "extra": "0",
-    "pMk": "1448575391948286113616816103941623",
-    "burnS": "0"
-   }
-  },
-  {
-   "id": "ledger-033-markout-burn-capped-by-reserve-shares",
-   "fn": "ExecLedger.settleExtra",
-   "in": {
-    "before": {
-     "idle0": "20000000000",
-     "idle1": "600000000000000000000",
-     "L": "0",
-     "lo": "0",
-     "hi": "0"
-    },
-    "after": {
-     "idle0": "10550543265",
-     "idle1": "600000000294",
-     "L": "346075993638199299",
-     "lo": "194320",
-     "hi": "196320"
+    "pend": {
+     "s0": "1446042728370400211848465323367120",
+     "sEnd": "1446042728370400211848465323367120",
+     "charge0": "7",
+     "reserve": "11",
+     "burn0": "0",
+     "sAct": "1000000000000000000000000"
     },
     "tickMk": "196290",
     "feeTicks": "5",
-    "charge0": "0",
-    "reserve": "1000000000000000000000000000000",
-    "now": {
-     "idle0": "10550543265",
-     "idle1": "600000000294",
-     "L": "346075993638199299",
-     "lo": "194320",
-     "hi": "196320"
-    },
-    "S": "1000000000000000000000000",
+    "feePips": "500",
     "reserveShares": "1"
    },
    "out": {
-    "extra": "9885751054947906",
+    "extra": "0",
     "pMk": "1448575391948286113616816103941623",
     "burnS": "1"
    }
   },
   {
-   "id": "ledger-034-markout-nav-now-zero",
+   "id": "ledger-032-markout-burn0-covers",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -1233,57 +1154,18 @@
      "lo": "194320",
      "hi": "196320"
     },
-    "tickMk": "196290",
-    "feeTicks": "5",
-    "charge0": "0",
-    "reserve": "1000000000000000000000000000000",
-    "now": {
-     "idle0": "0",
-     "idle1": "0",
-     "L": "0",
-     "lo": "0",
-     "hi": "0"
-    },
-    "S": "1000000000000000000000000",
-    "reserveShares": "7"
-   },
-   "out": {
-    "extra": "9885751054947906",
-    "pMk": "1448575391948286113616816103941623",
-    "burnS": "7"
-   }
-  },
-  {
-   "id": "ledger-035-markout-zero-extra-nav-zero",
-   "fn": "ExecLedger.settleExtra",
-   "in": {
-    "before": {
-     "idle0": "20000000000",
-     "idle1": "600000000000000000000",
-     "L": "0",
-     "lo": "0",
-     "hi": "0"
-    },
-    "after": {
-     "idle0": "10550543265",
-     "idle1": "600000000294",
-     "L": "346075993638199299",
-     "lo": "194320",
-     "hi": "196320"
+    "pend": {
+     "s0": "1446042728370400211848465323367120",
+     "sEnd": "1446042728370400211848465323367120",
+     "charge0": "7",
+     "reserve": "11",
+     "burn0": "1000000000000000000000000000000",
+     "sAct": "1000000000000000000000000"
     },
     "tickMk": "196290",
     "feeTicks": "5",
-    "charge0": "1000000000000000000000000000000",
-    "reserve": "1000000000000000000000000000000",
-    "now": {
-     "idle0": "0",
-     "idle1": "0",
-     "L": "0",
-     "lo": "0",
-     "hi": "0"
-    },
-    "S": "1000000000000000000000000",
-    "reserveShares": "7"
+    "feePips": "500",
+    "reserveShares": "1000000000000000000000000000000"
    },
    "out": {
     "extra": "0",
@@ -1292,7 +1174,7 @@
    }
   },
   {
-   "id": "ledger-036-markout-reserve-one-wei",
+   "id": "ledger-033-markout-burn0-partly",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -1309,28 +1191,64 @@
      "lo": "194320",
      "hi": "196320"
     },
+    "pend": {
+     "s0": "1446042728370400211848465323367120",
+     "sEnd": "1446042728370400211848465323367120",
+     "charge0": "7",
+     "reserve": "11",
+     "burn0": "1000000000000000000",
+     "sAct": "1000000000000000000000000"
+    },
     "tickMk": "196290",
     "feeTicks": "5",
-    "charge0": "0",
-    "reserve": "1",
-    "now": {
-     "idle0": "10550543265",
-     "idle1": "600000000294",
-     "L": "346075993638199299",
-     "lo": "194320",
-     "hi": "196320"
-    },
-    "S": "1000000000000000000000000",
-    "reserveShares": "100000000000000000000"
+    "feePips": "500",
+    "reserveShares": "1000000000000000000000000000000"
    },
    "out": {
-    "extra": "1",
+    "extra": "3750377163764424",
     "pMk": "1448575391948286113616816103941623",
-    "burnS": "1649"
+    "burnS": "6181745471404516233"
    }
   },
   {
-   "id": "ledger-037-markout-upper-leg",
+   "id": "ledger-034-markout-sact-zero",
+   "fn": "ExecLedger.settleExtra",
+   "in": {
+    "before": {
+     "idle0": "20000000000",
+     "idle1": "600000000000000000000",
+     "L": "0",
+     "lo": "0",
+     "hi": "0"
+    },
+    "after": {
+     "idle0": "10550543265",
+     "idle1": "600000000294",
+     "L": "346075993638199299",
+     "lo": "194320",
+     "hi": "196320"
+    },
+    "pend": {
+     "s0": "1446042728370400211848465323367120",
+     "sEnd": "1446042728370400211848465323367120",
+     "charge0": "7",
+     "reserve": "11",
+     "burn0": "0",
+     "sAct": "0"
+    },
+    "tickMk": "196290",
+    "feeTicks": "5",
+    "feePips": "500",
+    "reserveShares": "1000000000000000000000000000000"
+   },
+   "out": {
+    "extra": "0",
+    "pMk": "1448575391948286113616816103941623",
+    "burnS": "0"
+   }
+  },
+  {
+   "id": "ledger-035-markout-upper-leg",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -1347,28 +1265,27 @@
      "lo": "0",
      "hi": "0"
     },
+    "pend": {
+     "s0": "1446042728370400211848465323367120",
+     "sEnd": "1446042728370400211848465323367120",
+     "charge0": "7",
+     "reserve": "11",
+     "burn0": "0",
+     "sAct": "1000000000000000000000000"
+    },
     "tickMk": "196290",
     "feeTicks": "5",
-    "charge0": "0",
-    "reserve": "1000000000000000000000000000000",
-    "now": {
-     "idle0": "19000000000",
-     "idle1": "600003000000000000000",
-     "L": "0",
-     "lo": "0",
-     "hi": "0"
-    },
-    "S": "1000000000000000000000000",
-    "reserveShares": "100000000000000000000"
+    "feePips": "500",
+    "reserveShares": "1000000000000000000000000000000"
    },
    "out": {
     "extra": "331657636102765159",
     "pMk": "1449372287695977538953130337297178",
-    "burnS": "100000000000000000000"
+    "burnS": "546664544695640681056"
    }
   },
   {
-   "id": "ledger-038-markout-tie-lower-leg",
+   "id": "ledger-036-markout-tie-lower-leg",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -1385,19 +1302,18 @@
      "lo": "0",
      "hi": "0"
     },
+    "pend": {
+     "s0": "1446042728370400211848465323367120",
+     "sEnd": "1446042728370400211848465323367120",
+     "charge0": "7",
+     "reserve": "11",
+     "burn0": "0",
+     "sAct": "1000000000000000000000000"
+    },
     "tickMk": "196290",
     "feeTicks": "5",
-    "charge0": "0",
-    "reserve": "1000000000000000000000000000000",
-    "now": {
-     "idle0": "20000000000",
-     "idle1": "600000000000000000000",
-     "L": "0",
-     "lo": "0",
-     "hi": "0"
-    },
-    "S": "1000000000000000000000000",
-    "reserveShares": "100000000000000000000"
+    "feePips": "500",
+    "reserveShares": "1000000000000000000000000000000"
    },
    "out": {
     "extra": "0",
@@ -1406,7 +1322,7 @@
    }
   },
   {
-   "id": "ledger-039-markout-clamp-max-tick",
+   "id": "ledger-037-markout-clamp-max-tick",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -1422,29 +1338,28 @@
      "L": "0",
      "lo": "0",
      "hi": "0"
+    },
+    "pend": {
+     "s0": "1446042728370400211848465323367120",
+     "sEnd": "1446042728370400211848465323367120",
+     "charge0": "7",
+     "reserve": "11",
+     "burn0": "0",
+     "sAct": "1000000000000000000000000"
     },
     "tickMk": "887272",
     "feeTicks": "5",
-    "charge0": "0",
-    "reserve": "1000000000000000000000000000000",
-    "now": {
-     "idle0": "19000000000",
-     "idle1": "600003000000000000000",
-     "L": "0",
-     "lo": "0",
-     "hi": "0"
-    },
-    "S": "1000000000000000000000000",
-    "reserveShares": "100000000000000000000"
+    "feePips": "500",
+    "reserveShares": "1000000000000000000000000000000"
    },
    "out": {
-    "extra": "1000000000000000000000000000000",
+    "extra": "340256786836388094070642339929681172762184831912",
     "pMk": "1461446703485210103287273052203988822378723970342",
-    "burnS": "154682"
+    "burnS": "50000000000000000000000"
    }
   },
   {
-   "id": "ledger-040-markout-clamp-near-max",
+   "id": "ledger-038-markout-clamp-near-max",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -1460,29 +1375,28 @@
      "L": "0",
      "lo": "0",
      "hi": "0"
+    },
+    "pend": {
+     "s0": "1446042728370400211848465323367120",
+     "sEnd": "1446042728370400211848465323367120",
+     "charge0": "7",
+     "reserve": "11",
+     "burn0": "0",
+     "sAct": "1000000000000000000000000"
     },
     "tickMk": "887267",
     "feeTicks": "5",
-    "charge0": "0",
-    "reserve": "1000000000000000000000000000000",
-    "now": {
-     "idle0": "19000000000",
-     "idle1": "600003000000000000000",
-     "L": "0",
-     "lo": "0",
-     "hi": "0"
-    },
-    "S": "1000000000000000000000000",
-    "reserveShares": "100000000000000000000"
+    "feePips": "500",
+    "reserveShares": "1000000000000000000000000000000"
    },
    "out": {
-    "extra": "1000000000000000000000000000000",
+    "extra": "340256786836388094070642339929681172762184831912",
     "pMk": "1461446703485210103287273052203988822378723970342",
-    "burnS": "154682"
+    "burnS": "50000000000000000000000"
    }
   },
   {
-   "id": "ledger-041-markout-clamp-min-tick",
+   "id": "ledger-039-markout-clamp-min-tick",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -1499,19 +1413,18 @@
      "lo": "0",
      "hi": "0"
     },
+    "pend": {
+     "s0": "1446042728370400211848465323367120",
+     "sEnd": "1446042728370400211848465323367120",
+     "charge0": "7",
+     "reserve": "11",
+     "burn0": "0",
+     "sAct": "1000000000000000000000000"
+    },
     "tickMk": "-887272",
     "feeTicks": "5",
-    "charge0": "0",
-    "reserve": "1000000000000000000000000000000",
-    "now": {
-     "idle0": "19000000000",
-     "idle1": "600003000000000000000",
-     "L": "0",
-     "lo": "0",
-     "hi": "0"
-    },
-    "S": "1000000000000000000000000",
-    "reserveShares": "100000000000000000000"
+    "feePips": "500",
+    "reserveShares": "1000000000000000000000000000000"
    },
    "out": {
     "extra": "0",
@@ -1520,7 +1433,7 @@
    }
   },
   {
-   "id": "ledger-042-markout-upper-leg-rounded-up",
+   "id": "ledger-040-markout-upper-leg-rounded-up",
    "fn": "ExecLedger.settleExtra",
    "in": {
     "before": {
@@ -1537,28 +1450,249 @@
      "lo": "0",
      "hi": "0"
     },
+    "pend": {
+     "s0": "1446042728370400211848465323367120",
+     "sEnd": "1446042728370400211848465323367120",
+     "charge0": "7",
+     "reserve": "11",
+     "burn0": "0",
+     "sAct": "1000000000000000000000000"
+    },
     "tickMk": "196244",
     "feeTicks": "5",
-    "charge0": "0",
-    "reserve": "1000000000000000000000000000000",
-    "now": {
-     "idle0": "19000000000",
-     "idle1": "600003000000000000000",
-     "L": "0",
-     "lo": "0",
-     "hi": "0"
-    },
-    "S": "1000000000000000000000000",
-    "reserveShares": "100000000000000000000"
+    "feePips": "500",
+    "reserveShares": "1000000000000000000000000000000"
    },
    "out": {
     "extra": "330121822844583743",
     "pMk": "1446042728370400211848465323367120",
-    "burnS": "100000000000000000000"
+    "burnS": "544160645205930097210"
    }
   },
   {
-   "id": "ledger-043-charge-zero-nav-zero",
+   "id": "ledger-041-markout-fee-foregone",
+   "fn": "ExecLedger.settleExtra",
+   "in": {
+    "before": {
+     "idle0": "0",
+     "idle1": "0",
+     "L": "10000000000000000",
+     "lo": "195250",
+     "hi": "197250"
+    },
+    "after": {
+     "idle0": "0",
+     "idle1": "0",
+     "L": "5000000000000000",
+     "lo": "196190",
+     "hi": "198190"
+    },
+    "pend": {
+     "s0": "1446042728370400211848465323367120",
+     "sEnd": "1450387152716278242562425184642509",
+     "charge0": "7",
+     "reserve": "11",
+     "burn0": "0",
+     "sAct": "1000000000000000000000000"
+    },
+    "tickMk": "196140",
+    "feeTicks": "5",
+    "feePips": "500",
+    "reserveShares": "1000000000000000000000000000000"
+   },
+   "out": {
+    "extra": "9084009673622800800",
+    "pMk": "1437752255150356950145545372980539",
+    "burnS": "513373780790975601354435"
+   }
+  },
+  {
+   "id": "ledger-042-markout-fee-credit",
+   "fn": "ExecLedger.settleExtra",
+   "in": {
+    "before": {
+     "idle0": "0",
+     "idle1": "9094362414389534146",
+     "L": "5000000000000000",
+     "lo": "196190",
+     "hi": "198190"
+    },
+    "after": {
+     "idle0": "0",
+     "idle1": "0",
+     "L": "10000000000000000",
+     "lo": "195250",
+     "hi": "197250"
+    },
+    "pend": {
+     "s0": "1450387152716278242562425184642509",
+     "sEnd": "1446042728370400211848465323367120",
+     "charge0": "7",
+     "reserve": "11",
+     "burn0": "0",
+     "sAct": "1000000000000000000000000"
+    },
+    "tickMk": "196140",
+    "feeTicks": "5",
+    "feePips": "500",
+    "reserveShares": "1000000000000000000000000000000"
+   },
+   "out": {
+    "extra": "10354849905211625",
+    "pMk": "1437752255150356950145545372980539",
+    "burnS": "584851840929357241714"
+   }
+  },
+  {
+   "id": "ledger-043-markout-fee-dynamic-pips",
+   "fn": "ExecLedger.settleExtra",
+   "in": {
+    "before": {
+     "idle0": "0",
+     "idle1": "0",
+     "L": "10000000000000000",
+     "lo": "195250",
+     "hi": "197250"
+    },
+    "after": {
+     "idle0": "0",
+     "idle1": "0",
+     "L": "5000000000000000",
+     "lo": "196190",
+     "hi": "198190"
+    },
+    "pend": {
+     "s0": "1446042728370400211848465323367120",
+     "sEnd": "1450387152716278242562425184642509",
+     "charge0": "7",
+     "reserve": "11",
+     "burn0": "0",
+     "sAct": "1000000000000000000000000"
+    },
+    "tickMk": "196140",
+    "feeTicks": "5",
+    "feePips": "3000",
+    "reserveShares": "1000000000000000000000000000000"
+   },
+   "out": {
+    "extra": "9085263271093598933",
+    "pMk": "1437752255150356950145545372980539",
+    "burnS": "513368899673845876821759"
+   }
+  },
+  {
+   "id": "ledger-044-markout-centre-leg",
+   "fn": "ExecLedger.settleExtra",
+   "in": {
+    "before": {
+     "idle0": "0",
+     "idle1": "0",
+     "L": "10000000000000000",
+     "lo": "195250",
+     "hi": "197250"
+    },
+    "after": {
+     "idle0": "29525875610",
+     "idle1": "7971496616972566420",
+     "L": "0",
+     "lo": "0",
+     "hi": "0"
+    },
+    "pend": {
+     "s0": "1446042728370400211848465323367120",
+     "sEnd": "1446042728370400211848465323367120",
+     "charge0": "7",
+     "reserve": "11",
+     "burn0": "0",
+     "sAct": "1000000000000000000000000"
+    },
+    "tickMk": "196140",
+    "feeTicks": "5",
+    "feePips": "500",
+    "reserveShares": "1000000000000000000000000000000"
+   },
+   "out": {
+    "extra": "10000000000",
+    "pMk": "1438111720172448615415957793991075",
+    "burnS": "564984024091697"
+   }
+  },
+  {
+   "id": "ledger-045-markout-leg-by-fraction",
+   "fn": "ExecLedger.settleExtra",
+   "in": {
+    "before": {
+     "idle0": "1000000000",
+     "idle1": "100000000000000000",
+     "L": "1000000000000000",
+     "lo": "195250",
+     "hi": "197250"
+    },
+    "after": {
+     "idle0": "0",
+     "idle1": "100000000000000000",
+     "L": "500000000000000",
+     "lo": "196050",
+     "hi": "198050"
+    },
+    "pend": {
+     "s0": "1446042728370400211848465323367120",
+     "sEnd": "1450387152716278242562425184642509",
+     "charge0": "7",
+     "reserve": "11",
+     "burn0": "0",
+     "sAct": "1000000000000000000000000"
+    },
+    "tickMk": "195850",
+    "feeTicks": "5",
+    "feePips": "500",
+    "reserveShares": "1000000000000000000000000000000"
+   },
+   "out": {
+    "extra": "1215250649946230948",
+    "pMk": "1417056290566042877010882369731842",
+    "burnS": "563237471571876733867474"
+   }
+  },
+  {
+   "id": "ledger-046-markout-positive-replaces-negative",
+   "fn": "ExecLedger.settleExtra",
+   "in": {
+    "before": {
+     "idle0": "1000000000000",
+     "idle1": "100000000000000000000",
+     "L": "0",
+     "lo": "0",
+     "hi": "0"
+    },
+    "after": {
+     "idle0": "999000000000",
+     "idle1": "100329477744169452503",
+     "L": "0",
+     "lo": "0",
+     "hi": "0"
+    },
+    "pend": {
+     "s0": "1446042728370400211848465323367120",
+     "sEnd": "1446042728370400211848465323367120",
+     "charge0": "7",
+     "reserve": "11",
+     "burn0": "0",
+     "sAct": "1000000000000000000000000"
+    },
+    "tickMk": "196140",
+    "feeTicks": "5",
+    "feePips": "500",
+    "reserveShares": "1000000000000000000000000000000"
+   },
+   "out": {
+    "extra": "197736074753346",
+    "pMk": "1438543196833290066894213492423422",
+    "burnS": "460198647223161998"
+   }
+  },
+  {
+   "id": "ledger-047-charge-zero-nav-zero",
    "fn": "ExecLedger.measure",
    "in": {
     "before": {
@@ -1593,7 +1727,7 @@
    }
   },
   {
-   "id": "ledger-044-spot-unique-max-loss",
+   "id": "ledger-048-spot-unique-max-loss",
    "fn": "ExecLedger.measure",
    "in": {
     "before": {
@@ -1628,7 +1762,7 @@
    }
   },
   {
-   "id": "ledger-045-value",
+   "id": "ledger-049-value",
    "fn": "ExecLedger.value",
    "in": {
     "h": {
@@ -1646,7 +1780,7 @@
    }
   },
   {
-   "id": "ledger-046-value",
+   "id": "ledger-050-value",
    "fn": "ExecLedger.value",
    "in": {
     "h": {
@@ -1664,7 +1798,7 @@
    }
   },
   {
-   "id": "ledger-047-value",
+   "id": "ledger-051-value",
    "fn": "ExecLedger.value",
    "in": {
     "h": {
@@ -1682,7 +1816,7 @@
    }
   },
   {
-   "id": "ledger-048-value",
+   "id": "ledger-052-value",
    "fn": "ExecLedger.value",
    "in": {
     "h": {
@@ -1700,7 +1834,7 @@
    }
   },
   {
-   "id": "ledger-049-value-q-high-branch",
+   "id": "ledger-053-value-q-high-branch",
    "fn": "ExecLedger.value",
    "in": {
     "h": {
@@ -1718,7 +1852,7 @@
    }
   },
   {
-   "id": "ledger-050-value-empty",
+   "id": "ledger-054-value-empty",
    "fn": "ExecLedger.value",
    "in": {
     "h": {

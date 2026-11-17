@@ -89,8 +89,21 @@ contract VaultHarness is TouchstoneVault {
 
     // ------------------------------------------------------------------ placement seam (factory deployment)
 
+    /// @dev Which test seam the next dispatch serves (0: none; 1: `placeForTest`; 2: `creditIdle`).
+    uint8 internal _seam;
+
+    /// @notice A placement with no guards, no charge and no pending record (test setup only; the curator's
+    ///         `setPositions` is the production path). Runs the production prologue and mode gate.
     function placeForTest(int24 lo, int24 hi) external nonReentrant {
+        _seam = 1;
         MANAGER.unlock(abi.encode(Entry.SetPositions, msg.sender, abi.encode(lo, hi)));
+    }
+
+    /// @notice Credits idle with `a0`/`a1` paid by the caller (claims minted, the ledger raised), with no shares: a
+    ///         state seam for inventories the flows cannot reach directly (e.g. a 90% token0 vault).
+    function creditIdle(uint256 a0, uint256 a1) external nonReentrant {
+        _seam = 2;
+        MANAGER.unlock(abi.encode(Entry.Settle, msg.sender, abi.encode(a0, a1)));
     }
 
     function _dispatch(Entry entry, address payer, bytes memory args, bool liveRead, int24 liveTick)
@@ -98,22 +111,38 @@ contract VaultHarness is TouchstoneVault {
         override
         returns (bytes memory)
     {
-        if (entry == Entry.SetPositions) return _placeForTest(args);
+        uint8 seam = _seam;
+        _seam = 0;
+        if (seam == 1) return _placeForTest(args);
+        if (seam == 2) {
+            (uint256 a0, uint256 a1) = abi.decode(args, (uint256, uint256));
+            _payIn(C0, payer, a0);
+            _payIn(C1, payer, a1);
+            _mintClaims(C0, a0);
+            _mintClaims(C1, a1);
+            (_idle0, _idle1) = (SafeCast.toUint128(_idle0 + a0), SafeCast.toUint128(_idle1 + a1));
+            return "";
+        }
         return super._dispatch(entry, payer, args, liveRead, liveTick);
+    }
+
+    // ------------------------------------------------------------------ the vault's move seam
+
+    /// @dev The exact output the vault's move requests (0: the production `type(int128).max`). A finite amount makes
+    ///      the move fill before its price limit, the miss that only an astronomically deep pool reaches otherwise.
+    int256 public moveOutOverride;
+
+    function setMoveOut(int256 v) external {
+        moveOutOverride = v;
+    }
+
+    function _moveOut() internal view override returns (int256) {
+        return moveOutOverride != 0 ? moveOutOverride : super._moveOut();
     }
 
     function _placeForTest(bytes memory args) internal returns (bytes memory) {
         (int24 lo, int24 hi) = abi.decode(args, (int24, int24));
-        if (_L > 0) {
-            BalanceDelta r = _modify(-int256(uint256(_L)));
-            uint256 r0 = uint256(int256(r.amount0()));
-            uint256 r1 = uint256(int256(r.amount1()));
-            _mintClaims(C0, r0);
-            _mintClaims(C1, r1);
-            _idle0 = SafeCast.toUint128(_idle0 + r0);
-            _idle1 = SafeCast.toUint128(_idle1 + r1);
-            _L = 0;
-        }
+        _removeToIdle();
         (_lo, _hi) = (lo, hi);
         (uint160 sp,,,) = MANAGER.getSlot0(PoolId.wrap(keccak256(abi.encode(_key()))));
         uint128 L = LiquidityAmounts.getLiquidityForAmounts(

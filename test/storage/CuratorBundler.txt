@@ -1,0 +1,8 @@
+   0  0   20 vault: contract ICuratorVault
+   1  0   20 hook: contract ITouchstoneHook
+   2  0   96 _key: struct PoolKey
+   2  0   20 _key.currency0: Currency
+   3  0   20 _key.currency1: Currency
+   3 20    3 _key.fee: uint24
+   3 23    3 _key.tickSpacing: int24
+   4  0   20 _key.hooks: contract IHooks

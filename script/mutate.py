@@ -52,6 +52,12 @@ def audit(muts):
     for m in muts:
         if m.get('file') and m['file'] not in tags.get(m['id'], set()):
             errs.append(f"mutant without its tag in {m['file']}: {m['id']}")
+    # every wired mutant's find string matches its file exactly once (a stale or ambiguous pattern is not a kill)
+    for m in muts:
+        if wired(m):
+            n = open(os.path.join(ROOT, m['file'])).read().count(m['find'])
+            if n != 1:
+                errs.append(f"find string matches {n} times in {m['file']}: {m['id']}")
     pending = sum(1 for m in muts if not wired(m))
     for e in errs:
         print(e)

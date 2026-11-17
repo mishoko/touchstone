@@ -97,14 +97,24 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         }
         assertTrue(_obs().gapSinceVerify, "a silent jump left a gap");
         handler.breakRef(0);
-        handler.place(10, 3); // a registration clears the gap
+        handler.place(3, 0, 1, 1); // the curator's placement (no move, no pre-swap): a registration clears the gap
+        assertEq(handler.curatorPlacements(), 1, "a curator placement");
         handler.seedBank(1, 1e20); // maturedPending: vestable now
         handler.refresh();
         handler.withdraw(2, 1e21 + 5); // the gate reads the live leg and opens
         handler.refresh();
+        for (uint256 i; i < 14; ++i) handler.advance(0); // the cooldown: the placement's markout settles first
         // a real curator action, its markout settled by settle() on the window read
-        handler.rebalance(true, 1e15, 0); // within the per-action cap on both pools
+        handler.rebalance(true, 1e6, 0); // within the per-action cap on both pools
         assertEq(handler.curatorSwaps(), 1, "a curator action");
+        for (uint256 i; i < 14; ++i) handler.advance(0);
+        // a placement with the vault's own move (5 ticks down: move = 35 << 2) and a token0 pre-swap of 1e6 (within
+        // the per-action cap on both pools; pre = 1e6 << 8 | 2: divisible by 3, bit 2 clear); it settles the swap's
+        // markout first
+        handler.place(5, 0, 256_000_002, 140);
+        assertEq(handler.curatorPlacements(), 2, "a moved, pre-swapped placement");
+        assertEq(handler.placementsMoved(), 1, "moved");
+        assertEq(handler.placementsPreSwapped(), 1, "pre-swapped");
         for (uint256 i; i < 13; ++i) handler.advance(0);
         handler.settle();
         for (uint256 i; i < 3; ++i) handler.driveBreach();
@@ -129,9 +139,11 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         assertGt(handler.exitedWithdrawals(), 0, "a withdrawal in EXITED");
         assertEq(handler.pends(), 2, "two pending actions");
         assertEq(handler.withdrawalsSettling(), 1, "a withdrawal settled");
-        assertEq(handler.settledByRead(), 2, "settled on the window read");
+        // on the read: the first placement (by the swap), the swap (by the moved placement), the moved placement (by
+        // settle()) and the seam's first pending action (by a withdrawal)
+        assertEq(handler.settledByRead(), 4, "settled on the window read");
         assertEq(handler.curatorSwaps(), 1, "a curator action");
-        assertEq(handler.settledReal(), 1, "the real action settled");
+        assertEq(handler.settledReal(), 3, "the three real actions settled");
         assertEq(handler.actionFailures(), 0, "actions revert only on their guards");
         assertEq(handler.settledByFallback(), 1, "settled by the fallback");
         assertEq(handler.i2Failures(), 0, handler.i2Why());

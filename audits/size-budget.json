@@ -41,12 +41,12 @@
   {
    "row": "markout: pending record, settlement step 0, settle(), moveTo",
    "budget": 700,
-   "built": "partial: the pending record, settlement step 0 and settle(); no moveTo (setPositions)"
+   "built": "full: the pending record, settlement step 0, settle() and the vault's move to moveTo"
   },
   {
    "row": "Actions (setPositions incl. pre-swap, rebalanceSwap, guards)",
    "budget": 3300,
-   "built": "partial: rebalanceSwap, its guards and the shared charge path; no setPositions"
+   "built": "full: setPositions (removal, move, placement rules, pre-swap, sizing, registration) and rebalanceSwap as one action body with one charge call site"
   }
  ],
  "contracts": {
@@ -130,7 +130,7 @@
    ]
   },
   "TouchstoneVault": {
-   "runtime": 18387,
+   "runtime": 21057,
    "history": [
     {
      "runtime": 14971,
@@ -155,6 +155,10 @@
     {
      "runtime": 18387,
      "note": "s11 fix review r1: the no-pending-record guard (F12-01), +30 B"
+    },
+    {
+     "runtime": 21057,
+     "note": "s12: setPositions (the removal to idle, the vault's exact-output move to moveTo with SwapCap and Move, the placement rules, the optional pre-swap through the shared capped swap, the sizing through ExecLedger.placementSize, DeltaMin, setVaultRange, Op.Place). First written as a second action function: 22,623 B (+4,236 B; the shared charge path was inlined twice). Restructured: both actions run one body with one _charge call site (rebalanceSwap encodes its swap as the pre-swap of an action with no placement) and every PoolManager delta of the vault is booked through one helper (_book): 21,057 B (+2,670 B), 57 B over the 21,000 B escalation line (escalated). CuratorBundler (periphery, outside the vault gate) recorded at 9,145 B."
     }
    ]
   },
@@ -164,6 +168,15 @@
     {
      "runtime": 57,
      "note": "s9: ExecLedger gains measure (three legs, reserve, gate), settleExtra (clamped legs, upper leg rounded up) and placementSize (the Placement library behind the coarse link, spec lever D9-05); linked library outside the vault; Placement is an internal library (57 B stub)"
+    }
+   ]
+  },
+  "CuratorBundler": {
+   "runtime": 9145,
+   "history": [
+    {
+     "runtime": 9145,
+     "note": "s12: setPositions (the removal to idle, the vault's exact-output move to moveTo with SwapCap and Move, the placement rules, the optional pre-swap through the shared capped swap, the sizing through ExecLedger.placementSize, DeltaMin, setVaultRange, Op.Place). First written as a second action function: 22,623 B (+4,236 B; the shared charge path was inlined twice). Restructured: both actions run one body with one _charge call site (rebalanceSwap encodes its swap as the pre-swap of an action with no placement) and every PoolManager delta of the vault is booked through one helper (_book): 21,057 B (+2,670 B), 57 B over the 21,000 B escalation line (escalated). CuratorBundler (periphery, outside the vault gate) recorded at 9,145 B."
     }
    ]
   }

@@ -9,6 +9,8 @@ import {TouchstoneFactory} from "../src/TouchstoneFactory.sol";
 import {TouchstoneHook} from "../src/TouchstoneHook.sol";
 import {HookArgs, SeedParams} from "../src/interfaces/ITouchstoneFactory.sol";
 import {TouchstoneVault} from "../src/TouchstoneVault.sol";
+import {CuratorBundler, DeployArgs} from "../src/periphery/CuratorBundler.sol";
+import {PreSwap} from "../src/types/PreSwap.sol";
 import {HookMining} from "./Mine.s.sol";
 import {Tier} from "../src/types/Tier.sol";
 import {Tiers} from "./Tiers.sol";
@@ -16,9 +18,10 @@ import {MockRefPool} from "../test/utils/MockRefPool.sol";
 import {MockToken} from "../test/utils/Stubs.sol";
 
 /// @notice Deploys every contract under src/ to a local anvil node, which enforces the EIP-170 code-size limit on
-///         a real deployment (`forge test` does not). The vault and the hook are created by `factory.deploy` with the
-///         real creation-code hashes, a hook salt mined for the sender, and the seed. `script/anvil_check.py` then checks that each one was created
-///         and that its deployed runtime is at most 22,000 B.
+///         a real deployment (`forge test` does not). The vault and the hook are created by the curator's
+///         `CuratorBundler.deployAndPlace` through `factory.deploy` with the real creation-code hashes, a hook salt
+///         mined for the bundler, the seed, and the first placement in the same transaction. `script/anvil_check.py`
+///         then checks that each one was created and that its deployed runtime is at most 22,000 B.
 contract AnvilDeploy is Script {
     function run() external {
         vm.startBroadcast();
@@ -37,9 +40,10 @@ contract AnvilDeploy is Script {
         t.REF_POOL = address(ref);
         t.REF_SQRT_PRICE = TickMath.getSqrtPriceAtTick(0);
         bytes32 saltV = bytes32(uint256(1));
+        CuratorBundler bundler = new CuratorBundler(sender, factory);
         HookArgs memory args = HookArgs({
             poolManager: address(manager),
-            vault: HookMining.vaultAddress(address(factory), sender, saltV, vaultCode),
+            vault: HookMining.vaultAddress(address(factory), address(bundler), saltV, vaultCode),
             currency0: Currency.wrap(address(t0)),
             currency1: Currency.wrap(address(t1)),
             fee: 500,
@@ -47,13 +51,13 @@ contract AnvilDeploy is Script {
             seedSqrtPriceX96: TickMath.getSqrtPriceAtTick(0),
             tier: t
         });
-        (bytes32 saltH,) = HookMining.mine(address(factory), sender, hookCode, args, 0);
-        SeedParams memory seed = SeedParams({a0: 1e18, a1: 1e18, curator: sender, wit0: 1e9, wit1: 1e9});
-        t0.mint(sender, 2e18);
-        t1.mint(sender, 2e18);
-        t0.approve(address(factory), 2e18);
-        t1.approve(address(factory), 2e18);
-        factory.deploy(vaultCode, hookCode, args, saltV, saltH, seed);
+        (bytes32 saltH,) = HookMining.mine(address(factory), address(bundler), hookCode, args, 0);
+        SeedParams memory seed = SeedParams({a0: 1e18, a1: 1e18, curator: address(bundler), wit0: 1e9, wit1: 1e9});
+        t0.mint(address(bundler), 2e18);
+        t1.mint(address(bundler), 2e18);
+        bundler.deployAndPlace(
+            DeployArgs(vaultCode, hookCode, args, saltV, saltH, seed), -1000, 1000, PreSwap(false, false, 0), type(uint256).max
+        );
         vm.stopBroadcast();
     }
 }

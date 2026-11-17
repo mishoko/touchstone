@@ -17,14 +17,16 @@ import {ExpectedFlows} from "../../utils/ExpectedFlows.sol";
 import {ITouchstoneHook} from "../../../src/interfaces/ITouchstoneHook.sol";
 import {TouchstoneVault} from "../../../src/TouchstoneVault.sol";
 import {Holdings} from "../../../src/types/Holdings.sol";
+import {PreSwap} from "../../../src/types/PreSwap.sol";
+import {Tier} from "../../../src/types/Tier.sol";
 import {Bank, Cohort, RING, V} from "../../../src/types/Bank.sol";
 import {ExecLedger} from "../../../src/libraries/ExecLedger.sol";
 import {FeeBank} from "../../../src/libraries/FeeBank.sol";
 import {Ladder} from "../../../src/libraries/Ladder.sol";
 
-/// @notice The minimal P2 handler: deposits, withdrawals, time (snapshotted steps and silent jumps), keep-alive
-///         refreshes, test-only placements, third-party swaps, reference moves and `breakRef` (every failure mode of
-///         the scripted reference). Every withdrawal is checked against the exact pro-rata share computed from the
+/// @notice The handler: deposits, withdrawals, time (snapshotted steps and silent jumps), keep-alive refreshes, the
+///         curator's actions (`setPositions` with an optional move and pre-swap, `rebalanceSwap`), third-party swaps,
+///         reference moves and `breakRef` (every failure mode of the scripted reference). Every withdrawal is checked against the exact pro-rata share computed from the
 ///         PoolManager's state (I-2) and against the revert allow-list (I-10); the results are kept in ghosts.
 contract VaultHandler is Test {
     using StateLibrary for IPoolManager;
@@ -65,6 +67,9 @@ contract VaultHandler is Test {
     bool internal _realPending;
     uint256 public actionFailures;
     bytes4 public actionSelector;
+    uint256 public curatorPlacements;
+    uint256 public placementsMoved;
+    uint256 public placementsPreSwapped;
 
     constructor(
         IPoolManager m,
@@ -257,14 +262,133 @@ contract VaultHandler is Test {
         }
     }
 
-    function place(uint256 w, uint256 off) external {
-        (, int24 t,,) = manager.getSlot0(poolId);
-        int24 width = int24(int256(bound(w, 2, 40))) * 20; // 40 … 800 ticks, a multiple of 2·spacing
-        int24 lo = _floor10(t) - width / 2 + int24(int256(bound(off, 0, uint256(int256(width / 20) - 1)))) * 10;
-        if (lo > t) lo -= 10;
-        try hv.placeForTest(lo, lo + width) {
-            ++placements;
-        } catch {}
+    /// @notice The curator's `setPositions` on a W-wide aligned range containing the (post-move) spot and the live
+    ///         reference. On even `align` the reference is first set flat at the pool's tick. A quarter of the calls
+    ///         move spot by up to ±40 ticks with the vault's own move; a third add a pre-swap of up to an eighth of
+    ///         the input token's idle. Every revert must be one of the action's own guards, each allowed only in the
+    ///         state that legitimises it; a success leaves the PoolManager position equal to the ledger, the old range
+    ///         empty, the claims equal to idle, NORMAL and `placedByCurator`.
+    function place(uint256 off, uint256 align, uint256 pre, uint256 move) external {
+        Tier memory tr = hv.tier();
+        (uint160 sp, int24 t,,) = manager.getSlot0(poolId);
+        if (align % 2 == 0) {
+            uint32[] memory st = new uint32[](1);
+            int24[] memory tk = new int24[](1);
+            (st[0], tk[0]) = (1, t);
+            refPool.setMode(MockRefPool.Mode.Ok);
+            refPool.setPath(st, tk);
+        }
+        uint160 moveTo;
+        int24 tm = t;
+        if (move % 4 == 0) {
+            int24 dm = int24(int256(bound(move >> 2, 0, 79))) - 40;
+            if (dm >= 0) ++dm; // ±1 … ±40
+            tm = t + dm;
+            moveTo = TickMath.getSqrtPriceAtTick(tm);
+        }
+        (bool ok, int24 ref) = hook.tryRef();
+        if (!ok) ref = tm;
+        int24 lo;
+        {
+            int24 loMax = _floor10(tm < ref ? tm : ref);
+            int24 loMin = _floor10(tm < ref ? ref : tm) + 10 - tr.W_TICKS;
+            lo = loMin > loMax ? loMax : loMin + int24(int256(bound(off, 0, uint256(int256((loMax - loMin) / 10))))) * 10;
+        }
+        PreSwap memory ps;
+        Holdings memory h = hv.holdings();
+        if (pre % 3 == 0) {
+            bool z = (pre >> 2) % 2 == 0;
+            uint256 idle = z ? h.idle0 : h.idle1;
+            if (idle >= 8) ps = PreSwap(true, z, uint128(bound(pre >> 8, 1, idle / 8)));
+        }
+        Expect memory x = _placeExpect(tr, h, lo, sp, t, tm, ref, ok, ps.active, moveTo != 0);
+        (, bool due, bool okS) = _expectedSettleBurn();
+        vm.prank(hv.curator());
+        try hv.setPositions(lo, lo + tr.W_TICKS, ps, moveTo, type(uint256).max) {
+            ++curatorPlacements;
+            if (moveTo != 0) ++placementsMoved;
+            if (ps.active) ++placementsPreSwapped;
+            if (due) _countSettled(okS);
+            _realPending = true;
+            _checkPlaced(h, lo, lo + tr.W_TICKS);
+        } catch (bytes memory err) {
+            bytes4 sel = bytes4(err);
+            bool allowed = (sel == TouchstoneVault.Fence.selector && !x.fenceOk)
+                || (sel == ITouchstoneHook.RefUnreadable.selector && !ok)
+                || (sel == TouchstoneVault.Cooldown.selector && x.cooling)
+                || (sel == FeeBank.MarkoutPending.selector && !_realPending)
+                || (sel == TouchstoneVault.MaxSwaps.selector && ps.active && x.swapsOut)
+                || (sel == TouchstoneVault.SwapCap.selector && (ps.active || moveTo != 0))
+                || (sel == TouchstoneVault.DeltaMin.selector && x.deltaShort)
+                || (sel == Ladder.BadMode.selector && x.mayExit)
+                // the bank's gate: the charge and the reserve against unvested pay and the bond
+                || sel == FeeBank.Insolvent.selector;
+            if (!allowed) {
+                ++actionFailures;
+                actionSelector = sel;
+            }
+        }
+    }
+
+    /// @dev The states that legitimise each placement revert, read before the call.
+    struct Expect {
+        bool fenceOk;
+        bool cooling;
+        bool swapsOut;
+        bool deltaShort;
+        bool mayExit;
+    }
+
+    function _placeExpect(
+        Tier memory tr,
+        Holdings memory h,
+        int24 lo,
+        uint160 sp,
+        int24 t,
+        int24 tm,
+        int24 ref,
+        bool ok,
+        bool preSwap,
+        bool moved
+    ) internal view returns (Expect memory x) {
+        int256 dist = int256(tm) - ref;
+        x.fenceOk = ok && dist <= tr.REF_BAND && -dist <= tr.REF_BAND;
+        uint256 la = hv.lastAction();
+        x.cooling = la != 0 && vm.getBlockNumber() < la + tr.COOLDOWN;
+        x.swapsOut = hv.scalars().swapCount >= tr.MAX_SWAPS;
+        (,,,,, uint8 mode,) = hv.bank();
+        x.mayExit = mode == Ladder.EXITED || hook.obs().pendingBreaches > 0;
+        // δ_after on the idle the removal leaves (fees swept first) at this spot and the live reference; a move or a
+        // pre-swap changes the inventory and the spot, so either may legitimately leave δ short
+        if (preSwap || moved || !ok) {
+            x.deltaShort = true;
+        } else {
+            (uint256 f0, uint256 f1) = ExpectedFlows.fees(manager, poolId, address(hv), h.lo, h.hi);
+            (uint256 r0, uint256 r1) = ExpectedFlows.legs(manager, poolId, h.lo, h.hi, h.L, false);
+            Holdings memory idle = Holdings(uint128(h.idle0 + f0 + r0), uint128(h.idle1 + f1 + r1), 0, 0, 0);
+            (,, uint64 d) = ExecLedger.placementSize(idle, lo, lo + tr.W_TICKS, sp, TickMath.getSqrtPriceAtTick(ref));
+            x.deltaShort = d < tr.DELTA_MIN;
+        }
+        t;
+    }
+
+    /// @dev After a successful placement: the PoolManager position equals the ledger on the new range, the old range
+    ///      (if different) is empty, the claims equal idle, the mode is NORMAL and the range is the curator's.
+    function _checkPlaced(Holdings memory old, int24 lo, int24 hi) internal {
+        Holdings memory h = hv.holdings();
+        (uint40 tA,,,,) = hv.pendingAction();
+        if (tA != vm.getBlockTimestamp()) _i2("the placement left no pending record");
+        if (h.lo != lo || h.hi != hi) _i2("the ledger range");
+        (uint128 liq,,) = manager.getPositionInfo(poolId, address(hv), lo, hi, bytes32(0));
+        if (liq != h.L) _i2("the PoolManager position differs from the ledger L");
+        if (old.L > 0 && (old.lo != lo || old.hi != hi)) {
+            (uint128 l0,,) = manager.getPositionInfo(poolId, address(hv), old.lo, old.hi, bytes32(0));
+            if (l0 != 0) _i2("the old position was not removed");
+        }
+        if (manager.balanceOf(address(hv), uint256(uint160(address(token0)))) != h.idle0) _i2("claims0 != idle0");
+        if (manager.balanceOf(address(hv), uint256(uint160(address(token1)))) != h.idle1) _i2("claims1 != idle1");
+        Bank memory b = hv.bankFull();
+        if (b.mode != Ladder.NORMAL || !b.placedByCurator) _i2("the placement's mode row");
     }
 
     // ------------------------------------------------------------------ the market and time

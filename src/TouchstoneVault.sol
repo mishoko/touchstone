@@ -404,6 +404,7 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
         bool vestable = _vestable(b, ne);
         bool gateOpen;
         // [MU-069] [MU-093] [MU-106] [MU-164] [MU-165] a fresh, gap-free cached reference inside the registered range
+        // [MU-287] (the gap leg alone, after a return in range: U-vest-park)
         if (o.refFresh && !o.emptyRange && !o.gapSinceVerify && lo <= o.refTick && o.refTick < hi && vestable) {
             (liveRead, liveTick) = _tryRef();
             // [MU-070] and the live reference inside the range (a failed read never opens the gate)

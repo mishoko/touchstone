@@ -81,12 +81,23 @@ contract MN2Test is LiquidPoolBase {
         refPool.setMode(MockRefPool.Mode.Ok);
         advance(1);
         _ve().poke();
-        (amount, segs) = _sumBase(vm.getRecordedLogs());
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        (amount, segs) = _sumBase(logs);
+        if (mode == 2) {
+            uint256 deferrals;
+            for (uint256 i; i < logs.length; ++i) {
+                if (logs[i].emitter == vault && logs[i].topics[0] == VaultCommon.CheckpointDeferred.selector) ++deferrals;
+            }
+            assertGt(deferrals, 0, "precondition: the starved run deferred");
+        }
         assertEq(hv.scalars().baseOwed, 0, "every deferred amount minted");
     }
 
     function test_M_N2__forcedCheckpointsNeitherRaiseNorEscapeTheBase() public {
         uint256 n = 30;
+        // align: the starved steps 8-13 (blocks +80..+140) span an epoch boundary
+        advance(tier.EPOCH - (block.number % tier.EPOCH) + tier.EPOCH - 100);
+        assertLt((block.number + 80) / tier.EPOCH, (block.number + 140) / tier.EPOCH, "precondition: the crossing");
         uint256 snap = vm.snapshotState();
         (uint256 a,) = _run(0, n);
         vm.revertToState(snap);
@@ -104,7 +115,7 @@ contract MN2Test is LiquidPoolBase {
         vm.revertToState(snap);
         console.log("M-N2 base: hook-only on the failing schedule", d);
         assertLe(c, d, "a deferral never raises the amount");
-        assertLe(d - c, sc, "and loses at most 1 wei per segment: the deferred amount is minted, not lost");
+        assertLe(d - c, sc, "and loses at most 1 wei per segment of base (the minting of baseOwed: the next test)");
         // control (power): one more in-range step moves the amount by far more than the per-segment bound
         (uint256 a2,) = _run(0, n + 1);
         vm.revertToState(snap);
@@ -145,29 +156,32 @@ contract MN2Test is LiquidPoolBase {
         assertGe(worth + 1, owed, "the owed amount is minted in full");
     }
 
-    /// @notice A mint timed for a low NAV per share gains nothing: at two reference prices the minted shares are
-    ///         worth at most the base amount (`shares = floor(Base·S/(NAV′ − Base))`).
-    function test_M_N2__mintAtALowNavPerShareGainsNothing() public {
-        int24[2] memory refs = [int24(0), int24(-1500)];
-        for (uint256 i; i < 2; ++i) {
-            uint256 snap = vm.snapshotState();
-            _setRef(refs[i]);
-            _keepAlive(200);
-            uint256 S = hv.totalSupply();
-            vm.recordLogs();
-            _ve().poke();
-            (uint256 base,) = _sumBase(vm.getRecordedLogs());
-            uint256 minted = hv.totalSupply() - S;
-            Scalars memory s = hv.scalars();
-            assertEq(s.baseOwed, 0, "priced");
-            (uint256 navp,) = ExecLedger.value(hv.holdings(), TickMath.getSqrtPriceAtTick(_obs().refTick));
-            uint256 worth = FullMath.mulDiv(minted, navp, hv.totalSupply());
-            console.log("M-N2 mint at ref, base, worth", uint256(int256(refs[i]) + 10_000), base, worth);
-            assertGt(base, 0, "base accrued");
-            assertLe(worth, base, "the minted shares are worth at most the amount");
-            assertGe(worth + 2, base, "and the amount, less rounding");
-            vm.revertToState(snap);
-        }
+    /// @notice A mint timed for a low NAV per share (spec §3.5): the amount becomes shares at the minting checkpoint's
+    ///         price, worth the amount there; valued later at another price q, the minted shares are worth
+    ///         `amount·NAV(q)/NAV(p)`, the vault's own return on the base amount over the interval, exactly what any
+    ///         holder of that value earns (disclosed in §3.5; second order: m × the segment × the move). Measured: the
+    ///         base minted with the reference at -1500 (a low NAV in token1) is worth, at the reference 0, exactly
+    ///         that (± 2 wei). Control: the timing gain over minting at 0 is visibly > 0 (the measure sees it).
+    function test_M_N2__aMintAtALowNavPerShareEarnsOnlyTheVaultsReturnOnTheBase() public {
+        _setRef(-1500);
+        _keepAlive(200);
+        uint256 S = hv.totalSupply();
+        vm.recordLogs();
+        _ve().poke();
+        (uint256 amount,) = _sumBase(vm.getRecordedLogs());
+        assertEq(hv.scalars().baseOwed, 0, "priced");
+        assertGt(amount, 0, "base accrued");
+        uint256 minted = hv.totalSupply() - S;
+        (uint256 navLow,) = ExecLedger.value(hv.holdings(), TickMath.getSqrtPriceAtTick(_obs().refTick));
+        (uint256 nav0,) = ExecLedger.value(hv.holdings(), TickMath.getSqrtPriceAtTick(0));
+        uint256 S2 = hv.totalSupply();
+        assertLe(FullMath.mulDiv(minted, navLow, S2), amount, "worth the amount at the mint price");
+        uint256 worthAt0 = FullMath.mulDiv(minted, nav0, S2);
+        uint256 expected = FullMath.mulDiv(amount, nav0, navLow); // the vault's return on the amount
+        console.log("M-N2 mint at -1500: amount, worth at 0, vault return on it", amount, worthAt0, expected);
+        assertLe(worthAt0, expected + 2, "no more than the vault's return on the base amount");
+        assertGe(worthAt0 + 2, expected, "and exactly it, less rounding");
+        assertGt(worthAt0, amount + 10, "control: the timing gain is visible to the measure");
     }
 
     /// @notice NAV₀ re-bases with the supply on deposits and withdrawals (no price read): the base per unit of NAV₀

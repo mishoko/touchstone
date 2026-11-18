@@ -112,9 +112,10 @@ contract VaultExtensionTest is VaultBase {
         _ve().retire();
         vm.roll(block.number + V * tier.EPOCH);
         vm.warp(block.timestamp + V * tier.EPOCH * blocktime);
+        uint256 before = v.balanceOf(curator);
         _ve().releaseBond();
         vm.stopPrank();
-        assertGt(v.balanceOf(curator), 0, "the whole allow-list forwarded (the bond released)");
+        assertGt(v.balanceOf(curator), before, "the whole allow-list forwarded (the bond released)");
     }
 
     // ------------------------------------------------------------------ (b) direct calls

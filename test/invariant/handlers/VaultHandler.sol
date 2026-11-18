@@ -98,6 +98,9 @@ contract VaultHandler is Test, SettleExtraOracle {
     uint256 public pokes;
     uint256 public endgames;
     bool internal _claiming;
+    /// @dev Non-vacuity: I-3 drain checks with a pool past its drip, I-12 checks where the prologue moved the supply.
+    uint256 public i3DrainChecks;
+    uint256 public i12Moved;
 
     constructor(
         IPoolManager m,
@@ -146,6 +149,7 @@ contract VaultHandler is Test, SettleExtraOracle {
         try IVaultEntries(address(hv)).deposit(s, type(uint256).max, type(uint256).max, a) {
             // I-12: the re-base uses the supply after the prologue (settlement, drip, base mint), not before it
             uint256 S2 = hv.totalSupply();
+            if (S2 - s != S) ++i12Moved;
             if (hv.scalars().nav0 != _u128(FullMath.mulDiv(nav0b, S2, S2 - s))) ++i12Failures;
         } catch {}
     }
@@ -616,10 +620,19 @@ contract VaultHandler is Test, SettleExtraOracle {
         if (b.vestedUnclaimed < vuBefore && !_claiming) _i3("vested pay fell outside a claim");
         _claiming = false;
         if (
-            hv.scalars().segStart == vm.getBlockNumber() && b.forfeitPool > 0
+            hv.scalars().segStart == vm.getBlockNumber() && b.forfeitTotal > 0
                 && vm.getBlockNumber() >= uint256(b.forfeitStart) + b.dripBlocks
-        ) _i3("the forfeit pool outlived its drip at a checkpoint");
+        ) {
+            ++i3DrainChecks;
+            if (b.forfeitPool > 0) _i3("the forfeit pool outlived its drip at a checkpoint");
+        }
         if (b.mode == Ladder.EXITED && hv.scalars().baseOwed != 0) _i3("EXITED with base owed");
+    }
+
+    /// @dev `BadMode` is legitimate for topUp and retire only in EXITED or with the removal pending behind the prologue.
+    function _removedOrPending() internal view returns (bool) {
+        Bank memory b = hv.bankFull();
+        return b.mode == Ladder.EXITED || uint256(b.breaches) + hook.obs().pendingBreaches >= Ladder.REMOVAL;
     }
 
     function _entryFailed(bytes memory err) internal {
@@ -655,7 +668,7 @@ contract VaultHandler is Test, SettleExtraOracle {
         try IVaultEntries(address(hv)).topUpBond(amt) {
             ++topUps;
         } catch (bytes memory err) {
-            if (bytes4(err) != Ladder.BadMode.selector) _entryFailed(err);
+            if (bytes4(err) != Ladder.BadMode.selector || !_removedOrPending()) _entryFailed(err);
         }
     }
 
@@ -666,7 +679,7 @@ contract VaultHandler is Test, SettleExtraOracle {
         try IVaultEntries(address(hv)).retire() {
             ++retires;
         } catch (bytes memory err) {
-            if (bytes4(err) != Ladder.BadMode.selector) _entryFailed(err);
+            if (bytes4(err) != Ladder.BadMode.selector || !_removedOrPending()) _entryFailed(err);
         }
     }
 

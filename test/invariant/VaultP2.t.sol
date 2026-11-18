@@ -87,7 +87,10 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
                 vm.toString(handler.rebalanceCalls()), ",", vm.toString(handler.curatorSwaps()), ",",
                 vm.toString(handler.placeCalls()), ",", vm.toString(handler.curatorPlacements()), ",",
                 vm.toString(handler.placementsMoved()), ",", vm.toString(handler.placementsPreSwapped()), ",",
-                vm.toString(handler.withdrawalsMintingBase())
+                vm.toString(handler.withdrawalsMintingBase()), ",", vm.toString(handler.claims()), ",",
+                vm.toString(handler.topUps()), ",", vm.toString(handler.retires()), ",", vm.toString(handler.releases()), ",",
+                vm.toString(handler.pokes()), ",", vm.toString(handler.endgames()), ",", vm.toString(handler.i3DrainChecks()), ",",
+                vm.toString(handler.i12Moved())
             )
         );
     }
@@ -120,6 +123,8 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         for (uint256 i; i < 3; ++i) handler.deposit(i, 5e22);
         for (uint256 k; k < 3; ++k) handler.seedBank(k, 1e20);
         handler.topUp(0); // the curator holds no shares yet: a no-op
+        handler.advance(30 * 256 + 10); // a silent jump: the seeded forfeit pool drips
+        handler.deposit(0, 1e21); // its prologue burns the drip: the I-12 check sees a moved supply
         for (uint256 i; i < 3; ++i) handler.driveBreach();
         assertEq(_obs().pendingBreaches, 3, "three latched");
         // a curator action right after the third crossing: pending removal reverts it after the prologue
@@ -140,6 +145,8 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         assertEq(handler.i3Failures(), 0, handler.i3Why());
         assertEq(handler.i12Failures(), 0, "I-12");
         assertGt(hv.balanceOf(curator), 0, "the curator was paid its bond");
+        assertGt(handler.i3DrainChecks(), 0, "an I-3 drain check ran past a drip");
+        assertGt(handler.i12Moved(), 0, "an I-12 check ran where the prologue moved the supply");
     }
 
     function invariant_I_10__withdrawNeverRevertsOutsideTheAllowList() public view {

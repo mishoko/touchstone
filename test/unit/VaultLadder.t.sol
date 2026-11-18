@@ -195,16 +195,17 @@ contract VaultLadderTest is LiquidPoolBase {
 
     // ------------------------------------------------------------------ U-vest-park
 
-    /// @notice The curator parks (stays silent past maturity), re-places, pokes and claims: no pay vests before the
-    ///         verified return (the registration), not at a poke after the gap nor after one in-range anchor; the pay
-    ///         in `maturedPending` vests at the first poke after the re-placement and `claim` pays exactly it.
+    /// @notice The curator parks (the reference leaves the range), stays silent past maturity, the reference comes back
+    ///         (fewer than `RESET_RUN` in-range anchors), re-places, pokes and claims. With the cache fresh and in range
+    ///         and the live reference in range, only `gapSinceVerify` keeps the gate closed: no pay vests before the
+    ///         verified return (the registration); the pay in `maturedPending` vests at the first poke after it and
+    ///         `claim` pays exactly it.
     function test_U_vest_park__noVestBeforeTheVerifiedReturn() public {
         _place(LO, HI);
         _keepAlive(200);
         _ve().poke(); // mints the base into this epoch's cohort
         _plant(_epochNow(), 1e21, 0, 0); // and more pay in it (the re-placement's reserve is taken from unvested pay)
         uint256 cohort = _unvested();
-        assertGt(cohort, 0, "precondition: a cohort");
         // parks: the reference leaves the range (spot follows it), then silence past maturity
         _outAbove(230);
         advance((V + 2) * tier.EPOCH);
@@ -213,19 +214,28 @@ contract VaultLadderTest is LiquidPoolBase {
         assertTrue(_obs().gapSinceVerify, "the silence left a gap");
         assertEq(b.vestedUnclaimed, 0, "nothing vests at the gap");
         assertEq(b.maturedPending, cohort, "the matured cohort waits in maturedPending");
-        // observed anchors while parked are no verified return (out of range: no reset run, no vest)
-        for (uint256 i; i < 3; ++i) {
-            advance(tier.GRID);
+        // the reference and spot come back in range; stop at the FIRST in-range anchor (one short of RESET_RUN)
+        _setRef(0);
+        _swap(true, 1e30, _tick());
+        for (uint256 i; !(_obs().refTick >= LO && _obs().refTick < HI); ++i) {
+            require(i < 400, "no in-range anchor");
+            advance(1);
             ITouchstoneHook(hook).refreshRef();
-            _ve().poke();
         }
-        assertTrue(_obs().gapSinceVerify, "still unverified");
-        assertEq(hv.bankFull().vestedUnclaimed, 0, "nothing vests while parked");
-        assertEq(_obs().pendingBreaches + hv.bankFull().breaches, 0, "precondition: no breach yet");
-        // the verified return: a real re-placement around spot and the reference (its charge may burn from
-        // maturedPending)
+        assertEq(_obs().resetStreak, 1, "precondition: one in-range anchor, short of RESET_RUN");
+        (bool ok, int24 live) = ITouchstoneHook(hook).tryRef();
+        assertTrue(ok && live >= LO && live < HI, "precondition: the live reference is in range");
+        _ve().poke();
+        assertTrue(_obs().gapSinceVerify, "still unverified: only the gap leg closes the gate");
+        assertTrue(_obs().refFresh, "precondition: the cache is fresh");
+        assertEq(hv.bankFull().vestedUnclaimed, 0, "nothing vests before the verified return");
+        assertEq(_obs().pendingBreaches + hv.bankFull().breaches, 0, "precondition: no breach");
+        // the verified return in the same anchor: spot to the live reference (the fence), then a real re-placement
+        // (its charge may burn from maturedPending)
+        int24 dt = live - _tick();
+        if (dt != 0) _swap(dt < 0, 1e30, dt < 0 ? -dt : dt);
         vm.prank(curator);
-        hv.setPositions(-1760, 240, _none(), 0, type(uint256).max);
+        hv.setPositions(LO, HI, _none(), 0, type(uint256).max);
         assertFalse(_obs().gapSinceVerify, "the registration clears the gap");
         uint256 mp = hv.bankFull().maturedPending;
         assertGt(mp, 0, "maturedPending survives the charge");
@@ -251,6 +261,8 @@ contract VaultLadderTest is LiquidPoolBase {
     ///         the epoch's salt). The record clause (at most two records) comes with the records (s19).
     function test_U_gap__aLongGapThenOnePoke() public {
         hv.placeForTest(-600, 600);
+        _setRef(300); // the reference moves; spot stays at 0, so a witness centred on spot would fail
+        _keepAlive(60);
         uint256[2] memory gaps = [uint256((V + 3) * tier.EPOCH), 9 * tier.GRID + 7];
         for (uint256 i; i < 2; ++i) {
             advance(gaps[i]);
@@ -259,6 +271,8 @@ contract VaultLadderTest is LiquidPoolBase {
             uint256 used = g - gasleft();
             assertLe(used, 700_000, "bounded gas");
             int24 c = ITouchstoneHook(hook).epochStartRef();
+            assertGt(c, 200, "precondition: epochStartRef is the moved reference, not spot");
+            assertLt(_tick(), 10, "precondition: spot stayed near 0");
             int24 sp = TICK_SPACING;
             int24 base = c / sp * sp;
             if (c < 0 && c % sp != 0) base -= sp;
@@ -279,7 +293,7 @@ contract VaultLadderTest is LiquidPoolBase {
         _setRef(ref);
         _keepAlive(60); // the TWAP reaches ref
         _swap(false, 1e30, ref - _tick());
-        assertEq(_tick(), ref - 1 >= _tick() ? _tick() : _tick(), "");
+        assertApproxEqAbs(int256(_tick()), int256(ref), uint256(int256(TICK_SPACING)), "spot followed the reference");
     }
 
     /// @notice A placement that does not contain spot (or the reference) and a dust placement (δ < DELTA_MIN) both

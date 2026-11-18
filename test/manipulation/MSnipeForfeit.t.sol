@@ -119,7 +119,7 @@ contract MSnipeForfeitTest is LiquidPoolBase {
             (int256 pnl,) = _snipe(lane == 1, 10, 0, 0);
             console.log("control, instant burn, lane", lane);
             console.logInt(pnl);
-            assertGt(pnl, 0, "control: an instant burn pays the same-block sniper");
+            assertGt(pnl, 10, "control: an instant burn pays the same-block sniper beyond the pass tolerance (bound 0 + 10)");
             vm.revertToState(snap);
         }
     }

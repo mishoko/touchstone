@@ -423,7 +423,7 @@
   {
    "id": "MU-036",
    "area": "bank",
-   "desc": "NAV₀ read before settlement",
+   "desc": "NAV₀ read before settlement. EQUIVALENT since s15 (s18 fix review S18T-03): the settlement reads only its pending record and changes no NAV₀ input; NAV₀ changes only in an action's epilogue (at the live reference, after the settlement in the prologue) and in a flow's re-base, whose supply is read after the prologue (MU-096, I-12). No textual mutation reaches a pre-settlement NAV₀; kept unwired with this reason.",
    "killer_id": null,
    "kill": "pending",
    "file": null,
@@ -1137,13 +1137,14 @@
   {
    "id": "MU-096",
    "area": "additional",
-   "desc": "non-curator epilogue uses a price instead of `NAV₀·S′/S`",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "PENDING"
+   "desc": "a flow's epilogue re-bases NAV0 on a supply other than the post-prologue one (I-12: the next NAV0 is post-settlement; a textual stand-in for a stale supply)",
+   "killer_id": "M-N2",
+   "kill": "test_M_N2__flowsRebaseNav0ProRata",
+   "file": "src/TouchstoneVaultBase.sol",
+   "find": "        rebased = FullMath.mulDiv(_nav0, S2, S);\n",
+   "replace": "        rebased = FullMath.mulDiv(_nav0, S2, S - S / 1000);\n",
+   "status": "KILLED",
+   "basis": "a90c9e56ec9f3541"
   },
   {
    "id": "MU-097",
@@ -3408,6 +3409,18 @@
    "replace": "        // [MU-286] curator only\n",
    "status": "KILLED",
    "basis": "6010242493ea2b7e"
+  },
+  {
+   "id": "MU-287",
+   "area": "ladder",
+   "desc": "the vest gate ignores gapSinceVerify, killed with every other gate leg open (the parked curator's return in range, one anchor short of RESET_RUN; s18 fix review S18T-02)",
+   "killer_id": "U-vest-park",
+   "kill": "test_U_vest_park__noVestBeforeTheVerifiedReturn",
+   "file": "src/TouchstoneVault.sol",
+   "find": "!o.gapSinceVerify && ",
+   "replace": "",
+   "status": "KILLED",
+   "basis": "db519adce318ded4"
   }
  ]
 }

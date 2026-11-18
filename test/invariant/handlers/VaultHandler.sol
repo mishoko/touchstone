@@ -630,9 +630,16 @@ contract VaultHandler is Test, SettleExtraOracle {
     }
 
     /// @dev `BadMode` is legitimate for topUp and retire only in EXITED or with the removal pending behind the prologue.
-    function _removedOrPending() internal view returns (bool) {
+    ///      A third breach may latch inside the reverted call's own prologue (rolled back with it), so a stored count
+    ///      can miss it: then a poke in a snapshot decides (S18T2-03).
+    function _removedOrPending() internal returns (bool r) {
         Bank memory b = hv.bankFull();
-        return b.mode == Ladder.EXITED || uint256(b.breaches) + hook.obs().pendingBreaches >= Ladder.REMOVAL;
+        if (b.mode == Ladder.EXITED || uint256(b.breaches) + hook.obs().pendingBreaches >= Ladder.REMOVAL) return true;
+        uint256 snap = vm.snapshotState();
+        try IVaultEntries(address(hv)).poke() {
+            r = hv.bankFull().mode == Ladder.EXITED;
+        } catch {}
+        vm.revertToState(snap);
     }
 
     function _entryFailed(bytes memory err) internal {

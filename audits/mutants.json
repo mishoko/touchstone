@@ -3413,7 +3413,7 @@
   {
    "id": "MU-287",
    "area": "ladder",
-   "desc": "the vest gate ignores gapSinceVerify, killed with every other gate leg open (the parked curator's return in range, one anchor short of RESET_RUN; s18 fix review S18T-02)",
+   "desc": "MU-069's edit (the vest gate without its gap leg) with a second killer: U-vest-park, where every other gate leg is open (the parked curator's return in range, one anchor short of RESET_RUN; s18 fix review S18T-02, S18T2-01)",
    "killer_id": "U-vest-park",
    "kill": "test_U_vest_park__noVestBeforeTheVerifiedReturn",
    "file": "src/TouchstoneVault.sol",

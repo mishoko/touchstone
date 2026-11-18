@@ -192,11 +192,14 @@ contract MN2Test is LiquidPoolBase {
         _keepAlive(60); // base accrues: the flows' prologues mint before the re-base
         _deposit(bob, s);
         uint256 S2 = hv.totalSupply();
+        assertGt(S2 - s, s, "precondition: the deposit's prologue minted base (the supply moved)");
         assertEq(hv.scalars().nav0, FullMath.mulDiv(nav0, S2, S2 - s), "a deposit re-bases NAV0 with the supply");
         uint256 nav1 = hv.scalars().nav0;
         _keepAlive(60);
+        uint256 sPre = hv.totalSupply();
         _withdraw(bob, s / 2);
         S2 = hv.totalSupply();
+        assertGt(S2 + s / 2, sPre, "precondition: the withdrawal's prologue minted base (the supply moved)");
         assertEq(hv.scalars().nav0, FullMath.mulDiv(nav1, S2, S2 + s / 2), "a withdrawal re-bases it down");
         console.log("M-N2 NAV0 before, after flows", nav0, hv.scalars().nav0);
     }

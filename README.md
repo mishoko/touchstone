@@ -45,16 +45,18 @@ been measured; m was not changed after seeing the data.
 **Allocation ledger (measured, two negative results).** The allocation ledger is published for disclosure only and
 never affects pay. Its pre-registered test requires each epoch's allocation to reconcile the vault's value change for a
 fixed depositor to within 0.3 bp. Both registered forms fail, and both are published as failed:
-- E0, the original formula: residual 58.6 bp per epoch for a curator offset from the benchmark (reduced form); on the
-  E0a runs the same formula misses by 0.99 to 147 bp.
+- E0, the original formula: worst residual 58.6 bp in an epoch for a curator offset from the benchmark (reduced
+  form); on the E0a runs the same formula misses by up to 0.99, 38.6 and 147 bp.
 - E0a, the ledger amended once after E0's data: worst residual 0.0074 bp (`same`) and 0.0058 bp (`offset`), but
-  0.556 bp in one epoch of the `exit` run. In that epoch the vault earned the fees of an in-block crossing of about 400
-  ticks out of its range, right after a poke on a stale reference cache; the ledger credits fees only to observed
-  in-range time, so it booked them as zero (the residual equals the fees collected). The registered form described
-  such fees as spread over the observed exposure and listed this mechanism among the error terms the 0.3 bp bound was
-  to cover; the data show they are dropped instead. One of the ten controls (`fee_by_n`, 0.2975 bp) also falls short
-  of the bound, so it lacks the power to detect its fault. The evidence is three scripted runs on the test tier with
-  the base rate raised about 3,153 times (to make the base terms measurable); every share row closes exactly.
+  0.556 bp in one epoch of the `exit` run. The following diagnosis was made after the run, from that one epoch, whose
+  exit was a single scripted in-block swap of about 400 ticks out of the vault's range right after a poke on a stale
+  reference cache: the ledger credits fees only to in-range blocks seen at a snapshot, so in this epoch it booked the
+  vault's fees from that swap as zero (the residual equals the fees collected, to 2e-11 bp). The form registered
+  before the run read: "fees of unobserved in-range time, which are spread over the observed exposure", and listed
+  "fee non-uniformity within a lifetime" and "the τ_v reference gate" as error terms measured by the residual; in this
+  epoch they were not spread but dropped. One of the ten controls (`fee_by_n`, 0.2975 bp) also falls short of the
+  bound, so it lacks the power to detect its fault. The evidence is three scripted runs on the test tier with the base
+  rate raised about 3,150 times (to make the base terms measurable); every share row closes exactly.
 
 No further amendment will be made for this release; a fee leg based on fee growth is left as future work.
 Results: `eval/results/E0.json`, `eval/results/E0a.json`.

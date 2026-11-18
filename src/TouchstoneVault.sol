@@ -235,6 +235,7 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
         }
         // [MU-155] the s0 leg, distinct from the post-move spot
         _charge(uint8(entry), before, s0, sSpot, sRef, maxCharge);
+        // [MU-060] rebalanceSwap never registers a range (no clock reset)
         // [MU-021] rebalanceSwap leaves the mode as it is
         if (place) {
             // [MU-044] [MU-062]

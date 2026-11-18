@@ -108,7 +108,7 @@ contract VaultP4EntriesTest is HarnessVaultBase {
         assertGt(_cohortSum(), 0, "into a curator cohort");
     }
 
-    /// @notice Retire: curator only, NORMAL or BREACHED only, burns the drip owed first, emits `Retired(forfeited)`,
+    /// @notice Retire: curator only, NORMAL or BREACHED only, emits `Retired(forfeited)`,
     ///         leaves vested-unclaimed pay and the bond in place, and sets `exitBlock`.
     function test_U_mode__retireIsCuratorOnlyAndClosedInExited() public {
         _plant(0, 4e18, 0, 1e18);
@@ -146,6 +146,8 @@ contract VaultP4EntriesTest is HarnessVaultBase {
         vm.expectRevert(VaultCommon.OnlyCurator.selector);
         _ve().claim();
         uint256 held = v.balanceOf(vault);
+        vm.expectEmit(true, false, false, true, vault);
+        emit VaultCommon.Claim(curator, 2e18);
         vm.prank(curator);
         _ve().claim();
         assertEq(v.balanceOf(curator), 2e18, "paid");
@@ -175,6 +177,8 @@ contract VaultP4EntriesTest is HarnessVaultBase {
         vm.prank(mallory);
         vm.expectRevert(VaultCommon.OnlyCurator.selector);
         _ve().topUpBond(1e20);
+        vm.expectEmit(false, false, false, true, vault);
+        emit VaultCommon.BondTopUp(4e20);
         vm.prank(curator);
         _ve().topUpBond(4e20);
         assertEq(hv.bankFull().bondShares, bond + 4e20, "bond");
@@ -206,6 +210,8 @@ contract VaultP4EntriesTest is HarnessVaultBase {
         vm.prank(mallory);
         vm.expectRevert(VaultCommon.OnlyCurator.selector);
         _ve().releaseBond();
+        vm.expectEmit(true, false, false, true, vault);
+        emit VaultCommon.BondReleased(curator, bond);
         vm.prank(curator);
         _ve().releaseBond();
         assertEq(v.balanceOf(curator), bond, "the bond to the curator");

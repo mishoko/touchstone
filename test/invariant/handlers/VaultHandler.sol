@@ -83,6 +83,21 @@ contract VaultHandler is Test, SettleExtraOracle {
     /// @notice Calls that reached the vault (non-vacuity of the random campaign, value review item 6).
     uint256 public rebalanceCalls;
     uint256 public placeCalls;
+    /// @notice P4 (spec §9.1 I-3, I-12, I-16): the curator's bank entries and their checks.
+    uint256 public i3Failures;
+    string public i3Why;
+    uint256 public i12Failures;
+    uint256 public i16Failures;
+    string public i16Why;
+    uint256 public entryFailures;
+    bytes4 public entrySelector;
+    uint256 public claims;
+    uint256 public topUps;
+    uint256 public retires;
+    uint256 public releases;
+    uint256 public pokes;
+    uint256 public endgames;
+    bool internal _claiming;
 
     constructor(
         IPoolManager m,
@@ -120,17 +135,22 @@ contract VaultHandler is Test, SettleExtraOracle {
 
     // ------------------------------------------------------------------ flows
 
-    function deposit(uint256 who, uint256 s) external {
+    function deposit(uint256 who, uint256 s) external checked {
         address a = actors[who % 3];
         uint256 S = hv.totalSupply();
         uint256 cap = uint256(hv.bondShares()) * 1e18 / hv.tier().BOND_RATIO;
         if (cap <= S) return;
         s = bound(s, 1, _min(cap - S, S / 4));
+        uint256 nav0b = hv.scalars().nav0;
         vm.prank(a);
-        try IVaultEntries(address(hv)).deposit(s, type(uint256).max, type(uint256).max, a) {} catch {}
+        try IVaultEntries(address(hv)).deposit(s, type(uint256).max, type(uint256).max, a) {
+            // I-12: the re-base uses the supply after the prologue (settlement, drip, base mint), not before it
+            uint256 S2 = hv.totalSupply();
+            if (hv.scalars().nav0 != _u128(FullMath.mulDiv(nav0b, S2, S2 - s))) ++i12Failures;
+        } catch {}
     }
 
-    function withdraw(uint256 who, uint256 s) external {
+    function withdraw(uint256 who, uint256 s) external checked {
         address a = actors[who % 3];
         uint256 bal = hv.balanceOf(a);
         if (bal == 0) return;
@@ -148,10 +168,13 @@ contract VaultHandler is Test, SettleExtraOracle {
         (uint128 posBefore,,) = manager.getPositionInfo(poolId, address(hv), h.lo, h.hi, bytes32(0));
         uint256 vestedBefore = hv.bankFull().vestedUnclaimed;
         uint256 owedBefore = hv.scalars().baseOwed;
+        uint256 nav0b = hv.scalars().nav0;
         vm.recordLogs();
         vm.prank(a);
         try IVaultEntries(address(hv)).withdraw(s, 0, 0, a) {
             ++withdrawals;
+            // I-12 (as for deposits)
+            if (hv.scalars().nav0 != _u128(FullMath.mulDiv(nav0b, hv.totalSupply(), hv.totalSupply() + s))) ++i12Failures;
             if (h.L > 0) ++withdrawalsWithL;
             (,,,,, uint8 mode,) = hv.bank();
             if (mode == 2) ++exitedWithdrawals;
@@ -220,7 +243,7 @@ contract VaultHandler is Test, SettleExtraOracle {
     /// @notice Puts vault-held shares into the bank, carved out of the bond (they stay held by the vault): a due
     ///         cohort, maturedPending, or a forfeit pool that starts dripping now. So the checkpoint's live read,
     ///         drip burn, breach forfeit and vest run inside the flows.
-    function seedBank(uint256 kind, uint256 amt) external {
+    function seedBank(uint256 kind, uint256 amt) external checked {
         Bank memory b = hv.bankFull();
         amt = bound(amt, 1, b.bondShares / 1000);
         uint32 ne = uint32(vm.getBlockNumber() / hv.tier().EPOCH);
@@ -244,7 +267,7 @@ contract VaultHandler is Test, SettleExtraOracle {
     /// @notice A pending curator action at this block (the actions that record one are built later; this writes it
     ///         through the harness seam): a loss of `d` token0, an immediate charge and a reserve value, with the reserve's
     ///         shares carved out of the bond, part of them marked as the bond's.
-    function pend(uint256 d, uint256 charge0, uint256 reserve, uint256 shares, uint256 bondPart) external {
+    function pend(uint256 d, uint256 charge0, uint256 reserve, uint256 shares, uint256 bondPart) external checked {
         (uint40 tA,,,,) = hv.pendingAction();
         Bank memory b = hv.bankFull();
         if (tA != 0 || b.reserveShares != 0 || b.bondShares < 2000) return;
@@ -263,7 +286,7 @@ contract VaultHandler is Test, SettleExtraOracle {
     }
 
     /// @notice The open `settle()`; it never reverts with full gas.
-    function settle() external {
+    function settle() external checked {
         (, bool due, bool ok) = _expectedSettleBurn();
         try hv.settle() {
             if (due) _countSettle(ok);
@@ -277,7 +300,7 @@ contract VaultHandler is Test, SettleExtraOracle {
     ///         reference is first set flat at the pool's tick (its live TWAP equals it at once), so the fence passes;
     ///         otherwise the action meets whatever the market and the reference are. Every revert must be one of the
     ///         action's own guards (or the bank's gate, or the pending markout of a seam action).
-    function rebalance(bool z, uint256 amt, uint256 align) external {
+    function rebalance(bool z, uint256 amt, uint256 align) external checked {
         if (align % 2 == 0) {
             (, int24 t,,) = manager.getSlot0(poolId);
             uint32[] memory st = new uint32[](1);
@@ -346,7 +369,7 @@ contract VaultHandler is Test, SettleExtraOracle {
     ///         the input token's idle. Every revert must be one of the action's own guards, each allowed only in the
     ///         state that legitimises it; a success leaves the PoolManager position equal to the ledger, the old range
     ///         empty, the claims equal to idle, NORMAL and `placedByCurator`.
-    function place(uint256 off, uint256 align, uint256 pre, uint256 move) external {
+    function place(uint256 off, uint256 align, uint256 pre, uint256 move) external checked {
         Tier memory tr = hv.tier();
         (uint160 sp, int24 t,,) = manager.getSlot0(poolId);
         if (align % 2 == 0) {
@@ -510,7 +533,7 @@ contract VaultHandler is Test, SettleExtraOracle {
 
     // ------------------------------------------------------------------ the market and time
 
-    function swap(bool zeroForOne, uint256 amount, uint256 limit) external {
+    function swap(bool zeroForOne, uint256 amount, uint256 limit) external checked {
         amount = bound(amount, 1e3, zeroForOne ? swapMax0 : swapMax1);
         (, int24 t,,) = manager.getSlot0(poolId);
         int24 d = int24(int256(bound(limit, 1, 400)));
@@ -527,7 +550,7 @@ contract VaultHandler is Test, SettleExtraOracle {
     }
 
     /// @notice 85%: 1-3 blocks, each snapshotted; 15%: a silent jump of 37-120 blocks.
-    function advance(uint256 seed) external {
+    function advance(uint256 seed) external checked {
         if (seed % 100 < 85) {
             uint256 n = 1 + (seed >> 8) % 3;
             for (uint256 i; i < n; ++i) {
@@ -540,7 +563,11 @@ contract VaultHandler is Test, SettleExtraOracle {
     }
 
     /// @notice Holds the reference outside the vault's range, observed, until one more breach latches (bounded).
-    function driveBreach() external {
+    function driveBreach() external checked {
+        _driveBreach();
+    }
+
+    function _driveBreach() internal {
         Holdings memory h = hv.holdings();
         refPool.setMode(MockRefPool.Mode.Ok);
         refPool.setTick(h.hi + 1000 > center + 1500 ? h.lo - 1000 : h.hi + 1000);
@@ -552,19 +579,19 @@ contract VaultHandler is Test, SettleExtraOracle {
         if (hook.obs().breachSeq > seq) ++breachesDriven;
     }
 
-    function refresh() external {
+    function refresh() external checked {
         try hook.refreshRef() {} catch {}
     }
 
     /// @notice Moves the reference by up to ±1,500 ticks from the pool's centre (breaches latch when it leaves the
     ///         vault's range; the reference starts in range).
-    function moveRef(uint256 d) external {
+    function moveRef(uint256 d) external checked {
         int24 t = center + int24(int256(bound(d, 0, 3000))) - 1500;
         refPool.setTick(t);
     }
 
     /// @notice Every failure mode of the scripted reference, and back (half the calls restore it).
-    function breakRef(uint256 m) external {
+    function breakRef(uint256 m) external checked {
         uint256 k = m % 10;
         if (k < 5) refPool.setMode(MockRefPool.Mode.Ok);
         else if (k == 5) refPool.setMode(MockRefPool.Mode.Old);
@@ -572,6 +599,160 @@ contract VaultHandler is Test, SettleExtraOracle {
         else if (k == 7) refPool.setMode(MockRefPool.Mode.Short);
         else if (k == 8) refPool.setMode(MockRefPool.Mode.GasBomb);
         else refPool.setMode(MockRefPool.Mode.ReturnBomb);
+    }
+
+    // ------------------------------------------------------------------ P4: the curator's bank entries
+
+    modifier checked() {
+        uint256 vu = hv.bankFull().vestedUnclaimed;
+        _;
+        _afterCall(vu);
+    }
+
+    /// @dev I-3 after every handler call: vested pay falls only by a claim (a charge never burns it); at a checkpoint
+    ///      (this block's), a forfeit pool older than its drip is empty; EXITED leaves no base owed (S18D2-01).
+    function _afterCall(uint256 vuBefore) internal {
+        Bank memory b = hv.bankFull();
+        if (b.vestedUnclaimed < vuBefore && !_claiming) _i3("vested pay fell outside a claim");
+        _claiming = false;
+        if (
+            hv.scalars().segStart == vm.getBlockNumber() && b.forfeitPool > 0
+                && vm.getBlockNumber() >= uint256(b.forfeitStart) + b.dripBlocks
+        ) _i3("the forfeit pool outlived its drip at a checkpoint");
+        if (b.mode == Ladder.EXITED && hv.scalars().baseOwed != 0) _i3("EXITED with base owed");
+    }
+
+    function _entryFailed(bytes memory err) internal {
+        ++entryFailures;
+        entrySelector = bytes4(err);
+    }
+
+    /// @notice The curator's `claim`: open in every mode, never reverts with full gas; pays at least what was vested
+    ///         before the call (its checkpoint may vest more) and leaves nothing vested.
+    function claim() external checked {
+        address c = hv.curator();
+        uint256 vu = hv.bankFull().vestedUnclaimed;
+        uint256 bal = hv.balanceOf(c);
+        _claiming = true;
+        vm.prank(c);
+        try IVaultEntries(address(hv)).claim() {
+            ++claims;
+            if (hv.balanceOf(c) - bal < vu) _i16("claim paid less than the vested pay");
+            if (hv.bankFull().vestedUnclaimed != 0) _i16("claim left vested pay");
+        } catch (bytes memory err) {
+            _entryFailed(err);
+        }
+    }
+
+    /// @notice The curator tops up the bond with up to its whole balance: reverts only `BadMode` (EXITED, or a
+    ///         removal pending behind the prologue).
+    function topUp(uint256 amt) external checked {
+        address c = hv.curator();
+        uint256 bal = hv.balanceOf(c);
+        if (bal == 0) return;
+        amt = bound(amt, 1, bal);
+        vm.prank(c);
+        try IVaultEntries(address(hv)).topUpBond(amt) {
+            ++topUps;
+        } catch (bytes memory err) {
+            if (bytes4(err) != Ladder.BadMode.selector) _entryFailed(err);
+        }
+    }
+
+    /// @notice The curator retires (rarely: one call in eight proceeds); reverts only `BadMode`.
+    function retire(uint256 seed) external checked {
+        if (seed % 8 != 0) return;
+        vm.prank(hv.curator());
+        try IVaultEntries(address(hv)).retire() {
+            ++retires;
+        } catch (bytes memory err) {
+            if (bytes4(err) != Ladder.BadMode.selector) _entryFailed(err);
+        }
+    }
+
+    /// @notice `releaseBond`: reverts only `BadMode` (not EXITED) or `BondLocked` (before the delay); a success pays
+    ///         the whole bond.
+    function releaseBond() external checked {
+        vm.prank(hv.curator());
+        try IVaultEntries(address(hv)).releaseBond() {
+            ++releases;
+            if (hv.bankFull().bondShares != 0) _i16("release left bond shares");
+        } catch (bytes memory err) {
+            bytes4 e = bytes4(err);
+            if (e != Ladder.BadMode.selector && e != FeeBank.BondLocked.selector) _entryFailed(err);
+        }
+    }
+
+    /// @notice The open `poke` and `processBreach`: never revert with full gas.
+    function poke(bool processOnly) external checked {
+        try this.callOpen(processOnly) {
+            ++pokes;
+        } catch (bytes memory err) {
+            _entryFailed(err);
+        }
+    }
+
+    function callOpen(bool processOnly) external {
+        require(msg.sender == address(this));
+        if (processOnly) IVaultEntries(address(hv)).processBreach();
+        else IVaultEntries(address(hv)).poke();
+    }
+
+    /// @notice I-16 (spec §9.1): in EXITED, the curator's shares are eventually claimable, burned or released. Drives a
+    ///         breach after removal (it forfeits whatever unvested pay is left), lets the markout, the drip and the
+    ///         release delay run out (twice: a settlement may restart the drip and return a reserve's bond part),
+    ///         then claims and releases; every curator bucket must then be empty.
+    function endgame() external checked {
+        Bank memory b = hv.bankFull();
+        if (b.mode != Ladder.EXITED) return;
+        address c = hv.curator();
+        uint256 bal = hv.balanceOf(c);
+        _driveBreach();
+        Tier memory t = hv.tier();
+        uint256 wait = _max(_max(b.dripBlocks, b.releaseDelay), (2 * blocktime + t.H_MARKOUT) / blocktime + 1) + 1;
+        for (uint256 i; i < 2; ++i) {
+            _roll(wait);
+            try this.callOpen(false) {} catch (bytes memory err) {
+                _entryFailed(err);
+            }
+        }
+        b = hv.bankFull();
+        uint256 owed = uint256(b.vestedUnclaimed) + b.bondShares;
+        _claiming = true;
+        vm.startPrank(c);
+        try IVaultEntries(address(hv)).claim() {} catch (bytes memory err) {
+            _entryFailed(err);
+        }
+        try IVaultEntries(address(hv)).releaseBond() {} catch (bytes memory err) {
+            _entryFailed(err);
+        }
+        vm.stopPrank();
+        b = hv.bankFull();
+        uint256 u = b.maturedPending;
+        for (uint256 k; k < RING; ++k) u += b.cohorts[k].shares;
+        if (u != 0) _i16("unvested pay left in EXITED");
+        if (b.vestedUnclaimed != 0) _i16("vested pay left unclaimed");
+        if (b.bondShares != 0) _i16("bond left unreleased");
+        if (b.forfeitPool != 0) _i16("forfeit pool not burned");
+        if (b.reserveShares != 0) _i16("reserve left encumbered");
+        if (hv.balanceOf(c) - bal != owed) _i16("the curator was not paid its vested pay and bond");
+        ++endgames;
+    }
+
+    function _i3(string memory why) internal {
+        if (i3Failures++ == 0) i3Why = why;
+    }
+
+    function _i16(string memory why) internal {
+        if (i16Failures++ == 0) i16Why = why;
+    }
+
+    function _max(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a > b ? a : b;
+    }
+
+    function _u128(uint256 x) internal pure returns (uint128) {
+        return x > type(uint128).max ? type(uint128).max : uint128(x);
     }
 
     // ------------------------------------------------------------------ helpers

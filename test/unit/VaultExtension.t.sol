@@ -16,6 +16,7 @@ import {VaultHarness} from "../utils/VaultHarness.sol";
 import {Tiers} from "../../script/Tiers.sol";
 import {HookMining} from "../../script/Mine.s.sol";
 import {Tier} from "../../src/types/Tier.sol";
+import {V} from "../../src/types/Bank.sol";
 import {Entry} from "../../src/types/Entry.sol";
 import {PreSwap} from "../../src/types/PreSwap.sol";
 import {ITouchstoneFactory} from "../../src/interfaces/ITouchstoneFactory.sol";
@@ -107,8 +108,13 @@ contract VaultExtensionTest is VaultBase {
         _ve().processBreach();
         vm.startPrank(curator);
         _ve().claim();
+        _ve().topUpBond(0);
         _ve().retire();
+        vm.roll(block.number + V * tier.EPOCH);
+        vm.warp(block.timestamp + V * tier.EPOCH * blocktime);
+        _ve().releaseBond();
         vm.stopPrank();
+        assertGt(v.balanceOf(curator), 0, "the whole allow-list forwarded (the bond released)");
     }
 
     // ------------------------------------------------------------------ (b) direct calls
@@ -302,14 +308,15 @@ contract VaultExtensionLockTest is VaultBase {
     ///         shared lock. Control: the unarmed token deposits.
     function test_U_ext__aMovedFlowCannotReenterAResidentEntryPoint() public {
         _fundUser(alice, 10e18);
-        bytes[4] memory inner = [
+        bytes[5] memory inner = [
             abi.encodeCall(TouchstoneVault.settle, ()),
             abi.encodeCall(TouchstoneVault.setPositions, (int24(-600), int24(600), PreSwap(false, false, 0), uint160(0), type(uint256).max)),
             // moved entries through the fallback (the lock is shared)
             abi.encodeCall(IVaultEntries.poke, ()),
-            abi.encodeCall(IVaultEntries.processBreach, ())
+            abi.encodeCall(IVaultEntries.processBreach, ()),
+            abi.encodeCall(IVaultEntries.claim, ()) // refused on the shared lock before its curator check
         ];
-        for (uint256 i; i < 4; ++i) {
+        for (uint256 i; i < 5; ++i) {
             _cb().arm(vault, inner[i]);
             vm.prank(alice);
             vm.expectRevert(ReentrancyGuardTransient.ReentrancyGuardReentrantCall.selector);

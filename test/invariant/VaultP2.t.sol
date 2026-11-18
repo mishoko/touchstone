@@ -92,6 +92,56 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         );
     }
 
+    /// @notice I-3: vested pay falls only by a claim; at a checkpoint a forfeit pool older than its drip (one epoch)
+    ///         is empty; EXITED leaves no base owed (the handler checks after every call); no deficit (F-3 above).
+    function invariant_I_3__bankDrainsAndVestedPayIsNeverBurned() public view {
+        assertEq(handler.i3Failures(), 0, handler.i3Why());
+        Bank memory b = hv.bankFull();
+        if (b.mode == Ladder.EXITED) assertEq(hv.scalars().baseOwed, 0, "EXITED => baseOwed == 0");
+    }
+
+    /// @notice I-12: a flow's NAV0 re-base uses the supply after the prologue (the settlement burn, the drip, the
+    ///         base mint): the next NAV0 is post-settlement.
+    function invariant_I_12__nextNav0IsPostSettlement() public view {
+        assertEq(handler.i12Failures(), 0, "I-12");
+    }
+
+    /// @notice I-16: in EXITED the curator's shares are eventually claimable, burned or released (`endgame`), and the
+    ///         P4 entries revert only on their own guards.
+    function invariant_I_16__curatorSharesEventuallyClaimedBurnedOrReleased() public view {
+        assertEq(handler.i16Failures(), 0, handler.i16Why());
+        assertEq(handler.entryFailures(), 0, vm.toString(abi.encodePacked(handler.entrySelector())));
+    }
+
+    /// @notice I-16's fixed sequence (spec §9.1): three breaches driven, a curator action right after the third
+    ///         reverts (removal pending behind the prologue), a poke removes the curator, a reserve is pending in
+    ///         EXITED, more breaches after removal, then the endgame claims, burns and releases everything.
+    function test_I_16__exitedCuratorSharesAreClaimedBurnedOrReleased() public {
+        for (uint256 i; i < 3; ++i) handler.deposit(i, 5e22);
+        for (uint256 k; k < 3; ++k) handler.seedBank(k, 1e20);
+        handler.topUp(0); // the curator holds no shares yet: a no-op
+        for (uint256 i; i < 3; ++i) handler.driveBreach();
+        assertEq(_obs().pendingBreaches, 3, "three latched");
+        // a curator action right after the third crossing: pending removal reverts it after the prologue
+        vm.prank(curator);
+        vm.expectRevert(Ladder.BadMode.selector);
+        hv.rebalanceSwap(true, 1e6, type(uint256).max);
+        handler.poke(true); // processBreach: EXITED
+        (,,,,, uint8 mode,) = v.bank();
+        assertEq(mode, Ladder.EXITED, "removed");
+        handler.pend(1e15, 1e15, 1e16, 1e20, 3e19); // a reserve with a bond part, pending in EXITED
+        handler.seedBank(0, 1e20); // unvested pay appearing after removal (forfeited by the next breach)
+        handler.releaseBond(); // BondLocked: before the delay
+        handler.claim();
+        handler.endgame();
+        assertEq(handler.endgames(), 1, "the endgame ran");
+        assertEq(handler.i16Failures(), 0, handler.i16Why());
+        assertEq(handler.entryFailures(), 0, "entries revert only on their guards");
+        assertEq(handler.i3Failures(), 0, handler.i3Why());
+        assertEq(handler.i12Failures(), 0, "I-12");
+        assertGt(hv.balanceOf(curator), 0, "the curator was paid its bond");
+    }
+
     function invariant_I_10__withdrawNeverRevertsOutsideTheAllowList() public view {
         assertEq(handler.i10Failures(), 0, vm.toString(abi.encodePacked(handler.i10Selector())));
     }

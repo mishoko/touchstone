@@ -84,12 +84,14 @@ contract TouchstoneVaultExtension is VaultCommon {
 
     /// @notice Transfers the curator's vested shares to it (open in every mode).
     function claim() external delegated {
+        // [MU-284] curator only
         _onlyCurator();
         _enter(Entry.Claim, "");
     }
 
     /// @notice Moves `shares` of the curator's own shares into the bond (NORMAL and BREACHED).
     function topUpBond(uint256 shares) external delegated {
+        // [MU-285] curator only
         _onlyCurator();
         _enter(Entry.TopUpBond, abi.encode(shares));
     }
@@ -103,6 +105,7 @@ contract TouchstoneVaultExtension is VaultCommon {
 
     /// @notice Returns the whole bond to the curator, in EXITED, at or after `exitBlock + V·EPOCH`.
     function releaseBond() external delegated {
+        // [MU-286] curator only
         _onlyCurator();
         _enter(Entry.ReleaseBond, "");
     }

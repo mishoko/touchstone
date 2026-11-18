@@ -614,12 +614,13 @@
    "id": "MU-052",
    "area": "ladder",
    "desc": "cutoff at the first instead of the last pending block",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "PENDING"
+   "killer_id": "U-forfeit-2gap",
+   "kill": "test_U_forfeit_2gap__twoLatchesOneCheckpoint",
+   "file": "src/TouchstoneHook.sol",
+   "find": "            _lastPendingBlock = at;\n            _tauVAtLastPending = _tauV;\n",
+   "replace": "            if (_pendingBreaches == 1) (_lastPendingBlock, _tauVAtLastPending) = (at, _tauV);\n",
+   "status": "KILLED",
+   "basis": "85aab5c2d9ab6a0d"
   },
   {
    "id": "MU-053",
@@ -706,13 +707,14 @@
   {
    "id": "MU-060",
    "area": "ladder",
-   "desc": "reset on any action",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
-   "status": "PENDING"
+   "desc": "reset on any action (rebalanceSwap re-registers the range: a dust swap restarts the clock)",
+   "killer_id": "U-breach-capdodge",
+   "kill": "test_U_breach_capdodge__dustSwapsCannotPauseTheClock",
+   "file": "src/TouchstoneVault.sol",
+   "find": "            FeeBank.bankApply(_bank, Op.Place, \"\");\n        }\n        return \"\";",
+   "replace": "            FeeBank.bankApply(_bank, Op.Place, \"\");\n        } else {\n            HOOK.setVaultRange(_lo, _hi, ref);\n        }\n        return \"\";",
+   "status": "KILLED",
+   "basis": "94ad003e5f67b3fd"
   },
   {
    "id": "MU-061",
@@ -3370,6 +3372,42 @@
    "replace": "",
    "status": "KILLED",
    "basis": "71181509fe3e4f67"
+  },
+  {
+   "id": "MU-284",
+   "area": "guards",
+   "desc": "claim without the curator check (s18 fix review S18F-01)",
+   "killer_id": "U-4",
+   "kill": "test_U_4__claimPaysVestedSharesInEveryMode",
+   "file": "src/TouchstoneVaultExtension.sol",
+   "find": "        // [MU-284] curator only\n        _onlyCurator();\n",
+   "replace": "        // [MU-284] curator only\n",
+   "status": "KILLED",
+   "basis": "cbca467a3114ca03"
+  },
+  {
+   "id": "MU-285",
+   "area": "guards",
+   "desc": "topUpBond without the curator check (anyone raises the bond cap) (s18 fix review S18F-01)",
+   "killer_id": "U-4",
+   "kill": "test_U_4__topUpBondMovesTheCuratorsSharesIntoTheBond",
+   "file": "src/TouchstoneVaultExtension.sol",
+   "find": "        // [MU-285] curator only\n        _onlyCurator();\n",
+   "replace": "        // [MU-285] curator only\n",
+   "status": "KILLED",
+   "basis": "4596798beef3547f"
+  },
+  {
+   "id": "MU-286",
+   "area": "guards",
+   "desc": "releaseBond without the curator check (s18 fix review S18F-01)",
+   "killer_id": "U-4",
+   "kill": "test_U_4__releaseBondAfterTheDelayOnlyInExited",
+   "file": "src/TouchstoneVaultExtension.sol",
+   "find": "        // [MU-286] curator only\n        _onlyCurator();\n",
+   "replace": "        // [MU-286] curator only\n",
+   "status": "KILLED",
+   "basis": "6010242493ea2b7e"
   }
  ]
 }

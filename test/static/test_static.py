@@ -287,6 +287,37 @@ def test_S_1__slither_triage_covers_the_recorded_run_of_the_current_src():
         assert any(want in x for x in v), (k, v)
 
 
+STRICT_JSON_EXEMPT = {'U-IC.json'}   # written once before the rule (a bisection Infinity); never rewritten (S23U-03)
+
+
+def test_eval_results_parse_strictly_and_the_uic_supplement_is_complete():
+    """Every eval result parses as strict JSON (no NaN/Infinity) except the named exemption; the U-IC observer
+    supplement covers every gated bot, bucket and simulated m; the README names the observer figure (s23 S23U-01/03)."""
+    def strict(t):
+        return json.loads(t, parse_constant=lambda c: (_ for _ in ()).throw(ValueError(c)))
+    for f in glob.glob(os.path.join(ROOT, 'eval', '**', '*.json'), recursive=True):
+        if os.path.basename(f) not in STRICT_JSON_EXEMPT:
+            strict(open(f).read())
+    try:   # control: a bare Infinity is rejected
+        strict('{"x": Infinity}')
+        raise AssertionError('Infinity accepted')
+    except ValueError:
+        pass
+    sys.path.insert(0, os.path.join(ROOT, 'script'))
+    import uic_observer
+    assert uic_observer.check() == [], uic_observer.check()
+    with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False) as t:   # control: a dropped row is caught
+        r = json.load(open(uic_observer.OUT))
+        r['comparisons']['gbm-120'].pop('dodge')
+        json.dump(r, t)
+    try:
+        assert uic_observer.check(t.name) == [f'gbm-120 dodge {m:g}' for m in uic_observer.MS]
+    finally:
+        os.remove(t.name)
+    readme = open(os.path.join(ROOT, 'README.md')).read()
+    assert 'U-IC-observer.json' in readme and 'outside observer' in readme
+
+
 def test_S_2__hard_size_gate_with_an_anvil_deploy_and_the_oversized_fixture_failing():
     """S-2 (spec §4.12 gates, §9.1): every src/ runtime <= 22,000 B by `forge build --sizes`, a real anvil deploy of
     every src/ contract with each deployed runtime read back <= 22,000 B, and the gate rejecting the oversized fixture."""

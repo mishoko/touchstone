@@ -43,14 +43,18 @@ lower bound −0.052 ETH) and the cheapest legal clock reset (mean −0.016 ETH,
 been measured; m was not changed after seeing the data.
 
 The same rule was then run once more, on 200 fresh simulated paths per bucket (seeds not used by any earlier run),
-with the run's form, seeds and pass rule written and reviewed before it started (test U-IC). The result is the same:
-at 120% volatility, edge-6h minus the minimum-deployment strategy is +0.086 ETH (lower bound −0.011 ETH) and minus
-the clock reset +0.012 ETH (lower bound −0.084 ETH). The other 50 comparisons pass at 40%, 60% and 120% volatility
-and on a path that hovers at the range edge. So do the conditions on the reference curator's own net, and the
-control (with no base fee, the lazy curator beats the reference curator in every volatility bucket). On these paths
-the smallest passing rate is estimated at 2.38% a year, extrapolated beyond the simulated rates. U-IC is therefore
+with the run's form, seeds and pass rule written and reviewed before it started (test U-IC). The same two comparisons
+fail: at 120% volatility, edge-6h minus the strategy that places the smallest legal deployment at or above the
+minimum just before the cure window is +0.086 ETH (lower bound −0.011 ETH), and minus the clock reset +0.012 ETH
+(lower bound −0.084 ETH). The other 50 comparisons pass at 40%, 60% and 120% volatility and on a path that hovers at
+the range edge, as do the conditions on the reference curator's own net. The power control passes in the three
+volatility buckets (with no base fee, the lazy curator beats the reference curator); on the hovering path it does not
+(−0.020 ETH; reported, not gated). The gated comparisons assume no outside party refreshes the reference. On the
+same paths with an outside observer refreshing it every two hours (reported, not gated), both strategies out-earn the
+reference curator at 120% volatility (by 0.32 and 0.39 ETH). The smallest passing rate is estimated at 2.38% a year
+without an observer and about 8.1% with one, both extrapolated beyond the simulated rates. U-IC is therefore
 published as failed and stays unmet; m stays 2.2% a year. These are simulations on synthetic 180-day paths with no
-third-party liquidity, not the historical replay. Result: `eval/results/U-IC.json`.
+third-party liquidity, not the historical replay. Results: `eval/results/U-IC.json`, `eval/supplements/U-IC-observer.json`.
 
 **Allocation ledger (measured, two negative results).** The allocation ledger is published for disclosure only and
 never affects pay. Its pre-registered test requires each epoch's allocation to reconcile the vault's value change for a

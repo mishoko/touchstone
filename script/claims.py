@@ -191,6 +191,10 @@ def selftest(rows):
         json.dump({'verdict': 'FAIL', 'negative_result': True, 'superseded_by': 'E0a'}, open(rp, 'w'))
         if missing([('E0', 'P4', 'eval')], '', 'P4', d) != ['E0']:
             errs.append('fixture: a negative result without its decision must leave its ID missing')
+        # a final negative result (decision set, no successor) stays unmet (s22 panel D1.2; E0a's form)
+        json.dump({'verdict': 'FAIL', 'negative_result': True, 'decision': 'x'}, open(rp, 'w'))
+        if missing([('E0', 'P4', 'eval')], '', 'P4', d) != ['E0']:
+            errs.append('fixture: a final negative result without a successor must leave its ID missing')
         json.dump({'verdict': 'FAIL', 'superseded_by': 'E0a'}, open(rp, 'w'))
         if missing([('E0', 'P4', 'eval')], '', 'P4', d) != ['E0']:
             errs.append('fixture: a FAIL not marked as a negative result must leave its ID missing')

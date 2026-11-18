@@ -366,7 +366,8 @@
    "note": "the control moves the residual by less than the bound, or towards zero, on every row: a lack of power on this data, not a defect of its implementation"
   }
  ],
- "decision": null,
+ "negative_result": true,
+ "decision": "decision log #190, registry F-049 (2026-11-18, s22 panel, owner-delegated): C2, published as a negative result and final for the submission; no further amendment; the allocation ledger is disclosure only and never affects pay",
  "original_formula_verdict": "FAIL",
  "scope": "the events reproduce the state, the fee-leg approximation and the share terms; not the benchmark's economic meaning",
  "disclosed": "m_perBlock raised in the harness to 12000000000000 (the shipped TEST value is 3805175038, 2.2%/yr at 12 s blocks; about 3153x); TEST tier otherwise. The identity's share terms equal the truth's per-call sum once the share rows close (record minted = the vault's Transfer mints); only the share rows test them, the identity adds no independent timing test.",

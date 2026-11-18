@@ -3,7 +3,8 @@
 by at least one test function named `test_<ID>__<claim>` or `invariant_<ID>__<claim>` under test/ (Solidity or
 Python), with `-` replaced by `_` inside the ID and a double underscore before the claim, or by an evaluation result
 `eval/results/<ID>.json`. The double underscore keeps one ID's tests from covering another ID that it prefixes
-(a test `test_U_clock_gap__x` does not cover `U-clock`).
+(a test `test_U_clock_gap__x` does not cover `U-clock`). A published result that does not pass leaves its ID unmet,
+whatever the test names; a failed run-once row (`NO_SUCCESSOR`) is never met by a successor.
 
   CLAIMS_PHASE=P3 python3 script/claims.py      # IDs due in P0..P3 must be covered (default: P6, all)
   python3 script/claims.py --table              # ID | due | status
@@ -72,7 +73,8 @@ def eval_passed(path):
 
 def covered(i, tests, root, kind='test'):
     """A test row is covered by a matching test name or a PASS eval result; an eval row only by a PASS result (a test
-    named after an eval never covers it; s19 fix review S19F2-03)."""
+    named after an eval never covers it; s19 fix review S19F2-03). A published result that does not pass leaves a test
+    row unmet, whatever the test names (s23 S23D-04)."""
     rp = os.path.join(root, 'eval', 'results', i + '.json')
     passed = eval_passed(rp)
     if kind == 'eval':

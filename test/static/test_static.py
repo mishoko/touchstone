@@ -183,6 +183,8 @@ def slither_triage_violations(md, rec, inputs_hash):
     if rec.get('tool', '').split()[-1:] != (re.findall(r'Tool: Slither ([\d.]+)', md) or ['?'])[:1]:
         bad.append(f"tool {rec.get('tool')} differs from the triage's")
     heads = list(re.finditer(r'^## (.+?)\s*$', md, re.M))
+    if heads and re.search(r'^\|[^\n]*`[a-z0-9-]+`', md[:heads[0].start()], re.M):
+        bad.append('a detector row before the first section')
     seen, rows_of, total = set(), {}, 0
     for i, h in enumerate(heads):
         hm = re.fullmatch(r'(.+?) \((\d+)\)', h.group(1))
@@ -212,6 +214,11 @@ def slither_triage_violations(md, rec, inputs_hash):
             if not re.match(r'\*\*(FP|Design|Accepted)\b', cells[-1]):
                 bad.append(f'{name}: row {dets} has no verdict')
             if name == 'High':
+                rec_names = {el for x in dets for el in first.get(x, [])}
+                for w in re.findall(r'`([^`(]+)`', cells[2]):       # element references, not code expressions
+                    w = w.split('.')[-1]
+                    if re.fullmatch(r'\w+', w) and w not in rec_names:
+                        bad.append(f'High: row {dets}: Where names {w}, which the record does not flag')
                 for x in dets:
                     for el in first.get(x, []):
                         if el is None or not re.search(r'\b' + re.escape(el) + r'\b', cells[2]):
@@ -243,6 +250,10 @@ def test_S_1__slither_triage_covers_the_recorded_run_of_the_current_src():
     el['name'] = 'totallyDifferent'
     from slither_record import results_sha256
     md_sw = md.replace(results_sha256(rec['results']), results_sha256(swapped['results']))   # even when re-hashed
+    dropped = json.loads(json.dumps(rec))                   # a named element no longer flagged (same counts)
+    e2 = next(e for e in dropped['results'][0]['elements'] if e['type'] != 'node')
+    e2['name'] = next(e['name'] for e in dropped['results'][1]['elements'] if e['type'] != 'node')
+    md_dr = md.replace(results_sha256(rec['results']), results_sha256(dropped['results']))
     low_det = next(r['check'] for r in rec['results'] if r['impact'] == 'Low')
     lowrow = re.search(r'^\|[^\n]*`' + re.escape(low_det) + r'`[^\n]*\n', md, re.M).group(0)
     moved = md.replace(lowrow, '').replace('## Low (', '## Low (X').replace('## Medium (', '## Medium (Y')
@@ -266,6 +277,8 @@ def test_S_1__slither_triage_covers_the_recorded_run_of_the_current_src():
         'stray section': ((md + '\n## Notes\n' + lowrow, rec, h), 'unknown section Notes'),
         'section dropped': ((md[:md.index('## Low (')] + md[md.index('## Informational'):], rec, h), 'section Low missing'),
         'detector moved': ((moved, rec, h), 'not in the run [' + repr(low_det)),
+        'preamble row': ((md.replace('## High (', lowrow + '## High (', 1), rec, h), 'before the first section'),
+        'named element dropped': ((md_dr, dropped, h), 'which the record does not flag'),
         'tool changed': ((md.replace('Tool: Slither ', 'Tool: Slither 9', 1), rec, h), 'differs from the triage'),
     }
     for k, ((m2, r2, h2), want) in cases.items():

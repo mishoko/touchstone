@@ -3,13 +3,15 @@
 - Run: `slither . --filter-paths 'lib/|test/|script/' --exclude-dependencies --json <out>`, re-run on 2026-11-18 at the
   current `src/` (the first triage's run predated a parameter check added to the hook constructor, which requires the
   forfeiture drip to equal one epoch; both runs give the same 215 results by detector and flagged element).
-- Record: `audits/slither-results.json` (`script/slither_record.py`), Record: sha256 `88b01024a808991d`. It holds
+- The record `audits/slither-results.json` (written by `script/slither_record.py`; Record: sha256 `88b01024a808991d`) holds
   every result's detector, impact and elements, and `input_sha256`, the hash of `src/**/*.sol`, `foundry.toml`,
   `remappings.txt` and the submodule pins. Test S-1 (`test/static/test_static.py`) fails if `src/` or those inputs
   changed since the recorded run, if the record differs from the one named here, if the stated total or tool differ,
   if a section's count, detector set or any row's count differs from the record, if a detector has two rows or a row
-  lacks a verdict, or if a High result's flagged element is not named in its row. The test does not re-run Slither;
-  the record is reproduced by re-running the command.
+  lacks a verdict, or if a High row's named elements and the record's flagged elements differ (by name; changes
+  inside a function are caught by the record hash). The test does not re-run Slither; the record can be reproduced by
+  re-running the command and `script/slither_record.py`. The input hash reads `git submodule status`, so the test
+  needs a git checkout.
 - Tool: Slither 0.11.5, solc 0.8.26, via-IR.
 - Scope: `src/` (64 contracts analysed, 101 detectors).
 - Result: 215 results, triaged below. None requires a code change.

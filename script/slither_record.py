@@ -4,7 +4,7 @@
 Usage: python3 script/slither_record.py <slither.json> "<command>" [out]
 The record keeps, per result, the detector, impact, confidence and each element's type, name, file and first/last
 line, plus the Slither version, `input_sha256` (`src/**/*.sol`, `foundry.toml`, `remappings.txt` and the submodule pins)
-and the raw JSON's sha256, so that `test/static/test_static.py::test_S_1__…` can check that `audits/SLITHER.md`
+and the raw JSON's sha256 (provenance only; machine-specific, as the raw JSON holds absolute paths), so that `test/static/test_static.py::test_S_1__…` can check that `audits/SLITHER.md`
 triages exactly this record (its `Record: sha256` line) and that the record was made from the current inputs. The test
 does not re-run Slither: the record is reproduced by re-running the command.
 """

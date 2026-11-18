@@ -28,6 +28,17 @@ def bots():
     return [b for b in B.GATED if b != 'lazy']
 
 
+def hover_note(out):
+    """Generated from the rows (s23 S23U2-01): which simulated m every hover observer comparison passes at."""
+    hv = out['hover-60']
+    ms = [m for m in MS if all(v[f'{m:g}']['ok'] for v in hv.values())]
+    assert ms == [0.01, 0.022], ms   # the frozen statement below; a different pattern must be re-worded, not hidden
+    fail0 = sorted(b for b, v in hv.items() if not v['0']['ok'])
+    return ('U-IC.json l3_form.hover-60.observer_m_need = Infinity is a bisection artifact (the extrapolated segment '
+            'above 2.2% dips below 0): every hover-60 observer comparison passes at each simulated nonzero m (1%, '
+            f"2.2%); at m = 0 (no base fee) {', '.join(fail0)} out-earn the mimic (this file)")
+
+
 def build():
     import incentives as I
     from common import mean_ci
@@ -54,9 +65,7 @@ def build():
                source=dict(rows='output/uic/uic-500-200.json', sha256=h, run='eval/results/U-IC.json (single run, no re-run)'),
                mimic='edge-6h', environment='a third party calls refreshRef every 2·GRID; mimic and bot both in it',
                failing_at_2_2pct=fails, comparisons=out,
-               note='U-IC.json l3_form.*.observer_m_need = Infinity for hover-60 is a bisection artifact (the '
-                    'extrapolated segment above 2.2% dips below 0); every hover observer comparison passes at each '
-                    'simulated m (this file)')
+               note=hover_note(out))
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, 'w') as fh:
         json.dump(res, fh, indent=1, allow_nan=False)

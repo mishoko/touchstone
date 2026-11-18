@@ -316,6 +316,18 @@ def test_eval_results_parse_strictly_and_the_uic_supplement_is_complete():
         os.remove(t.name)
     readme = open(os.path.join(ROOT, 'README.md')).read()
     assert 'U-IC-observer.json' in readme and 'outside observer' in readme
+    assert 'exactly the minimum deployment' not in readme   # dodge places the smallest legal deployment >= DELTA_MIN
+    # the README's figures are the files' (S23U2-03): observer gbm-120 margins at 2.2% and the observer gate minimum
+    sup = json.load(open(uic_observer.OUT))
+    g = sup['comparisons']['gbm-120']
+    for bot in ('dodge', 'breach-reset'):
+        assert f"{-g[bot]['0.022']['diff']:.2f} " in readme or f"{-g[bot]['0.022']['diff']:.2f} ETH" in readme, bot
+    uic = json.loads(open(os.path.join(ROOT, 'eval', 'results', 'U-IC.json')).read())
+    assert f"about {uic['l3_form']['gbm-120']['observer_m_need'] * 100:.1f}%" in readme
+    assert f"{uic['l3_form']['gbm-120']['m_need_max'] * 100:.2f}% a year" in readme
+    # the supplement's hover note matches its rows (S23U2-01)
+    hv = sup['comparisons']['hover-60']
+    assert all(v[m]['ok'] for v in hv.values() for m in ('0.01', '0.022')) and 'nonzero m' in sup['note']
 
 
 def test_S_2__hard_size_gate_with_an_anvil_deploy_and_the_oversized_fixture_failing():

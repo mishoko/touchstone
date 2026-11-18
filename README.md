@@ -38,7 +38,7 @@ that stops outside the settlement's fee band is not covered by its legs.
 
 **Known limitation (measured, negative result).** At the shipped base rate m = 2.2% a year and 120% annual volatility,
 the reference curator (edge-6h) is not shown to out-earn two lax strategies on held-out paths over 180 days: a
-placement at exactly the minimum deployment just before the cure window (edge-6h minus it: mean +0.036 ETH, confidence
+placement of the smallest legal deployment at or above the minimum just before the cure window (edge-6h minus it: mean +0.036 ETH, confidence
 lower bound −0.052 ETH) and the cheapest legal clock reset (mean −0.016 ETH, lower bound −0.102 ETH). All other gated rows pass. The smallest rate that would close the gap is estimated at no less than about 2.4% a year on the held-out paths and has not
 been measured; m was not changed after seeing the data.
 

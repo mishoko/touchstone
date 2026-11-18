@@ -982,5 +982,5 @@
    }
   }
  },
- "note": "U-IC.json l3_form.*.observer_m_need = Infinity for hover-60 is a bisection artifact (the extrapolated segment above 2.2% dips below 0); every hover observer comparison passes at each simulated m (this file)"
+ "note": "U-IC.json l3_form.hover-60.observer_m_need = Infinity is a bisection artifact (the extrapolated segment above 2.2% dips below 0): every hover-60 observer comparison passes at each simulated nonzero m (1%, 2.2%); at m = 0 (no base fee) lazy-keepalive, lazy-quiet, lazy-silent, stale out-earn the mimic (this file)"
 }

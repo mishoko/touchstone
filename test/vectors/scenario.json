@@ -1,12 +1,12 @@
 {
  "schema": "touchstone-vectors/1",
- "modelHash": "65ca3334481c1998",
+ "modelHash": "a8b273b7af6f5bbf",
  "conventions": {
   "fn": "VaultHarness.checkpoint(Obs o, bool liveOk, int24 liveTick): the vault's _checkpoint(o) with no PoolManager; the harness sets the state of in.state through its setters, stubs ackBreaches (recorded as an emitted {ackBreaches: {n}}) and overrides _tryRef() to return (liveOk, liveTick) and count its calls.",
   "events": "in.events[i] = {block, ts, obs, live}: vm.roll(block), vm.warp(ts), then checkpoint(obs, live != \"fail\", live == \"fail\" ? 0 : live). The state carries over between events.",
   "state": "{holdings {idle0, idle1, L, lo, hi} (lo/hi = the registered range; EMPTY = 0/0), bank (as bank.json), NAV0, delta0 (WAD), tauV0, segStart, S, baseOwed, epoch, epochSwapFrac, swapCount, records}; in.state.records is empty.",
-  "out": "out.steps[i] = {state after event i, liveReads (the _tryRef calls during the event: 0 or 1; the gate's live leg is read only when vestable, and a mint at a stale cache reads tryRef), emitted}. emitted pins the vault events Checkpoint(tauV, tauB, nav0, delta, base, L, lo, hi), BreachProcessed(count, lastBlock, forfeited) and CheckpointDeferred() plus the ackBreaches stub, in order; ModeChanged and EpochRecorded are not pinned here (the mode is in state.bank; the record subset below is all the vectors pin; the remaining EpochRecord fields are tested by U-mode and the P4 record tests).",
-  "records": "records[e] = {base, minted, forfeited, forfeitValue, flags, end (0 until the epoch roll writes it)}: the subset of EpochRecord the model computes. flags are names; as a u8 the bit of each flag is its position in the record's flag list (0 stale, 1 witnessMissing, 2 witnessFallback, 3 breach, 4 refStale, 5 deferred, 6 unverified).",
+  "out": "out.steps[i] = {state after event i, liveReads (the _tryRef calls during the event: 0 or 1; the gate's live leg is read only when vestable, and a mint at a stale cache reads tryRef), emitted}. emitted pins the vault events Checkpoint(tauV, tauB, nav0, delta, base, L, lo, hi), BreachProcessed(count, lastBlock, forfeited), CheckpointDeferred(), ModeChanged(from, to) and EpochRecorded(e) plus the ackBreaches stub, in order.",
+  "records": "records[e] = every EpochRecord field (spec \u00a73.9; end = 0 and tauV/tauB the counters at start while the record is open; a record the scenario did not open has start 0). flags are names; as a u8 the bit of each flag is its position in the record's flag list (0 stale, 1 witnessMissing, 2 witnessFallback, 3 breach, 4 refStale, 5 deferred, 6 unverified).",
   "notes": {
    "scenario-001-gate-live-out": "cache fresh and in range, live reference out: no vest, matured cohort to maturedPending",
    "scenario-003-gate-live-fail-tick0-inside": "a failed read whose tick field is 0 inside the range must not open the gate",
@@ -165,12 +165,21 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "7607935572700",
+         "charge": "0",
          "minted": "76103506551705210",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "0"
+         "flags": []
         }
        }
       },
@@ -344,12 +353,21 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "7607935572700",
+         "charge": "0",
          "minted": "76103506551705210",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "0"
+         "flags": []
         }
        }
       },
@@ -523,12 +541,21 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "7607935572700",
+         "charge": "0",
          "minted": "76103506551705210",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "0"
+         "flags": []
         }
        }
       },
@@ -702,12 +729,21 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "7607935572700",
+         "charge": "0",
          "minted": "152158734301959479",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "0"
+         "flags": []
         }
        }
       },
@@ -881,14 +917,23 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "7607935572700",
+         "charge": "0",
          "minted": "76103506551705210",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "refStale"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -1062,12 +1107,21 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "7607935572700",
+         "charge": "0",
          "minted": "70408377635592059",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "0"
+         "flags": []
         }
        }
       },
@@ -1241,14 +1295,23 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "7607935572700",
+         "charge": "0",
          "minted": "76103506551705210",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "unverified"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -1422,12 +1485,21 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "0"
+         "flags": []
         }
        }
       },
@@ -1601,12 +1673,21 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "7607935572700",
+         "charge": "0",
          "minted": "76103506551705210",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "0"
+         "flags": []
         }
        }
       },
@@ -1780,12 +1861,21 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "7607935572700",
+         "charge": "0",
          "minted": "76103506551705210",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "0"
+         "flags": []
         }
        }
       },
@@ -1959,12 +2049,21 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "7607935572700",
+         "charge": "0",
          "minted": "76103506551705210",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "0"
+         "flags": []
         }
        }
       },
@@ -2138,14 +2237,23 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "9509919465875",
+         "charge": "0",
          "minted": "57077628827826982",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "9000000000000000000",
          "forfeitValue": "3803967786350",
          "flags": [
           "breach"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -2337,14 +2445,23 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "17117855038575",
+         "charge": "0",
          "minted": "38051751827916732",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "2000000000000000000",
          "forfeitValue": "18313887252225",
          "flags": [
           "breach"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -2536,14 +2653,23 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "11411903359050",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "2000000000000000000",
          "forfeitValue": "11411903359050",
          "flags": [
           "breach"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -2735,14 +2861,23 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "breach"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -2928,12 +3063,21 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "9509919465875",
+         "charge": "0",
          "minted": "94986743365845475",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "0"
+         "flags": []
         }
        }
       },
@@ -3107,12 +3251,21 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "0"
+         "flags": []
         }
        }
       },
@@ -3286,12 +3439,21 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "9509919465875",
+         "charge": "0",
          "minted": "95129384999551456",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "0"
+         "flags": []
         }
        }
       },
@@ -3465,12 +3627,21 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "0"
+         "flags": []
         }
        }
       },
@@ -3668,15 +3839,24 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "9509919465875",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "deferred",
           "refStale"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -3758,15 +3938,24 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "10841308191097",
+         "charge": "0",
          "minted": "108664315265601231",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "deferred",
           "refStale"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -3964,15 +4153,24 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "9509919465875",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "deferred",
           "refStale"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -4054,15 +4252,24 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "11221704969732",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "deferred",
           "refStale"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -4239,14 +4446,23 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "190198389317500000000",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "deferred"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -4423,12 +4639,21 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "7607935572700",
+         "charge": "0",
          "minted": "76103506551705210",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "0"
+         "flags": []
         }
        }
       },
@@ -4602,12 +4827,21 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "7607935572700",
+         "charge": "0",
          "minted": "76103506551705210",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "0"
+         "flags": []
         }
        }
       },
@@ -4781,12 +5015,21 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "0"
+         "flags": []
         }
        }
       },
@@ -4960,35 +5203,62 @@
        "swapCount": "0",
        "records": {
         "8": {
+         "start": "0",
+         "end": "1200",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "stale"
-         ],
-         "end": "1200"
+         ]
         },
         "9": {
+         "start": "1200",
+         "end": "1200",
+         "med9Start": "196250",
+         "med9End": "196250",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "stale",
           "witnessMissing"
-         ],
-         "end": "1200"
+         ]
         },
         "10": {
+         "start": "1200",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -5172,14 +5442,23 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "7607935572700",
+         "charge": "0",
          "minted": "76103506551705210",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "unverified"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -5510,12 +5789,21 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "7607935572700",
+         "charge": "0",
          "minted": "76103506551705210",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "0"
+         "flags": []
         }
        }
       },
@@ -5881,12 +6169,21 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "10460911412462",
+         "charge": "0",
          "minted": "104616173519584853",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "0"
+         "flags": []
         }
        }
       },
@@ -5965,22 +6262,40 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "1320",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "110",
+         "tauB": "0",
+         "lTau": "0",
          "base": "20921822824924",
+         "charge": "0",
          "minted": "209206207004725308",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "1320"
+         "flags": []
         },
         "11": {
+         "start": "1320",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "110",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -6064,22 +6379,40 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "1320",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "110",
+         "tauB": "0",
+         "lTau": "0",
          "base": "20921822824924",
+         "charge": "0",
          "minted": "209206207004725308",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "1320"
+         "flags": []
         },
         "11": {
+         "start": "1320",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "110",
+         "tauB": "0",
+         "lTau": "0",
          "base": "10460911412462",
+         "charge": "0",
          "minted": "104563893444880068",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -6158,32 +6491,59 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "1320",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "110",
+         "tauB": "0",
+         "lTau": "0",
          "base": "20921822824924",
+         "charge": "0",
          "minted": "209206207004725308",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "1320"
+         "flags": []
         },
         "11": {
+         "start": "1320",
+         "end": "1440",
+         "med9Start": "196250",
+         "med9End": "196250",
+         "tauV": "110",
+         "tauB": "0",
+         "lTau": "0",
          "base": "20921822824924",
+         "charge": "0",
          "minted": "209101646846954357",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "1440"
+         ]
         },
         "12": {
+         "start": "1440",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "220",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -6267,32 +6627,59 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "1320",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "110",
+         "tauB": "0",
+         "lTau": "0",
          "base": "20921822824924",
+         "charge": "0",
          "minted": "209206207004725308",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "1320"
+         "flags": []
         },
         "11": {
+         "start": "1320",
+         "end": "1440",
+         "med9Start": "196250",
+         "med9End": "196250",
+         "tauV": "110",
+         "tauB": "0",
+         "lTau": "0",
          "base": "20921822824924",
+         "charge": "0",
          "minted": "209101646846954357",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "1440"
+         ]
         },
         "12": {
+         "start": "1440",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "220",
+         "tauB": "0",
+         "lTau": "0",
          "base": "10460911412462",
+         "charge": "0",
          "minted": "104511613359993711",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -6371,42 +6758,78 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "1320",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "110",
+         "tauB": "0",
+         "lTau": "0",
          "base": "20921822824924",
+         "charge": "0",
          "minted": "209206207004725308",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "1320"
+         "flags": []
         },
         "11": {
+         "start": "1320",
+         "end": "1440",
+         "med9Start": "196250",
+         "med9End": "196250",
+         "tauV": "110",
+         "tauB": "0",
+         "lTau": "0",
          "base": "20921822824924",
+         "charge": "0",
          "minted": "209101646846954357",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "1440"
+         ]
         },
         "12": {
+         "start": "1440",
+         "end": "1560",
+         "med9Start": "196250",
+         "med9End": "196250",
+         "tauV": "110",
+         "tauB": "0",
+         "lTau": "0",
          "base": "20921822824924",
+         "charge": "0",
          "minted": "208997086681902638",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "1560"
+         ]
         },
         "13": {
+         "start": "1560",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "330",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -6490,42 +6913,78 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "1320",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "110",
+         "tauB": "0",
+         "lTau": "0",
          "base": "20921822824924",
+         "charge": "0",
          "minted": "209206207004725308",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "1320"
+         "flags": []
         },
         "11": {
+         "start": "1320",
+         "end": "1440",
+         "med9Start": "196250",
+         "med9End": "196250",
+         "tauV": "110",
+         "tauB": "0",
+         "lTau": "0",
          "base": "20921822824924",
+         "charge": "0",
          "minted": "209101646846954357",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "1440"
+         ]
         },
         "12": {
+         "start": "1440",
+         "end": "1560",
+         "med9Start": "196250",
+         "med9End": "196250",
+         "tauV": "110",
+         "tauB": "0",
+         "lTau": "0",
          "base": "20921822824924",
+         "charge": "0",
          "minted": "208997086681902638",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "1560"
+         ]
         },
         "13": {
+         "start": "1560",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "330",
+         "tauB": "0",
+         "lTau": "0",
          "base": "10460911412462",
+         "charge": "0",
          "minted": "104459333291090524",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -6604,52 +7063,97 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "1320",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "110",
+         "tauB": "0",
+         "lTau": "0",
          "base": "20921822824924",
+         "charge": "0",
          "minted": "209206207004725308",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "1320"
+         "flags": []
         },
         "11": {
+         "start": "1320",
+         "end": "1440",
+         "med9Start": "196250",
+         "med9End": "196250",
+         "tauV": "110",
+         "tauB": "0",
+         "lTau": "0",
          "base": "20921822824924",
+         "charge": "0",
          "minted": "209101646846954357",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "1440"
+         ]
         },
         "12": {
+         "start": "1440",
+         "end": "1560",
+         "med9Start": "196250",
+         "med9End": "196250",
+         "tauV": "110",
+         "tauB": "0",
+         "lTau": "0",
          "base": "20921822824924",
+         "charge": "0",
          "minted": "208997086681902638",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "1560"
+         ]
         },
         "13": {
+         "start": "1560",
+         "end": "1680",
+         "med9Start": "196250",
+         "med9End": "196250",
+         "tauV": "110",
+         "tauB": "0",
+         "lTau": "0",
          "base": "20921822824924",
+         "charge": "0",
          "minted": "208892526561899608",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "1680"
+         ]
         },
         "14": {
+         "start": "1680",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "440",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -6733,63 +7237,117 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "1320",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "110",
+         "tauB": "0",
+         "lTau": "0",
          "base": "20921822824924",
+         "charge": "0",
          "minted": "209206207004725308",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "1320"
+         "flags": []
         },
         "11": {
+         "start": "1320",
+         "end": "1440",
+         "med9Start": "196250",
+         "med9End": "196250",
+         "tauV": "110",
+         "tauB": "0",
+         "lTau": "0",
          "base": "20921822824924",
+         "charge": "0",
          "minted": "209101646846954357",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "1440"
+         ]
         },
         "12": {
+         "start": "1440",
+         "end": "1560",
+         "med9Start": "196250",
+         "med9End": "196250",
+         "tauV": "110",
+         "tauB": "0",
+         "lTau": "0",
          "base": "20921822824924",
+         "charge": "0",
          "minted": "208997086681902638",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "1560"
+         ]
         },
         "13": {
+         "start": "1560",
+         "end": "1680",
+         "med9Start": "196250",
+         "med9End": "196250",
+         "tauV": "110",
+         "tauB": "0",
+         "lTau": "0",
          "base": "20921822824924",
+         "charge": "0",
          "minted": "208892526561899608",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "1680"
+         ]
         },
         "14": {
+         "start": "1680",
+         "end": "1800",
+         "med9Start": "196250",
+         "med9End": "196250",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "836197467095481911",
          "forfeitValue": "0",
          "flags": [
           "breach",
           "witnessMissing"
-         ],
-         "end": "1800"
+         ]
         },
         "15": {
+         "start": "1800",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "440",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -6986,35 +7544,62 @@
        "swapCount": "0",
        "records": {
         "26": {
+         "start": "0",
+         "end": "3476",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "603",
+         "tauB": "0",
+         "lTau": "231276109674340728240",
          "base": "225069733148452",
+         "charge": "0",
          "minted": "124489107998484310",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "stale"
-         ],
-         "end": "3476"
+         ]
         },
         "27": {
+         "start": "3476",
+         "end": "3476",
+         "med9Start": "196250",
+         "med9End": "196250",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "stale",
           "witnessMissing"
-         ],
-         "end": "3476"
+         ]
         },
         "28": {
+         "start": "3476",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "603",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -7198,22 +7783,40 @@
        "swapCount": "0",
        "records": {
         "26": {
+         "start": "0",
+         "end": "3290",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "661",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "3290"
+         "flags": []
         },
         "27": {
+         "start": "3290",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "661",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -7392,24 +7995,42 @@
        "swapCount": "0",
        "records": {
         "19": {
+         "start": "0",
+         "end": "2459",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "524",
+         "tauB": "0",
+         "lTau": "82256307533078539872",
          "base": "330023021651601",
+         "charge": "0",
          "minted": "67889631354887228",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "5572457615681489568443",
          "forfeitValue": "523824868767082",
          "flags": [
           "breach"
-         ],
-         "end": "2459"
+         ]
         },
         "20": {
+         "start": "2459",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "524",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -7606,36 +8227,63 @@
        "swapCount": "0",
        "records": {
         "25": {
+         "start": "0",
+         "end": "3343",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "549",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "refStale",
           "stale"
-         ],
-         "end": "3343"
+         ]
         },
         "26": {
+         "start": "3343",
+         "end": "3343",
+         "med9Start": "196250",
+         "med9End": "196250",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "stale",
           "witnessMissing"
-         ],
-         "end": "3343"
+         ]
         },
         "27": {
+         "start": "3343",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "549",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -7819,25 +8467,43 @@
        "swapCount": "0",
        "records": {
         "27": {
+         "start": "0",
+         "end": "3377",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "401",
+         "tauB": "0",
+         "lTau": "0",
          "base": "40646193860784",
+         "charge": "0",
          "minted": "128554503637338006",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "14122757606006473139092",
          "forfeitValue": "27794823743036",
          "flags": [
           "breach",
           "refStale"
-         ],
-         "end": "3377"
+         ]
         },
         "28": {
+         "start": "3377",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "401",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -8034,12 +8700,21 @@
        "swapCount": "0",
        "records": {
         "18": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "238156187876428039066",
          "base": "1601113285605453",
+         "charge": "0",
          "minted": "931779154406904300",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "0"
+         "flags": []
         }
        }
       },
@@ -8213,36 +8888,63 @@
        "swapCount": "0",
        "records": {
         "21": {
+         "start": "0",
+         "end": "2821",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "585",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "28424095149138859181196",
          "forfeitValue": "0",
          "flags": [
           "breach",
           "stale"
-         ],
-         "end": "2821"
+         ]
         },
         "22": {
+         "start": "2821",
+         "end": "2821",
+         "med9Start": "196250",
+         "med9End": "196250",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "stale",
           "witnessMissing"
-         ],
-         "end": "2821"
+         ]
         },
         "23": {
+         "start": "2821",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "585",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -8444,24 +9146,42 @@
        "swapCount": "0",
        "records": {
         "25": {
+         "start": "0",
+         "end": "3175",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "484",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "6728919794945123020954",
          "forfeitValue": "0",
          "flags": [
           "breach"
-         ],
-         "end": "3175"
+         ]
         },
         "26": {
+         "start": "3175",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "484",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -8658,12 +9378,21 @@
        "swapCount": "0",
        "records": {
         "24": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "9363419065765538160",
          "base": "0",
+         "charge": "0",
          "minted": "2002853105881507820",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "0"
+         "flags": []
         }
        }
       },
@@ -8837,24 +9566,42 @@
        "swapCount": "0",
        "records": {
         "28": {
+         "start": "0",
+         "end": "3568",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "433",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "refStale"
-         ],
-         "end": "3568"
+         ]
         },
         "29": {
+         "start": "3568",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "433",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -9033,14 +9780,23 @@
        "swapCount": "0",
        "records": {
         "14": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "48105296738235949199",
          "base": "87552816914064",
+         "charge": "0",
          "minted": "605315133932967971",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "refStale"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -9214,35 +9970,62 @@
        "swapCount": "0",
        "records": {
         "15": {
+         "start": "0",
+         "end": "2149",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "296",
+         "tauB": "0",
+         "lTau": "0",
          "base": "21145572911831",
+         "charge": "0",
          "minted": "2280664011009765682",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "stale"
-         ],
-         "end": "2149"
+         ]
         },
         "16": {
+         "start": "2149",
+         "end": "2149",
+         "med9Start": "196250",
+         "med9End": "196250",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "stale",
           "witnessMissing"
-         ],
-         "end": "2149"
+         ]
         },
         "17": {
+         "start": "2149",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "296",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -9426,35 +10209,62 @@
        "swapCount": "0",
        "records": {
         "24": {
+         "start": "0",
+         "end": "3131",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "394",
+         "tauB": "0",
+         "lTau": "0",
          "base": "2502392346751",
+         "charge": "0",
          "minted": "6517927849814170294",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "stale"
-         ],
-         "end": "3131"
+         ]
         },
         "25": {
+         "start": "3131",
+         "end": "3131",
+         "med9Start": "196250",
+         "med9End": "196250",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "stale",
           "witnessMissing"
-         ],
-         "end": "3131"
+         ]
         },
         "26": {
+         "start": "3131",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "394",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -9638,14 +10448,23 @@
        "swapCount": "0",
        "records": {
         "12": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "unverified"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -9819,12 +10638,21 @@
        "swapCount": "0",
        "records": {
         "12": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "74116617769222",
+         "charge": "0",
          "minted": "741401948627039403",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "0"
+         "flags": []
         }
        }
       },
@@ -9998,12 +10826,21 @@
        "swapCount": "0",
        "records": {
         "16": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "2784416135319433324",
          "base": "18842983938729",
+         "charge": "0",
          "minted": "14068348797772118",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "0"
+         "flags": []
         }
        }
       },
@@ -10177,14 +11014,23 @@
        "swapCount": "0",
        "records": {
         "29": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "23271696200240065600",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "24890984548795326740150",
          "forfeitValue": "0",
          "flags": [
           "breach"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -10370,25 +11216,43 @@
        "swapCount": "0",
        "records": {
         "27": {
+         "start": "0",
+         "end": "3394",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "496",
+         "tauB": "0",
+         "lTau": "0",
          "base": "24788001476478",
+         "charge": "0",
          "minted": "73483507585044003",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "6905055485747425416879",
          "forfeitValue": "618510495284121",
          "flags": [
           "breach",
           "unverified"
-         ],
-         "end": "3394"
+         ]
         },
         "28": {
+         "start": "3394",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "496",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -10585,14 +11449,23 @@
        "swapCount": "0",
        "records": {
         "14": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "47733940509156020922",
          "base": "141983188692395",
+         "charge": "0",
          "minted": "114598266068853001",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "refStale"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -10766,35 +11639,62 @@
        "swapCount": "0",
        "records": {
         "25": {
+         "start": "0",
+         "end": "3316",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "233",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "3514553335622738552",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "stale"
-         ],
-         "end": "3316"
+         ]
         },
         "26": {
+         "start": "3316",
+         "end": "3316",
+         "med9Start": "196250",
+         "med9End": "196250",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "stale",
           "witnessMissing"
-         ],
-         "end": "3316"
+         ]
         },
         "27": {
+         "start": "3316",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "233",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -10978,24 +11878,42 @@
        "swapCount": "0",
        "records": {
         "26": {
+         "start": "0",
+         "end": "3355",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "58",
+         "tauB": "0",
+         "lTau": "6189066533325482275",
          "base": "11517414429736",
+         "charge": "0",
          "minted": "788914692358453651",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "refStale"
-         ],
-         "end": "3355"
+         ]
         },
         "27": {
+         "start": "3355",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "58",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -11174,14 +12092,23 @@
        "swapCount": "0",
        "records": {
         "20": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "72473803744322740977",
          "base": "75634942924095",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "27159550917733998122563",
          "forfeitValue": "75634942924095",
          "flags": [
           "breach"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -11373,36 +12300,63 @@
        "swapCount": "0",
        "records": {
         "11": {
+         "start": "0",
+         "end": "1565",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "510",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "8103800814920668781",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "stale",
           "unverified"
-         ],
-         "end": "1565"
+         ]
         },
         "12": {
+         "start": "1565",
+         "end": "1565",
+         "med9Start": "196250",
+         "med9End": "196250",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "stale",
           "witnessMissing"
-         ],
-         "end": "1565"
+         ]
         },
         "13": {
+         "start": "1565",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "510",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -11586,14 +12540,23 @@
        "swapCount": "0",
        "records": {
         "22": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "96244764975635118270",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "6070240355654840136697",
          "forfeitValue": "107601676054194",
          "flags": [
           "breach"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -11779,22 +12742,40 @@
        "swapCount": "0",
        "records": {
         "24": {
+         "start": "0",
+         "end": "3066",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "412",
+         "tauB": "0",
+         "lTau": "76712703651419112162",
          "base": "146999400221310",
+         "charge": "0",
          "minted": "199358552303440013",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
-         "flags": [],
-         "end": "3066"
+         "flags": []
         },
         "25": {
+         "start": "3066",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "412",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -11973,35 +12954,62 @@
        "swapCount": "0",
        "records": {
         "21": {
+         "start": "0",
+         "end": "2786",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "276",
+         "tauB": "0",
+         "lTau": "0",
          "base": "49295910447950",
+         "charge": "0",
          "minted": "1304411929358630917",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "stale"
-         ],
-         "end": "2786"
+         ]
         },
         "22": {
+         "start": "2786",
+         "end": "2786",
+         "med9Start": "196250",
+         "med9End": "196250",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "stale",
           "witnessMissing"
-         ],
-         "end": "2786"
+         ]
         },
         "23": {
+         "start": "2786",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "276",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -12185,25 +13193,43 @@
        "swapCount": "0",
        "records": {
         "10": {
+         "start": "0",
+         "end": "1372",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "399",
+         "tauB": "0",
+         "lTau": "0",
          "base": "1385830521799",
+         "charge": "0",
          "minted": "14546777581356792",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "refStale",
           "unverified"
-         ],
-         "end": "1372"
+         ]
         },
         "11": {
+         "start": "1372",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "399",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -12382,15 +13408,24 @@
        "swapCount": "0",
        "records": {
         "13": {
+         "start": "0",
+         "end": "0",
+         "med9Start": "0",
+         "med9End": "0",
+         "tauV": "0",
+         "tauB": "0",
+         "lTau": "0",
          "base": "13642015295717",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "16850291293549611679165",
          "forfeitValue": "13642015295717",
          "flags": [
           "breach",
           "refStale"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -12582,24 +13617,42 @@
        "swapCount": "0",
        "records": {
         "28": {
+         "start": "0",
+         "end": "3563",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "447",
+         "tauB": "0",
+         "lTau": "0",
          "base": "30920874116664",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "26295962063261010819574",
          "forfeitValue": "318083722123015",
          "flags": [
           "breach"
-         ],
-         "end": "3563"
+         ]
         },
         "29": {
+         "start": "3563",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "447",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },
@@ -12796,24 +13849,42 @@
        "swapCount": "0",
        "records": {
         "24": {
+         "start": "0",
+         "end": "3076",
+         "med9Start": "0",
+         "med9End": "196250",
+         "tauV": "670",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "refStale"
-         ],
-         "end": "3076"
+         ]
         },
         "25": {
+         "start": "3076",
+         "end": "0",
+         "med9Start": "196250",
+         "med9End": "0",
+         "tauV": "670",
+         "tauB": "0",
+         "lTau": "0",
          "base": "0",
+         "charge": "0",
          "minted": "0",
+         "bankBurned": "0",
+         "bondBurned": "0",
          "forfeited": "0",
          "forfeitValue": "0",
          "flags": [
           "witnessMissing"
-         ],
-         "end": "0"
+         ]
         }
        }
       },

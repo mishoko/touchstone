@@ -1631,7 +1631,7 @@ def rules_r4():
     w.v.poke(w.block, w.ts(), roll=(0, 0, False))
     check("witnessMissing" not in rn["flags"], "witness: an ignored roll writes nothing")
     w.v.poke(w.block, w.ts(), roll=(2, 0, False))
-    check("witnessMissing" in rn["flags"], "witness: a failed roll sets missing")
+    check("witnessMissing" not in rn["flags"], "witness: a failed roll writes nothing")
     w.v.poke(w.block, w.ts(), roll=(1, 0, False))
     check("witnessMissing" in rn["flags"] and "witnessFallback" not in rn["flags"], "witness: lw = 0 is missing")
     # deposit and withdraw return the exact amounts paid and received (idle slice + liquidity leg)

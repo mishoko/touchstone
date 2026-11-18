@@ -1160,8 +1160,10 @@ class _AckStub:
 def _vault_state(v):
     recs = {}
     for e, r in sorted(v.records.items()):
-        recs[str(e)] = dict(base=r["base"], minted=r["minted"], forfeited=r["forfeited"],
-                            forfeitValue=r["forfeitValue"], flags=sorted(r["flags"]), end=r.get("end", 0))
+        recs[str(e)] = dict(start=r["start"], end=r["end"], med9Start=r["med9Start"], med9End=r["med9End"],
+                            tauV=r["tauV"], tauB=r["tauB"], lTau=r["lTau"], base=r["base"], charge=r["charge"],
+                            minted=r["minted"], bankBurned=r["bankBurned"], bondBurned=r["bondBurned"],
+                            forfeited=r["forfeited"], forfeitValue=r["forfeitValue"], flags=sorted(r["flags"]))
     b = v.bank  # serialised field by field (not through Bank.d) so a defect there is caught by the vectors, not a crash
     bank = {"cohorts": [{"epoch": e, "shares": s_} for e, s_ in b.cohorts], **{f: getattr(b, f) for f in R.Bank.FIELDS}}
     return dict(holdings=v.h.d(), bank=bank, NAV0=v.NAV0, delta0=v.delta0, tauV0=v.tauV0, segStart=v.segStart,
@@ -1360,11 +1362,10 @@ SCENARIO_CONV = {
     "out": "out.steps[i] = {state after event i, liveReads (the _tryRef calls during the event: 0 or 1; the gate's live "
            "leg is read only when vestable, and a mint at a stale cache reads tryRef), emitted}. emitted pins the "
            "vault events Checkpoint(tauV, tauB, nav0, delta, base, L, lo, hi), BreachProcessed(count, lastBlock, "
-           "forfeited) and CheckpointDeferred() plus the ackBreaches stub, in order; ModeChanged and EpochRecorded "
-           "are not pinned here (the mode is in state.bank; the record subset below is all the vectors pin; the "
-           "remaining EpochRecord fields are tested by U-mode and the P4 record tests).",
-    "records": "records[e] = {base, minted, forfeited, forfeitValue, flags, end (0 until the epoch roll writes it)}: "
-               "the subset of EpochRecord the model computes. flags are names; as a u8 the bit of each flag is its "
+           "forfeited), CheckpointDeferred(), ModeChanged(from, to) and EpochRecorded(e) plus the ackBreaches stub, "
+           "in order.",
+    "records": "records[e] = every EpochRecord field (spec §3.9; end = 0 and tauV/tauB the counters at start while "
+               "the record is open; a record the scenario did not open has start 0). flags are names; as a u8 the bit of each flag is its "
                "position in the record's flag list (0 stale, 1 witnessMissing, 2 witnessFallback, 3 breach, "
                "4 refStale, 5 deferred, 6 unverified).",
     "notes": SCENARIO_NOTES,

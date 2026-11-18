@@ -15,7 +15,7 @@ import csv, sys
 FLOORS = {'swap_rate': 0.025, 'place_rate': 0.015, 'moved': 25, 'pre': 35, 'base': 1}
 # the P4 handler's counters (columns 8..15 of a row): campaign totals per pool, each at least this (F-048 (d); the
 # floors are set from the s19 P4-close campaign, about a third of its counts and never below 1)
-P4 = ['claims', 'topUps', 'retires', 'releases', 'pokes', 'endgames', 'i3DrainChecks', 'i12Moved']
+P4 = ['claims', 'topUps', 'retires', 'releases', 'pokes', 'endgames', 'i3DrainChecks', 'i12Moved', 'forfeitedReserveSettles']
 P4_FLOORS = {k: 1 for k in P4}
 NCOL = 7 + len(P4)
 

@@ -21,18 +21,32 @@ import {
     F_UNVERIFIED
 } from "../../src/types/EpochRecord.sol";
 import {MockRefPool} from "../utils/MockRefPool.sol";
+import {VaultHarness, CheckpointLog} from "../utils/VaultHarness.sol";
+import {NoFloorExtension} from "../utils/NoFloorExtension.sol";
 
 /// @notice The epoch records (spec §3.9, §4.6 step (6), §4.12 `roll`), `ModeChanged` (§4.9) and the gas-starved
 ///         `poke` (F-048 (b)). Real flow (factory deployment, real hook, scripted reference pool, TEST tier).
-contract VaultRecordsTest is HarnessVaultBase {
-    bytes32 internal constant T_REC = keccak256("EpochRecorded(uint32,(uint40,uint40,int24,int24,uint64,uint64,uint192,uint8,uint96,uint96,uint128,uint128,uint128,uint128,uint96))");
-    bytes32 internal constant T_MODE = keccak256("ModeChanged(uint8,uint8)");
-
-    function setUp() public override {
+abstract contract VaultRecordsBase is HarnessVaultBase {
+    function setUp() public virtual override {
         super.setUp();
         _fundUser(alice, 1e24);
         _deposit(alice, 1e23);
     }
+
+    /// @dev A placed vault, its witness rolled, then a deposit's checkpoint rolls into a fresh epoch (its record opens
+    ///      with `witnessMissing`; no poke yet).
+    function prepareSweep() external {
+        hv.placeForTest(-600, 600);
+        _keepAlive(20);
+        IVaultEntries(vault).poke();
+        advance(tier.EPOCH);
+        _deposit(alice, 1e18);
+    }
+}
+
+contract VaultRecordsTest is VaultRecordsBase {
+    bytes32 internal constant T_REC = keccak256("EpochRecorded(uint32,(uint40,uint40,int24,int24,uint64,uint64,uint192,uint8,uint96,uint96,uint128,uint128,uint128,uint128,uint96))");
+    bytes32 internal constant T_MODE = keccak256("ModeChanged(uint8,uint8)");
 
     function _ve() internal view returns (IVaultEntries) {
         return IVaultEntries(vault);
@@ -199,6 +213,56 @@ contract VaultRecordsTest is HarnessVaultBase {
         assertTrue(found && from == Ladder.NORMAL && to == Ladder.EXITED, "ModeChanged(NORMAL, EXITED)");
     }
 
+    /// @notice §3.8/§3.9: a closed record's `tauV` and `lTau` are rebuilt from the `Checkpoint` events of its window
+    ///         (each event's L is the L of the segment it closes): the counter at the opening checkpoint, then
+    ///         Σ L_i·(τ_i − τ_{i−1}) over the window's checkpoints up to the one that rolls it out, across L changes.
+    function test_U_record__tauVAndLTauRebuiltFromTheWindowsCheckpoints() public {
+        _place(-1000, 1000);
+        advance(tier.EPOCH - vm.getBlockNumber() % tier.EPOCH + 1);
+        ITouchstoneHook(hook).refreshRef();
+        vm.recordLogs();
+        hv.settle(); // rolls into e: the record opens here
+        Vm.Log[] memory open = vm.getRecordedLogs();
+        uint32 e = _epochNow();
+        uint64 tauPrev = _lastCheckpoint(open).tauV;
+        assertEq(hv.record(e).tauV, tauPrev, "the open record holds the counter at the opening checkpoint");
+        vm.recordLogs();
+        for (uint256 i; i < 3; ++i) {
+            _keepAlive(20);
+            _deposit(alice, 1e21 * (i + 1)); // L changes after each checkpoint
+        }
+        advance(tier.EPOCH - vm.getBlockNumber() % tier.EPOCH + 1);
+        ITouchstoneHook(hook).refreshRef();
+        hv.settle(); // rolls out of e
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        uint256 lt;
+        uint256 n;
+        for (uint256 i; i < logs.length; ++i) {
+            if (logs[i].emitter != vault || logs[i].topics[0] != T_CHECKPOINT) continue;
+            CheckpointLog memory c = abi.decode(logs[i].data, (CheckpointLog));
+            lt += uint256(c.L) * (c.tauV - tauPrev);
+            tauPrev = c.tauV;
+            ++n;
+        }
+        EpochRecord memory r = hv.record(e);
+        assertEq(n, 4, "the window's checkpoints");
+        assertGt(r.end, 0, "closed");
+        assertEq(r.tauV, tauPrev - _lastCheckpoint(open).tauV, "tauV from the events");
+        assertGt(r.lTau, 0, "precondition: exposure in the window");
+        assertEq(r.lTau, lt, "lTau = sum of L_i * dtau_i from the events");
+    }
+
+    bytes32 internal constant T_CHECKPOINT =
+        keccak256("Checkpoint(uint64,uint64,uint256,uint64,uint256,uint128,int24,int24)");
+
+    function _lastCheckpoint(Vm.Log[] memory logs) internal view returns (CheckpointLog memory c) {
+        for (uint256 i; i < logs.length; ++i) {
+            if (logs[i].emitter == vault && logs[i].topics[0] == T_CHECKPOINT) {
+                c = abi.decode(logs[i].data, (CheckpointLog));
+            }
+        }
+    }
+
     function _unvested() internal view returns (uint256 u) {
         (uint128 c, uint128 mp,,,,,) = hv.bank();
         return uint256(c) + mp;
@@ -316,43 +380,46 @@ contract VaultRecordsTest is HarnessVaultBase {
 
     // ------------------------------------------------------------------ the gas-starved poke (F-048 (b))
 
-    /// @notice For every gas limit, a `poke` into a fresh epoch either reverts or rolls the witness: it never completes
-    ///         with a failed roll recorded (`witnessMissing` left set). Control: the hook's roll called by the vault
-    ///         without the floor, at some gas limit, fails (status 2), so the floor is what excludes it.
+    /// @notice For every gas limit (1k steps), a `poke` into a fresh epoch either reverts or rolls the witness: it never
+    ///         completes with the roll failed (the record's `witnessMissing` left set). Control: the same sweep with the
+    ///         floor removed through the extension's seam (`VaultRecordsNoFloorTest`) completes some pokes with the roll
+    ///         failed.
     function test_U_record__gasStarvedPokeNeverRecordsAFailedRoll() public {
-        hv.placeForTest(-600, 600);
-        _keepAlive(20);
-        _ve().poke();
-        advance(tier.EPOCH);
-        _deposit(alice, 1e18); // rolls into a fresh epoch; its record opens witnessMissing
-        uint32 e = _epochNow();
-        uint256 snap = vm.snapshotState();
-        uint256 reverted;
-        uint256 rolled;
-        for (uint256 g = 200_000; g <= 1_200_000; g += 20_000) {
-            (bool ok,) = vault.call{gas: g}(abi.encodeCall(IVaultEntries.poke, ()));
-            if (ok) {
-                assertEq(hv.record(e).flags & F_WITNESS_MISSING, 0, "a completed poke rolled the witness");
-                ++rolled;
-            } else {
-                ++reverted;
-            }
-            vm.revertToState(snap);
-        }
+        (uint256 reverted, uint256 rolled, uint256 failed) = PokeSweep.sweep(this, hv, vault);
+        assertEq(failed, 0, "no completed poke leaves the roll failed");
         assertGt(reverted, 0, "non-vacuous: some limits revert");
         assertGt(rolled, 0, "non-vacuous: some limits roll");
-        // control: no floor (the hook's roll called by the vault directly) — some limit fails the roll
-        uint256 failed;
-        for (uint256 g = 60_000; g <= 900_000; g += 10_000) {
-            vm.prank(vault);
-            (bool ok, bytes memory ret) =
-                hook.call{gas: g}(abi.encodeCall(ITouchstoneHook.rollWitness, (e)));
-            if (ok) {
-                (,,,, uint8 st) = abi.decode(ret, (uint256, uint256, uint128, bool, uint8));
-                if (st == 2) ++failed;
-            }
+    }
+}
+
+/// @notice The sweep shared by the guarded test and its control.
+library PokeSweep {
+    function sweep(VaultRecordsBase t, VaultHarness hv, address vault)
+        internal
+        returns (uint256 reverted, uint256 rolled, uint256 failed)
+    {
+        t.prepareSweep();
+        uint32 e = hv.scalars().epoch;
+        Vm vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
+        uint256 snap = vm.snapshotState();
+        for (uint256 g = 150_000; g <= 900_000; g += 1_000) {
+            (bool ok,) = vault.call{gas: g}(abi.encodeCall(IVaultEntries.poke, ()));
+            if (!ok) ++reverted;
+            else if (hv.record(e).flags & F_WITNESS_MISSING != 0) ++failed;
+            else ++rolled;
             vm.revertToState(snap);
         }
-        assertGt(failed, 0, "control: without the floor a starved roll fails and returns");
+    }
+}
+
+/// @notice The sweep's control: the extension without the floor (`NoFloorExtension`).
+contract VaultRecordsNoFloorTest is VaultRecordsBase {
+    function _extCode() internal pure override returns (bytes memory) {
+        return type(NoFloorExtension).creationCode;
+    }
+
+    function test_U_record__ctlNoFloorCompletesAPokeWithAFailedRoll() public {
+        (,, uint256 failed) = PokeSweep.sweep(this, hv, vault);
+        assertGt(failed, 0, "control: without the floor some limit completes the poke with the roll failed");
     }
 }

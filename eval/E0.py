@@ -13,6 +13,16 @@ with |residual| <= 0.3 bp of NAV_after. Shares need no term here: mints and burn
 depositor's value is NAV/S and the record's `minted` and burns close the supply exactly (U-record's closure).
 
   TS_E0_OUT=output/e0 forge test --mc E0DataTest && python3 eval/E0.py output/e0      # writes eval/results/E0.json
+
+Scope of this run (s19 fix review S19F-04): a REDUCED form of spec §3.8's E0. It checks the NAV identity over the
+window after the curator's action, on a passive leg with the vault's own L (equal L, not equal value) and without
+the fixed-depositor share terms, the claim/deferral/breach/drip rows or the non-poke first checkpoint. Its same-range
+run is a tautology (the passive leg is the vault's position on the same range: 0.0000 bp is rounding) and its
+control is vacuous (alloc = 0 in both runs). What it does show: an offset curator whose range and the mandate range
+both contain the path differs by a term §3.8 does not carry, the inventory term (x0_v − x0_b)(p1 − p0), exact here
+because an in-range position's second derivative does not depend on its bounds. The FAIL is therefore reported, not
+the pass/fail of the full form, which the inventory gap would also fail (registry F-049; the full form needs its own
+review round before it runs).
 """
 import json, math, os, sys
 

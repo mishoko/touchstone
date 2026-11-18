@@ -1352,8 +1352,8 @@ class Vault:
                         fl.discard("witnessMissing")
                     else:
                         fl.add("witnessMissing")
-                elif st == 2:
-                    fl.add("witnessMissing")
+                # status 2 (a failed roll) writes nothing (§3.9): the flag is clear only after a successful roll of the
+                # epoch, after which the hook ignores every roll of it
         return self.call(f)
 
     def settle(self, now, ts):

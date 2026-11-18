@@ -90,7 +90,7 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
                 vm.toString(handler.withdrawalsMintingBase()), ",", vm.toString(handler.claims()), ",",
                 vm.toString(handler.topUps()), ",", vm.toString(handler.retires()), ",", vm.toString(handler.releases()), ",",
                 vm.toString(handler.pokes()), ",", vm.toString(handler.endgames()), ",", vm.toString(handler.i3DrainChecks()), ",",
-                vm.toString(handler.i12Moved())
+                vm.toString(handler.i12Moved()), ",", vm.toString(handler.forfeitedReserveSettles())
             )
         );
     }

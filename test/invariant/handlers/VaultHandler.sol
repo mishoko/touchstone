@@ -97,6 +97,7 @@ contract VaultHandler is Test, SettleExtraOracle {
     ///      harness seams (a seeded cohort or maturedPending, a pending reserve's non-bond part), the first epoch
     ///      tracked and the closure's two sides at construction.
     uint256 public claimed;
+    uint256 public forfeitedReserveSettles;
     uint256 public planted;
     uint32 public recEpoch0;
     int256 public closure0;
@@ -262,7 +263,6 @@ contract VaultHandler is Test, SettleExtraOracle {
         amt = bound(amt, 1, b.bondShares / 1000);
         uint32 ne = uint32(vm.getBlockNumber() / hv.tier().EPOCH);
         uint256 k = kind % 3;
-        if (k != 2) planted += amt;
         if (k == 0) {
             uint32 e = ne >= V + 1 ? ne - uint32(V + 1) : ne; // due when ne >= e + 1 + V
             Cohort memory c = b.cohorts[e % RING];
@@ -276,6 +276,8 @@ contract VaultHandler is Test, SettleExtraOracle {
         }
         b.bondShares -= uint128(amt);
         hv.setBank(b);
+        // counted only once planted (an early return above plants nothing; s19 fix review S19F-05)
+        if (k != 2) planted += amt;
         ++bankSeeds;
     }
 
@@ -620,8 +622,11 @@ contract VaultHandler is Test, SettleExtraOracle {
     // ------------------------------------------------------------------ P4: the curator's bank entries
 
     modifier checked() {
-        uint256 vu = hv.bankFull().vestedUnclaimed;
+        Bank memory b0 = hv.bankFull();
+        uint256 vu = b0.vestedUnclaimed;
         _;
+        // U-record's closure non-vacuity: a forfeited reserve settled (its non-bond part to the drip; S19F-11)
+        if (b0.reserveForfeit && b0.reserveShares > 0 && hv.bankFull().reserveShares == 0) ++forfeitedReserveSettles;
         _afterCall(vu);
     }
 

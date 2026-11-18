@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
+import {Obs} from "../../src/types/Obs.sol";
+
 import {Test, Vm} from "forge-std/Test.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {IUnlockCallback} from "@uniswap/v4-core/src/interfaces/callback/IUnlockCallback.sol";
@@ -93,8 +95,9 @@ contract VaultExtensionTest is VaultBase {
         calls[4] = abi.encodeWithSelector(bytes4(0xdeadbeef), uint256(1));
         calls[5] = "";
         calls[6] = hex"fad3cc"; // three bytes of deposit's selector
-        // a P4 record-write selector (not yet built; it is never on the allow-list)
-        calls[7] = abi.encodeWithSignature("roll(uint32)", uint32(1));
+        // the record write's own entry (spec §4.12): never on the allow-list
+        Obs memory o;
+        calls[7] = abi.encodeCall(ITouchstoneVaultExtension.roll, (o, uint32(1)));
         for (uint256 i; i < calls.length; ++i) {
             (bool ok, bytes memory ret) = vault.call(calls[i]);
             assertFalse(ok, "refused");
@@ -120,7 +123,7 @@ contract VaultExtensionTest is VaultBase {
 
     // ------------------------------------------------------------------ (b) direct calls
 
-    /// @notice (b) A direct call to each moved entry point and to `dispatch` on the extension reverts `NotDelegated`.
+    /// @notice (b) A direct call to each moved entry point, `dispatch` and `roll` on the extension reverts `NotDelegated`.
     ///         Control: the same entry points through the vault succeed.
     function test_U_ext__directCallsToTheExtensionRevert() public {
         _fundUser(alice, 10e18);
@@ -155,6 +158,13 @@ contract VaultExtensionTest is VaultBase {
         vm.prank(address(manager));
         vm.expectRevert(VaultCommon.NotDelegated.selector);
         ITouchstoneVaultExtension(ext).dispatch(Entry.Deposit, alice, abi.encode(uint256(1), uint256(0), uint256(0), alice));
+        // `roll`, from anyone and from the PoolManager
+        Obs memory o;
+        vm.expectRevert(VaultCommon.NotDelegated.selector);
+        ITouchstoneVaultExtension(ext).roll(o, 1);
+        vm.prank(address(manager));
+        vm.expectRevert(VaultCommon.NotDelegated.selector);
+        ITouchstoneVaultExtension(ext).roll(o, 1);
         // control: through the vault
         (uint256 a0, uint256 a1) = _deposit(alice, 1e22);
         assertGt(a0 + a1, 0);

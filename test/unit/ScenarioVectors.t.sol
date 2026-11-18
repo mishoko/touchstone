@@ -8,11 +8,11 @@ import {VaultHarness, Scalars, CheckpointLog} from "../utils/VaultHarness.sol";
 import {Obs} from "../../src/types/Obs.sol";
 import {Holdings} from "../../src/types/Holdings.sol";
 import {Bank, Cohort, RING} from "../../src/types/Bank.sol";
+import {EpochRecord} from "../../src/types/EpochRecord.sol";
 
 /// @notice Replays test/vectors/scenario.json against `VaultHarness.checkpoint` (the vault's `_checkpoint` with a
-///         scripted observation and live read), bit for bit. This build's accrual step is inert, so the runner takes
-///         the cases that mint no base (every step's `Checkpoint.base` is 0, `baseOwed` stays 0, nothing is deferred)
-///         and compares every state field except `records`; the full runner comes with base accrual and records.
+///         scripted observation and live read), bit for bit: every state field, the epoch records (spec §3.9, every
+///         field of every record the model wrote) and the pinned events. The no-base subset keeps its own row (U-vest-gate).
 contract ScenarioVectorsTest is VectorBase, ScriptedVaultBase {
     /// @dev The number of no-base cases in the current file; a change in the generator must be looked at.
     uint256 internal constant RUNNABLE = 18;
@@ -111,6 +111,44 @@ contract ScenarioVectorsTest is VectorBase, ScriptedVaultBase {
         assertEq(vm.parseJsonKeys(c, string.concat(p, ".records")).length, 0, string.concat(cid, " in.state.records"));
     }
 
+    /// @dev Every record the model wrote, field by field (U-record; s19 fix review S19F-02).
+    function _checkRecords(VaultHarness h, string memory c, string memory p) internal view {
+        string[] memory es = vm.parseJsonKeys(c, p);
+        for (uint256 k; k < es.length; ++k) {
+            string memory q = string.concat(p, ".", es[k]);
+            EpochRecord memory r = h.record(uint32(vm.parseUint(es[k])));
+            string memory w = string.concat(cid, " record ", es[k], " ");
+            assertEq(r.start, _u(c, string.concat(q, ".start")), string.concat(w, "start"));
+            assertEq(r.end, _u(c, string.concat(q, ".end")), string.concat(w, "end"));
+            assertEq(int256(r.med9Start), _i(c, string.concat(q, ".med9Start")), string.concat(w, "med9Start"));
+            assertEq(int256(r.med9End), _i(c, string.concat(q, ".med9End")), string.concat(w, "med9End"));
+            assertEq(r.tauV, _u(c, string.concat(q, ".tauV")), string.concat(w, "tauV"));
+            assertEq(r.tauB, _u(c, string.concat(q, ".tauB")), string.concat(w, "tauB"));
+            assertEq(r.lTau, _u(c, string.concat(q, ".lTau")), string.concat(w, "lTau"));
+            assertEq(r.base, _u(c, string.concat(q, ".base")), string.concat(w, "base"));
+            assertEq(r.charge, _u(c, string.concat(q, ".charge")), string.concat(w, "charge"));
+            assertEq(r.minted, _u(c, string.concat(q, ".minted")), string.concat(w, "minted"));
+            assertEq(r.bankBurned, _u(c, string.concat(q, ".bankBurned")), string.concat(w, "bankBurned"));
+            assertEq(r.bondBurned, _u(c, string.concat(q, ".bondBurned")), string.concat(w, "bondBurned"));
+            assertEq(r.forfeited, _u(c, string.concat(q, ".forfeited")), string.concat(w, "forfeited"));
+            assertEq(r.forfeitValue, _u(c, string.concat(q, ".forfeitValue")), string.concat(w, "forfeitValue"));
+            assertEq(r.flags, _flags(c, string.concat(q, ".flags")), string.concat(w, "flags"));
+        }
+    }
+
+    function _flags(string memory c, string memory q) internal pure returns (uint8 f) {
+        string[] memory names = vm.parseJsonStringArray(c, q);
+        string[7] memory bits =
+            ["stale", "witnessMissing", "witnessFallback", "breach", "refStale", "deferred", "unverified"];
+        for (uint256 i; i < names.length; ++i) {
+            bool known;
+            for (uint256 b; b < 7; ++b) {
+                if (_eq(names[i], bits[b])) (f, known) = (f | uint8(1 << b), true);
+            }
+            require(known, "unknown record flag");
+        }
+    }
+
     function _checkState(VaultHarness h, string memory c, string memory p) internal view {
         _keys(c, p, _stateFields());
         Holdings memory hd = h.holdings();
@@ -121,6 +159,7 @@ contract ScenarioVectorsTest is VectorBase, ScriptedVaultBase {
         assertEq(int256(hd.lo), _i(c, string.concat(hp, ".lo")), string.concat(cid, " lo"));
         assertEq(int256(hd.hi), _i(c, string.concat(hp, ".hi")), string.concat(cid, " hi"));
         _checkBank(h.bankFull(), c, string.concat(p, ".bank"));
+        _checkRecords(h, c, string.concat(p, ".records"));
         Scalars memory s = h.scalars();
         assertEq(s.nav0, _u(c, string.concat(p, ".NAV0")), string.concat(cid, " NAV0"));
         assertEq(s.delta0, _u(c, string.concat(p, ".delta0")), string.concat(cid, " delta0"));

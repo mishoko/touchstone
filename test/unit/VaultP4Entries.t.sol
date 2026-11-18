@@ -70,6 +70,9 @@ contract VaultP4EntriesTest is HarnessVaultBase {
         // the cache goes stale and the live read fails: the retire's checkpoint defers (precondition: it did)
         advance(3 * tier.GRID);
         refPool.setMode(MockRefPool.Mode.Revert);
+        uint32 e0 = hv.scalars().epoch;
+        uint256 fv0 = hv.record(e0).forfeitValue;
+        uint256 base0 = hv.record(e0).base;
         vm.recordLogs();
         _retire();
         Vm.Log[] memory logs = vm.getRecordedLogs();
@@ -81,8 +84,17 @@ contract VaultP4EntriesTest is HarnessVaultBase {
         Bank memory b = hv.bankFull();
         assertEq(b.mode, Ladder.EXITED, "EXITED");
         assertEq(hv.scalars().baseOwed, 0, "retire zeroes baseOwed");
-        // the record keeps the forfeited deferred base's value (S18D-05, F-048 (a)): OWED plus the retire's own segment
-        assertGe(hv.record(hv.scalars().epoch).forfeitValue, OWED, "retire records the forfeited baseOwed value");
+        // the record keeps the forfeited deferred base's value exactly (S18D-05, F-048 (a)): OWED plus the base the
+        // retire's own checkpoint deferred (that segment's gross base, in the records of e0..e1)
+        uint32 e1 = hv.scalars().epoch;
+        uint256 fv;
+        uint256 based;
+        for (uint32 e = e0; e <= e1; ++e) {
+            fv += hv.record(e).forfeitValue - (e == e0 ? fv0 : 0);
+            based += hv.record(e).base - (e == e0 ? base0 : 0);
+        }
+        // (the harness placement has δ₀ = 0, so the segment adds no base here: the identity is then fv == OWED)
+        assertEq(fv, OWED + based, "retire records exactly the forfeited baseOwed value");
         assertEq(_cohortSum() + b.maturedPending, 0, "every unvested bucket forfeited");
         assertEq(b.forfeitPool, 7e18, "cohorts and maturedPending in the drip");
         assertFalse(b.placedByCurator, "placedByCurator cleared");

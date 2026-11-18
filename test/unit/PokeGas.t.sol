@@ -7,7 +7,8 @@ import {Bank} from "../../src/types/Bank.sol";
 import {PreSwap} from "../../src/types/PreSwap.sol";
 import {Ladder} from "../../src/libraries/Ladder.sol";
 import {IVaultEntries} from "../../src/interfaces/ITouchstoneVaultExtension.sol";
-import {EpochRecord} from "../../src/types/EpochRecord.sol";
+import {EpochRecord, F_WITNESS_MISSING} from "../../src/types/EpochRecord.sol";
+import {ITouchstoneHook} from "../../src/interfaces/ITouchstoneHook.sol";
 
 /// @notice G-3 (spec §9.1): `poke` costs at most 700k gas on the union of its heavy legs, measured in two scenarios that
 ///         cannot share one block (a vest needs the reference in range, a breach needs it out): (a) a due settlement, a
@@ -62,7 +63,10 @@ contract PokeGasTest is LiquidPoolBase {
         uint32 e0 = hv.scalars().epoch;
         _keepAlive(3 * tier.EPOCH); // observed (no gap), the vault untouched: the poke rolls over skipped epochs
         assertGt(_obs().epoch, e0 + 1, "precondition: epochs skipped");
+        uint256 minted0 = hv.record(e0).minted;
         uint256 used = _measure("G-3 poke (vest, mint, settle, gap roll, witness)");
+        assertGt(hv.record(e0).minted, minted0, "precondition: the poke minted base");
+        assertEq(hv.record(_obs().epoch).flags & F_WITNESS_MISSING, 0, "precondition: the witness rolled (L_W > 0)");
         (uint40 tA,,,,) = hv.pendingAction();
         assertEq(tA, 0, "precondition: the action settled");
         assertEq(hv.bankFull().maturedPending, 0, "precondition: the matured pay vested");
@@ -79,6 +83,12 @@ contract PokeGasTest is LiquidPoolBase {
         uint32 e0 = hv.scalars().epoch;
         advance(9 * tier.GRID + 2 * tier.EPOCH); // silent: every grid slot freezes at the poke
         uint256 used = _measure("G-3 poke (3 breaches, freeze, settle, gap roll, witness)");
+        uint32 gi = _obs().gridIndex;
+        for (uint32 k; k < 8; ++k) {
+            (,,, bool exists) = ITouchstoneHook(hook).frozen(gi - k);
+            assertTrue(exists, "precondition: every grid slot froze");
+        }
+        assertEq(hv.record(_obs().epoch).flags & F_WITNESS_MISSING, 0, "precondition: the witness rolled (L_W > 0)");
         Bank memory b = hv.bankFull();
         assertEq(b.mode, Ladder.EXITED, "precondition: the removal processed");
         (uint40 tA,,,,) = hv.pendingAction();

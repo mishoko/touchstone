@@ -13,7 +13,7 @@ Python), with `-` replaced by `_` inside the ID and a double underscore before t
                                                 # evaluation table and due table
 
 Exit 1 on a missing ID."""
-import glob, os, re, sys
+import json, glob, os, re, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CLAIMS = os.path.join(ROOT, 'test', 'CLAIMS.md')
@@ -43,8 +43,18 @@ def test_text(root):
     return '\n'.join(open(p).read() for p in files)
 
 
+def eval_passed(path):
+    """An eval result covers its ID only when it exists and its verdict is PASS (a FAIL is an unmet claim)."""
+    if not os.path.exists(path):
+        return False
+    try:
+        return json.load(open(path)).get('verdict') == 'PASS'
+    except (ValueError, AttributeError):
+        return False
+
+
 def covered(i, tests, root):
-    return bool(re.search(pattern(i), tests)) or os.path.exists(os.path.join(root, 'eval', 'results', i + '.json'))
+    return bool(re.search(pattern(i), tests)) or eval_passed(os.path.join(root, 'eval', 'results', i + '.json'))
 
 
 def missing(rows, tests, phase, root):
@@ -119,6 +129,16 @@ def selftest(rows):
         errs.append('fixture: an ID due in P3 must not be required at P2')
     if missing([('S-3', 'P0', 'test')], 'def test_S_3__ok():', 'P0', '/nonexistent'):
         errs.append('fixture: a Python test must cover its ID')
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:  # an eval result covers its ID only with verdict PASS
+        os.makedirs(os.path.join(d, 'eval', 'results'))
+        rp = os.path.join(d, 'eval', 'results', 'E0.json')
+        json.dump({'verdict': 'FAIL'}, open(rp, 'w'))
+        if missing([('E0', 'P4', 'eval')], '', 'P4', d) != ['E0']:
+            errs.append('fixture: a FAIL eval result must leave its ID missing')
+        json.dump({'verdict': 'PASS'}, open(rp, 'w'))
+        if missing([('E0', 'P4', 'eval')], '', 'P4', d):
+            errs.append('fixture: a PASS eval result must cover its ID')
     for e in errs:
         print('claims selftest:', e)
     print('claims selftest', 'OK' if not errs else 'FAIL')

@@ -1,17 +1,21 @@
 # Slither triage (test S-1)
 
 - Run: `slither . --filter-paths 'lib/|test/|script/' --exclude-dependencies --json <out>`, re-run on 2026-11-18 at the
-  current `src/` (the first triage's run predated a six-line constructor check; both runs give the same 215 results).
-- Record: `audits/slither-results.json` (`script/slither_record.py`: every result's detector, impact and elements, and
-  `src_sha256`, the hash of the analysed `src/`). Test S-1 (`test/static/test_static.py`) fails if this triage and the
-  record differ in any section count, detector or row count, if a row lacks a verdict, or if `src/` has changed since
-  the recorded run.
+  current `src/` (the first triage's run predated a parameter check added to the hook constructor, which requires the
+  forfeiture drip to equal one epoch; both runs give the same 215 results by detector and flagged element).
+- Record: `audits/slither-results.json` (`script/slither_record.py`), Record: sha256 `88b01024a808991d`. It holds
+  every result's detector, impact and elements, and `input_sha256`, the hash of `src/**/*.sol`, `foundry.toml`,
+  `remappings.txt` and the submodule pins. Test S-1 (`test/static/test_static.py`) fails if `src/` or those inputs
+  changed since the recorded run, if the record differs from the one named here, if the stated total or tool differ,
+  if a section's count, detector set or any row's count differs from the record, if a detector has two rows or a row
+  lacks a verdict, or if a High result's flagged element is not named in its row. The test does not re-run Slither;
+  the record is reproduced by re-running the command.
 - Tool: Slither 0.11.5, solc 0.8.26, via-IR.
 - Scope: `src/` (64 contracts analysed, 101 detectors).
 - Result: 215 results, triaged below. None requires a code change.
 - Verdicts:
   - **FP**: a false positive (the detector's premise does not hold here).
-  - **Design**: the flagged pattern is intended and covered by the named test.
+  - **Design**: the flagged pattern is intended; where a test covers it, the test is named.
   - **Accepted**: a real observation with no effect on funds, documented here.
 
 ## High (10)

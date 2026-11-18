@@ -68,9 +68,12 @@ def eval_passed(path):
 def covered(i, tests, root, kind='test'):
     """A test row is covered by a matching test name or a PASS eval result; an eval row only by a PASS result (a test
     named after an eval never covers it; s19 fix review S19F2-03)."""
-    passed = eval_passed(os.path.join(root, 'eval', 'results', i + '.json'))
+    rp = os.path.join(root, 'eval', 'results', i + '.json')
+    passed = eval_passed(rp)
     if kind == 'eval':
         return passed
+    if os.path.exists(rp) and not passed:
+        return False   # a published result that does not pass leaves a test row unmet, whatever the test names (S23D-04)
     return bool(re.search(pattern(i), tests)) or passed
 
 
@@ -201,6 +204,13 @@ def selftest(rows):
         json.dump({'verdict': 'PASS'}, open(rp, 'w'))
         if missing([('E0', 'P4', 'eval')], '', 'P4', d):
             errs.append('fixture: a PASS eval result must cover its ID')
+        up = os.path.join(d, 'eval', 'results', 'U-IC.json')   # a test row with a FAIL result (S23D-04)
+        json.dump({'verdict': 'FAIL', 'negative_result': True, 'decision': 'x'}, open(up, 'w'))
+        if missing([('U-IC', 'P5', 'test')], 'def test_U_IC__x():', 'P5', d) != ['U-IC']:
+            errs.append('fixture: a FAIL result must leave a test row missing even when a test is named after it')
+        json.dump({'verdict': 'PASS'}, open(up, 'w'))
+        if missing([('U-IC', 'P5', 'test')], '', 'P5', d):
+            errs.append('fixture: a PASS result must cover a test row')
     if _eval_ids('| E0 | q | p |\n| E0a | q | p |\n') != ['E0', 'E0a']:
         errs.append('fixture: a suffixed eval ID (E0a) must be listed')
     if not ROW.search('| E0a | P4 | eval |'):

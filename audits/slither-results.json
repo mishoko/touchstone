@@ -1,7 +1,8 @@
 {
  "tool": "Slither 0.11.5",
  "command": "slither . --filter-paths 'lib/|test/|script/' --exclude-dependencies --json <out>",
- "src_sha256": "0399906ce0386737ff3656c30c2cca446fe1c5f40d24dae76c2bc5c890cd777b",
+ "input_sha256": "46681cca25d3a3228a8fea111052639a7145dc6124143316b242b4f76a17db5b",
+ "raw_sha256": "ac6181a88095a8b78cb929cce8ea39754ac49c1ae3d4a111bc9fe8788f97346c",
  "results": [
   {
    "check": "arbitrary-send-erc20",

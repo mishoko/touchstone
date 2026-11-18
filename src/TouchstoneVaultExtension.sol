@@ -10,10 +10,13 @@ import {Obs} from "./types/Obs.sol";
 import {Entry} from "./types/Entry.sol";
 import {Ladder} from "./libraries/Ladder.sol";
 import {ExecLedger} from "./libraries/ExecLedger.sol";
+import {FeeBank} from "./libraries/FeeBank.sol";
+import {Op} from "./types/Bank.sol";
 import {VaultCommon} from "./TouchstoneVaultBase.sol";
 
 /// @title TouchstoneVaultExtension
-/// @notice The cold paths of one vault (spec §4.12, lever (c)): `seed`, `deposit` and `withdraw`. Its code runs only by
+/// @notice The cold paths of one vault (spec §4.12, lever (c)): `seed`, `deposit`, `withdraw` and the curator's bank
+///         entries `claim`, `topUpBond`, `retire`, `releaseBond`, with the open `poke` and `processBreach`. Its code runs only by
 ///         `delegatecall` from its vault, on the vault's storage and under the vault's address: the vault's fallback
 ///         forwards the allow-listed selectors (holding the vault's reentrancy lock), each moved entry point calls
 ///         `MANAGER.unlock`, and the vault's `unlockCallback` runs the prologue and the mode gate and then delegates
@@ -79,6 +82,45 @@ contract TouchstoneVaultExtension is VaultCommon {
         );
     }
 
+    /// @notice Transfers the curator's vested shares to it (open in every mode).
+    function claim() external delegated {
+        _onlyCurator();
+        _enter(Entry.Claim, "");
+    }
+
+    /// @notice Moves `shares` of the curator's own shares into the bond (NORMAL and BREACHED).
+    function topUpBond(uint256 shares) external delegated {
+        _onlyCurator();
+        _enter(Entry.TopUpBond, abi.encode(shares));
+    }
+
+    /// @notice The curator exits: all unvested pay is forfeited to the drip and the vault moves to EXITED.
+    function retire() external delegated {
+        // [MU-280] curator only
+        _onlyCurator();
+        _enter(Entry.Retire, "");
+    }
+
+    /// @notice Returns the whole bond to the curator, in EXITED, at or after `exitBlock + V·EPOCH`.
+    function releaseBond() external delegated {
+        _onlyCurator();
+        _enter(Entry.ReleaseBond, "");
+    }
+
+    /// @notice Open: the prologue (settlement, snapshot, collect, checkpoint), then the witness roll.
+    function poke() external delegated {
+        _enter(Entry.Poke, "");
+    }
+
+    /// @notice Open: the prologue alone (its checkpoint processes pending breaches).
+    function processBreach() external delegated {
+        _enter(Entry.ProcessBreach, "");
+    }
+
+    function _enter(Entry entry, bytes memory args) internal {
+        MANAGER.unlock(abi.encode(entry, msg.sender, args));
+    }
+
     /// @notice The moved flows' bodies, run inside the vault's `unlockCallback` (by `delegatecall`): `Seed` at once
     ///         (no prologue), every other entry after the vault's step 0, prologue, checkpoint and mode gate.
     function dispatch(Entry entry, address payer, bytes calldata args) external delegated returns (bytes memory) {
@@ -92,9 +134,48 @@ contract TouchstoneVaultExtension is VaultCommon {
             return _seed(args);
         }
         if (entry == Entry.Deposit) return _deposit(payer, args);
-        // [MU-172] an entry this build does not implement never falls through to a flow
         if (entry == Entry.Withdraw) return _withdraw(payer, args);
+        if (entry == Entry.Claim) return _pay(Op.Claim, "");
+        if (entry == Entry.ReleaseBond) {
+            // the whole bond (FeeBank: BadMode outside EXITED, BondLocked before exitBlock + releaseDelay)
+            return _pay(Op.Release, abi.encode(type(uint256).max, uint40(block.number)));
+        }
+        if (entry == Entry.TopUpBond) {
+            uint256 s = abi.decode(args, (uint256));
+            // [MU-281] the curator's own shares move into the vault's custody with the bond
+            _transfer(payer, address(this), s);
+            FeeBank.bankApply(_bank, Op.TopUp, args);
+            emit BondTopUp(s);
+            return "";
+        }
+        if (entry == Entry.Retire) {
+            // [MU-279] the deferred base is forfeited with the rest (S16B-05): the checkpoint mints `baseOwed` in any
+            // mode, so this write is what keeps it out of EXITED (the prologue's checkpoint has already closed the
+            // segment; the forfeited value enters the epoch record with the records, s19)
+            _baseOwed = 0;
+            emit Retired(_burnBank(Op.Retire, abi.encode(uint40(block.number))));
+            return "";
+        }
+        if (entry == Entry.Poke) {
+            // [MU-282] the witness roll (fail-soft in the hook; it ignores an epoch already rolled)
+            HOOK.rollWitness(_epoch);
+            return "";
+        }
+        // [MU-172] processBreach is the prologue alone (an entry without its branch would reach the tail below)
+        if (entry == Entry.ProcessBreach) return "";
+        // reachable only by entries the vault never delegates (SetPositions, RebalanceSwap, Settle): defence in
+        // depth, so it carries no mutant
         revert Ladder.BadMode();
+    }
+
+    /// @dev A bank op that pays shares (`Claim`, `Release`): the vault's held shares to the curator.
+    function _pay(Op op, bytes memory a) internal returns (bytes memory) {
+        (, uint256 pay,,) = FeeBank.bankApply(_bank, op, a);
+        // [MU-283] the payment leaves the vault's custody to the curator
+        _transfer(address(this), curator, pay);
+        if (op == Op.Claim) emit Claim(curator, pay);
+        else emit BondReleased(curator, pay);
+        return "";
     }
 
     // ------------------------------------------------------------------ flows

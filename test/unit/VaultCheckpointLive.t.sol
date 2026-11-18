@@ -6,7 +6,6 @@ import {HarnessVaultBase} from "../utils/HarnessVaultBase.sol";
 import {ITouchstoneHook} from "../../src/interfaces/ITouchstoneHook.sol";
 import {Bank, Cohort} from "../../src/types/Bank.sol";
 import {Ladder} from "../../src/libraries/Ladder.sol";
-import {Entry} from "../../src/types/Entry.sol";
 import {MockRefPool} from "../utils/MockRefPool.sol";
 import {TouchstoneVault} from "../../src/TouchstoneVault.sol";
 import {VaultView} from "../utils/VaultView.sol";
@@ -80,13 +79,6 @@ contract VaultCheckpointLiveTest is HarnessVaultBase {
         Bank memory b = hv.bankFull();
         assertEq(b.mode, Ladder.NORMAL, "a placement returns the vault to NORMAL");
         assertTrue(b.placedByCurator, "placedByCurator");
-    }
-
-    function test_U_mode__anUnimplementedEntryRevertsInsteadOfFallingThrough() public {
-        vm.expectRevert(Ladder.BadMode.selector);
-        hv.rawEntry(Entry.Claim);
-        vm.expectRevert(Ladder.BadMode.selector);
-        hv.rawEntry(Entry.Poke);
     }
 
     // ------------------------------------------------------------------ the live leg through the hook

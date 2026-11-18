@@ -2043,14 +2043,14 @@
   {
    "id": "MU-172",
    "area": "guards",
-   "desc": "an unimplemented entry falls through to withdraw (the extension's dispatch)",
+   "desc": "processBreach without its own dispatch branch (an entry falls through to the dispatch tail; s18 S18D2-02)",
    "killer_id": "U-mode",
-   "kill": "test_U_mode__anUnimplementedEntryRevertsInsteadOfFallingThrough",
+   "kill": "test_U_mode__processBreachIsOpenInEveryMode",
    "file": "src/TouchstoneVaultExtension.sol",
-   "find": "        if (entry == Entry.Withdraw) return _withdraw(payer, args);\n        revert Ladder.BadMode();",
-   "replace": "        if (entry == Entry.Withdraw) return _withdraw(payer, args);\n        return _withdraw(payer, args);",
+   "find": "        if (entry == Entry.ProcessBreach) return \"\";\n",
+   "replace": "",
    "status": "KILLED",
-   "basis": "5fa3d391bcf51b7c"
+   "basis": "69c83b7553198867"
   },
   {
    "id": "MU-173",
@@ -3138,10 +3138,10 @@
    "killer_id": "U-ext",
    "kill": "test_U_ext__fallbackRefusesEverySelectorOutsideTheAllowList",
    "file": "src/TouchstoneVault.sol",
-   "find": "                || (sel != IVaultEntries.seed.selector && sel != IVaultEntries.deposit.selector\n                    && sel != IVaultEntries.withdraw.selector)",
+   "find": "                || (sel != IVaultEntries.seed.selector && sel != IVaultEntries.deposit.selector\n                    && sel != IVaultEntries.withdraw.selector && sel != IVaultEntries.claim.selector\n                    && sel != IVaultEntries.topUpBond.selector && sel != IVaultEntries.retire.selector\n                    && sel != IVaultEntries.releaseBond.selector && sel != IVaultEntries.poke.selector\n                    && sel != IVaultEntries.processBreach.selector)",
    "replace": "                || false",
    "status": "KILLED",
-   "basis": "61298aa2753b703b"
+   "basis": "b290fd77d235f587"
   },
   {
    "id": "MU-265",
@@ -3310,6 +3310,66 @@
    "replace": "        bool liveRead;\n        int24 liveTick;\n        if (entry != Entry.Withdraw) (liveRead, liveTick) = _checkpoint(o);\n",
    "status": "KILLED",
    "basis": "298da37600b88532"
+  },
+  {
+   "id": "MU-279",
+   "area": "bank",
+   "desc": "retire leaves the deferred base in place (S16B-05: the next priced checkpoint mints it in EXITED)",
+   "killer_id": "U-forfeit",
+   "kill": "test_U_forfeit__retireForfeitsADeferredBase",
+   "file": "src/TouchstoneVaultExtension.sol",
+   "find": "            _baseOwed = 0;\n            emit Retired(",
+   "replace": "            emit Retired(",
+   "status": "KILLED",
+   "basis": "69c83b7553198867"
+  },
+  {
+   "id": "MU-280",
+   "area": "guards",
+   "desc": "retire without the curator check",
+   "killer_id": "U-mode",
+   "kill": "test_U_mode__retireIsCuratorOnlyAndClosedInExited",
+   "file": "src/TouchstoneVaultExtension.sol",
+   "find": "        // [MU-280] curator only\n        _onlyCurator();\n",
+   "replace": "        // [MU-280] curator only\n",
+   "status": "KILLED",
+   "basis": "3529252197a5e1eb"
+  },
+  {
+   "id": "MU-281",
+   "area": "bank",
+   "desc": "topUpBond credits the bond without taking the curator's shares",
+   "killer_id": "U-4",
+   "kill": "test_U_4__topUpBondMovesTheCuratorsSharesIntoTheBond",
+   "file": "src/TouchstoneVaultExtension.sol",
+   "find": "            _transfer(payer, address(this), s);\n",
+   "replace": "",
+   "status": "KILLED",
+   "basis": "69c83b7553198867"
+  },
+  {
+   "id": "MU-282",
+   "area": "witness",
+   "desc": "poke without the witness roll",
+   "killer_id": "U-mode",
+   "kill": "test_U_mode__pokeRollsTheWitnessInEveryMode",
+   "file": "src/TouchstoneVaultExtension.sol",
+   "find": "            HOOK.rollWitness(_epoch);\n",
+   "replace": "",
+   "status": "KILLED",
+   "basis": "75d1da83e6d3f809"
+  },
+  {
+   "id": "MU-283",
+   "area": "bank",
+   "desc": "claim and releaseBond clear the bank without paying the curator",
+   "killer_id": "U-4",
+   "kill": "test_U_4__claimPaysVestedSharesInEveryMode",
+   "file": "src/TouchstoneVaultExtension.sol",
+   "find": "        _transfer(address(this), curator, pay);\n",
+   "replace": "",
+   "status": "KILLED",
+   "basis": "71181509fe3e4f67"
   }
  ]
 }

@@ -99,10 +99,16 @@ contract VaultExtensionTest is VaultBase {
             assertFalse(ok, "refused");
             assertEq(ret, abi.encodeWithSelector(VaultCommon.UnknownSelector.selector), "UnknownSelector");
         }
-        // control: an allow-listed selector is forwarded and succeeds
+        // control: an allow-listed selector is forwarded and succeeds (the P4 entries included)
         _fundUser(alice, 10e18);
         _deposit(alice, 1e22);
         assertEq(v.balanceOf(alice), 1e22);
+        _ve().poke();
+        _ve().processBreach();
+        vm.startPrank(curator);
+        _ve().claim();
+        _ve().retire();
+        vm.stopPrank();
     }
 
     // ------------------------------------------------------------------ (b) direct calls
@@ -122,6 +128,23 @@ contract VaultExtensionTest is VaultBase {
         vm.prank(address(factory));
         vm.expectRevert(VaultCommon.NotDelegated.selector);
         IVaultEntries(ext).seed(1, 1, alice, 0, 0);
+        // the six P4 entries, as anyone and as the curator
+        for (uint256 who; who < 2; ++who) {
+            vm.startPrank(who == 0 ? alice : curator);
+            vm.expectRevert(VaultCommon.NotDelegated.selector);
+            IVaultEntries(ext).claim();
+            vm.expectRevert(VaultCommon.NotDelegated.selector);
+            IVaultEntries(ext).topUpBond(1);
+            vm.expectRevert(VaultCommon.NotDelegated.selector);
+            IVaultEntries(ext).retire();
+            vm.expectRevert(VaultCommon.NotDelegated.selector);
+            IVaultEntries(ext).releaseBond();
+            vm.expectRevert(VaultCommon.NotDelegated.selector);
+            IVaultEntries(ext).poke();
+            vm.expectRevert(VaultCommon.NotDelegated.selector);
+            IVaultEntries(ext).processBreach();
+            vm.stopPrank();
+        }
         vm.prank(address(manager));
         vm.expectRevert(VaultCommon.NotDelegated.selector);
         ITouchstoneVaultExtension(ext).dispatch(Entry.Deposit, alice, abi.encode(uint256(1), uint256(0), uint256(0), alice));
@@ -279,11 +302,14 @@ contract VaultExtensionLockTest is VaultBase {
     ///         shared lock. Control: the unarmed token deposits.
     function test_U_ext__aMovedFlowCannotReenterAResidentEntryPoint() public {
         _fundUser(alice, 10e18);
-        bytes[2] memory inner = [
+        bytes[4] memory inner = [
             abi.encodeCall(TouchstoneVault.settle, ()),
-            abi.encodeCall(TouchstoneVault.setPositions, (int24(-600), int24(600), PreSwap(false, false, 0), uint160(0), type(uint256).max))
+            abi.encodeCall(TouchstoneVault.setPositions, (int24(-600), int24(600), PreSwap(false, false, 0), uint160(0), type(uint256).max)),
+            // moved entries through the fallback (the lock is shared)
+            abi.encodeCall(IVaultEntries.poke, ()),
+            abi.encodeCall(IVaultEntries.processBreach, ())
         ];
-        for (uint256 i; i < 2; ++i) {
+        for (uint256 i; i < 4; ++i) {
             _cb().arm(vault, inner[i]);
             vm.prank(alice);
             vm.expectRevert(ReentrancyGuardTransient.ReentrancyGuardReentrantCall.selector);

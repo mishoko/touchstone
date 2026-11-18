@@ -151,6 +151,10 @@ abstract contract VaultCommon is VaultConfig {
     event CheckpointDeferred();
     event Settled(uint256 charge0, uint256 extra, int24 tickMk, bool fallbackUsed);
     event Action(uint8 kind, uint256 charge, uint160 pStar, uint256 burnedBank, uint256 burnedBond);
+    event Claim(address indexed to, uint256 shares);
+    event BondTopUp(uint256 shares);
+    event BondReleased(address indexed to, uint256 shares);
+    event Retired(uint256 forfeited);
 
     error OnlyFactory();
     error OnlyPoolManager();

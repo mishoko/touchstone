@@ -35,7 +35,7 @@ import {VaultCommon} from "./TouchstoneVaultBase.sol";
 ///         never read. Every entry point runs inside the vault's own `unlock`: the prologue snapshots the hook's
 ///         clock, collects the position's fees into idle, then checkpoints; the mode gate runs after the prologue.
 /// @dev The vault carries the hot path (the curator actions, the settlement, the prologue and the checkpoint); its
-///      cold paths (`seed`, `deposit`, `withdraw`) live in its per-vault extension (`TouchstoneVaultExtension`), which
+///      cold paths (`seed`, `deposit`, `withdraw`, `claim`, `topUpBond`, `retire`, `releaseBond`, `poke`, `processBreach`) live in its per-vault extension (`TouchstoneVaultExtension`), which
 ///      the fallback reaches by `delegatecall` on the same storage (`VaultStorage`). The vault has no state views:
 ///      every field is read through `extsload` at the slots of its storage-layout snapshot (the Lens decodes them),
 ///      and the tier through `TIER_HASH`.
@@ -85,7 +85,7 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
         MANAGER.unlock(abi.encode(Entry.Settle, msg.sender, ""));
     }
 
-    /// @notice The moved entry points (`seed`, `deposit`, `withdraw`; `IVaultEntries`), forwarded to the extension by
+    /// @notice The moved entry points (`seed`, `deposit`, `withdraw` and the six P4 entries; `IVaultEntries`), forwarded to the extension by
     ///         `delegatecall` with their calldata; any other selector and empty calldata revert. The vault's one
     ///         reentrancy lock is held across the whole call, and the extension's output is returned raw (so the
     ///         lock's release runs on return).
@@ -97,7 +97,10 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
         if (
             data.length < 4
                 || (sel != IVaultEntries.seed.selector && sel != IVaultEntries.deposit.selector
-                    && sel != IVaultEntries.withdraw.selector)
+                    && sel != IVaultEntries.withdraw.selector && sel != IVaultEntries.claim.selector
+                    && sel != IVaultEntries.topUpBond.selector && sel != IVaultEntries.retire.selector
+                    && sel != IVaultEntries.releaseBond.selector && sel != IVaultEntries.poke.selector
+                    && sel != IVaultEntries.processBreach.selector)
         ) revert UnknownSelector();
         return _delegate(data);
     }

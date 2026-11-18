@@ -9,6 +9,12 @@ interface IVaultEntries {
     function seed(uint256 a0, uint256 a1, address curator, uint256 wit0, uint256 wit1) external;
     function deposit(uint256 shares, uint256 max0, uint256 max1, address to) external returns (uint256 a0, uint256 a1);
     function withdraw(uint256 shares, uint256 min0, uint256 min1, address to) external returns (uint256 a0, uint256 a1);
+    function claim() external;
+    function topUpBond(uint256 shares) external;
+    function retire() external;
+    function releaseBond() external;
+    function poke() external;
+    function processBreach() external;
 }
 
 /// @notice The per-vault extension (spec §4.12, lever (c)): the cold paths of one vault, run only by `delegatecall`

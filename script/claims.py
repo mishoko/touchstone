@@ -74,6 +74,28 @@ def covered(i, tests, root, kind='test'):
     return bool(re.search(pattern(i), tests)) or passed
 
 
+def decision_refs_ok(root):
+    """Every `decision log #N` cited by an eval result names an existing entry of the decision log that mentions the
+    eval (checked only where the internal history is present; s20 fix review S20F3-01)."""
+    hist = os.path.join(root, 'internal', 'spec-history.md')
+    if not os.path.exists(hist):
+        return []
+    h = open(hist).read()
+    errs = []
+    for f in glob.glob(os.path.join(root, 'eval', 'results', '*.json')):
+        try:
+            dec = json.load(open(f)).get('decision', '')
+        except (ValueError, AttributeError):
+            continue
+        eid = os.path.basename(f)[:-5]
+        for n in re.findall(r'decision log #(\d+)', dec or ''):
+            m = re.search(r'^\| ' + n + r' \|(.*)$', h, re.M)
+            sup = json.load(open(f)).get('superseded_by') or eid
+            if not m or sup not in m.group(1):
+                errs.append(f'{eid}: decision log #{n} missing or does not mention {sup}')
+    return errs
+
+
 def missing(rows, tests, phase, root):
     lim = PHASES.index(phase)
     return [i for i, due, k in rows if PHASES.index(due) <= lim and not covered(i, tests, root, k)]
@@ -205,6 +227,11 @@ def main(argv):
             print(f'| {i} | {due} | {st} |')
     req = [i for i, due, _ in rows if PHASES.index(due) <= PHASES.index(phase)]
     print(f'{len(req) - len(miss)}/{len(req)} claim IDs due by {phase} covered')
+    bad = decision_refs_ok(ROOT)
+    for e in bad:
+        print('decision reference:', e)
+    if bad:
+        return 1
     if miss:
         print('missing:', ' '.join(miss))
         return 1

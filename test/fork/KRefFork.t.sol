@@ -24,10 +24,7 @@ interface IV3Pool {
     function swap(address to, bool zeroForOne, int256 amount, uint160 sqrtPriceLimitX96, bytes calldata data)
         external
         returns (int256 amount0, int256 amount1);
-    function slot0()
-        external
-        view
-        returns (uint160 sqrtPriceX96, int24 tick, uint16, uint16, uint16, uint8, bool);
+    function slot0() external view returns (uint160 sqrtPriceX96, int24 tick, uint16, uint16, uint16, uint8, bool);
     function liquidity() external view returns (uint128);
     function observe(uint32[] calldata ago) external view returns (int56[] memory, uint160[] memory);
 }
@@ -155,7 +152,7 @@ contract KRefForkTest is MainnetVaultFork {
     ///      token0 with `amountIn` of WETH; returns the recorded charge and the legs of spec §3.2 for a `rebalanceSwap` (the spot
     ///      before the swap, which is also its pre-move spot, and the live reference), recomputed from the recorded
     ///      holdings with the vault's own valuation library (`ExecLedger.value`, covered by the unit tests and
-    ///      `model/reference.py`). The vault tests warp 72 blocks before this action, longer than the 600 s window, so
+    ///      `model/reference.py`). This test warps 72 blocks (setup 12 + two cooldowns) before the action, longer than the 600 s window, so
     ///      the reference is the fork-block tick: the leg is checked at the real price level, not over live history.
     function _swapAt(int24 off, uint128 amountIn) internal returns (Legs memory l) {
         int24 r = _prepAction();
@@ -168,8 +165,13 @@ contract KRefForkTest is MainnetVaultFork {
         bundler.moveSpot(TickMath.getSqrtPriceAtTick(r));
         vm.prank(curator);
         bundler.moveAndPlace(
-            TickMath.getSqrtPriceAtTick(r), 1, cc - tier.W_TICKS / 2 + sh, cc + tier.W_TICKS / 2 + sh,
-            PreSwap(false, false, 0), 0, type(uint256).max
+            TickMath.getSqrtPriceAtTick(r),
+            1,
+            cc - tier.W_TICKS / 2 + sh,
+            cc + tier.W_TICKS / 2 + sh,
+            PreSwap(false, false, 0),
+            0,
+            type(uint256).max
         );
         r = _prepAction(); // the live reference after the cooldown (the TWAP window slides onto the fork-block tick)
         (bool ok, int24 hr) = TouchstoneHook(hook).tryWindow(tier.REF_WINDOW, 0);
@@ -199,7 +201,7 @@ contract KRefForkTest is MainnetVaultFork {
     ///         WETH (≈ 0.5% of NAV) (idle pays a swap's input; the idle comes from a re-placement on a range shifted up by W/4), once with spot at the live reference and once with spot `REF_BAND / 2` above it
     ///         (USDC dearer at spot than at the reference, inside the fence). Each recorded charge equals the spec's
     ///         worst leg recomputed from the recorded holdings. Above the reference the reference leg binds (it exceeds
-    ///         both spot legs) and the charge exceeds the at-reference charge: the gap between spot and the reference is
+    ///         the spot leg) and the charge exceeds the at-reference charge: the gap between spot and the reference is
     ///         charged (the positive control is the at-reference swap, where the legs coincide).
     function test_K_ref__referenceChargeLegOnRealData() public {
         if (!_setUp()) return;
@@ -207,7 +209,9 @@ contract KRefForkTest is MainnetVaultFork {
         Legs memory at = _swapAt(0, 0);
         vm.revertToState(snap);
         Legs memory up = _swapAt(int24(uint24(tier.REF_BAND)) / 2, at.amountIn);
-        console.log("K-ref rebalanceSwap WETH in; charge at the reference, at +band/2", at.amountIn, at.charge, up.charge);
+        console.log(
+            "K-ref rebalanceSwap WETH in; charge at the reference, at +band/2", at.amountIn, at.charge, up.charge
+        );
         console.log("K-ref legs at +band/2 (spot, reference)");
         console.logInt(up.spot);
         console.logInt(up.ref);

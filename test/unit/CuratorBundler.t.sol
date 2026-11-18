@@ -18,6 +18,8 @@ import {Holdings} from "../../src/types/Holdings.sol";
 import {PreSwap} from "../../src/types/PreSwap.sol";
 import {IVaultEntries} from "../../src/interfaces/ITouchstoneVaultExtension.sol";
 import {VaultCommon} from "../../src/TouchstoneVaultBase.sol";
+import {FeeBank} from "../../src/libraries/FeeBank.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 using VaultView for TouchstoneVault;
 
@@ -198,5 +200,82 @@ contract CuratorBundlerTest is VaultBase {
         vm.prank(owner);
         vm.expectRevert(CuratorBundler.Deployed.selector);
         bundler.deployAndPlace(args, -1000, 1000, _none(), type(uint256).max);
+    }
+
+    // ------------------------------------------------------------------ the P4 passthroughs (F-042)
+
+    /// @dev Deploys, places and settles through the bundler (no pending action left).
+    function _deployPlaceSettle() internal {
+        _setRef(tier.REF_BAND);
+        _deployAndPlace(-940, 1060);
+        advance(2 + tier.H_MARKOUT / blocktime);
+        vm.prank(owner);
+        bundler.settle();
+    }
+
+    /// @dev Moves `x` bond shares into vestedUnclaimed (slots 16 and 17 of the layout snapshot; held shares unchanged).
+    function _plantVested(uint128 x) internal {
+        uint256 w16 = uint256(vm.load(vault, bytes32(uint256(16))));
+        uint256 w17 = uint256(vm.load(vault, bytes32(uint256(17))));
+        uint128 vu = uint128(w16 >> 128) + x;
+        uint128 bond = uint128(w17) - x;
+        vm.store(vault, bytes32(uint256(16)), bytes32((uint256(vu) << 128) | uint128(w16)));
+        vm.store(vault, bytes32(uint256(17)), bytes32(((w17 >> 128) << 128) | bond));
+    }
+
+    /// @notice F-042: each P4 passthrough of the bundler reaches the real vault. `claim` forwards the vested shares to
+    ///         the owner; `topUpBond` pulls the owner's shares into the bond; `poke` rolls the witness; `retire` moves
+    ///         the vault to EXITED; `releaseBond` reverts `BondLocked` before the delay and then forwards the whole
+    ///         bond to the owner. The bundler never keeps a share.
+    function test_U_6__bundlerP4PassthroughsReachTheVault() public {
+        _deployPlaceSettle();
+        // claim
+        _plantVested(3e18);
+        vm.prank(owner);
+        bundler.claim();
+        (,, uint128 vu, uint128 bond0,,,) = v.bank();
+        assertEq(vu, 0, "vested pay claimed");
+        assertEq(v.balanceOf(owner), 3e18, "claimed shares reach the owner");
+        assertEq(v.balanceOf(address(bundler)), 0, "the bundler keeps nothing");
+        // topUpBond
+        vm.prank(owner);
+        IERC20(vault).approve(address(bundler), 1e18);
+        vm.prank(owner);
+        bundler.topUpBond(1e18);
+        (,,, uint128 bond1,,,) = v.bank();
+        assertEq(bond1, bond0 + 1e18, "the bond grows by the top-up");
+        assertEq(v.balanceOf(owner), 2e18, "pulled from the owner");
+        // poke: the witness rolls for the new epoch (the hook's WitnessRolled with a live witness)
+        advance(tier.EPOCH);
+        vm.recordLogs();
+        vm.prank(owner);
+        bundler.poke();
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bool rolled;
+        for (uint256 i; i < logs.length; ++i) {
+            if (logs[i].emitter == hook && logs[i].topics[0] == keccak256("WitnessRolled(uint32,uint256,uint256,uint128)")) {
+                (,,, uint128 lw) = abi.decode(logs[i].data, (uint32, uint256, uint256, uint128));
+                rolled = lw > 0;
+            }
+        }
+        assertTrue(rolled, "poke rolled the witness");
+        // retire
+        vm.prank(owner);
+        bundler.retire();
+        (,,, uint128 bond2,, uint8 mode,) = v.bank();
+        assertEq(mode, 2, "EXITED");
+        // releaseBond: locked before exitBlock + V·EPOCH, then the whole bond to the owner
+        vm.prank(owner);
+        vm.expectRevert(FeeBank.BondLocked.selector);
+        bundler.releaseBond();
+        (, uint40 delay) = v.bankLimits();
+        advance(delay);
+        uint256 ob = v.balanceOf(owner);
+        vm.prank(owner);
+        bundler.releaseBond();
+        (,,, uint128 bond3,,,) = v.bank();
+        assertEq(bond3, 0, "the bond is released");
+        assertEq(v.balanceOf(owner) - ob, bond2, "the whole bond reaches the owner");
+        assertEq(v.balanceOf(address(bundler)), 0, "the bundler keeps nothing");
     }
 }

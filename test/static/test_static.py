@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Static checks of the tree. Run: python3 test/static/test_static.py (also collected by pytest)."""
-import os, subprocess, sys, tempfile
+import os, re, subprocess, sys, tempfile, time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+ANVIL_PK = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'  # anvil's default account 0
 
 
 def run(*args, env=None):
@@ -105,6 +106,32 @@ def test_D_3__abi_has_no_privileged_entry_point():
     planted['TouchstoneFactory'] = planted['TouchstoneFactory'] | {'deploy2'}
     bad = d3_violations(planted)
     assert any('setOwner' in b for b in bad) and any('deploy2' in b for b in bad), bad
+
+
+def test_S_2__hard_size_gate_with_an_anvil_deploy_and_the_oversized_fixture_failing():
+    """S-2 (spec §4.12 gates, §9.1): every src/ runtime <= 22,000 B by `forge build --sizes`, a real anvil deploy of
+    every src/ contract with each deployed runtime read back <= 22,000 B, and the gate rejecting the oversized fixture."""
+    r = run('script/size_gate.py')
+    assert r.returncode == 0 and 'size gate OK' in r.stdout, r.stdout + r.stderr
+    # control: the oversized fixture fails the same gate, by its size
+    r = run('script/size_gate.py', '--scope', 'test/fixtures', env={'FOUNDRY_PROFILE': 'oversized'})
+    assert r.returncode == 1 and re.search(r'Oversized: runtime \d+ B > 22000 B', r.stdout), r.stdout + r.stderr
+    port = os.environ.get('ANVIL_PORT', '8617')
+    rpc = f'http://127.0.0.1:{port}'
+    a = subprocess.Popen(['anvil', '--port', port, '--silent'], cwd=ROOT)
+    try:
+        for _ in range(50):
+            if subprocess.run(['cast', 'chain-id', '--rpc-url', rpc], capture_output=True).returncode == 0:
+                break
+            time.sleep(0.2)
+        d = subprocess.run(['forge', 'script', 'script/AnvilDeploy.s.sol', '--rpc-url', rpc, '--broadcast',
+                            '--private-key', ANVIL_PK], cwd=ROOT, capture_output=True, text=True)
+        assert d.returncode == 0, d.stdout[-2000:] + d.stderr[-2000:]
+        c = run('script/anvil_check.py', '--rpc-url', rpc)
+        assert c.returncode == 0, c.stdout + c.stderr
+    finally:
+        a.terminate()
+        a.wait()
 
 
 if __name__ == '__main__':

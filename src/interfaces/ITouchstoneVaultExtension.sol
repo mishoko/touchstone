@@ -2,6 +2,7 @@
 pragma solidity 0.8.26;
 
 import {Entry} from "../types/Entry.sol";
+import {Obs} from "../types/Obs.sol";
 
 /// @notice The vault's entry points that live in its extension. They are called on the VAULT's address: its fallback
 ///         forwards exactly these selectors (the allow-list) to the extension by `delegatecall`.
@@ -22,6 +23,8 @@ interface IVaultEntries {
 interface ITouchstoneVaultExtension is IVaultEntries {
     /// @notice The moved flows' bodies; called by the vault's `unlockCallback` (by `delegatecall`) only.
     function dispatch(Entry entry, address payer, bytes calldata args) external returns (bytes memory);
+    /// @notice The epoch roll's record write (spec §4.6 step (6)); called by the vault's checkpoint (by `delegatecall`) only.
+    function roll(Obs calldata o, uint32 ne) external;
     function VAULT() external view returns (address);
     function SELF() external view returns (address);
     function CONFIG_HASH() external view returns (bytes32);

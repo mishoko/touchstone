@@ -56,3 +56,4 @@
   27  0   20 _pend.sEnd: uint160
   28  0   16 _pend.burn0: uint128
   28 16   16 _pend.sAct: uint128
+  29  0   32 _records: mapping(uint32 => struct EpochRecord)

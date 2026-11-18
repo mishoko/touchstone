@@ -133,16 +133,20 @@
    ]
   },
   "TouchstoneHook": {
-   "runtime": 14310,
+   "runtime": 14329,
    "history": [
     {
      "runtime": 14310,
      "note": "s08 baseline: P2 with the checkpoint (steps 1-6, accrual inert), the swap counters and the dispatch/_tryRef seams"
+    },
+    {
+     "runtime": 14329,
+     "note": "s19: the epoch records (§3.9: accumulators at the checkpoint, action and settlement in the vault; roll, retire, poke and seed writes in the extension), ModeChanged, the poke's witness floor and status; the extension also carries the s18 P4 entries"
     }
    ]
   },
   "TouchstoneVault": {
-   "runtime": 17842,
+   "runtime": 19877,
    "history": [
     {
      "runtime": 14971,
@@ -187,6 +191,10 @@
     {
      "runtime": 17842,
      "note": "s16 base accrual (spec §3.5, checkpoint step 4): base amount, mint at the reference or deferral into baseOwed, sAct raised inside a markout window; vault 16,597 -> 17,842 B"
+    },
+    {
+     "runtime": 19877,
+     "note": "s19: the epoch records (§3.9: accumulators at the checkpoint, action and settlement in the vault; roll, retire, poke and seed writes in the extension), ModeChanged, the poke's witness floor and status; the extension also carries the s18 P4 entries"
     }
    ]
   },
@@ -213,11 +221,15 @@
    ]
   },
   "TouchstoneVaultExtension": {
-   "runtime": 10841,
+   "runtime": 15046,
    "history": [
     {
      "runtime": 10841,
      "note": "s16 lever (c), the per-vault extension (spec §4.12): seed/deposit/withdraw and the shared helpers moved to TouchstoneVaultExtension (10,841 B; projected ≈ 9,500 B before the s15 fee-aware settlement and the allow-list) by delegatecall from the vault's allow-listed fallback; vault 21,671 -> 16,597 B (projected 17,964 B with every s14 stub); factory +423 B (the extension's code hash, salt, creation and the two Pending fields)"
+    },
+    {
+     "runtime": 15046,
+     "note": "s19: the epoch records (§3.9: accumulators at the checkpoint, action and settlement in the vault; roll, retire, poke and seed writes in the extension), ModeChanged, the poke's witness floor and status; the extension also carries the s18 P4 entries"
     }
    ]
   }

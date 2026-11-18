@@ -315,18 +315,23 @@ contract TouchstoneHook is BaseHook, Extsload, ITouchstoneHook {
     /// @return fg1 the same for token1
     /// @return lw the new witness liquidity
     /// @return fallbackUsed the epoch had no successful refresh yet (the previous epochStartRef is used)
+    /// @return status 0 the call was ignored (`epoch <= witEpoch`), 1 the witness rolled, 2 the roll failed (the vault's
+    ///         record takes the last non-ignored roll, spec §3.9)
     function rollWitness(uint32 epoch)
         external
         onlyVault
-        returns (uint256 fg0, uint256 fg1, uint128 lw, bool fallbackUsed)
+        returns (uint256 fg0, uint256 fg1, uint128 lw, bool fallbackUsed, uint8 status)
     {
-        if (epoch <= _witEpoch) return (0, 0, 0, false);
+        if (epoch <= _witEpoch) return (0, 0, 0, false, 0);
         fallbackUsed = _epochStartRefEpoch != epoch;
         // [MU-131] the roll is fail-soft
+        status = 2;
         try this.witnessStep(epoch) returns (uint256 a, uint256 b, uint128 l) {
             (fg0, fg1, lw) = (a, b, l);
             // the flag describes the live witness: a failed roll leaves both unchanged
             _witnessFallback = fallbackUsed;
+            // [MU-297]
+            status = 1;
         } catch {}
         emit WitnessRolled(epoch, fg0, fg1, lw);
     }

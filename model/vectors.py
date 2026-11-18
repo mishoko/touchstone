@@ -1141,7 +1141,7 @@ MODE_CONV = {
 # ======================================================================== scenario (VaultHarness.checkpoint)
 VAULT_EVENTS = {"Checkpoint": ("tauV", "tauB", "nav0", "delta", "base", "L", "lo", "hi"),
                 "BreachProcessed": ("count", "lastBlock", "forfeited"), "CheckpointDeferred": (),
-                "ackBreaches": ("n",)}
+                "ModeChanged": ("from", "to"), "EpochRecorded": ("e",), "ackBreaches": ("n",)}
 
 
 class _AckStub:

@@ -19,6 +19,7 @@ import {ExpectedFlows} from "../../utils/ExpectedFlows.sol";
 import {ITouchstoneHook} from "../../../src/interfaces/ITouchstoneHook.sol";
 import {TouchstoneVault} from "../../../src/TouchstoneVault.sol";
 import {Markout} from "../../../src/types/Markout.sol";
+import {EpochRecord} from "../../../src/types/EpochRecord.sol";
 import {Holdings} from "../../../src/types/Holdings.sol";
 import {PreSwap} from "../../../src/types/PreSwap.sol";
 import {Tier} from "../../../src/types/Tier.sol";
@@ -92,6 +93,13 @@ contract VaultHandler is Test, SettleExtraOracle {
     uint256 public entryFailures;
     bytes4 public entrySelector;
     uint256 public claims;
+    /// @dev U-record's closure (spec §3.9): the shares paid by `claim`, the unvested shares planted through the
+    ///      harness seams (a seeded cohort or maturedPending, a pending reserve's non-bond part), the first epoch
+    ///      tracked and the closure's two sides at construction.
+    uint256 public claimed;
+    uint256 public planted;
+    uint32 public recEpoch0;
+    int256 public closure0;
     uint256 public topUps;
     uint256 public retires;
     uint256 public releases;
@@ -119,6 +127,8 @@ contract VaultHandler is Test, SettleExtraOracle {
         key = k;
         poolId = PoolId.wrap(keccak256(abi.encode(k)));
         (blocktime, center, swapMax0, swapMax1) = (bt, c, max0, max1);
+        recEpoch0 = v.scalars().epoch;
+        closure0 = _closure();
         swapRouter = new PoolSwapTest(m);
         t0.mint(address(this), 1e40);
         t1.mint(address(this), 1e40);
@@ -252,6 +262,7 @@ contract VaultHandler is Test, SettleExtraOracle {
         amt = bound(amt, 1, b.bondShares / 1000);
         uint32 ne = uint32(vm.getBlockNumber() / hv.tier().EPOCH);
         uint256 k = kind % 3;
+        if (k != 2) planted += amt;
         if (k == 0) {
             uint32 e = ne >= V + 1 ? ne - uint32(V + 1) : ne; // due when ne >= e + 1 + V
             Cohort memory c = b.cohorts[e % RING];
@@ -281,6 +292,7 @@ contract VaultHandler is Test, SettleExtraOracle {
         uint128 rs = uint128(bound(shares, 1, b.bondShares / 1000));
         b.bondShares -= rs;
         (b.reserveShares, b.reserveBond, b.reserveForfeit) = (rs, uint128(bound(bondPart, 0, rs)), false);
+        planted += b.reserveShares - b.reserveBond;
         hv.setBank(b);
         hv.setPending(
             uint40(vm.getBlockTimestamp()), before, a, uint128(bound(charge0, 0, 1e16)), uint128(bound(reserve, 0, 1e16))
@@ -657,6 +669,7 @@ contract VaultHandler is Test, SettleExtraOracle {
         vm.prank(c);
         try IVaultEntries(address(hv)).claim() {
             ++claims;
+            claimed += hv.balanceOf(c) - bal;
             if (hv.balanceOf(c) - bal < vu) _i16("claim paid less than the vested pay");
             if (hv.bankFull().vestedUnclaimed != 0) _i16("claim left vested pay");
         } catch (bytes memory err) {
@@ -740,7 +753,10 @@ contract VaultHandler is Test, SettleExtraOracle {
         uint256 owed = uint256(b.vestedUnclaimed) + b.bondShares;
         _claiming = true;
         vm.startPrank(c);
-        try IVaultEntries(address(hv)).claim() {} catch (bytes memory err) {
+        uint256 bc = hv.balanceOf(c);
+        try IVaultEntries(address(hv)).claim() {
+            claimed += hv.balanceOf(c) - bc;
+        } catch (bytes memory err) {
             _entryFailed(err);
         }
         try IVaultEntries(address(hv)).releaseBond() {} catch (bytes memory err) {
@@ -757,6 +773,26 @@ contract VaultHandler is Test, SettleExtraOracle {
         if (b.reserveShares != 0) _i16("reserve left encumbered");
         if (hv.balanceOf(c) - bal != owed) _i16("the curator was not paid its vested pay and bond");
         ++endgames;
+    }
+
+    /// @notice U-record's closure (spec §3.9, S19D-03, S19D2-03): Σ over the records since construction of
+    ///         (`minted − bankBurned − forfeited`) minus the closure at construction equals the change of the bank's
+    ///         unvested pay (cohorts, maturedPending, the reserve's non-bond part) plus the pay vested (unclaimed and
+    ///         claimed), less the shares planted through the harness seams.
+    function closureGap() public view returns (int256) {
+        return _closure() - closure0;
+    }
+
+    function _closure() internal view returns (int256 c) {
+        uint32 e1 = hv.scalars().epoch;
+        for (uint32 e = recEpoch0; e <= e1; ++e) {
+            EpochRecord memory r = hv.record(e);
+            c += int256(uint256(r.minted)) - int256(uint256(r.bankBurned)) - int256(uint256(r.forfeited));
+        }
+        Bank memory b = hv.bankFull();
+        uint256 u = uint256(b.maturedPending) + b.reserveShares - b.reserveBond + b.vestedUnclaimed + claimed;
+        for (uint256 k; k < RING; ++k) u += b.cohorts[k].shares;
+        c -= int256(u) - int256(planted);
     }
 
     function _i3(string memory why) internal {

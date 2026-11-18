@@ -93,8 +93,9 @@ contract WitnessFuzzTest is RealPoolBase {
         advance((b / tier.EPOCH + 1) * tier.EPOCH - b);
         uint32 e2 = uint32(vm.getBlockNumber() / tier.EPOCH);
         vm.prank(address(vault));
-        (uint256 fg0, uint256 fg1, uint128 lw, bool fbReturned) = hook.rollWitness(e2);
+        (uint256 fg0, uint256 fg1, uint128 lw, bool fbReturned, uint8 st) = hook.rollWitness(e2);
         assertEq(fg0 + fg1 + lw, 0);
+        assertEq(st, 2, "a failed roll reports status 2");
         (int24 lo2, int24 hi2, uint32 we2, uint128 l2,,) = hook.witness();
         assertEq(abi.encode(lo2, hi2, we2, l2), abi.encode(lo, hi, we, l));
         // the fallback flag still describes the unchanged witness (the failed roll would have set it differently)

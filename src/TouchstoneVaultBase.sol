@@ -20,6 +20,7 @@ import {Holdings} from "./types/Holdings.sol";
 import {Markout} from "./types/Markout.sol";
 import {Bank, Op, V} from "./types/Bank.sol";
 import {FeeBank} from "./libraries/FeeBank.sol";
+import {EpochRecord, F_WITNESS_MISSING} from "./types/EpochRecord.sol";
 
 /// @title VaultStorage
 /// @notice The one storage layout of a vault and its extension (spec §4.12): the ERC-20 state, then the vault's
@@ -54,6 +55,8 @@ abstract contract VaultStorage is ERC20 {
     Holdings internal _pBefore;
     Holdings internal _pAfter;
     Markout internal _pend;
+    /// @dev The epoch records (spec §3.9), keyed by epoch; the open one is `_records[_epoch]`.
+    mapping(uint32 => EpochRecord) internal _records;
 }
 
 /// @title VaultConfig
@@ -155,6 +158,10 @@ abstract contract VaultCommon is VaultConfig {
     event BondTopUp(uint256 shares);
     event BondReleased(address indexed to, uint256 shares);
     event Retired(uint256 forfeited);
+    /// @notice `Bank.mode` changed (place, breach, removal, retire).
+    event ModeChanged(uint8 from, uint8 to);
+    /// @notice A closed epoch record (at most two per checkpoint: the closed epoch and one gap record).
+    event EpochRecorded(uint32 indexed e, EpochRecord r);
 
     error OnlyFactory();
     error OnlyPoolManager();
@@ -247,6 +254,37 @@ abstract contract VaultCommon is VaultConfig {
 
     function _holdings() internal view returns (Holdings memory) {
         return Holdings(_idle0, _idle1, _L, _lo, _hi);
+    }
+
+    /// @dev Emits `ModeChanged` if `Bank.mode` differs from `m0`.
+    function _modeChanged(uint8 m0) internal {
+        uint8 m = _bank.mode;
+        // [MU-288] only on a change
+        if (m != m0) emit ModeChanged(m0, m);
+    }
+
+    /// @dev Opens the record of epoch `e` at this block from the hook's observation (`witnessMissing` until a roll).
+    function _openRecord(uint32 e, int24 med9, uint64 tauV, uint64 tauB) internal {
+        EpochRecord storage r = _records[e];
+        (r.start, r.med9Start, r.tauV, r.tauB) = (uint40(block.number), med9, tauV, tauB);
+        // [MU-289] a record opens with its witness missing (S19D-02)
+        r.flags |= F_WITNESS_MISSING;
+    }
+
+    /// @dev Saturating adds into the record's fields (an accumulation never reverts).
+    function _a96(uint96 x, uint256 y) internal pure returns (uint96) {
+        uint256 z = uint256(x) + y;
+        return z > type(uint96).max ? type(uint96).max : uint96(z);
+    }
+
+    function _a192(uint192 x, uint256 y) internal pure returns (uint192) {
+        uint256 z = uint256(x) + y;
+        return z > type(uint192).max ? type(uint192).max : uint192(z);
+    }
+
+    function _a128(uint128 x, uint256 y) internal pure returns (uint128) {
+        uint256 z = uint256(x) + y;
+        return z > type(uint128).max ? type(uint128).max : uint128(z);
     }
 
     function _min(uint256 a, uint256 b) internal pure returns (uint256) {

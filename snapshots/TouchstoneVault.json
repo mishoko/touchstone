@@ -1,4 +1,6 @@
 {
-  "G-4 rebalanceSwap worst case": "460179",
-  "G-4 setPositions worst case": "670792"
+  "G-3 poke (3 breaches, freeze, settle, gap roll, witness)": "627266",
+  "G-3 poke (vest, mint, settle, gap roll, witness)": "615122",
+  "G-4 rebalanceSwap worst case": "660338",
+  "G-4 setPositions worst case": "871306"
 }

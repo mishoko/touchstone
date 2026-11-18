@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.join(ROOT, 'script'))
 from storage_layout import inspect as layout_of  # noqa: E402
 
 VAULT, EXT, ENTRIES = 'TouchstoneVault', 'TouchstoneVaultExtension', 'IVaultEntries'
-EXTRA = {'dispatch'}  # P4 adds `roll` here with the record write
+EXTRA = {'dispatch', 'roll'}  # the extension's own entries (spec §4.12)
 ERC20_EXEMPT = {'transfer', 'approve', 'transferFrom'}
 EXT_ROOT = 'src/TouchstoneVaultExtension.sol'
 
@@ -159,7 +159,7 @@ def selftest():
     fn = lambda n, ins=(), m='nonpayable': dict(type='function', name=n, stateMutability=m,
                                                 inputs=[dict(type=t) for t in ins])
     entries = [fn('seed', ['uint256']), fn('deposit', ['uint256']), fn('withdraw', ['uint256'])]
-    ext = entries + [fn('dispatch', ['uint8']), fn('VAULT', m='view')] + [fn(n) for n in ERC20_EXEMPT]
+    ext = entries + [fn('dispatch', ['uint8']), fn('roll', ['uint32']), fn('VAULT', m='view')] + [fn(n) for n in ERC20_EXEMPT]
     ids = {'seed(uint256)': 'e828f5ab', 'deposit(uint256)': 'fad3cc4b', 'withdraw(uint256)': 'd331bef7'}
     vault = {'settle()': '11da60b4', 'setPositions(int24)': '0badf00d'}
     names = {'seed', 'deposit', 'withdraw'}

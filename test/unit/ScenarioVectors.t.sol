@@ -209,7 +209,8 @@ contract ScenarioVectorsTest is VectorBase, ScriptedVaultBase {
         o.epoch = uint32(_u(c, string.concat(p, ".epoch")));
     }
 
-    /// @dev The pinned events, in order: Checkpoint, BreachProcessed, CheckpointDeferred and the ackBreaches stub.
+    /// @dev The pinned events, in order: Checkpoint, BreachProcessed, CheckpointDeferred, ModeChanged, EpochRecorded
+    ///      and the ackBreaches stub.
     function _checkEmitted(string memory c, string memory p, Vm.Log[] memory logs) internal view {
         uint256 j;
         for (uint256 k; vm.keyExistsJson(c, string.concat(p, _p("[", k, "]"))); ++k) {
@@ -228,6 +229,14 @@ contract ScenarioVectorsTest is VectorBase, ScriptedVaultBase {
                 assertEq(n, _u(c, string.concat(q, ".count")), string.concat(cid, " count"));
                 assertEq(last, _u(c, string.concat(q, ".lastBlock")), string.concat(cid, " lastBlock"));
                 assertEq(forfeited, _u(c, string.concat(q, ".forfeited")), string.concat(cid, " forfeited"));
+            } else if (_eq(name, "ModeChanged")) {
+                assertEq(l.topics[0], T_MODE, string.concat(cid, " ModeChanged"));
+                (uint8 from, uint8 to) = abi.decode(l.data, (uint8, uint8));
+                assertEq(from, _u(c, string.concat(e, ".ModeChanged.from")), string.concat(cid, " ModeChanged.from"));
+                assertEq(to, _u(c, string.concat(e, ".ModeChanged.to")), string.concat(cid, " ModeChanged.to"));
+            } else if (_eq(name, "EpochRecorded")) {
+                assertEq(l.topics[0], T_RECORDED, string.concat(cid, " EpochRecorded"));
+                assertEq(uint256(l.topics[1]), _u(c, string.concat(e, ".EpochRecorded.e")), string.concat(cid, " EpochRecorded.e"));
             } else if (_eq(name, "CheckpointDeferred")) {
                 assertEq(l.topics[0], T_DEFERRED, string.concat(cid, " CheckpointDeferred"));
             } else {
@@ -253,7 +262,7 @@ contract ScenarioVectorsTest is VectorBase, ScriptedVaultBase {
     }
 
     function _pinned(bytes32 t) internal pure returns (bool) {
-        return t == T_ACK || t == T_BREACH || t == T_CHECKPOINT || t == T_DEFERRED;
+        return t == T_ACK || t == T_BREACH || t == T_CHECKPOINT || t == T_DEFERRED || t == T_MODE || t == T_RECORDED;
     }
 
     function _stateFields() internal pure returns (string[] memory f) {

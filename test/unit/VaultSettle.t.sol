@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
+import {EpochRecord} from "../../src/types/EpochRecord.sol";
+
 import {Vm} from "forge-std/Vm.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {LiquidPoolBase} from "../utils/LiquidPoolBase.sol";
@@ -219,6 +221,32 @@ contract VaultSettleTest is LiquidPoolBase, SettleExtraOracle {
         assertEq(hv.totalSupply(), S - owed, "burned to every holder");
     }
 
+    /// @notice The record of a settlement (spec §3.9, S19D-03): its extra charge, its burn split from the op's returns
+    ///         (`bankBurned += nb − relNb`, `bondBurned += reserveBond − relBond`) and, for a reserve forfeited by a
+    ///         breach while pending, `forfeited += relNb` (the non-bond remainder joining the drip), all in the record
+    ///         of the stored epoch.
+    function test_U_record__settlementRecordsItsBurnsAndAForfeitedReserve() public {
+        refPool.setTick(hi + 1000);
+        _driveBreaches(1);
+        refPool.setTick(0);
+        _pend();
+        vm.prank(alice);
+        IVaultEntries(address(hv)).withdraw(1e18, 0, 0, alice); // processes the breach: the reserve is marked
+        assertTrue(hv.bankFull().reserveForfeit, "precondition: marked to follow");
+        _scriptWindowAndRollToDue(T_MK);
+        (uint256 extra, uint256 burnS) = _expected(T_MK);
+        assertGt(burnS, 0, "precondition: a burn");
+        assertLt(burnS, RES_SHARES - RES_BOND, "precondition: a non-bond remainder");
+        uint32 e = hv.scalars().epoch;
+        EpochRecord memory b0 = hv.record(e);
+        hv.settle();
+        EpochRecord memory r = hv.record(e);
+        assertEq(r.charge - b0.charge, extra, "the settlement's extra");
+        assertEq(r.bankBurned - b0.bankBurned, burnS, "the non-bond part burned first");
+        assertEq(r.bondBurned, b0.bondBurned, "nothing from the bond's part");
+        assertEq(r.forfeited - b0.forfeited, RES_SHARES - RES_BOND - burnS, "the forfeited reserve's remainder");
+    }
+
     /// @notice The released non-bond reserve enters the settlement's epoch, not the last checkpoint's: the action sits
     ///         at the end of an epoch and the settlement in the next one; an occupied slot of an older epoch moves its
     ///         matured occupant to `maturedPending`.
@@ -293,7 +321,10 @@ contract VaultSettleTest is LiquidPoolBase, SettleExtraOracle {
     function _sweep(bool guardOff) internal returns (uint256 starved, uint256 settled) {
         _pend();
         _scriptWindowAndRollToDue(T_MK);
-        refPool.setGasFloor(tier.REF_GAS_CAP / 2); // a read needs half the cap to succeed
+        // a read needs the cap less 20k to succeed (s19: with the record's stores after the read, a starved read at half
+        // the cap no longer leaves the flow enough gas to complete, so the control needs a wider window; at the whole
+        // cap the hook's capped forward can never meet the floor)
+        refPool.setGasFloor(tier.REF_GAS_CAP - 20_000);
         hv.setGasGuardOff(guardOff);
         for (uint256 g = 100_000; g < 1_400_000; g += 5_000) {
             uint256 s = vm.snapshotState();

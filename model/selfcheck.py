@@ -701,7 +701,7 @@ def rules_pay():
     S0 = w.v.S
     w.poke()
     check(w.v.mint_reads == m0 + 1, "stale cache: the mint price comes from tryRef")
-    check(w.v.baseOwed > 0 and w.v.S == S0 and "deferred" in w.v.rec(w.block // t.EPOCH)["flags"],
+    check(w.v.baseOwed > 0 and w.v.S == S0 and any("deferred" in r["flags"] for r in w.v.records.values()),
           "no price: base amount closed into baseOwed, record flagged deferred", w.v.baseOwed)
     owed = w.v.baseOwed
     w.ref.fail = set()
@@ -718,10 +718,10 @@ def rules_pay():
     check(owed > 0, "deferred base available for the forfeiture checks")
     h = w.v.hook
     h.pendingBreaches, h.lastPendingBlock, h.tauVAtLastPending = 1, w.block, h.tauV
-    fv0 = w.v.rec(w.block // t.EPOCH)["forfeitValue"]
+    fv0 = sum(r["forfeitValue"] for r in w.v.records.values())
     w.step(1)
     w.poke()
-    check(w.v.baseOwed < owed // 2 and w.v.rec(w.block // t.EPOCH)["forfeitValue"] >= fv0 + owed,
+    check(w.v.baseOwed < owed // 2 and sum(r["forfeitValue"] for r in w.v.records.values()) >= fv0 + owed,
           "a breach forfeits baseOwed", (w.v.baseOwed, owed))
     w.v.baseOwed = owed
     w.step(t.COOLDOWN)
@@ -1582,7 +1582,7 @@ def rules_r4():
     st["ref"] = T0 + 2500
     w.keepalive_run(t.CURE_BLOCKS + 3 * t.GRID)
     unv = w.v.bank.unvested()
-    e = (w.block + 1) // t.EPOCH
+    e = w.v.epoch
     f0 = w.v.rec(e)["forfeited"]
     w.step(1)
     w.poke()
@@ -1590,21 +1590,50 @@ def rules_r4():
     check("breach" in rr["flags"] and rr["forfeited"] - f0 == unv and rr["forfeitValue"] > 0,
           "records: breach flag and forfeits", (rr["forfeited"] - f0, unv, rr["forfeitValue"]))
     w.step(10 * t.GRID)
+    e = w.v.epoch
     w.poke()
-    check("unverified" in w.v.rec(w.block // t.EPOCH)["flags"] or not w.v.hook.gapSinceVerify, "gap seen")
+    check("unverified" in w.v.rec(e)["flags"] or not w.v.hook.gapSinceVerify, "gap seen")
+    e = w.v.epoch
     w.step(1)
     w.poke()
-    check("unverified" in w.v.rec(w.block // t.EPOCH)["flags"], "records: unverified flag while a gap is open")
+    check("unverified" in w.v.rec(e)["flags"], "records: unverified flag while a gap is open")
     w = World()
     w.place(T0 - 1000, T0 + 1000)
     w.keepalive_run(t.COOLDOWN)
     w.v.baseOwed = 12345
     w.ref.fail = lambda end: True
     w.step(3 * t.GRID)
-    fv0 = w.v.rec(w.block // t.EPOCH)["forfeitValue"]
+    fv0 = sum(r["forfeitValue"] for r in w.v.records.values())
     w.v.retire(w.block, w.ts())
     w.ref.fail = set()
-    check(w.v.rec(w.block // t.EPOCH)["forfeitValue"] >= fv0 + 12345, "records: retire forfeitValue includes baseOwed")
+    check(sum(r["forfeitValue"] for r in w.v.records.values()) >= fv0 + 12345, "records: retire forfeitValue includes baseOwed")
+    # the roll (§3.9, §4.6 step 6; s19): a gap of V + 3 epochs closes `old` (stale), writes one stale gap record with an
+    # empty window and opens the new record with witnessMissing; at most two EpochRecorded; tauV is the difference
+    w = World()
+    w.place(T0 - 1000, T0 + 1000)
+    w.keepalive_run(t.COOLDOWN)
+    old = w.v.epoch
+    tv_start = w.v.rec(old)["tauV"]
+    n_ev = len(w.v.events)
+    w.step((R.V + 3) * t.EPOCH)
+    w.poke()
+    ne = w.v.epoch
+    ro, rg, rn = w.v.rec(old), w.v.rec(old + 1), w.v.rec(ne)
+    recs = [x for x in w.v.events[n_ev:] if x[0] == "EpochRecorded"]
+    check(ne == old + R.V + 3 + (1 if (w.block // t.EPOCH) > ne else 0) or ne == w.block // t.EPOCH, "roll: epoch advanced")
+    check(len(recs) == 2 and recs[0][1] == old and recs[1][1] == old + 1, "roll: at most two records, old and the gap", recs)
+    check(ro["end"] == w.block and "stale" in ro["flags"] and ro["tauV"] == w.v.hook.tauV - tv_start,
+          "roll: old closed, stale, tauV as a difference", (ro["end"], ro["flags"], ro["tauV"]))
+    check(rg["start"] == rg["end"] == w.block and rg["flags"] == {"stale", "witnessMissing"}, "roll: the gap record", rg)
+    check(rn["start"] == w.block and rn["end"] == 0 and "witnessMissing" in rn["flags"], "roll: new record opened", rn)
+    w.v.poke(w.block, w.ts(), roll=(1, 10**18, True))
+    check("witnessMissing" not in rn["flags"] and "witnessFallback" in rn["flags"], "witness: a live roll clears missing")
+    w.v.poke(w.block, w.ts(), roll=(0, 0, False))
+    check("witnessMissing" not in rn["flags"], "witness: an ignored roll writes nothing")
+    w.v.poke(w.block, w.ts(), roll=(2, 0, False))
+    check("witnessMissing" in rn["flags"], "witness: a failed roll sets missing")
+    w.v.poke(w.block, w.ts(), roll=(1, 0, False))
+    check("witnessMissing" in rn["flags"] and "witnessFallback" not in rn["flags"], "witness: lw = 0 is missing")
     # deposit and withdraw return the exact amounts paid and received (idle slice + liquidity leg)
     w = World()
     w.place(T0 - 1000, T0 + 1000)
@@ -1794,9 +1823,11 @@ def rules_r5():
     w.step(1)
     v = w.v
     o = v.hook.snapshot(w.block, w.ts(), v.pool.s, v.pool.tick)
-    e = w.block // t.EPOCH
-    fv0, b0 = v.rec(e)["forfeitValue"], v.rec(e)["base"]
-    exp_fv = R.mul_div(R.mul_div(t.m_perBlock, v.NAV0, R.WAD), v.delta0 * (o["tauVAtLastPending"] - v.tauV0), R.WAD) + v.baseOwed
+    e = v.epoch  # the record of the stored epoch (a span is recorded under the epoch it opened in, §3.9)
+    fv0, b0, lt0 = v.rec(e)["forfeitValue"], v.rec(e)["base"], v.rec(e)["lTau"]
+    exp_cut = R.mul_div(R.mul_div(t.m_perBlock, v.NAV0, R.WAD), v.delta0 * (o["tauVAtLastPending"] - v.tauV0), R.WAD)
+    exp_fv = exp_cut + v.baseOwed
+    exp_lt = v.h.L * (o["tauV"] - v.tauV0)
     exp_base = R.mul_div(R.mul_div(t.m_perBlock, v.NAV0, R.WAD), v.delta0 * (o["tauV"] - o["tauVAtLastPending"]), R.WAD)
     v._collect_first()
     S0m = v.S
@@ -1806,7 +1837,10 @@ def rules_r5():
           (v.S - S0m, exp_base))
     check(o["pendingBreaches"] == 1 and v.rec(e)["forfeitValue"] - fv0 == exp_fv and exp_fv > 0,
           "record forfeitValue = the unminted base up to b_last", (v.rec(e)["forfeitValue"] - fv0, exp_fv))
-    check(v.rec(e)["base"] - b0 == exp_base, "record base = the base after b_last", (v.rec(e)["base"] - b0, exp_base))
+    check(v.rec(e)["base"] - b0 == exp_base + exp_cut, "record base = the gross base, the cut span included (S19D-01)",
+          (v.rec(e)["base"] - b0, exp_base, exp_cut))
+    check(v.rec(e)["lTau"] - lt0 == exp_lt and exp_lt > 0, "record lTau = L·Δτ_v across the breach cut (S19D-01)",
+          (v.rec(e)["lTau"] - lt0, exp_lt))
     check(v.baseOwed == 0, "a priced breach checkpoint leaves no baseOwed", v.baseOwed)
     # empty holdings: δ = 0 (no division by zero)
     try:

@@ -22,6 +22,7 @@ import {Holdings} from "./types/Holdings.sol";
 import {Markout} from "./types/Markout.sol";
 import {PreSwap} from "./types/PreSwap.sol";
 import {Bank, Op, RING, V} from "./types/Bank.sol";
+import {EpochRecord, F_BREACH, F_REF_STALE, F_DEFERRED, F_UNVERIFIED} from "./types/EpochRecord.sol";
 import {Ladder} from "./libraries/Ladder.sol";
 import {ExecLedger} from "./libraries/ExecLedger.sol";
 import {FeeBank} from "./libraries/FeeBank.sol";
@@ -243,7 +244,9 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
             // [MU-230] [MU-231] [MU-232] a new clock run on [lo, hi) at the live reference
             HOOK.setVaultRange(lo, hi, ref);
             // [MU-233] [MU-234] NORMAL, placedByCurator
+            uint8 m0 = _bank.mode;
             FeeBank.bankApply(_bank, Op.Place, "");
+            _modeChanged(m0);
         }
         return "";
     }
@@ -327,6 +330,10 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
         // epilogue: [MU-203] NAV₀ and [MU-194] δ₀ re-based at the live reference on the new holdings
         _nav0 = _u128(nav);
         _delta0 = delta;
+        // [MU-290] the record: the charge and the burns of the action
+        EpochRecord storage r = _records[_epoch];
+        (r.charge, r.bankBurned, r.bondBurned) =
+            (_a96(r.charge, charge), _a128(r.bankBurned, bankBurn), _a128(r.bondBurned, bondBurn));
         // [MU-213]
         emit Action(kind, charge, pStar, bankBurn, bondBurn);
     }
@@ -355,9 +362,21 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
         }
         // [MU-191] the record clears (a cleared record never settles twice)
         _tAction = 0;
+        // the reserve's split and its forfeit mark, read before the op clears them (S19D-03, S19D2-03)
+        uint256 rb = b.reserveBond;
+        uint256 nb = b.reserveShares - rb;
+        bool forf = b.reserveForfeit;
         // [MU-187] the released non-bond reserve enters the current epoch's cohort
         // [MU-190] the bank's clock is the block number (the drip it may restart runs in blocks)
-        _burnBank(Op.Settle, abi.encode(burnS, uint32(block.number / EPOCH), uint40(block.number)));
+        (uint256 burned,, uint256 relBond, uint256 relNb) =
+            FeeBank.bankApply(b, Op.Settle, abi.encode(burnS, uint32(block.number / EPOCH), uint40(block.number)));
+        if (burned > 0) _burn(address(this), burned);
+        // [MU-291] the record: the settlement's value and burns, and a forfeited reserve's non-bond part
+        EpochRecord storage r = _records[_epoch];
+        r.charge = _a96(r.charge, extra);
+        r.bankBurned = _a128(r.bankBurned, nb - relNb);
+        r.bondBurned = _a128(r.bondBurned, rb - relBond);
+        if (forf) r.forfeited = _a128(r.forfeited, relNb);
         emit Settled(_pend.charge0, extra, tickMk, !ok);
     }
 
@@ -400,6 +419,12 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
         uint32 ne = o.epoch;
         int24 lo = _lo;
         int24 hi = _hi;
+        // the record of the stored epoch: the segment closed here opened in it (spec §3.9)
+        EpochRecord storage r = _records[_epoch];
+        uint8 fl;
+        // [MU-292] [MU-293]
+        if (o.gapSinceVerify) fl = F_UNVERIFIED;
+        if (!o.refFresh) fl |= F_REF_STALE;
         // (1) the vest gate, evaluated once: the cache legs, then the live leg only when something is vestable
         bool vestable = _vestable(b, ne);
         bool gateOpen;
@@ -417,10 +442,23 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
         uint32 n = o.pendingBreaches;
         // [MU-049] every checkpoint processes pending breaches
         if (n > 0) {
+            // the cut span [τ_v0, tauVAtLastPending): exposure and gross base in the record, its base forfeited
+            // (S19D-01); eligibility read before the op (the removal breach clears placedByCurator, S19D2-02)
+            uint64 cutTau = o.tauVAtLastPending > _tauV0 ? o.tauVAtLastPending - _tauV0 : 0;
+            // [MU-294]
+            r.lTau = _a192(r.lTau, uint256(_L) * cutTau);
+            uint256 cut = b.placedByCurator && b.mode != Ladder.EXITED ? _baseAmount(cutTau) : 0;
+            r.base = _a96(r.base, cut);
+            // [MU-295] the forfeited base value: the cut span and the deferred base
+            r.forfeitValue = _a96(r.forfeitValue, cut + _baseOwed);
             // [MU-080] [MU-097] deferred base is forfeited by a breach
             _baseOwed = 0;
+            uint8 m0 = b.mode;
             // [MU-123] every pending breach is counted and acknowledged
             uint256 forfeited = _burnBank(Op.Breach, abi.encode(n, now_));
+            r.forfeited = _a128(r.forfeited, forfeited);
+            fl |= F_BREACH;
+            _modeChanged(m0);
             // [MU-166] the hook's pending count is reduced by what was processed
             HOOK.ackBreaches(n);
             emit BreachProcessed(n, o.lastPendingBlock, forfeited);
@@ -433,6 +471,9 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
         // [MU-034]
         uint256 base = b.placedByCurator && b.mode != Ladder.EXITED ? _baseAmount(o.tauV - _tauV0) : 0;
         uint256 amount = base + _baseOwed;
+        // [MU-296] the record: the segment's gross base and its exposure L·Δτ_v
+        r.base = _a96(r.base, base);
+        r.lTau = _a192(r.lTau, uint256(_L) * (o.tauV - _tauV0));
         if (amount > 0) {
             // the price: the cached reference if fresh, else a live read (none if it fails: the amount is deferred)
             bool priced = o.refFresh;
@@ -456,23 +497,25 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
                     // [MU-083]
                     _baseOwed = 0;
                     minted = true;
+                    r.minted = _a128(r.minted, shares);
                 }
             }
             if (!minted) {
                 _baseOwed = _u128(amount);
+                fl |= F_DEFERRED;
                 emit CheckpointDeferred();
             }
         }
         _tauV0 = o.tauV;
         _segStart = now_;
+        r.flags |= fl;
         emit Checkpoint(o.tauV, o.tauB, _nav0, _delta0, base, _L, lo, hi);
         // (5) [MU-030] vest after breach processing: vested with the gate open, else held in maturedPending
         // [MU-171] the gate decides
         if (vestable) FeeBank.bankApply(b, Op.VestTime, abi.encode(ne, gateOpen));
-        // (6) the epoch roll
+        // (6) the epoch roll: the extension closes the record(s), opens the new one and advances the epoch
         if (ne > _epoch) {
-            // [MU-170]
-            _epoch = ne;
+            _delegate(abi.encodeCall(ITouchstoneVaultExtension.roll, (o, ne)));
             // [MU-132] the swap counters restart every epoch
             _epochSwapFrac = 0;
             _swapCount = 0;

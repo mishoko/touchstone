@@ -13,6 +13,7 @@ import {Bank, Cohort, RING} from "../../src/types/Bank.sol";
 import {Tiers} from "../../script/Tiers.sol";
 import {VaultHarness} from "./VaultHarness.sol";
 import {TouchstoneVaultExtension} from "../../src/TouchstoneVaultExtension.sol";
+import {VaultCommon} from "../../src/TouchstoneVaultBase.sol";
 
 /// @notice The scripted harness's hook: records `ackBreaches` as an event, in order with the vault's events.
 contract AckRecorder {
@@ -90,6 +91,8 @@ abstract contract ScriptedVaultBase is Test {
     bytes32 internal constant T_BREACH = keccak256("BreachProcessed(uint32,uint40,uint256)");
     bytes32 internal constant T_DEFERRED = keccak256("CheckpointDeferred()");
     bytes32 internal constant T_ACK = keccak256("AckBreaches(uint32)");
+    bytes32 internal constant T_MODE = keccak256("ModeChanged(uint8,uint8)");
+    bytes32 internal constant T_RECORDED = keccak256("EpochRecorded(uint32,(uint40,uint40,int24,int24,uint64,uint64,uint192,uint8,uint96,uint96,uint128,uint128,uint128,uint128,uint96))");
 
     function _newHarness() internal returns (VaultHarness h) {
         (Tier memory t,) = Tiers.testing();

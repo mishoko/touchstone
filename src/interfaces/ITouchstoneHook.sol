@@ -41,5 +41,7 @@ interface ITouchstoneHook {
     function armAtSeed() external;
     function ackBreaches(uint32 n) external;
     function fundWitness(uint256 a0, uint256 a1) external;
-    function rollWitness(uint32 epoch) external returns (uint256 fg0, uint256 fg1, uint128 lw, bool fallbackUsed);
+    function rollWitness(uint32 epoch)
+        external
+        returns (uint256 fg0, uint256 fg1, uint128 lw, bool fallbackUsed, uint8 status);
 }

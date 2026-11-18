@@ -12,6 +12,7 @@ import {Ladder} from "./libraries/Ladder.sol";
 import {ExecLedger} from "./libraries/ExecLedger.sol";
 import {FeeBank} from "./libraries/FeeBank.sol";
 import {Op} from "./types/Bank.sol";
+import {EpochRecord, F_STALE, F_WITNESS_MISSING, F_WITNESS_FALLBACK} from "./types/EpochRecord.sol";
 import {VaultCommon} from "./TouchstoneVaultBase.sol";
 
 /// @title TouchstoneVaultExtension
@@ -30,6 +31,12 @@ contract TouchstoneVaultExtension is VaultCommon {
     address public immutable VAULT;
     /// @notice This contract's own address: a call whose `address(this)` is this is a direct call, not a delegatecall.
     address public immutable SELF;
+
+    /// @notice The gas `poke` must hold before the witness roll (F-048 (b), spec §4.6 poke): two 63/64 hops above the
+    ///         worst measured `witnessStep` (a removal and an add on fresh ticks), so a caller cannot starve the roll into
+    ///         a recorded failure. Measured in G-3's pokes (s19): `rollWitness` 164,796 / 180,406 gas (`witnessStep`
+    ///         159,249 / 174,859), so two hops and 30k of overhead need ≈ 220k; 400k covers cold accounts and fresh ticks.
+    uint256 public constant WITNESS_GAS_MIN = 400_000;
 
     constructor() {
         VAULT = ITouchstoneFactory(msg.sender).pending().vault;
@@ -155,13 +162,35 @@ contract TouchstoneVaultExtension is VaultCommon {
             // [MU-279] the deferred base is forfeited with the rest (S16B-05): the checkpoint mints `baseOwed` in any
             // mode, so this write is what keeps it out of EXITED (the prologue's checkpoint has already closed the
             // segment; the forfeited value enters the epoch record with the records, s19)
+            // [MU-298] the record: the forfeited deferred base's value, read before it is zeroed (S18D-05)
+            EpochRecord storage r = _records[_epoch];
+            r.forfeitValue = _a96(r.forfeitValue, _baseOwed);
             _baseOwed = 0;
-            emit Retired(_burnBank(Op.Retire, abi.encode(uint40(block.number))));
+            uint8 m0 = _bank.mode;
+            uint256 forfeited = _burnBank(Op.Retire, abi.encode(uint40(block.number)));
+            r.forfeited = _a128(r.forfeited, forfeited);
+            _modeChanged(m0);
+            emit Retired(forfeited);
             return "";
         }
         if (entry == Entry.Poke) {
+            // [MU-299] the caller cannot starve the roll into a recorded failure (F-048 (b))
+            if (gasleft() < _witnessGasMin()) revert RefGas();
+            uint32 e = _epoch;
             // [MU-282] the witness roll (fail-soft in the hook; it ignores an epoch already rolled)
-            HOOK.rollWitness(_epoch);
+            (,, uint128 lw, bool fb, uint8 st) = HOOK.rollWitness(e);
+            // the record (spec §3.9, S19D-02): it opened with `witnessMissing`; a successful roll writes the fallback flag
+            // and clears `witnessMissing` if the witness is live (L_W > 0). A failed roll (status 2) needs no write: the
+            // flag can only be clear after a successful roll of this epoch, after which the hook ignores every roll.
+            if (st == 1) {
+                EpochRecord storage r = _records[e];
+                // [MU-300]
+                uint8 f = r.flags & ~(F_WITNESS_MISSING | F_WITNESS_FALLBACK);
+                if (fb) f |= F_WITNESS_FALLBACK;
+                // [MU-301] an unfunded witness (L_W = 0) is missing
+                if (lw == 0) f |= F_WITNESS_MISSING;
+                r.flags = f;
+            }
             return "";
         }
         // [MU-172] processBreach is the prologue alone (an entry without its branch would reach the tail below)
@@ -179,6 +208,39 @@ contract TouchstoneVaultExtension is VaultCommon {
         if (op == Op.Claim) emit Claim(curator, pay);
         else emit BondReleased(curator, pay);
         return "";
+    }
+
+    /// @notice The epoch roll (spec §4.6 step (6), §3.9): closes the record of the stored epoch, writes one gap record
+    ///         if epochs were skipped (both flagged `stale`), emits `EpochRecorded` for each (at most two), opens the
+    ///         record of `ne` and advances the epoch. Run only inside the vault's checkpoint (by `delegatecall`).
+    ///         It refuses a direct call (`delegated`); it is off the fallback's allow-list, so only the vault's own code
+    ///         reaches it (no `MANAGER` check: the test harness scripts the checkpoint outside `unlock`, X14-05).
+    function roll(Obs calldata o, uint32 ne) external delegated {
+        uint32 old = _epoch;
+        EpochRecord storage r = _records[old];
+        // [MU-302] the end fields; tauV/tauB become the differences over the window
+        (r.end, r.med9End) = (uint40(block.number), o.med9);
+        (r.tauV, r.tauB) = (o.tauV > r.tauV ? o.tauV - r.tauV : 0, o.tauB > r.tauB ? o.tauB - r.tauB : 0);
+        // [MU-303] skipped epochs: `old` spans them and one gap record marks them
+        if (ne > old + 1) {
+            r.flags |= F_STALE;
+            EpochRecord storage g = _records[old + 1];
+            (g.start, g.end, g.med9Start, g.med9End) = (uint40(block.number), uint40(block.number), o.med9, o.med9);
+            g.flags |= F_STALE | F_WITNESS_MISSING;
+            emit EpochRecorded(old, r);
+            emit EpochRecorded(old + 1, g);
+        } else {
+            emit EpochRecorded(old, r);
+        }
+        // [MU-304] the new record opens and the epoch advances
+        _openRecord(ne, o.med9, o.tauV, o.tauB);
+        // [MU-170]
+        _epoch = ne;
+    }
+
+    /// @dev The witness roll's gas floor (a seam for the test harness's control).
+    function _witnessGasMin() internal view virtual returns (uint256) {
+        return WITNESS_GAS_MIN;
     }
 
     // ------------------------------------------------------------------ flows
@@ -210,6 +272,8 @@ contract TouchstoneVaultExtension is VaultCommon {
         _nav0 = _u128(navAtRef);
         _delta0 = 0;
         _epoch = o.epoch;
+        // [MU-305] the first record opens at seed
+        _openRecord(o.epoch, o.med9, o.tauV, o.tauB);
         _segStart = uint40(block.number);
         _tauV0 = o.tauV;
         // [MU-074] the drip length and the release delay are written once, at seed

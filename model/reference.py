@@ -950,8 +950,33 @@ class Vault:
         return value(self.h, sqrt_p)[0]
 
     def rec(self, e):
-        return self.records.setdefault(e, dict(base=0, charge=0, minted=0, bankBurned=0, bondBurned=0,
-                                               forfeited=0, forfeitValue=0, flags=set(), tauV=0))
+        """The §3.9 record of epoch e (the stored epoch at the write: a span is recorded under the epoch it opened in).
+        While open: end = 0 and tauV/tauB hold the counters at start; the roll replaces them by the differences."""
+        return self.records.setdefault(e, dict(start=0, end=0, med9Start=0, med9End=0, tauV=0, tauB=0, lTau=0,
+                                               base=0, charge=0, minted=0, bankBurned=0, bondBurned=0,
+                                               forfeited=0, forfeitValue=0, flags=set()))
+
+    def _open_record(self, e, now, o):
+        r = self.rec(e)
+        r.update(start=now, med9Start=o["med9"], tauV=o["tauV"], tauB=o["tauB"])
+        r["flags"].add("witnessMissing")   # cleared only by a successful roll with L_W > 0 in the epoch (S19D-02)
+
+    def _roll(self, o, ne, now):
+        """§4.6 step (6) / §4.12 roll(o, ne): close the stored epoch's record, at most one gap record, open ne's."""
+        old = self.epoch
+        r = self.rec(old)
+        r.update(end=now, med9End=o["med9"], tauV=max(o["tauV"] - r["tauV"], 0), tauB=max(o["tauB"] - r["tauB"], 0))
+        out = [old]
+        if ne > old + 1:
+            r["flags"].add("stale")
+            g = self.rec(old + 1)
+            g.update(start=now, end=now, med9Start=o["med9"], med9End=o["med9"])
+            g["flags"] |= {"stale", "witnessMissing"}
+            out.append(old + 1)
+        for e in out:
+            self.events.append(("EpochRecorded", e))
+        self._open_record(ne, now, o)
+        self.epoch = ne
 
     # ---- prologue pieces
     def _snapshot(self, now, ts):
@@ -988,21 +1013,29 @@ class Vault:
             self.live_reads += 1
             live_read, live_tick = ok, t
             gate_open = ok and in_rng(lo, hi, t)
-        r = self.rec(ne)
+        r = self.rec(self.epoch)
         if o["gapSinceVerify"]:
             r["flags"].add("unverified")
+        if not o["refFresh"]:
+            r["flags"].add("refStale")
         # (2) drip
         burned, _, _, _ = fee_bank_apply(b, "Drip", dict(now=now))
         self.S -= burned
         # (3) pending breaches
         if o["pendingBreaches"] > 0:
             n = o["pendingBreaches"]
+            # the cut span [τ_v0, tauVAtLastPending): exposure and gross base in the record, its base forfeited (S19D-01)
+            r["lTau"] += self.h.L * max(o["tauVAtLastPending"] - self.tauV0, 0)
             if self._eligible():
                 fv = self._base_amount(o["tauVAtLastPending"] - self.tauV0)
+                r["base"] += fv
                 r["forfeitValue"] += fv
             r["forfeitValue"] += self.baseOwed
             self.baseOwed = 0
+            m0 = b.mode
             burned, _, forfeited, _ = fee_bank_apply(b, "Breach", dict(count=n, now=now))
+            if b.mode != m0:
+                self.events.append(("ModeChanged", m0, b.mode))
             self.S -= burned
             r["forfeited"] += forfeited
             r["flags"].add("breach")
@@ -1014,6 +1047,7 @@ class Vault:
         base = self._base_amount(o["tauV"] - self.tauV0) if self._eligible() else 0
         amount = base + self.baseOwed
         r["base"] += base
+        r["lTau"] += self.h.L * max(o["tauV"] - self.tauV0, 0)
         if amount > 0:
             price = None
             if o["refFresh"]:
@@ -1046,10 +1080,7 @@ class Vault:
         fee_bank_apply(b, "VestTime", dict(nowEpoch=ne, gateOpen=gate_open))
         # (6) epoch roll
         if ne > self.epoch:
-            self.rec(self.epoch)["end"] = now
-            if ne > self.epoch + 1:
-                self.rec(self.epoch + 1)["flags"].add("stale")
-            self.epoch = ne
+            self._roll(o, ne, now)
             self.epochSwapFrac = 0
             self.swapCount = 0
         return live_read, live_tick
@@ -1070,9 +1101,15 @@ class Vault:
                                                b.reserveShares)
         else:
             extra, burn_s = pd["reserve"], b.reserveShares
+        nb, rb, forf = b.reserveShares - b.reserveBond, b.reserveBond, b.reserveForfeit
         burned, _, rel_bond, rel_nb = fee_bank_apply(b, "Settle", dict(burnS=burn_s, epoch=now // t.EPOCH, now=now))
         self.S -= burned
-        self.rec(now // t.EPOCH)["charge"] += extra
+        r = self.rec(self.epoch)
+        r["charge"] += extra
+        r["bankBurned"] += nb - rel_nb
+        r["bondBurned"] += rb - rel_bond
+        if forf:
+            r["forfeited"] += rel_nb   # a forfeited reserve's non-bond part joins the drip (S19D-03)
         self.pending = None
         self.events.append(("Settled", pd["charge0"], extra, tick, not ok))   # a failed read returns tick 0
         return extra, burn_s, ok
@@ -1101,6 +1138,7 @@ class Vault:
             if mul_div(nav_ref, self.bank.bondShares, self.S) < self.t.BOND_MIN:
                 raise Revert("BondMin")
         self.epoch = now // self.t.EPOCH
+        self._open_record(self.epoch, now, self.hook.obs(now, self.pool.tick))
         self.NAV0 = self.nav(get_sqrt_price_at_tick(self.hook.refTick))
         self.delta0 = 0
         self.tauV0 = self.hook.tauV
@@ -1276,7 +1314,10 @@ class Vault:
             if d_after < t.DELTA_MIN:
                 raise Revert("DeltaMin")
             self.hook.set_vault_range(lo, hi, ref, now, ts)
+            m0 = self.bank.mode
             fee_bank_apply(self.bank, "Place", {})
+            if self.bank.mode != m0:
+                self.events.append(("ModeChanged", m0, self.bank.mode))
             self.lastAction = now
             self.NAV0, self.delta0 = self.nav(s_ref), delta_of(self.h, s_ref)
             return charge, p_star, burn, d_after
@@ -1293,8 +1334,27 @@ class Vault:
             return charge, p_star, burn
         return self.call(f)
 
-    def poke(self, now, ts):
-        return self.call(lambda: (self.prologue(now, ts), self._gate("Poke")))
+    def poke(self, now, ts, roll=None):
+        """poke(): the prologue, then the witness roll. The model has no witness position: `roll` is the hook's
+        (status, lw, fallbackUsed) for this call (status 0 ignored, 1 rolled, 2 failed; None = not modelled)."""
+        def f():
+            self.prologue(now, ts)
+            self._gate("Poke")
+            if roll is not None:
+                st, lw, fb = roll
+                fl = self.rec(self.epoch)["flags"]
+                if st == 1:
+                    # a successful roll writes the witness's fallback flag; it is live only with L_W > 0
+                    fl.discard("witnessFallback")
+                    if fb:
+                        fl.add("witnessFallback")
+                    if lw > 0:
+                        fl.discard("witnessMissing")
+                    else:
+                        fl.add("witnessMissing")
+                elif st == 2:
+                    fl.add("witnessMissing")
+        return self.call(f)
 
     def settle(self, now, ts):
         """settle(): open; the prologue only (settlement step 0, then the checkpoint)."""
@@ -1316,9 +1376,14 @@ class Vault:
             self._gate("Retire")
             fv = self.baseOwed
             self.baseOwed = 0
+            m0 = self.bank.mode
             burned, _, forfeited, _ = fee_bank_apply(self.bank, "Retire", dict(now=now))
             self.S -= burned
-            self.rec(now // self.t.EPOCH)["forfeitValue"] += fv
+            r = self.rec(self.epoch)
+            r["forfeitValue"] += fv
+            r["forfeited"] += forfeited
+            if self.bank.mode != m0:
+                self.events.append(("ModeChanged", m0, self.bank.mode))
             return forfeited
         return self.call(f)
 

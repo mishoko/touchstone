@@ -81,6 +81,8 @@ contract VaultP4EntriesTest is HarnessVaultBase {
         Bank memory b = hv.bankFull();
         assertEq(b.mode, Ladder.EXITED, "EXITED");
         assertEq(hv.scalars().baseOwed, 0, "retire zeroes baseOwed");
+        // the record keeps the forfeited deferred base's value (S18D-05, F-048 (a)): OWED plus the retire's own segment
+        assertGe(hv.record(hv.scalars().epoch).forfeitValue, OWED, "retire records the forfeited baseOwed value");
         assertEq(_cohortSum() + b.maturedPending, 0, "every unvested bucket forfeited");
         assertEq(b.forfeitPool, 7e18, "cohorts and maturedPending in the drip");
         assertFalse(b.placedByCurator, "placedByCurator cleared");

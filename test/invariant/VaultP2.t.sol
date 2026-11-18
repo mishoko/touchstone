@@ -105,6 +105,12 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
 
     /// @notice I-12: a flow's NAV0 re-base uses the supply after the prologue (the settlement burn, the drip, the
     ///         base mint): the next NAV0 is post-settlement.
+    /// @notice U-record's closure (spec §3.9): the records' share fields account for every unvested share the bank
+    ///         gains, loses or vests (see `VaultHandler.closureGap`).
+    function invariant_U_record__recordsCloseTheBank() public view {
+        assertEq(handler.closureGap(), 0, "records closure");
+    }
+
     function invariant_I_12__nextNav0IsPostSettlement() public view {
         assertEq(handler.i12Failures(), 0, "I-12");
     }

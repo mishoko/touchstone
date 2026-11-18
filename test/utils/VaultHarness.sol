@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
+import {EpochRecord} from "../../src/types/EpochRecord.sol";
+
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {PoolId} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
@@ -283,6 +285,16 @@ contract VaultHarness is TouchstoneVault {
         returns (uint40 tA, Holdings memory before, Holdings memory after_, uint128 charge0, uint128 reserve)
     {
         return (_tAction, _pBefore, _pAfter, _pend.charge0, _pend.reserve);
+    }
+
+    /// @notice The epoch record of `e` (spec §3.9).
+    function record(uint32 e) external view returns (EpochRecord memory) {
+        return _records[e];
+    }
+
+    /// @notice Test-only: overwrite the record of `e`.
+    function setRecord(uint32 e, EpochRecord calldata r) external {
+        _records[e] = r;
     }
 
     // ------------------------------------------------------------------ scripted checkpoint

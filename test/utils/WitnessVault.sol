@@ -43,7 +43,7 @@ contract WitnessVault is IUnlockCallback {
             return "";
         }
         uint32 epoch = abi.decode(args, (uint32));
-        (uint256 fg0, uint256 fg1, uint128 lw, bool fb) = hook.rollWitness(epoch);
+        (uint256 fg0, uint256 fg1, uint128 lw, bool fb,) = hook.rollWitness(epoch);
         return abi.encode(fg0, fg1, lw, fb);
     }
 

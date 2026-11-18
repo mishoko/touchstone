@@ -19,13 +19,16 @@ import {Tier} from "../../src/types/Tier.sol";
 import {HookMining} from "../Mine.s.sol";
 import {Tiers} from "../Tiers.sol";
 import {Addresses} from "../Addresses.sol";
+import {DemoToken} from "./DemoKit.sol";
 
 /// @notice DEMO deploy (spec §4.8 steps 1-4b) on Unichain Sepolia, after step 0b (`DemoRef.s.sol` and the warm-up):
 ///         the factory against the canonical v4 PoolManager, the curator's `CuratorBundler`, the hook salt mined for
 ///         the bundler, and `deployAndPlace` (factory.deploy with the seed, then the first placement, one
 ///         transaction). The DEMO tier takes the mock-token reference pool and the reference price read here.
 ///         Env: REF_POOL (the v3 reference pool from step 0b). The deployer holds the mock tokens (step 0b minted them).
-///         Run: `REF_POOL=<pool> forge script script/demo/DeployDemo.s.sol --rpc-url <unichain sepolia> --private-key $DEPLOYER_PK --broadcast --slow`
+///         Run: `REF_POOL=<pool> forge script script/demo/DeployDemo.s.sol --rpc-url <unichain sepolia> --private-key $DEPLOYER_PK --broadcast --slow --gas-estimate-multiplier 115`
+///         (`deployAndPlace` uses ~12.6M gas; the default 1.3x multiplier exceeds the chain's 2^24 per-transaction cap).
+///         The addresses of the 2026-11-18 deploy are recorded by hand in `script/demo/deployments-1301.json`.
 contract DeployDemo is Script {
     uint24 internal constant FEE = 500;
     int24 internal constant SPACING = 10;
@@ -34,6 +37,7 @@ contract DeployDemo is Script {
 
     error WrongChain(uint256 chainId);
     error History();
+    error NotDemoToken();
 
     function run() external {
         if (block.chainid != 1301) revert WrongChain(block.chainid);
@@ -54,6 +58,8 @@ contract DeployDemo is Script {
         IUniswapV3PoolOracle r = IUniswapV3PoolOracle(refPool);
         IERC20 t0 = IERC20(r.token0());
         IERC20 t1 = IERC20(r.token1());
+        // the token allow-list (spec §4.8): the mock tokens of step 0b, mintable only by this deployer
+        if (DemoToken(address(t0)).minter() != msg.sender || DemoToken(address(t1)).minter() != msg.sender) revert NotDemoToken();
 
         vm.startBroadcast();
         address me = msg.sender;

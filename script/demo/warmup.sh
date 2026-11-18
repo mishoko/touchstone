@@ -3,7 +3,8 @@
 # = 900 s before the vault is deployed, so the reference pool holds a TWAP history. A bounded random walk around the
 # start tick; one swap per SPACING seconds (>= (GRID_SEC + REF_WINDOW) / MIN_CARD = 0.6 s).
 # Usage: RPC=<unichain sepolia> DRIVER=<RefDriver> POOL=<v3 pool> DURATION=960 script/demo/warmup.sh
-# Needs DEPLOYER_PK in the environment (never printed).
+# Needs DEPLOYER_PK in the environment (never printed). cast takes it as --private-key, so it is visible to local
+# process listings while a swap is sent: run on a single-user machine, testnet keys only.
 set -euo pipefail
 : "${RPC:?}" "${DRIVER:?}" "${POOL:?}" "${DEPLOYER_PK:?}"
 DURATION=${DURATION:-960}

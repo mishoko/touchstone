@@ -144,6 +144,23 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         assertEq(handler.i5Failures(), 0, handler.i5Why());
     }
 
+    /// @notice I-15's counters do not overcount (s20 fix review S20F-01, S20F-02): a matured plant after this block's
+    ///         checkpoint is not a gate the live leg closed, and a retire is not a removal.
+    function test_I_15__countersDoNotOvercount() public {
+        for (uint256 i; i < 3; ++i) handler.deposit(i, 5e22);
+        // the cache in range and fresh, the live leg out; a checkpoint with nothing matured, then a plant in the block
+        while (vm.getBlockTimestamp() % 240 >= 12) handler.advance(1);
+        handler.refresh();
+        handler.moveRef(3000);
+        for (uint256 i; i < 16; ++i) handler.advance(1);
+        handler.withdraw(0, 1e18); // a checkpoint this block, nothing vestable
+        handler.seedBank(1, 1e20); // maturedPending planted after it, same block, no checkpoint
+        assertEq(handler.gateClosedLive(), 0, "a plant after the checkpoint is not a closed gate");
+        handler.retire(0);
+        assertEq(handler.retires(), 1, "retired");
+        assertEq(handler.removals(), 0, "a retire is not a removal");
+    }
+
     /// @notice I-15: a fixed sequence reaches every counter of the row (the random campaign's totals are checked by
     ///         `script/nonvacuity.py`), with no I-5, I-8 or I-13 failure on the way.
     function test_I_15__everyNonVacuityCounterIsReachable() public {
@@ -188,6 +205,7 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         assertEq(handler.i8Failures(), 0, handler.i8Why());
         assertEq(handler.i13Failures(), 0, handler.i13Why());
         assertGt(handler.i8Checks(), 0, "I-8 checked a live witness");
+        assertGt(handler.i13Checks(), 0, "I-13 checked with a second range recorded");
         assertGt(handler.curatorPlacements(), 0, "placement");
         assertGt(handler.curatorSwaps(), 0, "swap");
         assertGt(handler.chargedRecords(), 0, "charge > 0");

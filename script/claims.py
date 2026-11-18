@@ -18,7 +18,7 @@ import json, glob, os, re, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CLAIMS = os.path.join(ROOT, 'test', 'CLAIMS.md')
 PHASES = ['P0', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6']
-ROW = re.compile(r'^\| (?P<id>[A-Z]+(?:-[A-Za-z0-9]+)*|E[0-9]+) \| (?P<due>P\d) \| (?P<kind>test|eval) \|$', re.M)
+ROW = re.compile(r'^\| (?P<id>[A-Z]+(?:-[A-Za-z0-9]+)*|E[0-9]+[a-z]?) \| (?P<due>P\d) \| (?P<kind>test|eval) \|$', re.M)
 
 
 def pattern(i):
@@ -45,8 +45,8 @@ def test_text(root):
 
 def eval_passed(path):
     """An eval result covers its ID only when it exists and its verdict is PASS (a FAIL is an unmet claim), or when it
-    is a published negative result (`verdict` FAIL, `negative_result` true) whose `superseded_by` eval exists in the
-    same directory with verdict PASS. The failed result stays FAIL and is published; only the amended eval can meet
+    is a published negative result (`verdict` FAIL, `negative_result` true, a non-empty `decision` naming the ruling)
+    whose `superseded_by` eval exists in the same directory with verdict PASS. The failed result stays FAIL and is published; only the amended eval can meet
     the row."""
     if not os.path.exists(path):
         return False
@@ -55,7 +55,9 @@ def eval_passed(path):
         if r.get('verdict') == 'PASS':
             return True
         sup = r.get('superseded_by')
-        if r.get('verdict') == 'FAIL' and r.get('negative_result') is True and isinstance(sup, str) and sup:
+        dec = r.get('decision')
+        if (r.get('verdict') == 'FAIL' and r.get('negative_result') is True and isinstance(sup, str) and sup
+                and isinstance(dec, str) and dec):
             q = os.path.join(os.path.dirname(path), sup + '.json')
             return os.path.exists(q) and json.load(open(q)).get('verdict') == 'PASS'
         return False
@@ -92,7 +94,7 @@ def _matrix_ids(spec):
 
 
 def _eval_ids(spec):
-    return list(dict.fromkeys(re.findall(r'^\| (E[0-9]+|E-[A-Z]+) \|', spec, re.M)))
+    return list(dict.fromkeys(re.findall(r'^\| (E[0-9]+[a-z]?|E-[A-Z]+) \|', spec, re.M)))
 
 
 def _due(spec):
@@ -154,7 +156,7 @@ def selftest(rows):
         if missing([('E0', 'P4', 'eval')], 'function test_E0__x()', 'P4', d) != ['E0']:
             errs.append('fixture: a test named after an eval must not cover it')
         # a published negative result meets its row only through a PASS successor
-        json.dump({'verdict': 'FAIL', 'negative_result': True, 'superseded_by': 'E0a'}, open(rp, 'w'))
+        json.dump({'verdict': 'FAIL', 'negative_result': True, 'superseded_by': 'E0a', 'decision': 'x'}, open(rp, 'w'))
         sp = os.path.join(d, 'eval', 'results', 'E0a.json')
         if missing([('E0', 'P4', 'eval')], '', 'P4', d) != ['E0']:
             errs.append('fixture: a negative result without its successor must leave its ID missing')
@@ -164,12 +166,19 @@ def selftest(rows):
         json.dump({'verdict': 'PASS'}, open(sp, 'w'))
         if missing([('E0', 'P4', 'eval')], '', 'P4', d):
             errs.append('fixture: a negative result with a PASS successor must meet its ID')
+        json.dump({'verdict': 'FAIL', 'negative_result': True, 'superseded_by': 'E0a'}, open(rp, 'w'))
+        if missing([('E0', 'P4', 'eval')], '', 'P4', d) != ['E0']:
+            errs.append('fixture: a negative result without its decision must leave its ID missing')
         json.dump({'verdict': 'FAIL', 'superseded_by': 'E0a'}, open(rp, 'w'))
         if missing([('E0', 'P4', 'eval')], '', 'P4', d) != ['E0']:
             errs.append('fixture: a FAIL not marked as a negative result must leave its ID missing')
         json.dump({'verdict': 'PASS'}, open(rp, 'w'))
         if missing([('E0', 'P4', 'eval')], '', 'P4', d):
             errs.append('fixture: a PASS eval result must cover its ID')
+    if _eval_ids('| E0 | q | p |\n| E0a | q | p |\n') != ['E0', 'E0a']:
+        errs.append('fixture: a suffixed eval ID (E0a) must be listed')
+    if not ROW.search('| E0a | P4 | eval |'):
+        errs.append('fixture: a suffixed eval ID (E0a) must parse as a claims row')
     for e in errs:
         print('claims selftest:', e)
     print('claims selftest', 'OK' if not errs else 'FAIL')

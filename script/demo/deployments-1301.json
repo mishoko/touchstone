@@ -1,0 +1,27 @@
+{
+  "chain": "Unichain Sepolia (1301)",
+  "tier": "DEMO",
+  "date": "2026-11-18",
+  "code": "public commit 6061d68",
+  "step0b": {
+    "mUSDC_token0": "0x2295cd39Ad6FC4355B7fBf400567D32E9d070EF2",
+    "mWETH_token1": "0xC39161F7D7b8890c14b070758D23a1c849C2D36c",
+    "v3_reference_pool_500": "0x84517dBDaa924A8d9bc2abb97BAAB40A648EC972",
+    "ref_driver": "0x9D6c8584760a35FEa1537E76667A7fB237eE5acF",
+    "observation_cardinality": 1000,
+    "warmup": "55 reference swaps over 18 minutes before the deploy"
+  },
+  "deploy": {
+    "pool_manager": "0x00B036B58a818B1BC34d502D3fE730Db729e62AC",
+    "factory": "0x6E12d9D0648a2323cF57FdEa98c09f331dc48384",
+    "curator_bundler": "0xF35580c164136F38E7a8Fed8E01a611E9419AA15",
+    "vault": "0x299c05ED130F340593499772b1F14Fb790bD985D",
+    "vault_extension": "0x15077b34FDB27ED41e03084EcB9953fDbD14B9E5",
+    "hook": "0x9131d3ceb82af6D29075F6D3a2bb6A4f252b60A0",
+    "deploy_and_place_tx": "0xd1d7554c3c57263787307703f77f20fdc3a47c60434cdcd607ae376bff9b59dc",
+    "deploy_and_place_gas": 12574496,
+    "reference_tick_at_seed": 196389,
+    "first_range": [195380, 197380]
+  },
+  "note": "deployAndPlace exceeds the chain's per-transaction gas cap (2^24) at forge's default 1.3x estimate multiplier; it was sent with a 15.5M limit (12.57M used). Run DeployDemo with --gas-estimate-multiplier 115."
+}

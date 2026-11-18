@@ -9,6 +9,7 @@
  "control_exceeds_bound": true,
  "negative_result": true,
  "superseded_by": "E0a",
+ "decision": "published as a negative result; the ledger amended after the data and evaluated as E0a (2026-11-18)",
  "note": "registered form failed; the ledger was amended after this result (spec \u00a73.8) and is evaluated as E0a, with this formula reported next to it",
  "runs": {
   "same": {

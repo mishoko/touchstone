@@ -157,6 +157,7 @@ contract VaultHandler is Test, SettleExtraOracle {
         uint256 matured;
         uint256 vested;
         uint256 placements;
+        uint256 segStart;
     }
     uint256 public i12Moved;
 
@@ -699,6 +700,7 @@ contract VaultHandler is Test, SettleExtraOracle {
         Obs memory o = hook.obs();
         (p.outBlocks, p.epoch, p.breaches, p.mode) = (o.outBlocks, hv.scalars().epoch, b0.breaches, b0.mode);
         (p.matured, p.vested, p.placements) = (b0.maturedPending, b0.vestedUnclaimed, curatorPlacements);
+        p.segStart = hv.scalars().segStart;
     }
 
     /// @dev The hook's slot 0 (test/storage/TouchstoneHook.txt): `_lastSnapBlock` (bytes 0-4), `_vaultLo` (9),
@@ -741,8 +743,8 @@ contract VaultHandler is Test, SettleExtraOracle {
     }
 
     /// @notice I-8 (spec §9.1): while the hook holds a witness (`L_W > 0`), its position on the live witness range under
-    ///         the epoch's salt holds exactly `L_W` and both ticks are initialised (liquidityGross ≥ `L_W`); the witness
-    ///         is never from a future epoch. Slots 1 and 3 of the hook's layout snapshot: `_witLo` (byte 24), `_witHi`
+    ///         the epoch's salt holds exactly `L_W` (which implies both ticks are initialised: their liquidityGross
+    ///         includes it); the witness is never from a future epoch. Slots 1 and 3 of the hook's layout snapshot: `_witLo` (byte 24), `_witHi`
     ///         (27); `_witEpoch` (slot 3, byte 0), `_witL` (byte 4).
     function _i8() internal {
         uint256 w1 = uint256(vm.load(address(hook), bytes32(uint256(1))));
@@ -756,9 +758,6 @@ contract VaultHandler is Test, SettleExtraOracle {
         (uint128 liq,,) =
             manager.getPositionInfo(poolId, address(hook), lo, hi, keccak256(abi.encode("witness", e)));
         if (liq != lw) _i8f("witness position != L_W");
-        (uint128 gLo,) = manager.getTickLiquidity(poolId, lo);
-        (uint128 gHi,) = manager.getTickLiquidity(poolId, hi);
-        if (gLo < lw || gHi < lw) _i8f("a witness tick is not initialised");
         if (e > vm.getBlockNumber() / hv.tier().EPOCH) _i8f("witness from a future epoch");
     }
 
@@ -768,12 +767,13 @@ contract VaultHandler is Test, SettleExtraOracle {
     function _i13() internal {
         Holdings memory h = hv.holdings();
         bytes32 k = keccak256(abi.encode(h.lo, h.hi));
-        if (h.L > 0 && !_rangeSeen[k] && _nRanges < 64) {
+        if (h.L > 0 && !_rangeSeen[k]) {
+            if (_nRanges == 64) _i13f("range cap reached: a range would go unchecked");
             _rangeSeen[k] = true;
             (_rangeLo[_nRanges], _rangeHi[_nRanges]) = (h.lo, h.hi);
             ++_nRanges;
         }
-        ++i13Checks;
+        if (_nRanges > 1) ++i13Checks; // a check that can see a second position
         if (h.L > 0) {
             (uint128 liq,,) = manager.getPositionInfo(poolId, address(hv), h.lo, h.hi, bytes32(0));
             if (liq != h.L) _i13f("position != L");
@@ -794,7 +794,8 @@ contract VaultHandler is Test, SettleExtraOracle {
     ///         can be missed, so they undercount, never overcount): breach processed, removal, vest, epoch close,
     ///         reference refresh, truncated span (the first span the call closes outlived the cache), gap set and
     ///         cleared, the vest gate closed by the live leg (a checkpoint this block, cached legs open, the live read
-    ///         failed or out of range, matured pay held and nothing vested), a run reset by refresh (no registration), the frozen-boundary
+    ///         failed or out of range, matured pay held before and after and nothing vested; the checkpoint ran in this
+    ///         call: `segStart` moved to this block during it, S20F-01), a run reset by refresh (no registration), the frozen-boundary
     ///         ring wrapped (a span over more than 8 grid boundaries). Refresh failures are counted in `refresh()`.
     function _i15(Pre memory p) internal {
         Bank memory b = hv.bankFull();
@@ -802,7 +803,8 @@ contract VaultHandler is Test, SettleExtraOracle {
         uint256 w = uint256(vm.load(address(hook), bytes32(0)));
         Obs memory o = hook.obs();
         if (b.breaches > p.breaches) ++breachesProcessed;
-        if (p.mode != Ladder.EXITED && b.mode == Ladder.EXITED) ++removals;
+        // a removal is the third breach's, not a retire (S20F-02)
+        if (p.mode != Ladder.EXITED && b.mode == Ladder.EXITED && b.breaches > p.breaches) ++removals;
         if (b.vestedUnclaimed > p.vested) ++vests;
         if (hv.scalars().epoch > p.epoch) ++epochCloses;
         if (_refGrid(w) > _refGrid(p.hook0)) ++refreshes;
@@ -816,8 +818,9 @@ contract VaultHandler is Test, SettleExtraOracle {
             ++resetsByRefresh;
         }
         if (
-            hv.scalars().segStart == now_ && b.maturedPending > 0 && b.vestedUnclaimed <= p.vested && o.refFresh
-                && !o.emptyRange && !o.gapSinceVerify && _vaultRange(w) == _vaultRange(p.hook0)
+            p.segStart < now_ && hv.scalars().segStart == now_ && p.matured > 0 && b.maturedPending > 0
+                && b.vestedUnclaimed <= p.vested && b.mode != Ladder.EXITED && o.refFresh && !o.emptyRange
+                && !o.gapSinceVerify && _vaultRange(w) == _vaultRange(p.hook0)
         ) {
             Holdings memory h = hv.holdings();
             (bool ok, int24 t) = hook.tryRef();

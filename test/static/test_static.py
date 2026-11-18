@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Static checks of the tree. Run: python3 test/static/test_static.py (also collected by pytest)."""
-import glob, os, re, subprocess, sys, tempfile, time
+import glob, json, os, re, subprocess, sys, tempfile, time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ANVIL_PK = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'  # anvil's default account 0
@@ -151,6 +151,86 @@ def test_D_3__abi_has_no_privileged_entry_point():
     planted['TouchstoneFactory'] = planted['TouchstoneFactory'] | {'deploy2'}
     bad = d3_violations(planted)
     assert any('setOwner' in b for b in bad) and any('deploy2' in b for b in bad), bad
+
+
+SLITHER_SECTIONS = {'High': ('High',), 'Medium': ('Medium',), 'Low': ('Low',),
+                    'Informational and optimisation': ('Informational', 'Optimization')}
+
+
+def slither_triage_violations(md, rec, src_hash):
+    """S-1 (F-053): `audits/SLITHER.md` triages exactly the recorded Slither run `audits/slither-results.json`, and that
+    run analysed the current `src/` (`src_sha256`). Per section: the header count, the set of detectors and each row's
+    count equal the record's; every row has a verdict (FP, Design or Accepted); the stated total and tool match."""
+    bad = []
+    if rec.get('src_sha256') != src_hash:
+        bad.append('the recorded run is not of the current src/ (re-run Slither, script/slither_record.py, re-triage)')
+    counts = {}
+    for r in rec['results']:
+        counts.setdefault(r['impact'], {}).setdefault(r['check'], 0)
+        counts[r['impact']][r['check']] += 1
+    m = re.search(r'Result: (\d+) results', md)
+    if not m or int(m.group(1)) != len(rec['results']):
+        bad.append(f"stated total {m and m.group(1)} != {len(rec['results'])} recorded results")
+    if rec.get('tool', '').split()[-1:] != (re.findall(r'Tool: Slither ([\d.]+)', md) or ['?'])[:1]:
+        bad.append(f"tool {rec.get('tool')} differs from the triage's")
+    heads = list(re.finditer(r'^## (.+?) \((\d+)\)\s*$', md, re.M))
+    seen = set()
+    for i, h in enumerate(heads):
+        name, n = h.group(1), int(h.group(2))
+        if name not in SLITHER_SECTIONS:
+            bad.append(f'unknown section {name}')
+            continue
+        seen.add(name)
+        rc = {}
+        for imp in SLITHER_SECTIONS[name]:
+            rc.update(counts.get(imp, {}))
+        body = md[h.end():heads[i + 1].start() if i + 1 < len(heads) else len(md)]
+        if n != sum(rc.values()):
+            bad.append(f'{name}: header {n} != {sum(rc.values())} recorded')
+        triaged = set()
+        for row in re.findall(r'^\|(.+)\|\s*$', body, re.M):
+            cells = [c.strip() for c in row.split('|')]
+            dets = re.findall(r'`([a-z0-9-]+)`', cells[0])
+            if not dets:
+                continue   # the header and separator rows
+            triaged |= set(dets)
+            if not cells[1].isdigit() or int(cells[1]) != sum(rc.get(x, 0) for x in dets):
+                bad.append(f'{name}: row {dets} count {cells[1]} != {sum(rc.get(x, 0) for x in dets)} recorded')
+            if not re.match(r'\*\*(FP|Design|Accepted)\b', cells[-1]):
+                bad.append(f'{name}: row {dets} has no verdict')
+        if triaged != set(rc):
+            bad.append(f'{name}: untriaged {sorted(set(rc) - triaged)}, not in the run {sorted(triaged - set(rc))}')
+    for name in set(SLITHER_SECTIONS) - seen:
+        if any(counts.get(imp) for imp in SLITHER_SECTIONS[name]):
+            bad.append(f'section {name} missing')
+    return bad
+
+
+def test_S_1__slither_triage_covers_the_recorded_run_of_the_current_src():
+    sys.path.insert(0, os.path.join(ROOT, 'script'))
+    from slither_record import src_sha256
+    md = open(os.path.join(ROOT, 'audits', 'SLITHER.md')).read()
+    rec = json.load(open(os.path.join(ROOT, 'audits', 'slither-results.json')))
+    h = src_sha256(ROOT)
+    assert slither_triage_violations(md, rec, h) == [], slither_triage_violations(md, rec, h)
+    # controls: each mutation of the triage, the record or the tree is caught
+    det = rec['results'][0]['check']
+    extra = dict(rec, results=rec['results'] + [dict(check='new-detector', impact='High', confidence='High', elements=[])])
+    cases = {
+        'src changed': (md, rec, h[::-1]),
+        'count changed': (re.sub(r'(`' + re.escape(det) + r'`[^|]*\|\s*)(\d+)', lambda m: m.group(1) + str(int(m.group(2)) + 1),
+                                 md, count=1), rec, h),
+        'untriaged detector': (md, extra, h),
+        'verdict missing': (re.sub(r'^(\|[^\n]*\|\s*)\*\*(FP|Design|Accepted)\b', r'\1maybe', md, count=1, flags=re.M), rec, h),
+        'total changed': (re.sub(r'Result: (\d+)', lambda m: f'Result: {int(m.group(1)) + 1}', md), rec, h),
+        'row dropped': (re.sub(r'^\|[^\n]*`' + re.escape(det) + r'`[^\n]*\n', '', md, count=1, flags=re.M), rec, h),
+    }
+    want = {'src changed': 'not of the current src', 'count changed': 'count', 'untriaged detector': "untriaged ['new-detector']",
+            'verdict missing': 'has no verdict', 'total changed': 'stated total', 'row dropped': 'untriaged [' + repr(det)}
+    for k, (m2, r2, h2) in cases.items():
+        assert m2 != md or r2 is not rec or h2 != h, k
+        v = slither_triage_violations(m2, r2, h2)
+        assert any(want[k] in x for x in v), (k, v)
 
 
 def test_S_2__hard_size_gate_with_an_anvil_deploy_and_the_oversized_fixture_failing():

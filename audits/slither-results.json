@@ -1,0 +1,6885 @@
+{
+ "tool": "Slither 0.11.5",
+ "command": "slither . --filter-paths 'lib/|test/|script/' --exclude-dependencies --json <out>",
+ "src_sha256": "0399906ce0386737ff3656c30c2cca446fe1c5f40d24dae76c2bc5c890cd777b",
+ "results": [
+  {
+   "check": "arbitrary-send-erc20",
+   "impact": "High",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_payIn",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      239,
+      245
+     ]
+    },
+    {
+     "type": "node",
+     "name": "IERC20(Currency.unwrap(c)).safeTransferFrom(from,address(MANAGER),amount)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      243,
+      243
+     ]
+    }
+   ]
+  },
+  {
+   "check": "arbitrary-send-erc20",
+   "impact": "High",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "topUpBond",
+     "file": "src/periphery/CuratorBundler.sol",
+     "lines": [
+      164,
+      167
+     ]
+    },
+    {
+     "type": "node",
+     "name": "IERC20(address(vault)).safeTransferFrom(OWNER,address(this),shares)",
+     "file": "src/periphery/CuratorBundler.sol",
+     "lines": [
+      165,
+      165
+     ]
+    }
+   ]
+  },
+  {
+   "check": "controlled-delegatecall",
+   "impact": "High",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_delegate",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      110,
+      118
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(ok,ret) = EXTENSION.delegatecall(data)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      112,
+      112
+     ]
+    }
+   ]
+  },
+  {
+   "check": "encode-packed-collision",
+   "impact": "High",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "deploy",
+     "file": "src/TouchstoneFactory.sol",
+     "lines": [
+      51,
+      105
+     ]
+    },
+    {
+     "type": "node",
+     "name": "hookInit = abi.encodePacked(hookCreationCode,abi.encode(hookArgs))",
+     "file": "src/TouchstoneFactory.sol",
+     "lines": [
+      73,
+      73
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-state",
+   "impact": "High",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "_epoch",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      40,
+      40
+     ]
+    },
+    {
+     "type": "function",
+     "name": "_charge",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      307,
+      339
+     ]
+    },
+    {
+     "type": "function",
+     "name": "_settle",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      346,
+      381
+     ]
+    },
+    {
+     "type": "function",
+     "name": "_checkpoint",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      416,
+      524
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-state",
+   "impact": "High",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "_hi",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      35,
+      35
+     ]
+    },
+    {
+     "type": "function",
+     "name": "_modify",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      234,
+      236
+     ]
+    },
+    {
+     "type": "function",
+     "name": "_holdings",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      255,
+      257
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-state",
+   "impact": "High",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "_lo",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      34,
+      34
+     ]
+    },
+    {
+     "type": "function",
+     "name": "_modify",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      234,
+      236
+     ]
+    },
+    {
+     "type": "function",
+     "name": "_holdings",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      255,
+      257
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-state",
+   "impact": "High",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "_seeded",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      49,
+      49
+     ]
+    },
+    {
+     "type": "function",
+     "name": "unlockCallback",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      125,
+      141
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-state",
+   "impact": "High",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "_tAction",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      45,
+      45
+     ]
+    },
+    {
+     "type": "function",
+     "name": "_deposit",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      286,
+      324
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-state",
+   "impact": "High",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "curator",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      50,
+      50
+     ]
+    },
+    {
+     "type": "function",
+     "name": "_onlyCurator",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      197,
+      199
+     ]
+    }
+   ]
+  },
+  {
+   "check": "assembly",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_create2",
+     "file": "src/TouchstoneFactory.sol",
+     "lines": [
+      116,
+      125
+     ]
+    },
+    {
+     "type": "node",
+     "name": "",
+     "file": "src/TouchstoneFactory.sol",
+     "lines": [
+      117,
+      124
+     ]
+    }
+   ]
+  },
+  {
+   "check": "assembly",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_delegate",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      110,
+      118
+     ]
+    },
+    {
+     "type": "node",
+     "name": "",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      114,
+      116
+     ]
+    }
+   ]
+  },
+  {
+   "check": "assembly",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_mulHi",
+     "file": "src/libraries/ExecLedger.sol",
+     "lines": [
+      266,
+      272
+     ]
+    },
+    {
+     "type": "node",
+     "name": "",
+     "file": "src/libraries/ExecLedger.sol",
+     "lines": [
+      267,
+      271
+     ]
+    }
+   ]
+  },
+  {
+   "check": "assembly",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_window",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      559,
+      585
+     ]
+    },
+    {
+     "type": "node",
+     "name": "",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      564,
+      576
+     ]
+    }
+   ]
+  },
+  {
+   "check": "cyclomatic-complexity",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_action",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      170,
+      252
+     ]
+    }
+   ]
+  },
+  {
+   "check": "cyclomatic-complexity",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_checkpoint",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      416,
+      524
+     ]
+    }
+   ]
+  },
+  {
+   "check": "cyclomatic-complexity",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_snapshot",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      387,
+      464
+     ]
+    }
+   ]
+  },
+  {
+   "check": "low-level-calls",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_delegate",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      110,
+      118
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(ok,ret) = EXTENSION.delegatecall(data)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      112,
+      112
+     ]
+    }
+   ]
+  },
+  {
+   "check": "missing-inheritance",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "contract",
+     "name": "TouchstoneVaultExtension",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      29,
+      355
+     ]
+    },
+    {
+     "type": "contract",
+     "name": "IVaultEntries",
+     "file": "src/interfaces/ITouchstoneVaultExtension.sol",
+     "lines": [
+      9,
+      19
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "CONFIG_HASH",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      47,
+      49
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "CONFIG_HASH",
+     "file": "src/interfaces/ITouchstoneVaultExtension.sol",
+     "lines": [
+      30,
+      30
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "EXTENSION_CODE_HASH",
+     "file": "src/interfaces/ITouchstoneFactory.sol",
+     "lines": [
+      57,
+      57
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "HOOK_CODE_HASH",
+     "file": "src/interfaces/ITouchstoneFactory.sol",
+     "lines": [
+      58,
+      58
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "POOL_MANAGER",
+     "file": "src/interfaces/ITouchstoneFactory.sol",
+     "lines": [
+      55,
+      55
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "SELF",
+     "file": "src/interfaces/ITouchstoneVaultExtension.sol",
+     "lines": [
+      29,
+      29
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "TIER_HASH",
+     "file": "src/interfaces/ITouchstoneFactory.sol",
+     "lines": [
+      41,
+      41
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "TIER_HASH",
+     "file": "src/interfaces/ITouchstoneVaultExtension.sol",
+     "lines": [
+      31,
+      31
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "VAULT",
+     "file": "src/interfaces/ITouchstoneVaultExtension.sol",
+     "lines": [
+      28,
+      28
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "VAULT_CODE_HASH",
+     "file": "src/interfaces/ITouchstoneFactory.sol",
+     "lines": [
+      56,
+      56
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "BAND_SWAP",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      90,
+      90
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "BLOCKTIME",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      85,
+      85
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "BOND_MIN",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      79,
+      79
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "BOND_RATIO",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      78,
+      78
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "C0",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      74,
+      74
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "C1",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      75,
+      75
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "CONFIG",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      102,
+      102
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "COOLDOWN",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      91,
+      91
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "CURE_BLOCKS",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      53,
+      53
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "CURRENCY0",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      59,
+      59
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "CURRENCY1",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      60,
+      60
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "DELTA_MIN",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      97,
+      97
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "DRIP_BLOCKS",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      82,
+      82
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "EPOCH",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      52,
+      52
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "EPOCH",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      84,
+      84
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "EXTENSION",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      47,
+      47
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "EXTENSION_CODE_HASH",
+     "file": "src/TouchstoneFactory.sol",
+     "lines": [
+      35,
+      35
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "FACTORY",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      72,
+      72
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "FACTORY",
+     "file": "src/periphery/CuratorBundler.sol",
+     "lines": [
+      55,
+      55
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "FEE",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      58,
+      58
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "FEE",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      76,
+      76
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "FEE_TICKS",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      88,
+      88
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "GRID",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      51,
+      51
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "GRID_SEC",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      50,
+      50
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "HOOK",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      73,
+      73
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "HOOK_CODE_HASH",
+     "file": "src/TouchstoneFactory.sol",
+     "lines": [
+      36,
+      36
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "H_MARKOUT",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      86,
+      86
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "L",
+     "file": "src/libraries/LiquidityValue.sol",
+     "lines": [
+      22,
+      22
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "L_W_TARGET",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      56,
+      56
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "MANAGER",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      71,
+      71
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "MANAGER",
+     "file": "src/periphery/CuratorBundler.sol",
+     "lines": [
+      56,
+      56
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "MAX_SWAPS",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      95,
+      95
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "MAX_SWAP_ACTION",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      93,
+      93
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "MAX_SWAP_EPOCH",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      94,
+      94
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "M_PER_BLOCK",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      98,
+      98
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "NAV_MAX",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      80,
+      80
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "OWNER",
+     "file": "src/periphery/CuratorBundler.sol",
+     "lines": [
+      54,
+      54
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "POOL_ID",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      44,
+      44
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "POOL_ID",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      99,
+      99
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "POOL_MANAGER",
+     "file": "src/TouchstoneFactory.sol",
+     "lines": [
+      33,
+      33
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "REFRESH_GAS_MIN",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      49,
+      49
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "REF_BAND",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      89,
+      89
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "REF_GAS_CAP",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      48,
+      48
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "REF_GAS_CAP",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      87,
+      87
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "REF_POOL",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      46,
+      46
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "REF_SQRT_PRICE",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      81,
+      81
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "REF_WINDOW",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      47,
+      47
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "RELEASE_DELAY",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      83,
+      83
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "RESERVE_RATIO",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      92,
+      92
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "RESET_RUN",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      54,
+      54
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "S",
+     "file": "src/libraries/ExecLedger.sol",
+     "lines": [
+      40,
+      40
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "S",
+     "file": "src/libraries/ExecLedger.sol",
+     "lines": [
+      58,
+      58
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "SELF",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      33,
+      33
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "SPACING",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      77,
+      77
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "TICK_SPACING",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      57,
+      57
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "TIER_HASH",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      100,
+      100
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "VAULT",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      43,
+      43
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "VAULT",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      31,
+      31
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "VAULT_CODE_HASH",
+     "file": "src/TouchstoneFactory.sol",
+     "lines": [
+      34,
+      34
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "W_TICKS",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      55,
+      55
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "W_TICKS",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      96,
+      96
+     ]
+    }
+   ]
+  },
+  {
+   "check": "naming-convention",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "_L",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      33,
+      33
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-state",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "DEAD_ADDRESS",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      69,
+      69
+     ]
+    },
+    {
+     "type": "contract",
+     "name": "TouchstoneVault",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      43,
+      567
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-state",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "_epochSwapFrac",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      42,
+      42
+     ]
+    },
+    {
+     "type": "contract",
+     "name": "TouchstoneVaultExtension",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      29,
+      355
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-state",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "_lastAction",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      47,
+      47
+     ]
+    },
+    {
+     "type": "contract",
+     "name": "TouchstoneVaultExtension",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      29,
+      355
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-state",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "_pAfter",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      56,
+      56
+     ]
+    },
+    {
+     "type": "contract",
+     "name": "TouchstoneVaultExtension",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      29,
+      355
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-state",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "_pBefore",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      55,
+      55
+     ]
+    },
+    {
+     "type": "contract",
+     "name": "TouchstoneVaultExtension",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      29,
+      355
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-state",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "_pend",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      57,
+      57
+     ]
+    },
+    {
+     "type": "contract",
+     "name": "TouchstoneVaultExtension",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      29,
+      355
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-state",
+   "impact": "Informational",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "_swapCount",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      43,
+      43
+     ]
+    },
+    {
+     "type": "contract",
+     "name": "TouchstoneVaultExtension",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      29,
+      355
+     ]
+    }
+   ]
+  },
+  {
+   "check": "events-maths",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "ackBreaches",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      301,
+      305
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_pendingBreaches = 0",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      304,
+      304
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_pendingBreaches = p - n",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      304,
+      304
+     ]
+    }
+   ]
+  },
+  {
+   "check": "events-maths",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "fundWitness",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      308,
+      312
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_witnessReserve0 += uint128(a0)",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      310,
+      310
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_witnessReserve1 += uint128(a1)",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      311,
+      311
+     ]
+    }
+   ]
+  },
+  {
+   "check": "missing-zero-check",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "curator_",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      60,
+      60
+     ]
+    },
+    {
+     "type": "node",
+     "name": "curator = curator_",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      64,
+      64
+     ]
+    }
+   ]
+  },
+  {
+   "check": "missing-zero-check",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "ext",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      50,
+      50
+     ]
+    },
+    {
+     "type": "node",
+     "name": "EXTENSION = ext",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      51,
+      51
+     ]
+    }
+   ]
+  },
+  {
+   "check": "missing-zero-check",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "owner_",
+     "file": "src/periphery/CuratorBundler.sol",
+     "lines": [
+      67,
+      67
+     ]
+    },
+    {
+     "type": "node",
+     "name": "OWNER = owner_",
+     "file": "src/periphery/CuratorBundler.sol",
+     "lines": [
+      68,
+      68
+     ]
+    }
+   ]
+  },
+  {
+   "check": "missing-zero-check",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "poolManager",
+     "file": "src/TouchstoneFactory.sol",
+     "lines": [
+      40,
+      40
+     ]
+    },
+    {
+     "type": "node",
+     "name": "POOL_MANAGER = poolManager",
+     "file": "src/TouchstoneFactory.sol",
+     "lines": [
+      41,
+      41
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-benign",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_action",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      170,
+      252
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_removeToIdle()",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      183,
+      183
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      235,
+      235
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      211,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      214,
+      214
+     ]
+    },
+    {
+     "type": "node",
+     "name": "dm = _swapRaw(zm,_moveOut(),moveTo)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      188,
+      188
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.swap(_key(),SwapParams(z,amount,limit),)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      287,
+      287
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_book(dm)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      192,
+      192
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      211,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      214,
+      214
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_removeToIdle()",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      183,
+      183
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      235,
+      235
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      211,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      214,
+      214
+     ]
+    },
+    {
+     "type": "node",
+     "name": "dm = _swapRaw(zm,_moveOut(),moveTo)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      188,
+      188
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.swap(_key(),SwapParams(z,amount,limit),)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      287,
+      287
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_book(dm)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      192,
+      192
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      211,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      214,
+      214
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_moveCap(moveFrac)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      219,
+      219
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_epochSwapFrac += uint64(moveFrac)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      559,
+      559
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-benign",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_checkpoint",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      416,
+      524
+     ]
+    },
+    {
+     "type": "node",
+     "name": "HOOK.ackBreaches(n)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      464,
+      464
+     ]
+    },
+    {
+     "type": "node",
+     "name": "HOOK.ackBreaches(n)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      464,
+      464
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_pend.sAct = _u128(uint256(_pend.sAct) + shares)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      497,
+      497
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_segStart = o.lastPendingBlock",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      468,
+      468
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_segStart = now_",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      511,
+      511
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-benign",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_checkpoint",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      416,
+      524
+     ]
+    },
+    {
+     "type": "node",
+     "name": "HOOK.ackBreaches(n)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      464,
+      464
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_delegate(abi.encodeCall(ITouchstoneVaultExtension.roll,(o,ne)))",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      519,
+      519
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(ok,ret) = EXTENSION.delegatecall(data)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      112,
+      112
+     ]
+    },
+    {
+     "type": "node",
+     "name": "HOOK.ackBreaches(n)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      464,
+      464
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_delegate(abi.encodeCall(ITouchstoneVaultExtension.roll,(o,ne)))",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      519,
+      519
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(ok,ret) = EXTENSION.delegatecall(data)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      112,
+      112
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_epochSwapFrac = 0",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      521,
+      521
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_swapCount = 0",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      522,
+      522
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-benign",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_seed",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      248,
+      284
+     ]
+    },
+    {
+     "type": "node",
+     "name": "HOOK.snapshotIfNewBlock()",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      250,
+      250
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_payIn(C0,address(this),a0 + wit0)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      251,
+      251
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.sync(c)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      241,
+      241
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.settle()",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      244,
+      244
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_payIn(C1,address(this),a1 + wit1)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      252,
+      252
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.sync(c)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      241,
+      241
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.settle()",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      244,
+      244
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_mintClaims(C0,a0)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      253,
+      253
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),amount)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      248,
+      248
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_mintClaims(C1,a1)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      254,
+      254
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),amount)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      248,
+      248
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(HOOK),C0.toId(),wit0)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      256,
+      256
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(HOOK),C1.toId(),wit1)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      257,
+      257
+     ]
+    },
+    {
+     "type": "node",
+     "name": "HOOK.fundWitness(wit0,wit1)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      258,
+      258
+     ]
+    },
+    {
+     "type": "node",
+     "name": "HOOK.armAtSeed()",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      265,
+      265
+     ]
+    },
+    {
+     "type": "node",
+     "name": "HOOK.snapshotIfNewBlock()",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      250,
+      250
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_payIn(C0,address(this),a0 + wit0)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      251,
+      251
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.sync(c)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      241,
+      241
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.settle()",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      244,
+      244
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_payIn(C1,address(this),a1 + wit1)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      252,
+      252
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.sync(c)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      241,
+      241
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.settle()",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      244,
+      244
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_mintClaims(C0,a0)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      253,
+      253
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),amount)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      248,
+      248
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_mintClaims(C1,a1)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      254,
+      254
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),amount)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      248,
+      248
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(HOOK),C0.toId(),wit0)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      256,
+      256
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(HOOK),C1.toId(),wit1)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      257,
+      257
+     ]
+    },
+    {
+     "type": "node",
+     "name": "HOOK.fundWitness(wit0,wit1)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      258,
+      258
+     ]
+    },
+    {
+     "type": "node",
+     "name": "HOOK.armAtSeed()",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      265,
+      265
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_delta0 = 0",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      273,
+      273
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_epoch = o.epoch",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      274,
+      274
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_nav0 = _u128(navAtRef)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      272,
+      272
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_openRecord(o.epoch,o.med9,o.tauV,o.tauB)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      276,
+      276
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(r.start,r.med9Start,r.tauV,r.tauB) = (uint40(block.number),med9,tauV,tauB)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      269,
+      269
+     ]
+    },
+    {
+     "type": "node",
+     "name": "r.flags |= F_WITNESS_MISSING",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      271,
+      271
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_seeded = true",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      282,
+      282
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_segStart = uint40(block.number)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      277,
+      277
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_tauV0 = o.tauV",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      278,
+      278
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-benign",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_withdraw",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      326,
+      354
+     ]
+    },
+    {
+     "type": "node",
+     "name": "d = _modify(- int256(dL))",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      338,
+      338
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      235,
+      235
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),C0.toId(),o0)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      344,
+      344
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),C1.toId(),o1)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      345,
+      345
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.take(C0,to,a0)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      348,
+      348
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.take(C1,to,a1)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      349,
+      349
+     ]
+    },
+    {
+     "type": "node",
+     "name": "d = _modify(- int256(dL))",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      338,
+      338
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      235,
+      235
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),C0.toId(),o0)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      344,
+      344
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),C1.toId(),o1)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      345,
+      345
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.take(C0,to,a0)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      348,
+      348
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.take(C1,to,a1)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      349,
+      349
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_rebase(S,S - s)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      351,
+      351
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_nav0 = _u128(rebased)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      231,
+      231
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-benign",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "deployAndPlace",
+     "file": "src/periphery/CuratorBundler.sol",
+     "lines": [
+      83,
+      98
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(v,h) = FACTORY.deploy(a.vaultCode,a.extensionCode,a.hookCode,a.hookArgs,a.saltV,a.saltH,a.seed)",
+     "file": "src/periphery/CuratorBundler.sol",
+     "lines": [
+      94,
+      94
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(v,h) = FACTORY.deploy(a.vaultCode,a.extensionCode,a.hookCode,a.hookArgs,a.saltV,a.saltH,a.seed)",
+     "file": "src/periphery/CuratorBundler.sol",
+     "lines": [
+      94,
+      94
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_key = PoolKey(c0,c1,a.hookArgs.fee,a.hookArgs.tickSpacing,IHooks(h))",
+     "file": "src/periphery/CuratorBundler.sol",
+     "lines": [
+      96,
+      96
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(vault,hook) = (ICuratorVault(v),ITouchstoneHook(h))",
+     "file": "src/periphery/CuratorBundler.sol",
+     "lines": [
+      95,
+      95
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-benign",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "dispatch",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      136,
+      201
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(None,None,lw,fb,st) = HOOK.rollWitness(e)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      181,
+      181
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(None,None,lw,fb,st) = HOOK.rollWitness(e)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      181,
+      181
+     ]
+    },
+    {
+     "type": "node",
+     "name": "r_scope_0.flags = f",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      192,
+      192
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-benign",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "rollWitness",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      323,
+      340
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(a,b,l) = this.witnessStep(epoch)",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      332,
+      338
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(a,b,l) = this.witnessStep(epoch)",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      332,
+      338
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_witnessFallback = fallbackUsed",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      335,
+      335
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-benign",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "unlockCallback",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      125,
+      141
+     ]
+    },
+    {
+     "type": "node",
+     "name": "o = _prologue()",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      135,
+      135
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      235,
+      235
+     ]
+    },
+    {
+     "type": "node",
+     "name": "o = HOOK.snapshotIfNewBlock()",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      387,
+      387
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      211,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      214,
+      214
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(liveRead,liveTick) = _checkpoint(o)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      137,
+      137
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(ok,ret) = EXTENSION.delegatecall(data)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      112,
+      112
+     ]
+    },
+    {
+     "type": "node",
+     "name": "HOOK.ackBreaches(n)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      464,
+      464
+     ]
+    },
+    {
+     "type": "node",
+     "name": "o = _prologue()",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      135,
+      135
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      235,
+      235
+     ]
+    },
+    {
+     "type": "node",
+     "name": "o = HOOK.snapshotIfNewBlock()",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      387,
+      387
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      211,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      214,
+      214
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(liveRead,liveTick) = _checkpoint(o)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      137,
+      137
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(ok,ret) = EXTENSION.delegatecall(data)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      112,
+      112
+     ]
+    },
+    {
+     "type": "node",
+     "name": "HOOK.ackBreaches(n)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      464,
+      464
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(liveRead,liveTick) = _checkpoint(o)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      137,
+      137
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_epochSwapFrac = 0",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      521,
+      521
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(liveRead,liveTick) = _checkpoint(o)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      137,
+      137
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_segStart = o.lastPendingBlock",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      468,
+      468
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_segStart = now_",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      511,
+      511
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(liveRead,liveTick) = _checkpoint(o)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      137,
+      137
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_swapCount = 0",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      522,
+      522
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-events",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_action",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      170,
+      252
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_removeToIdle()",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      183,
+      183
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      235,
+      235
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      211,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      214,
+      214
+     ]
+    },
+    {
+     "type": "node",
+     "name": "dm = _swapRaw(zm,_moveOut(),moveTo)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      188,
+      188
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.swap(_key(),SwapParams(z,amount,limit),)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      287,
+      287
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_book(dm)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      192,
+      192
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      211,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      214,
+      214
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_cappedSwap(ps.zeroForOne,ps.amountIn,before,sRef,tickSpot,moveFrac)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      222,
+      222
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      235,
+      235
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.swap(_key(),SwapParams(z,amount,limit),)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      287,
+      287
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      211,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      214,
+      214
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_book(_modify(int256(uint256(L))))",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      233,
+      233
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      235,
+      235
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      211,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      214,
+      214
+     ]
+    },
+    {
+     "type": "node",
+     "name": "HOOK.setVaultRange(lo,hi,ref)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      245,
+      245
+     ]
+    },
+    {
+     "type": "node",
+     "name": "ModeChanged(m0,m)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      263,
+      263
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_modeChanged(m0)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      249,
+      249
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-events",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_withdraw",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      326,
+      354
+     ]
+    },
+    {
+     "type": "node",
+     "name": "d = _modify(- int256(dL))",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      338,
+      338
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      235,
+      235
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),C0.toId(),o0)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      344,
+      344
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),C1.toId(),o1)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      345,
+      345
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.take(C0,to,a0)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      348,
+      348
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.take(C1,to,a1)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      349,
+      349
+     ]
+    },
+    {
+     "type": "node",
+     "name": "Withdraw(owner,s,a0,a1)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      352,
+      352
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-events",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "deploy",
+     "file": "src/TouchstoneFactory.sol",
+     "lines": [
+      51,
+      105
+     ]
+    },
+    {
+     "type": "node",
+     "name": "ITouchstoneVaultSeed(vault).seed(seedParams.a0,seedParams.a1,seedParams.curator,seedParams.wit0,seedParams.wit1)",
+     "file": "src/TouchstoneFactory.sol",
+     "lines": [
+      101,
+      102
+     ]
+    },
+    {
+     "type": "node",
+     "name": "Deployed(msg.sender,vault,extension,hook,hookArgs.tier)",
+     "file": "src/TouchstoneFactory.sol",
+     "lines": [
+      104,
+      104
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-events",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "rollWitness",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      323,
+      340
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(a,b,l) = this.witnessStep(epoch)",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      332,
+      338
+     ]
+    },
+    {
+     "type": "node",
+     "name": "WitnessRolled(epoch,fg0,fg1,lw)",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      339,
+      339
+     ]
+    }
+   ]
+  },
+  {
+   "check": "timestamp",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_charge",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      307,
+      339
+     ]
+    },
+    {
+     "type": "node",
+     "name": "charge + reserve > maxCharge",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      318,
+      318
+     ]
+    }
+   ]
+  },
+  {
+   "check": "timestamp",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_checkpoint",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      416,
+      524
+     ]
+    },
+    {
+     "type": "node",
+     "name": "totalSupply() == 0",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      417,
+      417
+     ]
+    },
+    {
+     "type": "node",
+     "name": "amount > 0",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      478,
+      478
+     ]
+    },
+    {
+     "type": "node",
+     "name": "navp > amount",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      492,
+      492
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_tAction != 0",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      497,
+      497
+     ]
+    }
+   ]
+  },
+  {
+   "check": "timestamp",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_commit",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      479,
+      503
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_vaultLo <= t && t < _vaultHi",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      486,
+      486
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_refGrid + 1 == k",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      488,
+      488
+     ]
+    }
+   ]
+  },
+  {
+   "check": "timestamp",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_guards",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      292,
+      301
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_tAction != 0",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      300,
+      300
+     ]
+    }
+   ]
+  },
+  {
+   "check": "timestamp",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_refresh",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      467,
+      476
+     ]
+    },
+    {
+     "type": "node",
+     "name": "k > _refGrid",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      472,
+      472
+     ]
+    }
+   ]
+  },
+  {
+   "check": "timestamp",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_settle",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      346,
+      381
+     ]
+    },
+    {
+     "type": "node",
+     "name": "tA == 0 || block.timestamp < tA + 2 * BLOCKTIME + H_MARKOUT",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      349,
+      349
+     ]
+    },
+    {
+     "type": "node",
+     "name": "burned > 0",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      373,
+      373
+     ]
+    }
+   ]
+  },
+  {
+   "check": "timestamp",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_snapshot",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      387,
+      464
+     ]
+    },
+    {
+     "type": "node",
+     "name": "read = k > _refGrid",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      399,
+      399
+     ]
+    }
+   ]
+  },
+  {
+   "check": "timestamp",
+   "impact": "Low",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_window",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      559,
+      585
+     ]
+    },
+    {
+     "type": "node",
+     "name": "a <= b",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      560,
+      560
+     ]
+    },
+    {
+     "type": "node",
+     "name": "d < 0 && d % w != 0",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      581,
+      581
+     ]
+    },
+    {
+     "type": "node",
+     "name": "q < TickMath.MIN_TICK",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      582,
+      582
+     ]
+    },
+    {
+     "type": "node",
+     "name": "q > TickMath.MAX_TICK",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      583,
+      583
+     ]
+    }
+   ]
+  },
+  {
+   "check": "divide-before-multiply",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_snapshot",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      387,
+      464
+     ]
+    },
+    {
+     "type": "node",
+     "name": "bMax = now_ / GRID * GRID",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      438,
+      438
+     ]
+    }
+   ]
+  },
+  {
+   "check": "divide-before-multiply",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_snapshot",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      387,
+      464
+     ]
+    },
+    {
+     "type": "node",
+     "name": "bMin = last / GRID * GRID + GRID",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      439,
+      439
+     ]
+    }
+   ]
+  },
+  {
+   "check": "divide-before-multiply",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "witnessStep",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      343,
+      382
+     ]
+    },
+    {
+     "type": "node",
+     "name": "base = c / TICK_SPACING * TICK_SPACING",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      361,
+      361
+     ]
+    }
+   ]
+  },
+  {
+   "check": "incorrect-equality",
+   "impact": "Medium",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_checkpoint",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      416,
+      524
+     ]
+    },
+    {
+     "type": "node",
+     "name": "totalSupply() == 0",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      417,
+      417
+     ]
+    }
+   ]
+  },
+  {
+   "check": "incorrect-equality",
+   "impact": "Medium",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_commit",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      479,
+      503
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_refGrid + 1 == k",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      488,
+      488
+     ]
+    }
+   ]
+  },
+  {
+   "check": "incorrect-equality",
+   "impact": "Medium",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_payIn",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      239,
+      245
+     ]
+    },
+    {
+     "type": "node",
+     "name": "amount == 0",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      240,
+      240
+     ]
+    }
+   ]
+  },
+  {
+   "check": "incorrect-equality",
+   "impact": "Medium",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_settle",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      346,
+      381
+     ]
+    },
+    {
+     "type": "node",
+     "name": "tA == 0 || block.timestamp < tA + 2 * BLOCKTIME + H_MARKOUT",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      349,
+      349
+     ]
+    }
+   ]
+  },
+  {
+   "check": "incorrect-equality",
+   "impact": "Medium",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_snapshot",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      387,
+      464
+     ]
+    },
+    {
+     "type": "node",
+     "name": "last == now_ && _count != 0",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      390,
+      390
+     ]
+    }
+   ]
+  },
+  {
+   "check": "incorrect-equality",
+   "impact": "Medium",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_writeCache",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      505,
+      510
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_epochStartRefEpoch != e || _refCachedAt == 0",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      508,
+      508
+     ]
+    }
+   ]
+  },
+  {
+   "check": "incorrect-equality",
+   "impact": "Medium",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "function",
+     "name": "frozen",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      264,
+      268
+     ]
+    },
+    {
+     "type": "node",
+     "name": "exists = gridIndex != 0 && f.gridIndex == gridIndex",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      266,
+      266
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-no-eth",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_action",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      170,
+      252
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_removeToIdle()",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      183,
+      183
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      235,
+      235
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      211,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      214,
+      214
+     ]
+    },
+    {
+     "type": "node",
+     "name": "dm = _swapRaw(zm,_moveOut(),moveTo)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      188,
+      188
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.swap(_key(),SwapParams(z,amount,limit),)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      287,
+      287
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_book(dm)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      192,
+      192
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      211,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      214,
+      214
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_book(dm)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      192,
+      192
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_idle0 = _bookOne(C0,_idle0,d.amount0())",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      205,
+      205
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_book(dm)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      192,
+      192
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_idle1 = _bookOne(C1,_idle1,d.amount1())",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      206,
+      206
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-no-eth",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_action",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      170,
+      252
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_removeToIdle()",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      183,
+      183
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      235,
+      235
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      211,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      214,
+      214
+     ]
+    },
+    {
+     "type": "node",
+     "name": "dm = _swapRaw(zm,_moveOut(),moveTo)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      188,
+      188
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.swap(_key(),SwapParams(z,amount,limit),)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      287,
+      287
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_book(dm)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      192,
+      192
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      211,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      214,
+      214
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_cappedSwap(ps.zeroForOne,ps.amountIn,before,sRef,tickSpot,moveFrac)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      222,
+      222
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      235,
+      235
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.swap(_key(),SwapParams(z,amount,limit),)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      287,
+      287
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      211,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      214,
+      214
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(_lo,_hi) = (lo,hi)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      229,
+      229
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_cappedSwap(ps.zeroForOne,ps.amountIn,before,sRef,tickSpot,moveFrac)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      222,
+      222
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_idle0 = _bookOne(C0,_idle0,d.amount0())",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      205,
+      205
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_cappedSwap(ps.zeroForOne,ps.amountIn,before,sRef,tickSpot,moveFrac)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      222,
+      222
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_idle1 = _bookOne(C1,_idle1,d.amount1())",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      206,
+      206
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(_lo,_hi) = (lo,hi)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      229,
+      229
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-no-eth",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_action",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      170,
+      252
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_removeToIdle()",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      183,
+      183
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      235,
+      235
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      211,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      214,
+      214
+     ]
+    },
+    {
+     "type": "node",
+     "name": "dm = _swapRaw(zm,_moveOut(),moveTo)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      188,
+      188
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.swap(_key(),SwapParams(z,amount,limit),)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      287,
+      287
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_book(dm)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      192,
+      192
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      211,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      214,
+      214
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_cappedSwap(ps.zeroForOne,ps.amountIn,before,sRef,tickSpot,moveFrac)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      222,
+      222
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      235,
+      235
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.swap(_key(),SwapParams(z,amount,limit),)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      287,
+      287
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      211,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      214,
+      214
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_book(_modify(int256(uint256(L))))",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      233,
+      233
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      235,
+      235
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      211,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      214,
+      214
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_L = L",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      234,
+      234
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_book(_modify(int256(uint256(L))))",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      233,
+      233
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_idle0 = _bookOne(C0,_idle0,d.amount0())",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      205,
+      205
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_book(_modify(int256(uint256(L))))",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      233,
+      233
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_idle1 = _bookOne(C1,_idle1,d.amount1())",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      206,
+      206
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_charge(uint8(entry),before,s0,sSpot,sRef,maxCharge)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      238,
+      238
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_lastAction = uint40(block.number)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      329,
+      329
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_charge(uint8(entry),before,s0,sSpot,sRef,maxCharge)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      238,
+      238
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(_tAction,_pBefore,_pAfter) = (uint40(block.timestamp),before,after_)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      326,
+      326
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-no-eth",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_cappedSwap",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      260,
+      283
+     ]
+    },
+    {
+     "type": "node",
+     "name": "d = _swapRaw(z,- int256(uint256(amountIn)),TickMath.getSqrtPriceAtTick(lim))",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      274,
+      274
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.swap(_key(),SwapParams(z,amount,limit),)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      287,
+      287
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_book(d)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      276,
+      276
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      211,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      214,
+      214
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_book(d)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      276,
+      276
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_idle0 = _bookOne(C0,_idle0,d.amount0())",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      205,
+      205
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_book(d)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      276,
+      276
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_idle1 = _bookOne(C1,_idle1,d.amount1())",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      206,
+      206
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-no-eth",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_cappedSwap",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      260,
+      283
+     ]
+    },
+    {
+     "type": "node",
+     "name": "d = _swapRaw(z,- int256(uint256(amountIn)),TickMath.getSqrtPriceAtTick(lim))",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      274,
+      274
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.swap(_key(),SwapParams(z,amount,limit),)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      287,
+      287
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_book(d)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      276,
+      276
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      211,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      214,
+      214
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_collect()",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      278,
+      278
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      235,
+      235
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      211,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      214,
+      214
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_epochSwapFrac = uint64(_min(_epochSwapFrac + ExecLedger.swapFrac(before,z,paid,sRef),type()(uint64).max))",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      281,
+      281
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_collect()",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      278,
+      278
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_idle0 = _bookOne(C0,_idle0,d.amount0())",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      205,
+      205
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_collect()",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      278,
+      278
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_idle1 = _bookOne(C1,_idle1,d.amount1())",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      206,
+      206
+     ]
+    },
+    {
+     "type": "node",
+     "name": "++ _swapCount",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      282,
+      282
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-no-eth",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_deposit",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      286,
+      324
+     ]
+    },
+    {
+     "type": "node",
+     "name": "d = _modify(int256(dL))",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      300,
+      300
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      235,
+      235
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_L = SafeCast.toUint128(_L + dL)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      302,
+      302
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-no-eth",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_removeToIdle",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      401,
+      408
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_book(_modify(- int256(uint256(l))))",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      405,
+      405
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      235,
+      235
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      211,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      214,
+      214
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_L = 0",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      406,
+      406
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-no-eth",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_seed",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      248,
+      284
+     ]
+    },
+    {
+     "type": "node",
+     "name": "HOOK.snapshotIfNewBlock()",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      250,
+      250
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_payIn(C0,address(this),a0 + wit0)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      251,
+      251
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.sync(c)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      241,
+      241
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.settle()",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      244,
+      244
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_payIn(C1,address(this),a1 + wit1)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      252,
+      252
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.sync(c)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      241,
+      241
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.settle()",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      244,
+      244
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_mintClaims(C0,a0)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      253,
+      253
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),amount)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      248,
+      248
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_mintClaims(C1,a1)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      254,
+      254
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(this),c.toId(),amount)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      248,
+      248
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(HOOK),C0.toId(),wit0)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      256,
+      256
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.mint(address(HOOK),C1.toId(),wit1)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      257,
+      257
+     ]
+    },
+    {
+     "type": "node",
+     "name": "HOOK.fundWitness(wit0,wit1)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      258,
+      258
+     ]
+    },
+    {
+     "type": "node",
+     "name": "HOOK.armAtSeed()",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      265,
+      265
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_bank.dripBlocks = DRIP_BLOCKS",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      280,
+      280
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_bank.releaseDelay = RELEASE_DELAY",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      281,
+      281
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-no-eth",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_withdraw",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      326,
+      354
+     ]
+    },
+    {
+     "type": "node",
+     "name": "d = _modify(- int256(dL))",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      338,
+      338
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      235,
+      235
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_L -= uint128(dL)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      340,
+      340
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_idle0 -= uint128(o0)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      342,
+      342
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_idle1 -= uint128(o1)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      343,
+      343
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-no-eth",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "deployAndPlace",
+     "file": "src/periphery/CuratorBundler.sol",
+     "lines": [
+      83,
+      98
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(v,h) = FACTORY.deploy(a.vaultCode,a.extensionCode,a.hookCode,a.hookArgs,a.saltV,a.saltH,a.seed)",
+     "file": "src/periphery/CuratorBundler.sol",
+     "lines": [
+      94,
+      94
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(vault,hook) = (ICuratorVault(v),ITouchstoneHook(h))",
+     "file": "src/periphery/CuratorBundler.sol",
+     "lines": [
+      95,
+      95
+     ]
+    }
+   ]
+  },
+  {
+   "check": "reentrancy-no-eth",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "witnessStep",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      343,
+      382
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_modify(key,ModifyLiquidityParams(lo,hi,- int256(uint256(oldL)),salt))",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      353,
+      353
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = poolManager.modifyLiquidity(key,p,)",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      596,
+      596
+     ]
+    },
+    {
+     "type": "node",
+     "name": "poolManager.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      604,
+      604
+     ]
+    },
+    {
+     "type": "node",
+     "name": "poolManager.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      608,
+      608
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_modify(key,ModifyLiquidityParams(nlo,nhi,int256(uint256(lw)),_witSalt(epoch)))",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      379,
+      379
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = poolManager.modifyLiquidity(key,p,)",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      596,
+      596
+     ]
+    },
+    {
+     "type": "node",
+     "name": "poolManager.mint(address(this),c.toId(),uint128(a))",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      604,
+      604
+     ]
+    },
+    {
+     "type": "node",
+     "name": "poolManager.burn(address(this),c.toId(),uint128(- a))",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      608,
+      608
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(_witLo,_witHi,_witEpoch,_witL) = (nlo,nhi,epoch,lw)",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      381,
+      381
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(_witLo,_witHi,_witEpoch,_witL) = (nlo,nhi,epoch,lw)",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      381,
+      381
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(_witLo,_witHi,_witEpoch,_witL) = (nlo,nhi,epoch,lw)",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      381,
+      381
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(_witLo,_witHi,_witEpoch,_witL) = (nlo,nhi,epoch,lw)",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      381,
+      381
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_modify(key,ModifyLiquidityParams(nlo,nhi,int256(uint256(lw)),_witSalt(epoch)))",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      379,
+      379
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_witnessReserve0 = _settleOne(CURRENCY0,d.amount0(),_witnessReserve0)",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      597,
+      597
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_modify(key,ModifyLiquidityParams(nlo,nhi,int256(uint256(lw)),_witSalt(epoch)))",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      379,
+      379
+     ]
+    },
+    {
+     "type": "node",
+     "name": "_witnessReserve1 = _settleOne(CURRENCY1,d.amount1(),_witnessReserve1)",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      598,
+      598
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-local",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "a",
+     "file": "src/libraries/MedianOracle.sol",
+     "lines": [
+      24,
+      24
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-local",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "a0",
+     "file": "src/libraries/Placement.sol",
+     "lines": [
+      61,
+      61
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-local",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "a1",
+     "file": "src/libraries/Placement.sol",
+     "lines": [
+      62,
+      62
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-local",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "deltaAfter",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      223,
+      223
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-local",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "dripped",
+     "file": "src/libraries/FeeBank.sol",
+     "lines": [
+      181,
+      181
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-local",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "fl",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      425,
+      425
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-local",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "g",
+     "file": "src/libraries/ExecLedger.sol",
+     "lines": [
+      148,
+      148
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-local",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "gateOpen",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      431,
+      431
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-local",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "minted",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      487,
+      487
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-local",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "moveFrac",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      215,
+      215
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-local",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "n",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      515,
+      515
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-local",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "nb",
+     "file": "src/libraries/ExecLedger.sol",
+     "lines": [
+      149,
+      149
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-local",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "ok",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      400,
+      400
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-local",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "p0",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      297,
+      297
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-local",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "p1",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      298,
+      298
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-local",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "paidMove",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      180,
+      180
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-local",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "pos",
+     "file": "src/libraries/ExecLedger.sol",
+     "lines": [
+      147,
+      147
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-local",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "r0",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      335,
+      335
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-local",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "r1",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      336,
+      336
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-local",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "streak",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      484,
+      484
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-local",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "t",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      401,
+      401
+     ]
+    }
+   ]
+  },
+  {
+   "check": "uninitialized-local",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "zm",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      179,
+      179
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_act",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      79,
+      82
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.unlock(abi.encode(entry,msg.sender,args))",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      81,
+      81
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_action",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      170,
+      252
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(L,None,deltaAfter) = ExecLedger.placementSize(_holdings(),lo,hi,sNow,sRef)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      228,
+      228
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_action",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      170,
+      252
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(s0,None,None,None) = MANAGER.getSlot0(POOL_ID)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      175,
+      175
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_action",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      170,
+      252
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(sNow,None,None,None) = MANAGER.getSlot0(POOL_ID)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      226,
+      226
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_action",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      170,
+      252
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(sSpot,tickSpot,None,None) = MANAGER.getSlot0(POOL_ID)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      195,
+      195
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_action",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      170,
+      252
+     ]
+    },
+    {
+     "type": "node",
+     "name": "FeeBank.bankApply(_bank,Op.Place,)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      248,
+      248
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_burnBank",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      220,
+      225
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(burned,None,a,None) = FeeBank.bankApply(_bank,op,args)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      222,
+      222
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_charge",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      307,
+      339
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(burned,None,bankBurn,bondBurn) = FeeBank.bankApply(_bank,Op.Charge,abi.encode(burn,burnR))",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      315,
+      316
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_charge",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      307,
+      339
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(sEnd,None,None,None) = MANAGER.getSlot0(POOL_ID)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      324,
+      324
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_checkpoint",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      416,
+      524
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(navp,None) = ExecLedger.value(_holdings(),TickMath.getSqrtPriceAtTick(pt))",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      490,
+      490
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_checkpoint",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      416,
+      524
+     ]
+    },
+    {
+     "type": "node",
+     "name": "FeeBank.bankApply(b,Op.Accrue,abi.encode(ne,shares,gateOpen))",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      494,
+      494
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_checkpoint",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      416,
+      524
+     ]
+    },
+    {
+     "type": "node",
+     "name": "FeeBank.bankApply(b,Op.VestTime,abi.encode(ne,gateOpen))",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      516,
+      516
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_enter",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      130,
+      132
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.unlock(abi.encode(entry,msg.sender,args))",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      131,
+      131
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_modify",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      595,
+      599
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = poolManager.modifyLiquidity(key,p,)",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      596,
+      596
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_modify",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      234,
+      236
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      235,
+      235
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_move",
+     "file": "src/periphery/CuratorBundler.sol",
+     "lines": [
+      198,
+      200
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.unlock(abi.encode(target))",
+     "file": "src/periphery/CuratorBundler.sol",
+     "lines": [
+      199,
+      199
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_pay",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      204,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(None,pay,None,None) = FeeBank.bankApply(_bank,op,a)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      205,
+      205
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_payIn",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      239,
+      245
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.settle()",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      244,
+      244
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_seed",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      248,
+      284
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(navAtRef,None) = ExecLedger.value(_holdings(),TickMath.getSqrtPriceAtTick(o.refTick))",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      271,
+      271
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_seed",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      248,
+      284
+     ]
+    },
+    {
+     "type": "node",
+     "name": "HOOK.snapshotIfNewBlock()",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      250,
+      250
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_settle",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      346,
+      381
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(burned,None,relBond,relNb) = FeeBank.bankApply(b,Op.Settle,abi.encode(burnS,uint32(block.number / EPOCH),uint40(block.number)))",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      371,
+      372
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_settle",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      346,
+      381
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(extra,None,burnS) = ExecLedger.settleExtra(_pBefore,_pAfter,_pend,tickMk,FEE_TICKS,FEE,burnS)",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      361,
+      361
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_settleDelta",
+     "file": "src/periphery/CuratorBundler.sol",
+     "lines": [
+      203,
+      211
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.settle()",
+     "file": "src/periphery/CuratorBundler.sol",
+     "lines": [
+      207,
+      207
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_slot0",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      590,
+      592
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(sqrtP,tick,None,None) = poolManager.getSlot0(POOL_ID)",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      591,
+      591
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "_tryRef",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      563,
+      566
+     ]
+    },
+    {
+     "type": "node",
+     "name": "HOOK.tryRef()",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      565,
+      565
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "bankApply",
+     "file": "src/libraries/FeeBank.sol",
+     "lines": [
+      27,
+      83
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(mode,br,None) = Ladder.next(b.mode,b.breaches,Ladder.EV_PLACE,0)",
+     "file": "src/libraries/FeeBank.sol",
+     "lines": [
+      52,
+      52
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "constructor",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      121,
+      172
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(None,None,None,card,None,None,None) = r.slot0()",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      144,
+      144
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "constructor",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      121,
+      172
+     ]
+    },
+    {
+     "type": "node",
+     "name": "IPoolManager(a.poolManager).initialize(key,a.seedSqrtPriceX96)",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      171,
+      171
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "constructor",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      121,
+      172
+     ]
+    },
+    {
+     "type": "node",
+     "name": "r.observe(ago)",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      150,
+      150
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "dispatch",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      136,
+      201
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(None,None,lw,fb,st) = HOOK.rollWitness(e)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      181,
+      181
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "dispatch",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      136,
+      201
+     ]
+    },
+    {
+     "type": "node",
+     "name": "FeeBank.bankApply(_bank,Op.TopUp,args)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      157,
+      157
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "moveAndPlace",
+     "file": "src/periphery/CuratorBundler.sol",
+     "lines": [
+      111,
+      126
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(None,t,None,None) = MANAGER.getSlot0(_poolId())",
+     "file": "src/periphery/CuratorBundler.sol",
+     "lines": [
+      120,
+      120
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "placementSize",
+     "file": "src/libraries/ExecLedger.sol",
+     "lines": [
+      232,
+      238
+     ]
+    },
+    {
+     "type": "node",
+     "name": "Placement.size(idle,lo,hi,sqrtSpot,sqrtRef)",
+     "file": "src/libraries/ExecLedger.sol",
+     "lines": [
+      237,
+      237
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "seed",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      60,
+      66
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.unlock(abi.encode(Entry.Seed,address(0),abi.encode(a0,a1,wit0,wit1)))",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      65,
+      65
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "settle",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      85,
+      87
+     ]
+    },
+    {
+     "type": "node",
+     "name": "MANAGER.unlock(abi.encode(Entry.Settle,msg.sender,))",
+     "file": "src/TouchstoneVault.sol",
+     "lines": [
+      86,
+      86
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "unlockCallback",
+     "file": "src/periphery/CuratorBundler.sol",
+     "lines": [
+      128,
+      140
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(sp,None,None,None) = MANAGER.getSlot0(_poolId())",
+     "file": "src/periphery/CuratorBundler.sol",
+     "lines": [
+      132,
+      132
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "witnessStep",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      343,
+      382
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(None,last0,last1) = poolManager.getPositionInfo(POOL_ID,address(this),lo,hi,salt)",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      351,
+      351
+     ]
+    }
+   ]
+  },
+  {
+   "check": "unused-return",
+   "impact": "Medium",
+   "confidence": "Medium",
+   "elements": [
+    {
+     "type": "function",
+     "name": "witnessStep",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      343,
+      382
+     ]
+    },
+    {
+     "type": "node",
+     "name": "(None,now0,now1) = poolManager.getPositionInfo(POOL_ID,address(this),lo,hi,salt)",
+     "file": "src/TouchstoneHook.sol",
+     "lines": [
+      354,
+      354
+     ]
+    }
+   ]
+  },
+  {
+   "check": "constable-states",
+   "impact": "Optimization",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "_epoch",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      40,
+      40
+     ]
+    }
+   ]
+  },
+  {
+   "check": "constable-states",
+   "impact": "Optimization",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "_epochSwapFrac",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      42,
+      42
+     ]
+    }
+   ]
+  },
+  {
+   "check": "constable-states",
+   "impact": "Optimization",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "_hi",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      35,
+      35
+     ]
+    }
+   ]
+  },
+  {
+   "check": "constable-states",
+   "impact": "Optimization",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "_lastAction",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      47,
+      47
+     ]
+    }
+   ]
+  },
+  {
+   "check": "constable-states",
+   "impact": "Optimization",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "_lo",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      34,
+      34
+     ]
+    }
+   ]
+  },
+  {
+   "check": "constable-states",
+   "impact": "Optimization",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "_seeded",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      49,
+      49
+     ]
+    }
+   ]
+  },
+  {
+   "check": "constable-states",
+   "impact": "Optimization",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "_swapCount",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      43,
+      43
+     ]
+    }
+   ]
+  },
+  {
+   "check": "constable-states",
+   "impact": "Optimization",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "_tAction",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      45,
+      45
+     ]
+    }
+   ]
+  },
+  {
+   "check": "constable-states",
+   "impact": "Optimization",
+   "confidence": "High",
+   "elements": [
+    {
+     "type": "variable",
+     "name": "curator",
+     "file": "src/TouchstoneVaultBase.sol",
+     "lines": [
+      50,
+      50
+     ]
+    }
+   ]
+  }
+ ]
+}

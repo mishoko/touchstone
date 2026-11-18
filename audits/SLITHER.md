@@ -1,6 +1,11 @@
 # Slither triage (test S-1)
 
-- Run: `slither . --filter-paths 'lib/|test/|script/' --exclude-dependencies --json output/s20/slither.json`.
+- Run: `slither . --filter-paths 'lib/|test/|script/' --exclude-dependencies --json <out>`, re-run on 2026-11-18 at the
+  current `src/` (the first triage's run predated a six-line constructor check; both runs give the same 215 results).
+- Record: `audits/slither-results.json` (`script/slither_record.py`: every result's detector, impact and elements, and
+  `src_sha256`, the hash of the analysed `src/`). Test S-1 (`test/static/test_static.py`) fails if this triage and the
+  record differ in any section count, detector or row count, if a row lacks a verdict, or if `src/` has changed since
+  the recorded run.
 - Tool: Slither 0.11.5, solc 0.8.26, via-IR.
 - Scope: `src/` (64 contracts analysed, 101 detectors).
 - Result: 215 results, triaged below. None requires a code change.

@@ -15,7 +15,7 @@ optimizer_runs = 200
 extra_output = ["storageLayout"]
 # The golden-vector runners parse large JSON files inside the EVM; the default 2^30 test gas limit is too small.
 gas_limit = "18446744073709551615"
-fs_permissions = [{ access = "read", path = "./test/vectors" }, { access = "read", path = "./eval/data" }, { access = "read-write", path = "./output/nonvacuity" }, { access = "read-write", path = "./output/e0" }]
+fs_permissions = [{ access = "read", path = "./test/vectors" }, { access = "read", path = "./eval/data" }, { access = "read-write", path = "./output/nonvacuity" }, { access = "read-write", path = "./output/e0" }, { access = "read-write", path = "./output/e0a" }]
 # The size gate (runtime <= 22,000 B) is script/size_gate.py over `forge build --sizes --json` plus an anvil deploy.
 # Note: `forge test` does not enforce EIP-170; the size gate is `forge build --sizes` + an anvil deploy (CI).
 

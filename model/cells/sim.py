@@ -52,12 +52,17 @@ def gas_eth(kind, n=1):
 
 
 # ----------------------------------------------------------------------------- market paths
+def path_key(seed, sigma, kind="gbm"):
+    """The market path's RNG key (one place: `uic.py` checks fresh seeds against it)."""
+    return seed * 7919 + int(sigma * 1000) + {"gbm": 0, "t3": 1, "hover": 2}[kind] * 104729
+
+
 def market_path(seed, sigma, days, kind="gbm", step_sec=STEP_SEC, start=T0, edge=None):
     """Log-price path in ticks at `step_sec` resolution, with two pre-history points at `start` so the TWAP
     at t = 0 is defined. kinds: gbm (driftless), t3 (Student-t ν = 3 increments scaled to the same σ),
     hover (Ornstein-Uhlenbeck around `edge`, half-life 12 h, stationary sd ≈ 1.5× the hourly GBM sd × √12)."""
     kappa = 0.0
-    rng = random.Random(seed * 7919 + int(sigma * 1000) + {"gbm": 0, "t3": 1, "hover": 2}[kind] * 104729)
+    rng = random.Random(path_key(seed, sigma, kind))
     n = days * 86400 // step_sec
     sd = sigma * math.sqrt(step_sec / (365 * 86400)) / math.log(1.0001)
     out = [float(start)] * 2

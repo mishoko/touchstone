@@ -55,6 +55,11 @@ WAD = 10 ** 18
 HONEST_M = 0.022
 
 
+def sim_key(seed, sigma):
+    """The Sim's RNG key for a path (L8 uses key + 1); one place: `uic.py` checks fresh seeds against it."""
+    return seed * 1009 + int(sigma * 100)
+
+
 def job(args):
     seed, kind, sigma, honest_only = args
     S.SETTLE["rule"] = RULE
@@ -64,7 +69,7 @@ def job(args):
     rows = []
     if honest_only:   # the honest-cost row only: the mimic at m = 2.2%/yr, no observer (the same Sim as the full run's)
         sim = S.Sim(path, HONEST_M, observer=False, place=B.PLACES.get(MIMIC, True), sigma=sigma,
-                    rng_seed=seed * 1009 + int(sigma * 100), bond_ratio=WAD)
+                    rng_seed=sim_key(seed, sigma), bond_ratio=WAD)
         r = sim.run(B.make(MIMIC), I.DAYS * 24)
         r.pop("action_charges")
         r.update(bot=MIMIC, seed=seed, kind=kind, sigma=sigma, m=HONEST_M, observer=False)
@@ -74,13 +79,13 @@ def job(args):
         for obs in variants:
             for m in MS:
                 sim = S.Sim(path, m, observer=obs, place=B.PLACES.get(name, True), sigma=sigma,
-                            rng_seed=seed * 1009 + int(sigma * 100), bond_ratio=WAD)
+                            rng_seed=sim_key(seed, sigma), bond_ratio=WAD)
                 r = sim.run(B.make(name), I.DAYS * 24)
                 r.pop("action_charges")
                 r.update(bot=name, seed=seed, kind=kind, sigma=sigma, m=m, observer=obs)
                 rows.append(r)
     # L8: the mimic with an eroding BOND_RATIO·S bond and the gate enforced
-    sim = S.Sim(path, 0.01, observer=False, sigma=sigma, rng_seed=seed * 1009 + int(sigma * 100) + 1)
+    sim = S.Sim(path, 0.01, observer=False, sigma=sigma, rng_seed=sim_key(seed, sigma) + 1)
     r = sim.run(B.make(MIMIC), I.DAYS * 24)
     l8 = dict(seed=seed, kind=kind, sigma=sigma, actions=r["actions"], reverts=r["revert_kinds"], fallbacks=r["fallbacks"],
               settles=r["settles"], breaches=r["breaches"], bond_burn=r["bond_burn"], extras_max=max(r["extras"], default=0.0),

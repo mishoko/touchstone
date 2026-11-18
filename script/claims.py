@@ -43,6 +43,9 @@ def test_text(root):
     return '\n'.join(open(p).read() for p in files)
 
 
+NO_SUCCESSOR = ('U-IC',)   # run-once rows: a FAIL is final (s23 design review S23D2-01)
+
+
 def eval_passed(path):
     """An eval result covers its ID only when it exists and its verdict is PASS (a FAIL is an unmet claim), or when it
     is a published negative result (`verdict` FAIL, `negative_result` true, a non-empty `decision` naming the ruling)
@@ -56,6 +59,8 @@ def eval_passed(path):
             return True
         sup = r.get('superseded_by')
         dec = r.get('decision')
+        if os.path.basename(path)[:-5] in NO_SUCCESSOR:
+            return False   # a run-once row that failed is never met by a later row (spec §10 U-IC frozen form)
         if (r.get('verdict') == 'FAIL' and r.get('negative_result') is True and isinstance(sup, str) and sup
                 and isinstance(dec, str) and dec):
             q = os.path.join(os.path.dirname(path), sup + '.json')
@@ -208,6 +213,10 @@ def selftest(rows):
         json.dump({'verdict': 'FAIL', 'negative_result': True, 'decision': 'x'}, open(up, 'w'))
         if missing([('U-IC', 'P5', 'test')], 'def test_U_IC__x():', 'P5', d) != ['U-IC']:
             errs.append('fixture: a FAIL result must leave a test row missing even when a test is named after it')
+        json.dump({'verdict': 'FAIL', 'negative_result': True, 'decision': 'x', 'superseded_by': 'U-IC2'}, open(up, 'w'))
+        json.dump({'verdict': 'PASS'}, open(os.path.join(d, 'eval', 'results', 'U-IC2.json'), 'w'))
+        if missing([('U-IC', 'P5', 'test')], '', 'P5', d) != ['U-IC']:
+            errs.append('fixture: a failed U-IC must not be met by a PASS successor')
         json.dump({'verdict': 'PASS'}, open(up, 'w'))
         if missing([('U-IC', 'P5', 'test')], '', 'P5', d):
             errs.append('fixture: a PASS result must cover a test row')

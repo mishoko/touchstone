@@ -114,6 +114,18 @@ contract ScenarioVectorsTest is VectorBase, ScriptedVaultBase {
     /// @dev Every record the model wrote, field by field (U-record; s19 fix review S19F-02).
     function _checkRecords(VaultHarness h, string memory c, string memory p) internal view {
         string[] memory es = vm.parseJsonKeys(c, p);
+        // every epoch the model did not write is empty (a Solidity write the model lacks is caught; S19F2-01)
+        uint256 e1 = h.scalars().epoch + 1;
+        for (uint256 e = _u(c, ".in.state.epoch"); e <= e1; ++e) {
+            bool listed;
+            for (uint256 k; k < es.length; ++k) {
+                if (vm.parseUint(es[k]) == e) listed = true;
+            }
+            if (!listed) {
+                EpochRecord memory z = h.record(uint32(e));
+                assertEq(uint256(z.start) + z.end + z.lTau + z.base + z.minted + z.flags, 0, string.concat(cid, " unlisted record"));
+            }
+        }
         for (uint256 k; k < es.length; ++k) {
             string memory q = string.concat(p, ".", es[k]);
             EpochRecord memory r = h.record(uint32(vm.parseUint(es[k])));

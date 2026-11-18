@@ -1193,8 +1193,11 @@ def scenario_cases():
     LO, HI = T0 - 1000, T0 + 1000
     k = 10 ** 18
 
-    def obs(now, tauV, refFresh=True, refTick=T0, gap=False, empty=False, pending=0, lastPending=0, tauVAt=0, tauB=0):
-        return dict(med9=T0, tickSpot=T0, refTick=refTick, refCachedAt=now - (1 if refFresh else 2 * t.GRID + 1),
+    def obs(now, tauV, refFresh=True, refTick=T0, gap=False, empty=False, pending=0, lastPending=0, tauVAt=0, tauB=None):
+        # tauB defaults to a counter that grows with the block (s19 fix review S19F2-01: a non-zero tauB in the records)
+        tauB = now // 3 if tauB is None else tauB
+        return dict(med9=T0 + (now // t.EPOCH) % 7, tickSpot=T0, refTick=refTick,
+                    refCachedAt=now - (1 if refFresh else 2 * t.GRID + 1),
                     refFresh=refFresh, resetStreak=0, gapSinceVerify=gap, emptyRange=empty, tauV=tauV, tauB=tauB,
                     outBlocks=0, breachSeq=pending, pendingBreaches=pending, lastPendingBlock=lastPending,
                     tauVAtLastPending=tauVAt, gridIndex=now // t.GRID, epoch=now // t.EPOCH)
@@ -1365,7 +1368,9 @@ SCENARIO_CONV = {
            "forfeited), CheckpointDeferred(), ModeChanged(from, to) and EpochRecorded(e) plus the ackBreaches stub, "
            "in order.",
     "records": "records[e] = every EpochRecord field (spec §3.9; end = 0 and tauV/tauB the counters at start while "
-               "the record is open; a record the scenario did not open has start 0). flags are names; as a u8 the bit of each flag is its "
+               "the record is open; a record the scenario did not open has start 0); the scenarios run checkpoints only, "
+               "so charge, bankBurned and bondBurned are 0 here (the action and settlement rows pin them). Every epoch "
+               "from in.state.epoch to the last step's epoch + 1 that the model did not write is empty. flags are names; as a u8 the bit of each flag is its "
                "position in the record's flag list (0 stale, 1 witnessMissing, 2 witnessFallback, 3 breach, "
                "4 refStale, 5 deferred, 6 unverified).",
     "notes": SCENARIO_NOTES,

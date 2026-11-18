@@ -100,6 +100,9 @@ contract VaultRecordsTest is VaultRecordsBase {
         EpochRecord memory open0 = hv.record(e0);
         assertEq(open0.end, 0, "precondition: the record is open");
         assertGt(open0.start, 0, "the first record opened at seed");
+        // the counters at seed (S19F2-05): the clock arms at seed, so the opening record holds the hook's counters then
+        assertEq(open0.tauV, 0, "tauV at seed");
+        assertEq(open0.tauB, 0, "tauB at seed");
         vm.recordLogs();
         advance((V + 3) * tier.EPOCH);
         _ve().poke();

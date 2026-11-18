@@ -1,8 +1,11 @@
 {
  "eval": "E0",
+ "scope": "reduced (registry F-049): equal-L passive leg, no fixed-depositor share terms, no claim/deferral/breach/drip rows",
  "bound_bp": 0.3,
  "verdict": "FAIL",
  "nonvacuous": false,
+ "same_range_tautology": true,
+ "control_vacuous": true,
  "control_exceeds_bound": true,
  "runs": {
   "same": {

@@ -53,13 +53,18 @@ def eval_passed(path):
         return False
 
 
-def covered(i, tests, root):
-    return bool(re.search(pattern(i), tests)) or eval_passed(os.path.join(root, 'eval', 'results', i + '.json'))
+def covered(i, tests, root, kind='test'):
+    """A test row is covered by a matching test name or a PASS eval result; an eval row only by a PASS result (a test
+    named after an eval never covers it; s19 fix review S19F2-03)."""
+    passed = eval_passed(os.path.join(root, 'eval', 'results', i + '.json'))
+    if kind == 'eval':
+        return passed
+    return bool(re.search(pattern(i), tests)) or passed
 
 
 def missing(rows, tests, phase, root):
     lim = PHASES.index(phase)
-    return [i for i, due, _ in rows if PHASES.index(due) <= lim and not covered(i, tests, root)]
+    return [i for i, due, k in rows if PHASES.index(due) <= lim and not covered(i, tests, root, k)]
 
 
 # ------------------------------------------------------------------ generation from the specification
@@ -136,6 +141,8 @@ def selftest(rows):
         json.dump({'verdict': 'FAIL'}, open(rp, 'w'))
         if missing([('E0', 'P4', 'eval')], '', 'P4', d) != ['E0']:
             errs.append('fixture: a FAIL eval result must leave its ID missing')
+        if missing([('E0', 'P4', 'eval')], 'function test_E0__x()', 'P4', d) != ['E0']:
+            errs.append('fixture: a test named after an eval must not cover it')
         json.dump({'verdict': 'PASS'}, open(rp, 'w'))
         if missing([('E0', 'P4', 'eval')], '', 'P4', d):
             errs.append('fixture: a PASS eval result must cover its ID')

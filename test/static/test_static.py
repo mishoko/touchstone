@@ -56,6 +56,8 @@ D3_ENTRIES = {
     },
     'TouchstoneVaultExtension': {
         'seed': 'factory-once', 'deposit': 'anyone', 'withdraw': 'anyone', 'dispatch': 'vault-delegatecall',
+        'claim': 'curator', 'topUpBond': 'curator', 'retire': 'curator', 'releaseBond': 'curator', 'poke': 'anyone',
+        'processBreach': 'anyone', 'roll': 'vault-delegatecall',
         'approve': 'holder', 'transfer': 'holder', 'transferFrom': 'holder',
     },
     'TouchstoneFactory': {'deploy': 'anyone'},

@@ -148,6 +148,8 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
     ///         checkpoint is not a gate the live leg closed, and a retire is not a removal.
     function test_I_15__countersDoNotOvercount() public {
         for (uint256 i; i < 3; ++i) handler.deposit(i, 5e22);
+        handler.place(3, 0, 1, 1); // a curator placement on [c - 1960, c + 40): the moved reference leaves it
+        assertEq(handler.curatorPlacements(), 1, "placed");
         // the cache in range and fresh, the live leg out; a checkpoint with nothing matured, then a plant in the block
         while (vm.getBlockTimestamp() % 240 >= 12) handler.advance(1);
         handler.refresh();
@@ -156,7 +158,21 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         handler.withdraw(0, 1e18); // a checkpoint this block, nothing vestable
         handler.seedBank(1, 1e20); // maturedPending planted after it, same block, no checkpoint
         assertEq(handler.gateClosedLive(), 0, "a plant after the checkpoint is not a closed gate");
+        // positive control: the next block's checkpoint holds the matured pay against the live leg
+        handler.advance(1);
+        handler.withdraw(0, 1e18);
+        assertEq(handler.gateClosedLive(), 1, "control: a checkpoint holding matured pay counts");
         handler.retire(0);
+        assertEq(handler.retires(), 1, "retired");
+        assertEq(handler.removals(), 0, "a retire is not a removal");
+    }
+
+    /// @notice S20F2-01: a retire whose prologue processes a pending breach is a retire, not a removal.
+    function test_I_15__retireAfterAPendingBreachIsNotARemoval() public {
+        for (uint256 i; i < 3; ++i) handler.deposit(i, 5e22);
+        handler.driveBreach(); // one breach latched, pending
+        handler.retire(0); // its prologue processes the breach, then the retire exits
+        assertEq(handler.breachesProcessed(), 1, "the pending breach was processed");
         assertEq(handler.retires(), 1, "retired");
         assertEq(handler.removals(), 0, "a retire is not a removal");
     }

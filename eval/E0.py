@@ -100,7 +100,7 @@ def main(argv):
                    'no claim/deferral/breach/drip rows', bound_bp=BOUND_BP, verdict='PASS' if verdict else 'FAIL',
                    nonvacuous=nonvac, same_range_tautology=True, control_vacuous=vacuous_control,
                    control_exceeds_bound=control, negative_result=True, superseded_by='E0a',
-                   decision='published as a negative result; the ledger amended after the data and evaluated as E0a (2026-11-18)',
+                   decision='decision log #188, registry F-049 (2026-11-18): published as a negative result; the ledger amended after the data and evaluated as E0a',
                    note='registered form failed; the ledger was amended after this result (spec §3.8) and is '
                         'evaluated as E0a, with this formula reported next to it', runs=res)
     os.makedirs(os.path.join(HERE, 'results'), exist_ok=True)

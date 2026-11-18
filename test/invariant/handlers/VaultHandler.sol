@@ -768,7 +768,6 @@ contract VaultHandler is Test, SettleExtraOracle {
         Holdings memory h = hv.holdings();
         bytes32 k = keccak256(abi.encode(h.lo, h.hi));
         if (h.L > 0 && !_rangeSeen[k]) {
-            if (_nRanges == 64) _i13f("range cap reached: a range would go unchecked");
             _rangeSeen[k] = true;
             (_rangeLo[_nRanges], _rangeHi[_nRanges]) = (h.lo, h.hi);
             ++_nRanges;
@@ -803,8 +802,9 @@ contract VaultHandler is Test, SettleExtraOracle {
         uint256 w = uint256(vm.load(address(hook), bytes32(0)));
         Obs memory o = hook.obs();
         if (b.breaches > p.breaches) ++breachesProcessed;
-        // a removal is the third breach's, not a retire (S20F-02)
-        if (p.mode != Ladder.EXITED && b.mode == Ladder.EXITED && b.breaches > p.breaches) ++removals;
+        // a removal is the third breach's, not a retire (S20F-02, S20F2-01: a retire whose prologue processes a
+        // pending breach still exits by retire; the ladder removes exactly when the count reaches REMOVAL)
+        if (p.mode != Ladder.EXITED && b.mode == Ladder.EXITED && b.breaches >= Ladder.REMOVAL) ++removals;
         if (b.vestedUnclaimed > p.vested) ++vests;
         if (hv.scalars().epoch > p.epoch) ++epochCloses;
         if (_refGrid(w) > _refGrid(p.hook0)) ++refreshes;

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
+import {PreSwap} from "../../src/types/PreSwap.sol";
+
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {IUnlockCallback} from "@uniswap/v4-core/src/interfaces/callback/IUnlockCallback.sol";
 import {Currency, CurrencyLibrary} from "@uniswap/v4-core/src/types/Currency.sol";
@@ -138,11 +140,19 @@ contract VaultReentrancyTest is VaultBase {
     }
 
     function _payloads() internal view returns (bytes[] memory p) {
-        p = new bytes[](3);
+        p = new bytes[](5);
         // withdraw the bond-holding vault's shares to the attacker; deposit with alice as the payer; re-seed
         p[0] = abi.encode(Entry.Withdraw, vault, abi.encode(uint256(1e23), uint256(0), uint256(0), bob));
         p[1] = abi.encode(Entry.Deposit, alice, abi.encode(uint256(1e23), type(uint256).max, type(uint256).max, bob));
         p[2] = abi.encode(Entry.Seed, address(0), abi.encode(uint256(1), uint256(1), uint256(0), uint256(0)));
+        // the entries that run in the vault itself (no extension `dispatch`, whose own PoolManager check would mask the
+        // vault's; s19 MU-158): a curator swap of vault capital by anyone, and the open settle
+        p[3] = abi.encode(
+            Entry.RebalanceSwap,
+            bob,
+            abi.encode(int24(0), int24(0), PreSwap(true, true, 1e15), uint160(0), type(uint256).max)
+        );
+        p[4] = abi.encode(Entry.Settle, bob, "");
     }
 
     function test_U_reent__unlockCallbackFromAnEoaReverts() public {

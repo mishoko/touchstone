@@ -26,13 +26,21 @@ its unvested pay, three breaches remove it, and depositors can always exit in ki
 rewarded, and the reference TWAP is assumed not to be moved; the measured cost of moving it will be published with
 the security results.
 
-**Known limitation (measured).** The charge prices an action at the worse of spot and a 10-minute TWAP. When the market
-moves beyond both within the TWAP's lag, a curator colluding with a trader can place liquidity at a stale price and let
-the trader take the difference; honest placements made while the TWAP lags are also mis-charged when the curator first moves the pool price to its
-target (some of their loss to arbitrage goes uncharged, others are overcharged). On synthetic paths this lag leak measured 1.2% of NAV a year at 60%
-annual volatility (90% CI 0.6–1.8%) on a lane that fixes the size of the price push, and more when the push is free.
-Widening the charge to the reference pool's current price ± a margin closes it only with a margin wide enough to
-overcharge honest curators heavily. This is an open problem of the design and is reported as a negative result.
+**Lag leak and its repair (measured).** Every price an action can read is at least one block behind the market, so
+a charge at the worse of spot and the TWAP alone leaves a lag leak: a curator colluding with a trader can place
+liquidity at a stale price and let the trader take the difference (on synthetic paths 8.3% / 37.2% of NAV a year at
+60% / 120% annual volatility with the price push free to the fence). Each action is therefore also settled against
+the reference pool's TWAP over a short window that opens one block after the action, with a fixed reserve held until
+settlement; the curator commits before that price exists. On held-out paths the leak measured 0.000% of NAV a year at
+both volatilities. The guarantee is in expectation: the reserve caps what one settlement can recover, so a colluding
+pair can still profit on an extreme markout draw (beyond about 120 ticks for a 1.9%-of-NAV move), and an arbitrage
+that stops outside the settlement's fee band is not covered by its legs.
+
+**Known limitation (measured, negative result).** At the shipped base rate m = 2.2% a year and 120% annual volatility,
+the reference curator (edge-6h) is not shown to out-earn two lax strategies on held-out paths over 180 days: a
+placement at exactly the minimum deployment just before the cure window (mean difference +0.036 ETH, confidence lower
+bound −0.052 ETH) and the cheapest legal clock reset (mean −0.016 ETH, lower bound −0.102 ETH). All other gated rows pass. The smallest rate that would close the gap is estimated at 2.3–2.4% a year or more and has not
+been measured; m was not changed after seeing the data.
 
 There is no keeper, operator, admin or off-chain feed. The one external input is the reference pool's TWAP, because a
 new hook pool whose vault is out of range has no reliable price of its own.

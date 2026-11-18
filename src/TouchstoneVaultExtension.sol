@@ -152,7 +152,7 @@ contract TouchstoneVaultExtension is VaultCommon {
         }
         if (entry == Entry.TopUpBond) {
             uint256 s = abi.decode(args, (uint256));
-            // [MU-281] the curator's own shares move into the vault's custody with the bond
+            // [MU-281] [MU-311] the curator's own shares move into the vault's custody with the bond
             _transfer(payer, address(this), s);
             FeeBank.bankApply(_bank, Op.TopUp, args);
             emit BondTopUp(s);

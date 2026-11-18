@@ -401,6 +401,7 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
     function _removeToIdle() internal {
         uint128 l = _L;
         if (l > 0) {
+            // [MU-310] all of it: the vault holds one position (I-13)
             _book(_modify(-int256(uint256(l))));
             _L = 0;
         }

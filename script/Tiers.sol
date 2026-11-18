@@ -109,6 +109,7 @@ library Tiers {
         if (t.RESET_RUN < 2) revert TierInvalid("RESET_RUN");
         if (uint256(t.GRID) * blocktime != t.GRID_SEC) revert TierInvalid("GRID_SEC");
         if (t.EPOCH % t.GRID != 0) revert TierInvalid("EPOCH");
+        if (t.EPOCH == 0 || t.FORFEIT_DRIP_BLOCKS != t.EPOCH) revert TierInvalid("FORFEIT_DRIP_BLOCKS");
         if (uint256(t.COOLDOWN) * blocktime < uint256(t.H_MARKOUT) + 2 * blocktime) revert TierInvalid("COOLDOWN");
     }
 }

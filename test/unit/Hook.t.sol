@@ -519,6 +519,32 @@ contract HookTest is HookBase {
         assertTrue(d.deploy(ok, s0) != address(0));
     }
 
+    /// @notice M-10 (F-047, s20 panel decision D1): the hook's constructor rejects any tier whose forfeiture drip is not
+    ///         exactly one epoch (a drip of 1 block lets a sniper who deposits at the breach take its whole share one
+    ///         block later; a drip far longer than the epoch withholds forfeited pay from leaving depositors), and an
+    ///         `EPOCH` of 0 (which `EPOCH % GRID == 0` lets through). Control: drip = EPOCH deploys.
+    function test_M_10__hookRejectsADripOtherThanOneEpoch() public {
+        Create2Deployer d = new Create2Deployer();
+        Tier memory t;
+        for (uint256 i; i < 5; ++i) {
+            t = tier;
+            if (i == 0) t.FORFEIT_DRIP_BLOCKS = 0;
+            if (i == 1) t.FORFEIT_DRIP_BLOCKS = 1;
+            if (i == 2) t.FORFEIT_DRIP_BLOCKS = t.EPOCH - 1;
+            if (i == 3) t.FORFEIT_DRIP_BLOCKS = t.EPOCH + 1;
+            if (i == 4) (t.EPOCH, t.FORFEIT_DRIP_BLOCKS) = (0, 0);
+            bytes memory init = abi.encodePacked(type(TouchstoneHook).creationCode, abi.encode(_args(t, VAULT)));
+            (bytes32 salt,) = d.mine(init);
+            vm.expectRevert(ITouchstoneHook.BadTier.selector);
+            d.deploy(init, salt);
+        }
+        t = tier;
+        assertEq(t.FORFEIT_DRIP_BLOCKS, t.EPOCH, "the test tier drips over one epoch");
+        bytes memory ok = abi.encodePacked(type(TouchstoneHook).creationCode, abi.encode(_args(t, VAULT)));
+        (bytes32 s0,) = d.mine(ok);
+        assertTrue(d.deploy(ok, s0) != address(0), "control: a one-epoch drip deploys");
+    }
+
     /// @notice D-4 (s15, F-044): the hook rejects a key whose LP fee is dynamic (the flag 0x800000) or 100% and more,
     ///         since the vault's settlement prices the arbitrage fee at the key's fee; control: the static 500-pip key
     ///         deploys. Every shipped tier's `FEE_TICKS` is the smallest t with 1.0001^t ≥ 1 + fee/10⁶ at that fee.

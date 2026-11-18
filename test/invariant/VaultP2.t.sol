@@ -91,9 +91,118 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
                 vm.toString(handler.topUps()), ",", vm.toString(handler.retires()), ",", vm.toString(handler.releases()), ",",
                 vm.toString(handler.pokes()), ",", vm.toString(handler.endgames()), ",", vm.toString(handler.i3DrainChecks()), ",",
                 vm.toString(handler.i12Moved()), ",", vm.toString(handler.forfeitedReserveSettles()), ",",
-                vm.toString(handler.paidPayouts())
+                vm.toString(handler.paidPayouts()), ",", _p5Row()
             )
         );
+    }
+
+    /// @dev I-15's counters (spec §9.1), columns 18..32 of the non-vacuity row.
+    function _p5Row() internal view returns (string memory) {
+        string memory a = string.concat(
+            vm.toString(handler.i8Checks()), ",", vm.toString(handler.chargedRecords()), ",",
+            vm.toString(handler.breachesProcessed()), ",", vm.toString(handler.removals()), ",",
+            vm.toString(handler.vests()), ",", vm.toString(handler.epochCloses()), ",", vm.toString(handler.refreshes()), ","
+        );
+        return string.concat(
+            a, vm.toString(handler.refreshFails()), ",", vm.toString(handler.truncatedSpans()), ",",
+            vm.toString(handler.gapSets()), ",", vm.toString(handler.gapClears()), ",",
+            vm.toString(handler.gateClosedLive()), ",", vm.toString(handler.resetsByRefresh()), ",",
+            vm.toString(handler.ringWraps()), ",", vm.toString(handler.i13Checks())
+        );
+    }
+
+    /// @notice I-5: the curator gains only through `claim` and `releaseBond`: its share balance rises in no other call
+    ///         and it never receives either token.
+    function invariant_I_5__curatorGainsOnlyThroughClaimAndRelease() public view {
+        assertEq(handler.i5Failures(), 0, handler.i5Why());
+    }
+
+    /// @notice I-8: while the hook holds a witness, its position on the live witness range holds exactly `L_W` and both
+    ///         ticks are initialised.
+    function invariant_I_8__witnessTicksInitialisedWhileTheEpochIsOpen() public view {
+        assertEq(handler.i8Failures(), 0, handler.i8Why());
+    }
+
+    /// @notice I-13: one position, exactly `L` on the registered range, W wide and aligned when the curator placed it.
+    function invariant_I_13__widthWAlignedOnePosition() public view {
+        assertEq(handler.i13Failures(), 0, handler.i13Why());
+    }
+
+    /// @notice I-5, a fixed sequence the random campaign rarely reaches: the curator is paid by `claim`, then tops up
+    ///         the bond with half of it; its balance falls by exactly that and no call but the claim raised it.
+    function test_I_5__claimThenTopUpIsNoGain() public {
+        for (uint256 i; i < 3; ++i) handler.deposit(i, 5e22);
+        handler.seedBank(1, 1e20); // maturedPending: vestable now
+        handler.refresh();
+        handler.withdraw(2, 1e21 + 5); // the gate reads the live leg, in range: vests
+        handler.claim();
+        uint256 bal = hv.balanceOf(curator);
+        assertGt(bal, 0, "the curator was paid by claim");
+        handler.topUp(bal / 2);
+        assertEq(handler.topUps(), 1, "a top-up ran");
+        assertEq(hv.balanceOf(curator), bal - bal / 2, "the top-up moved exactly its amount");
+        assertEq(handler.i5Failures(), 0, handler.i5Why());
+    }
+
+    /// @notice I-15: a fixed sequence reaches every counter of the row (the random campaign's totals are checked by
+    ///         `script/nonvacuity.py`), with no I-5, I-8 or I-13 failure on the way.
+    function test_I_15__everyNonVacuityCounterIsReachable() public {
+        for (uint256 i; i < 3; ++i) handler.deposit(i, 5e22);
+        for (uint256 k; k < 3; ++k) handler.seedBank(k, 1e20);
+        handler.poke(false); // the witness of this epoch
+        handler.advance(99 * 256 + 50); // a silent jump over many grid boundaries: truncated span, gap set, ring wrap
+        handler.breakRef(6);
+        handler.advance(99 * 256 + 50);
+        handler.refresh(); // a due anchor, the read fails
+        handler.breakRef(0);
+        handler.refresh();
+        handler.place(3, 0, 1, 1); // a curator placement: registration clears the gap
+        for (uint256 i; i < 14; ++i) handler.advance(0);
+        handler.rebalance(true, 1e6, 0); // a charged action
+        for (uint256 i; i < 14; ++i) handler.advance(0);
+        handler.settle();
+        handler.seedBank(1, 1e20); // maturedPending: vestable
+        // just after an anchor: cache it, then move the reference 1,500 ticks above the centre (outside the placed range)
+        while (vm.getBlockTimestamp() % 240 >= 12) handler.advance(1);
+        handler.refresh();
+        handler.moveRef(3000);
+        for (uint256 i; i < 16; ++i) handler.advance(1); // within the anchor: the live TWAP leaves the range, the cache not
+        handler.withdraw(0, 1e18); // the cache legs open, the live leg closed: matured pay is held
+        assertGt(handler.gateClosedLive(), 0, "gate closed by the live leg");
+        for (uint256 i; i < 30; ++i) {
+            handler.advance(512); // 3 snapshotted blocks: 90 blocks, over four anchors, observed out of range
+            handler.refresh();
+        }
+        handler.moveRef(1000); // back inside the range: RESET_RUN consecutive in-range anchors reset the run
+        for (uint256 i; i < 30; ++i) {
+            handler.advance(512);
+            handler.refresh();
+            handler.withdraw(i, 1e18 + i);
+        }
+        handler.poke(false);
+        for (uint256 i; i < 3; ++i) handler.driveBreach();
+        handler.poke(true); // removal
+        handler.claim();
+        handler.endgame();
+        assertEq(handler.i5Failures(), 0, handler.i5Why());
+        assertEq(handler.i8Failures(), 0, handler.i8Why());
+        assertEq(handler.i13Failures(), 0, handler.i13Why());
+        assertGt(handler.i8Checks(), 0, "I-8 checked a live witness");
+        assertGt(handler.curatorPlacements(), 0, "placement");
+        assertGt(handler.curatorSwaps(), 0, "swap");
+        assertGt(handler.chargedRecords(), 0, "charge > 0");
+        assertGt(handler.breachesProcessed(), 0, "breach");
+        assertGt(handler.removals(), 0, "removal");
+        assertGt(handler.vests(), 0, "vest");
+        assertGt(handler.epochCloses(), 0, "epoch close");
+        assertGt(handler.refreshes(), 0, "refresh");
+        assertGt(handler.refreshFails(), 0, "refresh failed");
+        assertGt(handler.truncatedSpans(), 0, "truncated span");
+        assertGt(handler.gapSets(), 0, "gap set");
+        assertGt(handler.gapClears(), 0, "gap cleared");
+        assertGt(handler.resetsByRefresh(), 0, "reset by refresh");
+        assertGt(handler.ringWraps(), 0, "ring wrapped");
+        assertGt(handler.gateClosedLive(), 0, "gate closed by the live leg");
     }
 
     /// @notice I-3: vested pay falls only by a claim; at a checkpoint a forfeit pool older than its drip (one epoch)

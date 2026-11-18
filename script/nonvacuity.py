@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Non-vacuity of the random invariant campaign. `test/invariant/VaultP2.t.sol` appends one line per run to the file
 named by TS_NV_LOG (pool, rebalance calls, curator swaps, place calls, placements, moved, pre-swapped). A run may
-legitimately see every curator action revert, so the check is on the campaign's totals per pool: enough actions get
+legitimately see every curator action revert, so the check is on the campaign's totals per pool (I-15's counters, s20, each > 0): enough actions get
 past their guards for the invariants to be checked on executed swaps, placements, moves and pre-swaps.
 
   TS_NV_LOG=output/nonvacuity/inv.csv forge test --mp test/invariant/VaultP2.t.sol
@@ -24,7 +24,10 @@ P4_FLOORS = {'claims': 5000, 'topUps': 170, 'retires': 270, 'releases': 2800, 'p
              'i3DrainChecks': 34000, 'i12Moved': 130, 'forfeitedReserveSettles': 280,
              # paidPayouts (S19C-03) added after the campaign: the structural minimum until the next campaign measures it
              'paidPayouts': 1}
-NCOL = 7 + len(P4)
+# I-15 (spec §9.1, s20): the P5 counters (columns 18..32), each > 0 over the campaign per pool, as the spec's row states
+P5 = ['i8Checks', 'chargedRecords', 'breachesProcessed', 'removals', 'vests', 'epochCloses', 'refreshes', 'refreshFails',
+      'truncatedSpans', 'gapSets', 'gapClears', 'gateClosedLive', 'resetsByRefresh', 'ringWraps', 'i13Checks']
+NCOL = 7 + len(P4) + len(P5)
 
 
 def check(rows):
@@ -43,7 +46,8 @@ def check(rows):
         errs.append(f'expected both pools, got {sorted(agg)}')
     for pool, a in sorted(agg.items()):
         runs, rb, sw, pl, pd, mv, pre, bm = a[:8]
-        p4 = dict(zip(P4, a[8:]))
+        p4 = dict(zip(P4, a[8:8 + len(P4)]))
+        p5 = dict(zip(P5, a[8 + len(P4):]))
         print(f'{pool}: {runs} runs; swaps {sw}/{rb}; placements {pd}/{pl}; moved {mv}; pre-swapped {pre}; withdrawals minting base {bm}')
         if rb == 0 or sw / rb < FLOORS['swap_rate']:
             errs.append(f'{pool}: swap rate {sw}/{rb} below {FLOORS["swap_rate"]}')
@@ -59,19 +63,27 @@ def check(rows):
         for k in P4:
             if p4[k] < P4_FLOORS[k]:
                 errs.append(f'{pool}: {k} {p4[k]} < {P4_FLOORS[k]}')
+        print(f'{pool}: ' + ', '.join(f'{k} {v}' for k, v in p5.items()))
+        for k in P5:
+            if p5[k] < 1:
+                errs.append(f'{pool}: I-15 counter {k} is 0')
     return errs
 
 
 def main(argv):
     if argv[1:2] == ['--selftest']:
-        tail = [str(P4_FLOORS[k] * 3) for k in P4]
+        tail = [str(P4_FLOORS[k] * 3) for k in P4] + ['5'] * len(P5)
         good = [['tick0', '100', '8', '100', '5', '30', '40', '3'] + tail, ['tick196k', '100', '8', '100', '5', '30', '40', '3'] + tail]
         bad = [['tick0', '100', '0', '100', '5', '30', '40', '3'] + tail, good[1]]
         ok = not check(good) and len(check(bad)) == 1 and check(good[:1])
         ok = ok and len(check([g[:7] + ['0'] + tail for g in good])) == 2  # a campaign that never mints base fails
         for i in range(len(P4)):  # each P4 counter at zero fails on both pools
             ok = ok and len(check([g[:8 + i] + ['0'] + g[9 + i:] for g in good])) == 2
+        for i in range(len(P5)):  # each I-15 counter at zero fails on both pools
+            j = 8 + len(P4) + i
+            ok = ok and len(check([g[:j] + ['0'] + g[j + 1:] for g in good])) == 2
         ok = ok and len(check([g[:8] for g in good])) >= 1  # an old-format row (no P4 counters) fails
+        ok = ok and len(check([g[:8 + len(P4)] for g in good])) >= 1  # an s19-format row (no P5 counters) fails
         print('nonvacuity selftest', 'OK' if ok else 'FAILED')
         return 0 if ok else 1
     if len(argv) != 2:

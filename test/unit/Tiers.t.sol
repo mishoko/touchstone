@@ -53,6 +53,13 @@ contract TiersTest is Test {
         h.check(t, bt);
     }
 
+    function test_tiers_dripIsOneEpoch() public {
+        (Tier memory t, uint256 bt) = Tiers.testing();
+        t.FORFEIT_DRIP_BLOCKS = t.EPOCH - 1;
+        vm.expectRevert(abi.encodeWithSelector(Tiers.TierInvalid.selector, "FORFEIT_DRIP_BLOCKS"));
+        h.check(t, bt);
+    }
+
     function test_tiers_cooldownOutlastsMarkoutWindow() public {
         // TEST: COOLDOWN 12 blocks of 12 s = 144 s = H_MARKOUT 120 s + 2 blocks passes; 11 fails.
         (Tier memory t, uint256 bt) = Tiers.testing();

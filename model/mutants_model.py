@@ -226,11 +226,11 @@ MUTANTS = [
      '            charge, p_star, burn = self._charge(before, self.pool.s, self.pool.s, s_ref, "setPositions", max_charge, ts)'),
     ("markout", "s0 leg dropped", "for p in (sqrt_spot, sqrt_s0, sqrt_ref)]", "for p in (sqrt_spot, sqrt_ref)]"),
     ("markout", "reserve outside the gate", "    ok = burn + burn_r <= unvested + bond", "    ok = burn <= unvested + bond"),
-    ("markout", "lower markout leg without FEE_TICKS", "MAX_TICK, tick_mk - fee_ticks)))", "MAX_TICK, tick_mk)))"),
-    ("markout", "upper markout leg without FEE_TICKS", "MAX_TICK, tick_mk + fee_ticks + 1)))", "MAX_TICK, tick_mk + 1)))"),
-    ("markout", "upper markout leg floored (no round-up)", "MAX_TICK, tick_mk + fee_ticks + 1)))", "MAX_TICK, tick_mk + fee_ticks)))"),
-    ("markout", "extra uncapped", "    extra = min(reserve, max(0, loss_mk - charge0))", "    extra = max(0, loss_mk - charge0)"),
-    ("markout", "extra not net of the immediate charge", "    extra = min(reserve, max(0, loss_mk - charge0))", "    extra = min(reserve, max(0, loss_mk))"),
+    ("markout", "lower markout leg without FEE_TICKS", "    legs = [max(MIN_TICK, tick_mk - fee_ticks), ", "    legs = [max(MIN_TICK, tick_mk), "),
+    ("markout", "upper markout leg without FEE_TICKS", "min(MAX_TICK, tick_mk + fee_ticks + 1)]", "min(MAX_TICK, tick_mk + 1)]"),
+    ("markout", "upper markout leg floored (no round-up)", "min(MAX_TICK, tick_mk + fee_ticks + 1)]", "min(MAX_TICK, tick_mk + fee_ticks)]"),
+    ("markout", "extra uncapped", '    burn_s = min(reserve_shares, max(0, req - pend["burn0"]))', '    burn_s = max(0, req - pend["burn0"])'),
+    ("markout", "extra not net of the immediate charge", '    burn_s = min(reserve_shares, max(0, req - pend["burn0"]))', '    burn_s = min(reserve_shares, req)'),
     ("markout", "fallback burns nothing", '            extra, burn_s = pd["reserve"], b.reserveShares', "            extra, burn_s = 0, 0"),
     ("markout", "window not delayed one block", '        a = ts - pd["tAction"] - t.BLOCKTIME', '        a = ts - pd["tAction"]'),
     ("markout", "settlement before the window closes", '        if ts < pd["tAction"] + 2 * t.BLOCKTIME + t.H_MARKOUT:', '        if ts < pd["tAction"] + t.BLOCKTIME + t.H_MARKOUT:'),
@@ -787,6 +787,10 @@ def run_one(src, m):
             tb = [l for l in rv.stderr.splitlines() if l.strip().startswith("File ")]
             if "AssertionError" in rv.stderr and tb and "vectors.py" in tb[-1]:
                 return name, "killed", "vector generator assertion"
+            # F-050: a MathRevert (a modelled Solidity revert) on an input the clean model serves is an observable change:
+            # the clean generator ran without one, so the mutant reverts where the shipped code returns a value
+            if rv.stderr.strip().splitlines()[-1].startswith(("v4math.MathRevert", "reference.MathRevert", "MathRevert")):
+                return name, "killed", "reverts on a vector input the clean model serves: " + rv.stderr.strip().splitlines()[-1][:80]
             return name, "INVALID", "vector generator crashed: " + rv.stderr.strip().splitlines()[-1][:120]
         for f in sorted(x for x in os.listdir(VEC) if x.endswith(".json")):  # every committed vector file (s2: clock, mode, scenario)
             if not filecmp.cmp(os.path.join(vd, f), os.path.join(VEC, f), shallow=False):

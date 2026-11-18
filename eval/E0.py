@@ -24,6 +24,11 @@ both contain the path differs by a term §3.8 does not carry, the inventory term
 because an in-range position's second derivative does not depend on its bounds. The FAIL is therefore reported, not
 the pass/fail of the full form, which the inventory gap would also fail (registry F-049; the full form needs its own
 review round before it runs).
+
+This result stays published as a negative result. The amended ledger (an exact per-segment price leg at the
+reference, and a fee leg per witness lifetime; spec §3.8, amended after this result) is evaluated as E0a
+(`eval/E0a.py`), which also reports this formula on the same data. `script/claims.py` counts E0 as met only through a
+PASS of E0a, never as a pass of its own.
 """
 import json, math, os, sys
 
@@ -94,7 +99,9 @@ def main(argv):
     summary = dict(eval='E0', scope='reduced (registry F-049): equal-L passive leg, no fixed-depositor share terms, '
                    'no claim/deferral/breach/drip rows', bound_bp=BOUND_BP, verdict='PASS' if verdict else 'FAIL',
                    nonvacuous=nonvac, same_range_tautology=True, control_vacuous=vacuous_control,
-                   control_exceeds_bound=control, runs=res)
+                   control_exceeds_bound=control, negative_result=True, superseded_by='E0a',
+                   note='registered form failed; the ledger was amended after this result (spec §3.8) and is '
+                        'evaluated as E0a, with this formula reported next to it', runs=res)
     os.makedirs(os.path.join(HERE, 'results'), exist_ok=True)
     json.dump(summary, open(os.path.join(HERE, 'results', 'E0.json'), 'w'), indent=1)
     for n, r in res.items():

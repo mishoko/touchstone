@@ -3637,6 +3637,78 @@
    "replace": "",
    "status": "KILLED",
    "basis": "1ef9abb014c472b9"
+  },
+  {
+   "id": "MU-306",
+   "area": "guards",
+   "desc": "the hook accepts any forfeiture drip length (F-047: a zero drip makes the forfeit snipeable)",
+   "killer_id": "M-10",
+   "kill": "test_M_10__hookRejectsADripOtherThanOneEpoch",
+   "file": "src/TouchstoneHook.sol",
+   "find": "        if (t.EPOCH == 0 || t.FORFEIT_DRIP_BLOCKS != t.EPOCH) revert BadTier();",
+   "replace": "        if (false) revert BadTier();",
+   "status": "KILLED",
+   "basis": "0a6a78cadff8df77"
+  },
+  {
+   "id": "MU-307",
+   "area": "guards",
+   "desc": "the hook accepts a drip longer than one epoch (forfeited pay withheld from leaving depositors)",
+   "killer_id": "M-10",
+   "kill": "test_M_10__hookRejectsADripOtherThanOneEpoch",
+   "file": "src/TouchstoneHook.sol",
+   "find": "        if (t.EPOCH == 0 || t.FORFEIT_DRIP_BLOCKS != t.EPOCH) revert BadTier();",
+   "replace": "        if (t.EPOCH == 0 || t.FORFEIT_DRIP_BLOCKS < t.EPOCH) revert BadTier();",
+   "status": "KILLED",
+   "basis": "0a6a78cadff8df77"
+  },
+  {
+   "id": "MU-308",
+   "area": "guards",
+   "desc": "the hook accepts EPOCH = 0 with a zero drip",
+   "killer_id": "M-10",
+   "kill": "test_M_10__hookRejectsADripOtherThanOneEpoch",
+   "file": "src/TouchstoneHook.sol",
+   "find": "        if (t.EPOCH == 0 || t.FORFEIT_DRIP_BLOCKS != t.EPOCH) revert BadTier();",
+   "replace": "        if (t.FORFEIT_DRIP_BLOCKS != t.EPOCH) revert BadTier();",
+   "status": "KILLED",
+   "basis": "0a6a78cadff8df77"
+  },
+  {
+   "id": "MU-309",
+   "area": "witness",
+   "desc": "the witness is added on a range other than the one the hook records",
+   "killer_id": "I-8",
+   "kill": "invariant_I_8__witnessTicksInitialisedWhileTheEpochIsOpen",
+   "file": "src/TouchstoneHook.sol",
+   "find": "            _modify(key, ModifyLiquidityParams(nlo, nhi, int256(uint256(lw)), _witSalt(epoch)));",
+   "replace": "            _modify(key, ModifyLiquidityParams(nlo - TICK_SPACING, nhi, int256(uint256(lw)), _witSalt(epoch)));",
+   "status": "KILLED",
+   "basis": "3d5109233b3adfef"
+  },
+  {
+   "id": "MU-310",
+   "area": "placement",
+   "desc": "the removal to idle leaves one unit of liquidity on the old range (a second position)",
+   "killer_id": "I-13",
+   "kill": "invariant_I_13__widthWAlignedOnePosition",
+   "file": "src/TouchstoneVault.sol",
+   "find": "            _book(_modify(-int256(uint256(l))));",
+   "replace": "            _book(_modify(-int256(uint256(l - 1))));",
+   "status": "KILLED",
+   "basis": "6072f455e8fd1394"
+  },
+  {
+   "id": "MU-311",
+   "area": "bank",
+   "desc": "topUpBond moves shares from the vault to the curator (a gain outside claim/releaseBond)",
+   "killer_id": "I-5",
+   "kill": "test_I_5__claimThenTopUpIsNoGain",
+   "file": "src/TouchstoneVaultExtension.sol",
+   "find": "            _transfer(payer, address(this), s);",
+   "replace": "            _transfer(address(this), payer, s);",
+   "status": "KILLED",
+   "basis": "7a8b0440a1f41b82"
   }
  ]
 }

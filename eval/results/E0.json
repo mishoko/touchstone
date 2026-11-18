@@ -7,6 +7,9 @@
  "same_range_tautology": true,
  "control_vacuous": true,
  "control_exceeds_bound": true,
+ "negative_result": true,
+ "superseded_by": "E0a",
+ "note": "registered form failed; the ledger was amended after this result (spec \u00a73.8) and is evaluated as E0a, with this formula reported next to it",
  "runs": {
   "same": {
    "epochs": 8,

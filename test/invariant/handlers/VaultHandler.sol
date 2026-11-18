@@ -111,6 +111,53 @@ contract VaultHandler is Test, SettleExtraOracle {
     bool internal _claiming;
     /// @dev Non-vacuity: I-3 drain checks with a pool past its drip, I-12 checks where the prologue moved the supply.
     uint256 public i3DrainChecks;
+    // P5 (spec §9.1): I-5 (the curator gains only through `claim` and `releaseBond`), I-8 (the live witness's ticks are
+    // initialised and its position holds `L_W`), I-13 (width = W, aligned, one position), I-15 (the counters below)
+    uint256 public i5Failures;
+    string public i5Why;
+    uint256 public i8Failures;
+    string public i8Why;
+    uint256 public i8Checks;
+    uint256 public i13Failures;
+    string public i13Why;
+    uint256 public i13Checks;
+    uint256 public breachesProcessed;
+    uint256 public removals;
+    uint256 public vests;
+    uint256 public epochCloses;
+    uint256 public refreshes;
+    uint256 public refreshFails;
+    uint256 public truncatedSpans;
+    uint256 public gapSets;
+    uint256 public gapClears;
+    uint256 public gateClosedLive;
+    uint256 public resetsByRefresh;
+    uint256 public ringWraps;
+    bool internal _paying;
+    int24 internal immutable seamLo;
+    int24 internal immutable seamHi;
+    int24 internal immutable wTicks;
+    uint256 internal immutable gridBlocks;
+    uint256 internal immutable gridSec;
+    uint256 internal _nRanges;
+    mapping(uint256 => int24) internal _rangeLo;
+    mapping(uint256 => int24) internal _rangeHi;
+    mapping(bytes32 => bool) internal _rangeSeen;
+
+    /// @dev The state a P5 check compares across one handler call.
+    struct Pre {
+        uint256 cShares;
+        uint256 c0;
+        uint256 c1;
+        uint256 hook0;
+        uint64 outBlocks;
+        uint32 epoch;
+        uint32 breaches;
+        uint8 mode;
+        uint256 matured;
+        uint256 vested;
+        uint256 placements;
+    }
     uint256 public i12Moved;
 
     constructor(
@@ -131,6 +178,12 @@ contract VaultHandler is Test, SettleExtraOracle {
         poolId = PoolId.wrap(keccak256(abi.encode(k)));
         (blocktime, center, swapMax0, swapMax1) = (bt, c, max0, max1);
         recEpoch0 = v.scalars().epoch;
+        {
+            Holdings memory h0 = v.holdings();
+            (seamLo, seamHi) = (h0.lo, h0.hi);
+            Tier memory tr = v.tier();
+            (wTicks, gridBlocks, gridSec) = (tr.W_TICKS, tr.GRID, tr.GRID_SEC);
+        }
         closure0 = _closure();
         swapRouter = new PoolSwapTest(m);
         t0.mint(address(this), 1e40);
@@ -600,7 +653,11 @@ contract VaultHandler is Test, SettleExtraOracle {
     }
 
     function refresh() external checked {
+        uint32 g0 = _refGrid(uint256(vm.load(address(hook), bytes32(0))));
+        uint256 k = vm.getBlockTimestamp() / gridSec;
         try hook.refreshRef() {} catch {}
+        // I-15: a due anchor whose read failed leaves the cache unchanged
+        if (k > g0 && _refGrid(uint256(vm.load(address(hook), bytes32(0)))) == g0) ++refreshFails;
     }
 
     /// @notice Moves the reference by up to ±1,500 ticks from the pool's centre (breaches latch when it leaves the
@@ -626,10 +683,166 @@ contract VaultHandler is Test, SettleExtraOracle {
     modifier checked() {
         Bank memory b0 = hv.bankFull();
         uint256 vu = b0.vestedUnclaimed;
+        Pre memory p = _pre(b0);
         _;
         // U-record's closure non-vacuity: a forfeited reserve settled (its non-bond part to the drip; S19F-11)
         if (b0.reserveForfeit && b0.reserveShares > 0 && hv.bankFull().reserveShares == 0) ++forfeitedReserveSettles;
         _afterCall(vu);
+        _p5(p);
+    }
+
+    function _pre(Bank memory b0) internal view returns (Pre memory p) {
+        address c = hv.curator();
+        p.cShares = hv.balanceOf(c);
+        (p.c0, p.c1) = (token0.balanceOf(c), token1.balanceOf(c));
+        p.hook0 = uint256(vm.load(address(hook), bytes32(0)));
+        Obs memory o = hook.obs();
+        (p.outBlocks, p.epoch, p.breaches, p.mode) = (o.outBlocks, hv.scalars().epoch, b0.breaches, b0.mode);
+        (p.matured, p.vested, p.placements) = (b0.maturedPending, b0.vestedUnclaimed, curatorPlacements);
+    }
+
+    /// @dev The hook's slot 0 (test/storage/TouchstoneHook.txt): `_lastSnapBlock` (bytes 0-4), `_vaultLo` (9),
+    ///      `_vaultHi` (12), `_refGrid` (18), `_refCachedAt` (22), `_gapSinceVerify` (28).
+    function _lastSnap(uint256 w) internal pure returns (uint256) {
+        return uint40(w);
+    }
+
+    function _refGrid(uint256 w) internal pure returns (uint32) {
+        return uint32(w >> 144);
+    }
+
+    function _refCachedAt(uint256 w) internal pure returns (uint256) {
+        return uint40(w >> 176);
+    }
+
+    function _gap(uint256 w) internal pure returns (bool) {
+        return uint8(w >> 224) != 0;
+    }
+
+    function _vaultRange(uint256 w) internal pure returns (uint48) {
+        return uint48(w >> 72);
+    }
+
+    /// @dev I-5, I-8, I-13 after every handler call, and the I-15 counters.
+    function _p5(Pre memory p) internal {
+        _i5(p);
+        _i8();
+        _i13();
+        _i15(p);
+        _paying = false;
+    }
+
+    /// @notice I-5 (spec §9.1): the curator gains only through `claim` and `releaseBond` (the vault's `_pay`): its share
+    ///         balance never rises in any other call, and it never receives either token.
+    function _i5(Pre memory p) internal {
+        address c = hv.curator();
+        if (hv.balanceOf(c) > p.cShares && !_paying) _i5f("curator shares rose outside claim/releaseBond");
+        if (token0.balanceOf(c) > p.c0 || token1.balanceOf(c) > p.c1) _i5f("curator received tokens");
+    }
+
+    /// @notice I-8 (spec §9.1): while the hook holds a witness (`L_W > 0`), its position on the live witness range under
+    ///         the epoch's salt holds exactly `L_W` and both ticks are initialised (liquidityGross ≥ `L_W`); the witness
+    ///         is never from a future epoch. Slots 1 and 3 of the hook's layout snapshot: `_witLo` (byte 24), `_witHi`
+    ///         (27); `_witEpoch` (slot 3, byte 0), `_witL` (byte 4).
+    function _i8() internal {
+        uint256 w1 = uint256(vm.load(address(hook), bytes32(uint256(1))));
+        uint256 w3 = uint256(vm.load(address(hook), bytes32(uint256(3))));
+        uint128 lw = uint128(w3 >> 32);
+        if (lw == 0) return;
+        int24 lo = int24(uint24(w1 >> 192));
+        int24 hi = int24(uint24(w1 >> 216));
+        uint32 e = uint32(w3);
+        ++i8Checks;
+        (uint128 liq,,) =
+            manager.getPositionInfo(poolId, address(hook), lo, hi, keccak256(abi.encode("witness", e)));
+        if (liq != lw) _i8f("witness position != L_W");
+        (uint128 gLo,) = manager.getTickLiquidity(poolId, lo);
+        (uint128 gHi,) = manager.getTickLiquidity(poolId, hi);
+        if (gLo < lw || gHi < lw) _i8f("a witness tick is not initialised");
+        if (e > vm.getBlockNumber() / hv.tier().EPOCH) _i8f("witness from a future epoch");
+    }
+
+    /// @notice I-13 (spec §9.1): the vault holds one position: exactly `L` on its registered range and nothing on any
+    ///         range it held before; a range placed by the curator is W wide and aligned to the tick spacing. The test
+    ///         seam's initial range (`placeForTest`, never shipped) is exempt from the width rule only.
+    function _i13() internal {
+        Holdings memory h = hv.holdings();
+        bytes32 k = keccak256(abi.encode(h.lo, h.hi));
+        if (h.L > 0 && !_rangeSeen[k] && _nRanges < 64) {
+            _rangeSeen[k] = true;
+            (_rangeLo[_nRanges], _rangeHi[_nRanges]) = (h.lo, h.hi);
+            ++_nRanges;
+        }
+        ++i13Checks;
+        if (h.L > 0) {
+            (uint128 liq,,) = manager.getPositionInfo(poolId, address(hv), h.lo, h.hi, bytes32(0));
+            if (liq != h.L) _i13f("position != L");
+            if (h.lo != seamLo || h.hi != seamHi) {
+                if (h.hi - h.lo != wTicks) _i13f("width != W");
+                if (h.lo % key.tickSpacing != 0 || h.hi % key.tickSpacing != 0) _i13f("unaligned");
+            }
+        }
+        for (uint256 i; i < _nRanges; ++i) {
+            (int24 lo, int24 hi) = (_rangeLo[i], _rangeHi[i]);
+            if (h.L > 0 && lo == h.lo && hi == h.hi) continue;
+            (uint128 liq,,) = manager.getPositionInfo(poolId, address(hv), lo, hi, bytes32(0));
+            if (liq != 0) _i13f("a second position");
+        }
+    }
+
+    /// @notice I-15's counters (spec §9.1), from state deltas across the call (an inner snapshot of a multi-step call
+    ///         can be missed, so they undercount, never overcount): breach processed, removal, vest, epoch close,
+    ///         reference refresh, truncated span (the first span the call closes outlived the cache), gap set and
+    ///         cleared, the vest gate closed by the live leg (a checkpoint this block, cached legs open, the live read
+    ///         failed or out of range, matured pay held and nothing vested), a run reset by refresh (no registration), the frozen-boundary
+    ///         ring wrapped (a span over more than 8 grid boundaries). Refresh failures are counted in `refresh()`.
+    function _i15(Pre memory p) internal {
+        Bank memory b = hv.bankFull();
+        uint256 now_ = vm.getBlockNumber();
+        uint256 w = uint256(vm.load(address(hook), bytes32(0)));
+        Obs memory o = hook.obs();
+        if (b.breaches > p.breaches) ++breachesProcessed;
+        if (p.mode != Ladder.EXITED && b.mode == Ladder.EXITED) ++removals;
+        if (b.vestedUnclaimed > p.vested) ++vests;
+        if (hv.scalars().epoch > p.epoch) ++epochCloses;
+        if (_refGrid(w) > _refGrid(p.hook0)) ++refreshes;
+        if (_lastSnap(p.hook0) < now_ && _lastSnap(w) == now_) {
+            if (now_ > _refCachedAt(p.hook0) + 2 * gridBlocks) ++truncatedSpans;
+            if (now_ / gridBlocks > _lastSnap(p.hook0) / gridBlocks + 8) ++ringWraps;
+        }
+        if (!_gap(p.hook0) && _gap(w)) ++gapSets;
+        if (_gap(p.hook0) && !_gap(w)) ++gapClears;
+        if (p.outBlocks > 0 && o.outBlocks == 0 && _vaultRange(w) == _vaultRange(p.hook0) && curatorPlacements == p.placements) {
+            ++resetsByRefresh;
+        }
+        if (
+            hv.scalars().segStart == now_ && b.maturedPending > 0 && b.vestedUnclaimed <= p.vested && o.refFresh
+                && !o.emptyRange && !o.gapSinceVerify && _vaultRange(w) == _vaultRange(p.hook0)
+        ) {
+            Holdings memory h = hv.holdings();
+            (bool ok, int24 t) = hook.tryRef();
+            if (h.lo <= o.refTick && o.refTick < h.hi && !(ok && h.lo <= t && t < h.hi)) ++gateClosedLive;
+        }
+    }
+
+    function _i5f(string memory why) internal {
+        if (i5Failures++ == 0) i5Why = why;
+    }
+
+    function _i8f(string memory why) internal {
+        if (i8Failures++ == 0) i8Why = why;
+    }
+
+    function _i13f(string memory why) internal {
+        if (i13Failures++ == 0) i13Why = why;
+    }
+
+    /// @notice I-15: the records with a charge > 0 since construction.
+    function chargedRecords() external view returns (uint256 n) {
+        uint32 e1 = hv.scalars().epoch;
+        for (uint32 e = recEpoch0; e <= e1; ++e) {
+            if (hv.record(e).charge > 0) ++n;
+        }
     }
 
     /// @dev I-3 after every handler call: vested pay falls only by a claim (a charge never burns it); at a checkpoint
@@ -673,6 +886,7 @@ contract VaultHandler is Test, SettleExtraOracle {
         uint256 vu = hv.bankFull().vestedUnclaimed;
         uint256 bal = hv.balanceOf(c);
         _claiming = true;
+        _paying = true;
         vm.prank(c);
         try IVaultEntries(address(hv)).claim() {
             ++claims;
@@ -714,6 +928,7 @@ contract VaultHandler is Test, SettleExtraOracle {
     /// @notice `releaseBond`: reverts only `BadMode` (not EXITED) or `BondLocked` (before the delay); a success pays
     ///         the whole bond.
     function releaseBond() external checked {
+        _paying = true;
         vm.prank(hv.curator());
         try IVaultEntries(address(hv)).releaseBond() {
             ++releases;
@@ -760,6 +975,7 @@ contract VaultHandler is Test, SettleExtraOracle {
         b = hv.bankFull();
         uint256 owed = uint256(b.vestedUnclaimed) + b.bondShares;
         _claiming = true;
+        _paying = true;
         vm.startPrank(c);
         uint256 bc = hv.balanceOf(c);
         try IVaultEntries(address(hv)).claim() {

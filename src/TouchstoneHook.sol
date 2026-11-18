@@ -121,6 +121,9 @@ contract TouchstoneHook is BaseHook, Extsload, ITouchstoneHook {
     constructor(HookArgs memory a) BaseHook(IPoolManager(a.poolManager)) {
         Tier memory t = a.tier;
         if (t.REF_WINDOW == 0 || t.GRID == 0 || t.EPOCH % t.GRID != 0) revert BadTier();
+        // [MU-306] [MU-307] [MU-308] the forfeit drips over exactly one epoch (F-047): a shorter drip lets a sniper who
+        // deposits at the breach take its share at its exit, a longer one withholds forfeited pay from leaving depositors
+        if (t.EPOCH == 0 || t.FORFEIT_DRIP_BLOCKS != t.EPOCH) revert BadTier();
         // [MU-141] the tier's clock invariants hold on chain, not only in the deploy script: whole-second blocks on
         // the grid and a reset that needs at least two consecutive in-range anchors
         // [MU-143] whole-second blocks on the grid
@@ -372,7 +375,7 @@ contract TouchstoneHook is BaseHook, Extsload, ITouchstoneHook {
         );
         if (lw > L_W_TARGET) lw = L_W_TARGET;
         if (lw != 0) {
-            // [MU-065] the salt is per epoch
+            // [MU-065] the salt is per epoch; [MU-309] the position is added on the range it records
             _modify(key, ModifyLiquidityParams(nlo, nhi, int256(uint256(lw)), _witSalt(epoch)));
         }
         (_witLo, _witHi, _witEpoch, _witL) = (nlo, nhi, epoch, lw);

@@ -38,9 +38,11 @@ def fork_bypasses(root):
             if f.endswith('.sol') and rel != exempt and re.search(r'\b(createSelectFork|createFork|selectFork)\s*\(',
                                                                     open(p).read()):
                 bad.append(rel)
-    cfg = [os.path.join(root, 'foundry.toml')] + glob.glob(os.path.join(root, 'script', '*.sh'))
+    cfg = [os.path.join(root, 'foundry.toml')] + [q for e in ('sh', 'py') for q in
+                                                   glob.glob(os.path.join(root, 'script', '**', '*.' + e), recursive=True)]
     for p in cfg:
-        if os.path.exists(p) and re.search(r'^[^#]*(eth_rpc_url|fork_url|--fork-url)', open(p).read(), re.M):
+        if os.path.exists(p) and re.search(r'^[^#]*(eth_rpc_url|fork_url|--fork-url|forge test[^\n]*(--rpc-url|\s-f\s))',
+                                           open(p).read(), re.M):
             bad.append(os.path.relpath(p, root))
     return bad
 
@@ -56,7 +58,9 @@ def test_S_5__every_fork_is_chain_checked():
         open(os.path.join(d, 'test', 'unit', 'ForkBase.sol'), 'w').write('vm.createFork(url);')
         open(os.path.join(d, 'foundry.toml'), 'w').write('[profile.fork]\neth_rpc_url = "x"\n')
         open(os.path.join(d, 'script', 'run.sh'), 'w').write('forge test --fork-url $X\n')
-        assert sorted(fork_bypasses(d)) == ['foundry.toml', 'script/run.sh', 'test/fork/X.t.sol',
+        os.makedirs(os.path.join(d, 'script', 'demo'))
+        open(os.path.join(d, 'script', 'demo', 'go.py'), 'w').write("run('forge test --rpc-url ' + u)\n")
+        assert sorted(fork_bypasses(d)) == ['foundry.toml', 'script/demo/go.py', 'script/run.sh', 'test/fork/X.t.sol',
                                             'test/unit/ForkBase.sol'], fork_bypasses(d)
 
 

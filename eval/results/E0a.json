@@ -141,14 +141,14 @@
   "drip_sign_flipped": {
    "same": {
     "max_shift_bp": 0.0,
-    "at_epoch": 8,
+    "at_epoch": null,
     "base_closes_there": true,
     "max_shift_on_closing_rows_bp": 0.0,
     "exceeds_on_closing_rows": false
    },
    "offset": {
     "max_shift_bp": 0.0,
-    "at_epoch": 9,
+    "at_epoch": null,
     "base_closes_there": true,
     "max_shift_on_closing_rows_bp": 0.0,
     "exceeds_on_closing_rows": false
@@ -164,14 +164,14 @@
   "single_forfeit_drip": {
    "same": {
     "max_shift_bp": 0.0,
-    "at_epoch": 8,
+    "at_epoch": null,
     "base_closes_there": true,
     "max_shift_on_closing_rows_bp": 0.0,
     "exceeds_on_closing_rows": false
    },
    "offset": {
     "max_shift_bp": 0.0,
-    "at_epoch": 9,
+    "at_epoch": null,
     "base_closes_there": true,
     "max_shift_on_closing_rows_bp": 0.0,
     "exceeds_on_closing_rows": false
@@ -210,7 +210,7 @@
   "fee_by_n": {
    "same": {
     "max_shift_bp": 0.0,
-    "at_epoch": 8,
+    "at_epoch": null,
     "base_closes_there": true,
     "max_shift_on_closing_rows_bp": 0.0,
     "exceeds_on_closing_rows": false
@@ -233,7 +233,7 @@
   "epoch_indexed_witness": {
    "same": {
     "max_shift_bp": 0.0,
-    "at_epoch": 8,
+    "at_epoch": null,
     "base_closes_there": true,
     "max_shift_on_closing_rows_bp": 0.0,
     "exceeds_on_closing_rows": false
@@ -247,7 +247,7 @@
    },
    "exit": {
     "max_shift_bp": 0.0,
-    "at_epoch": 8,
+    "at_epoch": null,
     "base_closes_there": true,
     "max_shift_on_closing_rows_bp": 0.0,
     "exceeds_on_closing_rows": false
@@ -279,14 +279,14 @@
   "fallback_latest_write": {
    "same": {
     "max_shift_bp": 0.0,
-    "at_epoch": 8,
+    "at_epoch": null,
     "base_closes_there": true,
     "max_shift_on_closing_rows_bp": 0.0,
     "exceeds_on_closing_rows": false
    },
    "offset": {
     "max_shift_bp": 0.0,
-    "at_epoch": 9,
+    "at_epoch": null,
     "base_closes_there": true,
     "max_shift_on_closing_rows_bp": 0.0,
     "exceeds_on_closing_rows": false
@@ -335,7 +335,7 @@
    "segments": 1,
    "stale_or_gap_calls": 1,
    "vault_fees_collected_at_close_bp": 0.5560296329390886,
-   "note": "the vault earned fees in range while tau_v took no credit (a stale cache, then an in-block crossing out of the range); the ledger books the vault fee leg as L*dtau_v*f_w = 0, so the fees are dropped, not spread: the fee-leg error term of spec 3.8, measured above the bound"
+   "note": "the vault earned fees in range while tau_v took no credit (a stale cache, then an in-block crossing out of the range); the ledger books the vault fee leg as L*dtau_v*f_w = 0, so the fees are dropped (the first channel of the fee-leg error term of spec 3.8), measured above the bound"
   },
   {
    "condition": "control fee_by_n",
@@ -343,7 +343,7 @@
    "power": {
     "same": {
      "max_shift_bp": 0.0,
-     "at_epoch": 8,
+     "at_epoch": null,
      "base_closes_there": true,
      "max_shift_on_closing_rows_bp": 0.0,
      "exceeds_on_closing_rows": false

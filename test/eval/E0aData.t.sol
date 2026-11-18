@@ -530,7 +530,7 @@ contract E0aDataTest is LiquidPoolBase {
         _stalePoke(4, c3 + 160);
         // the price leaves the vault's range downwards and stays inside the witness range. Disclosed (fix review S21F-02):
         // this exit is one in-block swap of ≈ 400 ticks, right after a stale poke, so the vault's fees from the crossing
-        // earn no τ_v credit; it is the run's one deliberate departure from the near-uniform walk below.
+        // earn no τ_v credit; it is the run's one deliberate departure from the near-uniform walk of `_walkTo`.
         int24 out = vlo - 250;
         _swapTo(vlo - 150);
         uint32 seq0 = _obs().breachSeq;

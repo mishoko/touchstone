@@ -406,6 +406,9 @@ def evaluate(d):
         T = {t['c']: t for t in truth}
         led, meta = ledger(logs, tier)
         rows = identity(led, truth)
+        # S21F2-02: the power metric's self-test: a control aliased to the base must shift no row
+        alias, _ = ledger(logs, tier)
+        assert all(abs(x['residual_bp'] - y['residual_bp']) == 0 for x, y in zip(identity(alias, truth), rows))
         rows_orig = identity(led, truth, orig=original(led, meta, tier))
         # the share rows: the record's minted and the recomputed burns against the shares that actually moved
         share_rows = []
@@ -434,6 +437,8 @@ def evaluate(d):
             bm = {r['e']: r['residual_bp'] for r in rows}
             pw = [(abs(r['residual_bp'] - bm[r['e']]), r['e'], abs(bm[r['e']]) <= BOUND_BP) for r in cr]
             best = max(pw, default=(0.0, None, True))
+            if best[0] == 0.0:
+                best = (0.0, None, True)  # S21F2-02: no location when the control moves no row
             best_closing = max((x for x in pw if x[2]), default=(0.0, None, True))
             res['power'][c][run] = dict(max_shift_bp=best[0], at_epoch=best[1], base_closes_there=best[2],
                                         max_shift_on_closing_rows_bp=best_closing[0],
@@ -523,13 +528,16 @@ def main(argv):
             t = T[x['cout']]
             D, Spre = int(t['D']), int(t['Spre'])
             fees = int(t['navMid']) - int(t['navPre']) if t['tick'] == t['tickPre'] else None
+            fees_bp = (fees * D / Spre / x['V'] * 1e4) if fees is not None else None
+            # S21F2-03: the attribution only when the data shows it
+            attributed = x['stale_or_gap_calls'] > 0 and fees_bp is not None and abs(fees_bp - x['residual_bp']) < 0.01
             diagnosis.append(dict(
                 condition='closure', run=n, epoch=x['e'], residual_bp=x['residual_bp'], segments=x['segments'],
                 stale_or_gap_calls=x['stale_or_gap_calls'],
-                vault_fees_collected_at_close_bp=(fees * D / Spre / x['V'] * 1e4) if fees is not None else None,
-                note='the vault earned fees in range while tau_v took no credit (a stale cache, then an in-block '
+                vault_fees_collected_at_close_bp=fees_bp,
+                note='unattributed' if not attributed else 'the vault earned fees in range while tau_v took no credit (a stale cache, then an in-block '
                      'crossing out of the range); the ledger books the vault fee leg as L*dtau_v*f_w = 0, so the '
-                     'fees are dropped, not spread: the fee-leg error term of spec 3.8, measured above the bound'))
+                     'fees are dropped (the first channel of the fee-leg error term of spec 3.8), measured above the bound'))
     for c, ok in controls.items():
         if not ok:
             diagnosis.append(dict(condition='control ' + c, worst_bp=max(res['controls'][c].values()),

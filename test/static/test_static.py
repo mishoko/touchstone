@@ -26,6 +26,27 @@ def test_S_3__claims_due_by_the_current_phase_are_covered():
         os.remove(f.name)
 
 
+def fork_bypasses(root):
+    """Solidity test files that select a fork without the chain-checked `ForkBase._fork` (F-052)."""
+    bad = []
+    for d, _, fs in os.walk(os.path.join(root, 'test')):
+        for f in fs:
+            p = os.path.join(d, f)
+            if f.endswith('.sol') and f != 'ForkBase.sol' and re.search(r'\b(createSelectFork|createFork|selectFork)\s*\(',
+                                                                          open(p).read()):
+                bad.append(os.path.relpath(p, root))
+    return bad
+
+
+def test_S_5__every_fork_is_chain_checked():
+    assert fork_bypasses(ROOT) == [], fork_bypasses(ROOT)
+    # control: a test file that forks directly is caught
+    with tempfile.TemporaryDirectory() as d:
+        os.makedirs(os.path.join(d, 'test', 'fork'))
+        open(os.path.join(d, 'test', 'fork', 'X.t.sol'), 'w').write('vm.createSelectFork(url);')
+        assert fork_bypasses(d) == ['test/fork/X.t.sol']
+
+
 def test_S_4__no_mutation_markers_in_the_tree():
     r = run('script/markers.py')
     assert r.returncode == 0, r.stdout

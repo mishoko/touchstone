@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import {Test} from "forge-std/Test.sol";
+import {ForkBase} from "./ForkBase.sol";
 import {Addresses} from "../../script/Addresses.sol";
 
 interface IV3Factory {
@@ -20,18 +20,7 @@ interface ISymbol {
 
 /// @notice Every canonical address has code on its chain. Runs with
 ///         `FOUNDRY_PROFILE=fork forge test --mp test/fork`; each chain's test skips when its RPC variable is unset.
-contract AddressesForkTest is Test {
-    function _fork(string memory envVar, uint256 chainId) internal returns (bool) {
-        string memory url = vm.envOr(envVar, string(""));
-        if (bytes(url).length == 0) {
-            vm.skip(true);
-            return false;
-        }
-        vm.createSelectFork(url);
-        assertEq(block.chainid, chainId, "rpc chain id");
-        return true;
-    }
-
+contract AddressesForkTest is ForkBase {
     function _hasCode(address a, string memory name) internal view {
         bytes32 h;
         assembly {

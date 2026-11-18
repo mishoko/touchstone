@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import {Test, console} from "forge-std/Test.sol";
+import {console} from "forge-std/Test.sol";
+import {ForkBase} from "./ForkBase.sol";
 import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
@@ -14,9 +15,9 @@ import {Addresses} from "../../script/Addresses.sol";
 
 /// @notice G-1b on a mainnet fork: the gas of the reference read against USDC/WETH 0.05% and of a snapshot that
 ///         refreshes, at the pool's observed cardinality and with the cardinality forced to 65,535.
-///         Runs with `FOUNDRY_PROFILE=fork forge test --mp test/fork` (optionally `FORK_BLOCK=<n>`); skips when
-///         MAINNET_RPC_URL is unset.
-contract HookGasForkTest is Test {
+///         Runs with `FOUNDRY_PROFILE=fork forge test --mp test/fork` (optionally `FORK_BLOCK_1=<n>`); skips when
+///         MAINNET_RPC_URL is unset; fails unless that RPC is chain 1 (F-052).
+contract HookGasForkTest is ForkBase {
     uint160 internal constant FLAGS = Hooks.BEFORE_INITIALIZE_FLAG | Hooks.BEFORE_SWAP_FLAG | Hooks.BEFORE_DONATE_FLAG;
     address internal constant VAULT = address(0x5A17);
 
@@ -25,15 +26,7 @@ contract HookGasForkTest is Test {
     Tier internal tier;
 
     function _setUpFork() internal returns (bool) {
-        string memory url = vm.envOr("MAINNET_RPC_URL", string(""));
-        if (bytes(url).length == 0) {
-            vm.skip(true);
-            return false;
-        }
-        // FORK_BLOCK pins the fork so that Foundry's RPC cache serves repeated runs (public RPCs rate-limit)
-        uint256 fb = vm.envOr("FORK_BLOCK", uint256(0));
-        if (fb == 0) vm.createSelectFork(url);
-        else vm.createSelectFork(url, fb);
+        if (!_fork("MAINNET_RPC_URL", 1)) return false; // chain-checked (F-052)
         (Tier memory t,) = Tiers.mainnet();
         tier = t;
         (uint160 sqrtRef,,,,,,) = refPool.slot0();

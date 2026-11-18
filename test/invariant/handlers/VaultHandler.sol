@@ -98,6 +98,8 @@ contract VaultHandler is Test, SettleExtraOracle {
     ///      tracked and the closure's two sides at construction.
     uint256 public claimed;
     uint256 public forfeitedReserveSettles;
+    /// @dev Claims and releases that paid a share (S19C-03: a zero-pay call counts in `claims`/`releases` only).
+    uint256 public paidPayouts;
     uint256 public planted;
     uint32 public recEpoch0;
     int256 public closure0;
@@ -675,6 +677,7 @@ contract VaultHandler is Test, SettleExtraOracle {
         try IVaultEntries(address(hv)).claim() {
             ++claims;
             claimed += hv.balanceOf(c) - bal;
+            if (hv.balanceOf(c) > bal) ++paidPayouts;
             if (hv.balanceOf(c) - bal < vu) _i16("claim paid less than the vested pay");
             if (hv.bankFull().vestedUnclaimed != 0) _i16("claim left vested pay");
         } catch (bytes memory err) {
@@ -761,6 +764,7 @@ contract VaultHandler is Test, SettleExtraOracle {
         uint256 bc = hv.balanceOf(c);
         try IVaultEntries(address(hv)).claim() {
             claimed += hv.balanceOf(c) - bc;
+            if (hv.balanceOf(c) > bc) ++paidPayouts;
         } catch (bytes memory err) {
             _entryFailed(err);
         }

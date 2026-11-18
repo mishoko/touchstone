@@ -13,14 +13,17 @@ calls (4.7%), 103 / 126 moved and 204 / 120 pre-swapped placements."""
 import csv, sys
 
 FLOORS = {'swap_rate': 0.025, 'place_rate': 0.015, 'moved': 25, 'pre': 35, 'base': 1}
-# the P4 handler's counters (columns 8..16 of a row): campaign totals per pool, each at least this (F-048 (d); the
+# the P4 handler's counters (columns 8..17 of a row): campaign totals per pool, each at least this (F-048 (d); the
 # floors are set from the s19 P4-close campaign, about a third of its counts and never below 1)
-P4 = ['claims', 'topUps', 'retires', 'releases', 'pokes', 'endgames', 'i3DrainChecks', 'i12Moved', 'forfeitedReserveSettles']
+P4 = ['claims', 'topUps', 'retires', 'releases', 'pokes', 'endgames', 'i3DrainChecks', 'i12Moved', 'forfeitedReserveSettles',
+      'paidPayouts']
 # measured at the s19 P4-close campaign (256 x 128, fixed seed; tick0 / tick196k): claims 16,560 / 16,560, topUps 588 /
 # 528, retires 836 / 850, releases 8,415 / 8,461, pokes 16,730 / 16,730, endgames 10,326 / 10,232, i3DrainChecks
 # 102,615 / 102,552, i12Moved 428 / 393, forfeitedReserveSettles 844 / 894
 P4_FLOORS = {'claims': 5000, 'topUps': 170, 'retires': 270, 'releases': 2800, 'pokes': 5500, 'endgames': 3400,
-             'i3DrainChecks': 34000, 'i12Moved': 130, 'forfeitedReserveSettles': 280}
+             'i3DrainChecks': 34000, 'i12Moved': 130, 'forfeitedReserveSettles': 280,
+             # paidPayouts (S19C-03) added after the campaign: the structural minimum until the next campaign measures it
+             'paidPayouts': 1}
 NCOL = 7 + len(P4)
 
 

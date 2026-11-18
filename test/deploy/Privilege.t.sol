@@ -192,6 +192,11 @@ contract PrivilegeTest is DeployBaseUnplaced {
             _expectFrom(
                 callers[c], vault, abi.encodeCall(TouchstoneVault.rebalanceSwap, (true, 1, 0)), VaultCommon.OnlyCurator.selector
             );
+            // the P4 curator entries (through the fallback; s19 close review S19C-02)
+            _expectFrom(callers[c], vault, abi.encodeCall(IVaultEntries.claim, ()), VaultCommon.OnlyCurator.selector);
+            _expectFrom(callers[c], vault, abi.encodeCall(IVaultEntries.topUpBond, (1)), VaultCommon.OnlyCurator.selector);
+            _expectFrom(callers[c], vault, abi.encodeCall(IVaultEntries.retire, ()), VaultCommon.OnlyCurator.selector);
+            _expectFrom(callers[c], vault, abi.encodeCall(IVaultEntries.releaseBond, ()), VaultCommon.OnlyCurator.selector);
         }
         // control: the curator role passes the role check (it reverts later, on the action's own guards, not OnlyCurator)
         vm.prank(cur);

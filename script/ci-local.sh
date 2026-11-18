@@ -44,6 +44,11 @@ trap - EXIT
 step "forge test"
 forge test
 
+step "no stale invariant counterexample in the cache (a mutant run's counterexample must not linger; s19 S19C-04)"
+if [ -d cache/invariant/failures ] && [ -n "$(find cache/invariant/failures -type f 2>/dev/null)" ]; then
+  find cache/invariant/failures -type f; echo "replay or delete the cached counterexamples above (record their origin)"; exit 1
+fi
+
 step "invariant campaign 256 x 128 and its non-vacuity (the fixed seed; forge test runs 64 x 64)"
 mkdir -p output/nonvacuity
 rm -f output/nonvacuity/inv.csv

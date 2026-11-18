@@ -140,7 +140,7 @@ contract VaultReentrancyTest is VaultBase {
     }
 
     function _payloads() internal view returns (bytes[] memory p) {
-        p = new bytes[](5);
+        p = new bytes[](6);
         // withdraw the bond-holding vault's shares to the attacker; deposit with alice as the payer; re-seed
         p[0] = abi.encode(Entry.Withdraw, vault, abi.encode(uint256(1e23), uint256(0), uint256(0), bob));
         p[1] = abi.encode(Entry.Deposit, alice, abi.encode(uint256(1e23), type(uint256).max, type(uint256).max, bob));
@@ -153,6 +153,7 @@ contract VaultReentrancyTest is VaultBase {
             abi.encode(int24(0), int24(0), PreSwap(true, true, 1e15), uint160(0), type(uint256).max)
         );
         p[4] = abi.encode(Entry.Settle, bob, "");
+        p[5] = abi.encode(Entry.SetPositions, bob, abi.encode(int24(-600), int24(600), PreSwap(false, false, 0), uint160(0), uint256(0)));
     }
 
     function test_U_reent__unlockCallbackFromAnEoaReverts() public {

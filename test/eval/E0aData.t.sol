@@ -528,7 +528,9 @@ contract E0aDataTest is LiquidPoolBase {
         // epoch 4's poke: the settlement read fails (the reserve burns), the checkpoint is unpriced (the base is
         // deferred), the witness rolls on the fallback centre (epoch 3's first write)
         _stalePoke(4, c3 + 160);
-        // the price leaves the vault's range downwards and stays inside the witness range
+        // the price leaves the vault's range downwards and stays inside the witness range. Disclosed (fix review S21F-02):
+        // this exit is one in-block swap of ≈ 400 ticks, right after a stale poke, so the vault's fees from the crossing
+        // earn no τ_v credit; it is the run's one deliberate departure from the near-uniform walk below.
         int24 out = vlo - 250;
         _swapTo(vlo - 150);
         uint32 seq0 = _obs().breachSeq;

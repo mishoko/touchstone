@@ -27,7 +27,13 @@ The identity, per epoch window (from the checkpoint that rolls into e to the one
 minted and charge burns from `EpochRecorded`; the drip recomputed by the bank's restart rule from the forfeits'
 blocks. The per-step weights V_k/S_k are the truth's; the amounts are the ledger's. Within an epoch the record's
 minted and charge-burn totals are placed at the truth-weighted mean of the calls where the vault's own mints and burns
-occurred (a second-order placement; the amounts stay the ledger's).
+occurred (a second-order placement; the amounts stay the ledger's). Consequence (fix review S21F-05): once the share
+rows close (the record's minted equals the vault's `Transfer` mints, the recomputed burns equal its burns), the
+identity's share terms equal the truth's per-call sum, so only the share rows test the share terms; the identity adds
+no independent test of their timing.
+
+Controls: the verdict uses the frozen criterion (each control's worst |residual| exceeds the bound in some row);
+`controls_power` reports each control's own shift row by row against the base and whether the base closes there.
 
 Scope: E0a tests that the events reproduce the state, the fee-leg approximation and the share terms; it does not test
 the benchmark's economic meaning. Disclosed: `m_perBlock` is raised in the harness (see `E0a-tier.json`).
@@ -151,6 +157,7 @@ def ledger(logs, tier, ctl=None):
         eps = sorted({w['b'] // E for w in before if w['b'] // E < r['epoch']})
         e1 = eps[-1]
         ws = [w for w in before if w['b'] // E == e1]
+        r['src_first'], r['src_last'] = ws[0]['tick'], ws[-1]['tick']
         return (ws[-1] if latest else ws[0])['tick'], True
 
     for r in rolls:
@@ -305,7 +312,9 @@ def ledger(logs, tier, ctl=None):
                       charges=r['bankBurned'] + r['bondBurned'], drip={c: drip[c] for c in calls},
                       unresolved=any(s['unresolved'] for s in ss), rec=r,
                       alloc=sum(s['alloc'] for s in ss))
-    meta = dict(rolls=rolls, failed_rolls=[r for r in rolls_all if r['lw'] == 0], forfeits=forfeits,
+    for r in rolls:
+        r['refresh_after'] = any(w['b'] // E == r['epoch'] and key(w) > key(r) for w in writes)
+    meta = dict(rolls=rolls, segs=segs, windows=windows, failed_rolls=[r for r in rolls_all if r['lw'] == 0], forfeits=forfeits,
                 zero_L_segments=sum(1 for s in segs if s['L'] == 0), by_call=by_call)
     return out, meta
 
@@ -355,11 +364,13 @@ def identity(led, truth, ctl=None, orig=None, seam=None):
             rhs += share
         res = (Vout - Vin) - rhs
         tv = sum(int(T[s['close']]['seg']['gate']) for s in w['segs'] if T[s['close']]['seg'])
+        stale = sum(1 for c in w['calls'] if not T[c]['fresh'] or T[c]['gap'])
         rows.append(dict(e=e, cin=w['cin'], cout=w['cout'], V=Vin, dV_bp=(Vout - Vin) / Vin * 1e4,
                          alloc_bp=alloc_v / Vin * 1e4, residual_bp=res / Vin * 1e4,
                          minted_bp=mean(mint_w) * w['minted'] / Vin * 1e4,
                          charges_bp=mean(burn_w) * w['charges'] / Vin * 1e4, drip_bp=drip_v / Vin * 1e4,
                          unresolved=w['unresolved'], flags=w['rec']['flags'], tauV_gate_tagged=tv,
+                         stale_or_gap_calls=stale,
                          segments=len(w['segs'])))
     return rows
 
@@ -388,7 +399,7 @@ def original(led, meta, tier):
 def evaluate(d):
     tier = json.load(open(os.path.join(d, 'E0a-tier.json')))
     tier = {k: int(v) for k, v in tier.items()}
-    res = dict(runs={}, controls={c: {} for c in CONTROLS})
+    res = dict(runs={}, controls={c: {} for c in CONTROLS}, power={c: {} for c in CONTROLS})
     for run in RUNS:
         logs = [decode(x) for x in load(os.path.join(d, f'E0a-{run}-logs.jsonl'))]
         truth = load(os.path.join(d, f'E0a-{run}-truth.jsonl'))
@@ -419,6 +430,15 @@ def evaluate(d):
                 cl, _ = ledger(logs, tier, ctl=c)
                 cr = identity(cl, truth, ctl=c)
             res['controls'][c][run] = max((abs(r['residual_bp']) for r in cr), default=0.0)
+            # S21F-01: the control's own power, row by row against the base, and whether the base closes there
+            bm = {r['e']: r['residual_bp'] for r in rows}
+            pw = [(abs(r['residual_bp'] - bm[r['e']]), r['e'], abs(bm[r['e']]) <= BOUND_BP) for r in cr]
+            best = max(pw, default=(0.0, None, True))
+            best_closing = max((x for x in pw if x[2]), default=(0.0, None, True))
+            res['power'][c][run] = dict(max_shift_bp=best[0], at_epoch=best[1], base_closes_there=best[2],
+                                        max_shift_on_closing_rows_bp=best_closing[0],
+                                        exceeds_on_closing_rows=any(abs(r['residual_bp']) > BOUND_BP and
+                                                                    abs(bm[r['e']]) <= BOUND_BP for r in cr))
         # row presence (from the truth and the logs)
         bc = meta['by_call']
         place_calls = [t for t in truth if t['k'] == K_PLACE]
@@ -443,6 +463,12 @@ def evaluate(d):
             breaches=sum(1 for r in rows if r['flags'] & 8),
             flows=sum(1 for t in truth if t['k'] in (K_DEPOSIT, K_WITHDRAW)),
             non_poke_first_epochs=[r['e'] for r in rows if T[r['cin']]['k'] != K_POKE],
+            non_poke_first_centre_drift=max((abs(b['centre'] - a['centre']) for a, b in zip(meta['rolls'], meta['rolls'][1:])
+                                             if T.get(led.get(b['epoch'], {}).get('cin'), {}).get('k', K_POKE) != K_POKE), default=0),
+            fallback_source_drift=max((abs(r['src_last'] - r['src_first']) for r in meta['rolls'] if r['fallback']), default=0),
+            fallback_refresh_later=any(r['fallback'] and r['refresh_after'] for r in meta['rolls']),
+            max_segments_in_epoch=max((r['segments'] for r in rows), default=0),
+            dust_checkpoints=sum(1 for t in truth if t['k'] == K_SETTLE),
             max_liveTick_minus_anchor=max((abs(t['tick'] - t['tickPre']) for t in place_calls), default=0),
             share_rows_close=all(s['minted'] == s['truth_mints'] and s['burned'] == s['truth_burns'] for s in share_rows),
             share_rows=share_rows, rows=rows, rows_original=rows_orig)
@@ -458,6 +484,7 @@ def main(argv):
                 return 2
     res = evaluate(d)
     R = res['runs']
+    tier = {k: int(v) for k, v in json.load(open(os.path.join(d, 'E0a-tier.json'))).items()}
     ten = 10 * BOUND_BP
     closes = all(r['worst_residual_bp'] <= BOUND_BP for r in R.values())
     controls = {c: max(v.values()) > BOUND_BP for c, v in res['controls'].items()}
@@ -477,16 +504,51 @@ def main(argv):
         liveTick_3_ticks_from_anchor=max(r['max_liveTick_minus_anchor'] for r in R.values()) >= 3,
         no_unresolved_epoch=all(not r['unresolved_epochs'] for r in R.values()),
         no_zero_LW_roll=all(r['failed_rolls'] == 0 for r in R.values()),
+        non_poke_first_drift_2_spacings=max(r['non_poke_first_centre_drift'] for r in R.values()) >= 2 * tier['TICK_SPACING'],
+        fallback_source_drift_2_spacings=max(r['fallback_source_drift'] for r in R.values()) >= 2 * tier['TICK_SPACING'],
+        failed_poke_read_then_refresh=any(r['fallback_refresh_later'] for r in R.values()),
+        offset_3_segments_in_one_epoch=R['offset']['max_segments_in_epoch'] >= 3,
+        offset_dust_checkpoints=R['offset']['dust_checkpoints'] >= 1,
+        offset_liveTick_3_ticks_from_anchor=R['offset']['max_liveTick_minus_anchor'] >= 3,
         closing_roll_after_previous=all((r['closing_roll_epoch'] or 0) > (r['previous_roll_epoch'] or -1) for r in R.values()))
     share_ok = all(r['share_rows_close'] for r in R.values())
     verdict = closes and all(controls.values()) and all(nonvac.values()) and share_ok
+    # S21F-04: the attribution of each failing condition (computed from the data; the verdict is unchanged)
+    diagnosis = []
+    for n, r in R.items():
+        T = {t['c']: t for t in load(os.path.join(d, f'E0a-{n}-truth.jsonl'))}
+        for x in r['rows']:
+            if abs(x['residual_bp']) <= BOUND_BP:
+                continue
+            t = T[x['cout']]
+            D, Spre = int(t['D']), int(t['Spre'])
+            fees = int(t['navMid']) - int(t['navPre']) if t['tick'] == t['tickPre'] else None
+            diagnosis.append(dict(
+                condition='closure', run=n, epoch=x['e'], residual_bp=x['residual_bp'], segments=x['segments'],
+                stale_or_gap_calls=x['stale_or_gap_calls'],
+                vault_fees_collected_at_close_bp=(fees * D / Spre / x['V'] * 1e4) if fees is not None else None,
+                note='the vault earned fees in range while tau_v took no credit (a stale cache, then an in-block '
+                     'crossing out of the range); the ledger books the vault fee leg as L*dtau_v*f_w = 0, so the '
+                     'fees are dropped, not spread: the fee-leg error term of spec 3.8, measured above the bound'))
+    for c, ok in controls.items():
+        if not ok:
+            diagnosis.append(dict(condition='control ' + c, worst_bp=max(res['controls'][c].values()),
+                                  power=res['power'][c],
+                                  note='the control moves the residual by less than the bound, or towards zero, on '
+                                       'every row: a lack of power on this data, not a defect of its implementation'))
+    shipped_m = 10 ** 16 * 12 // (365 * 24 * 3600)
     summary = dict(eval='E0a', bound_bp=BOUND_BP, verdict='PASS' if verdict else 'FAIL', closes=closes,
                    share_rows_close=share_ok, controls_exceed_bound=controls,
-                   controls_worst_bp=res['controls'], nonvacuity=nonvac,
+                   controls_worst_bp=res['controls'], controls_power=res['power'], nonvacuity=nonvac,
+                   diagnosis=diagnosis, decision=None,
                    original_formula_verdict='PASS' if all(r['worst_residual_original_bp'] <= BOUND_BP for r in R.values()) else 'FAIL',
                    scope='the events reproduce the state, the fee-leg approximation and the share terms; not the '
                          "benchmark's economic meaning",
-                   disclosed='m_perBlock raised in the harness (E0a-tier.json); TEST tier otherwise',
+                   disclosed=f"m_perBlock raised in the harness to {tier['m_perBlock']} (the shipped TEST value is "
+                             f"{shipped_m}, 2.2%/yr at 12 s blocks; about {tier['m_perBlock'] // shipped_m}x); TEST tier "
+                             "otherwise. The identity's share terms equal the truth's per-call sum once the share rows "
+                             "close (record minted = the vault's Transfer mints); only the share rows test them, the "
+                             "identity adds no independent timing test.",
                    tier=json.load(open(os.path.join(d, 'E0a-tier.json'))), runs=R)
     os.makedirs(os.path.join(HERE, 'results'), exist_ok=True)
     json.dump(summary, open(os.path.join(HERE, 'results', 'E0a.json'), 'w'), indent=1, default=str)

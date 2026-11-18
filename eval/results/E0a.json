@@ -68,6 +68,238 @@
    "exit": 8.205066217213423
   }
  },
+ "controls_power": {
+  "no_alloc": {
+   "same": {
+    "max_shift_bp": 0.9798410029376592,
+    "at_epoch": 2,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 0.9798410029376592,
+    "exceeds_on_closing_rows": true
+   },
+   "offset": {
+    "max_shift_bp": 38.62351111558235,
+    "at_epoch": 7,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 38.62351111558235,
+    "exceeds_on_closing_rows": true
+   },
+   "exit": {
+    "max_shift_bp": 97.31546592689762,
+    "at_epoch": 5,
+    "base_closes_there": false,
+    "max_shift_on_closing_rows_bp": 38.18553460186873,
+    "exceeds_on_closing_rows": true
+   }
+  },
+  "lvr_price_leg": {
+   "same": {
+    "max_shift_bp": 0.979843345996299,
+    "at_epoch": 2,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 0.979843345996299,
+    "exceeds_on_closing_rows": true
+   },
+   "offset": {
+    "max_shift_bp": 38.66268138340296,
+    "at_epoch": 7,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 38.66268138340296,
+    "exceeds_on_closing_rows": true
+   },
+   "exit": {
+    "max_shift_bp": 147.78751567687542,
+    "at_epoch": 5,
+    "base_closes_there": false,
+    "max_shift_on_closing_rows_bp": 38.222075240855254,
+    "exceeds_on_closing_rows": true
+   }
+  },
+  "no_share_terms": {
+   "same": {
+    "max_shift_bp": 14.182936233526386,
+    "at_epoch": 3,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 14.182936233526386,
+    "exceeds_on_closing_rows": true
+   },
+   "offset": {
+    "max_shift_bp": 10.191937026577891,
+    "at_epoch": 5,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 10.191937026577891,
+    "exceeds_on_closing_rows": true
+   },
+   "exit": {
+    "max_shift_bp": 4.597578441521747,
+    "at_epoch": 4,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 4.597578441521747,
+    "exceeds_on_closing_rows": true
+   }
+  },
+  "drip_sign_flipped": {
+   "same": {
+    "max_shift_bp": 0.0,
+    "at_epoch": 8,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 0.0,
+    "exceeds_on_closing_rows": false
+   },
+   "offset": {
+    "max_shift_bp": 0.0,
+    "at_epoch": 9,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 0.0,
+    "exceeds_on_closing_rows": false
+   },
+   "exit": {
+    "max_shift_bp": 11.244731138514615,
+    "at_epoch": 7,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 11.244731138514615,
+    "exceeds_on_closing_rows": true
+   }
+  },
+  "single_forfeit_drip": {
+   "same": {
+    "max_shift_bp": 0.0,
+    "at_epoch": 8,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 0.0,
+    "exceeds_on_closing_rows": false
+   },
+   "offset": {
+    "max_shift_bp": 0.0,
+    "at_epoch": 9,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 0.0,
+    "exceeds_on_closing_rows": false
+   },
+   "exit": {
+    "max_shift_bp": 3.0406165052099072,
+    "at_epoch": 8,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 3.0406165052099072,
+    "exceeds_on_closing_rows": true
+   }
+  },
+  "witness_shift_one_spacing": {
+   "same": {
+    "max_shift_bp": 0.4370162106533459,
+    "at_epoch": 3,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 0.4370162106533459,
+    "exceeds_on_closing_rows": true
+   },
+   "offset": {
+    "max_shift_bp": 0.6438878851745375,
+    "at_epoch": 7,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 0.6438878851745375,
+    "exceeds_on_closing_rows": true
+   },
+   "exit": {
+    "max_shift_bp": 1.6923633684504775,
+    "at_epoch": 5,
+    "base_closes_there": false,
+    "max_shift_on_closing_rows_bp": 0.631369935379726,
+    "exceeds_on_closing_rows": true
+   }
+  },
+  "fee_by_n": {
+   "same": {
+    "max_shift_bp": 0.0,
+    "at_epoch": 8,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 0.0,
+    "exceeds_on_closing_rows": false
+   },
+   "offset": {
+    "max_shift_bp": 0.0014457109555912175,
+    "at_epoch": 4,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 0.0014457109555912175,
+    "exceeds_on_closing_rows": false
+   },
+   "exit": {
+    "max_shift_bp": 0.3828033317147329,
+    "at_epoch": 5,
+    "base_closes_there": false,
+    "max_shift_on_closing_rows_bp": 0.2975175394791407,
+    "exceeds_on_closing_rows": false
+   }
+  },
+  "epoch_indexed_witness": {
+   "same": {
+    "max_shift_bp": 0.0,
+    "at_epoch": 8,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 0.0,
+    "exceeds_on_closing_rows": false
+   },
+   "offset": {
+    "max_shift_bp": 0.5324710563434707,
+    "at_epoch": 5,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 0.5324710563434707,
+    "exceeds_on_closing_rows": true
+   },
+   "exit": {
+    "max_shift_bp": 0.0,
+    "at_epoch": 8,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 0.0,
+    "exceeds_on_closing_rows": false
+   }
+  },
+  "anchor_closing_price": {
+   "same": {
+    "max_shift_bp": 0.9798164508476698,
+    "at_epoch": 2,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 0.9798164508476698,
+    "exceeds_on_closing_rows": true
+   },
+   "offset": {
+    "max_shift_bp": 9.378730184500956,
+    "at_epoch": 3,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 9.378730184500956,
+    "exceeds_on_closing_rows": true
+   },
+   "exit": {
+    "max_shift_bp": 3.9515668009828797,
+    "at_epoch": 3,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 3.9515668009828797,
+    "exceeds_on_closing_rows": true
+   }
+  },
+  "fallback_latest_write": {
+   "same": {
+    "max_shift_bp": 0.0,
+    "at_epoch": 8,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 0.0,
+    "exceeds_on_closing_rows": false
+   },
+   "offset": {
+    "max_shift_bp": 0.0,
+    "at_epoch": 9,
+    "base_closes_there": true,
+    "max_shift_on_closing_rows_bp": 0.0,
+    "exceeds_on_closing_rows": false
+   },
+   "exit": {
+    "max_shift_bp": 8.761095850131236,
+    "at_epoch": 5,
+    "base_closes_there": false,
+    "max_shift_on_closing_rows_bp": 7.481064824059905,
+    "exceeds_on_closing_rows": true
+   }
+  }
+ },
  "nonvacuity": {
   "alloc_offset": true,
   "alloc_exit": true,
@@ -86,11 +318,58 @@
   "liveTick_3_ticks_from_anchor": true,
   "no_unresolved_epoch": true,
   "no_zero_LW_roll": true,
+  "non_poke_first_drift_2_spacings": true,
+  "fallback_source_drift_2_spacings": true,
+  "failed_poke_read_then_refresh": true,
+  "offset_3_segments_in_one_epoch": true,
+  "offset_dust_checkpoints": true,
+  "offset_liveTick_3_ticks_from_anchor": true,
   "closing_roll_after_previous": true
  },
+ "diagnosis": [
+  {
+   "condition": "closure",
+   "run": "exit",
+   "epoch": 5,
+   "residual_bp": 0.5560296329178135,
+   "segments": 1,
+   "stale_or_gap_calls": 1,
+   "vault_fees_collected_at_close_bp": 0.5560296329390886,
+   "note": "the vault earned fees in range while tau_v took no credit (a stale cache, then an in-block crossing out of the range); the ledger books the vault fee leg as L*dtau_v*f_w = 0, so the fees are dropped, not spread: the fee-leg error term of spec 3.8, measured above the bound"
+  },
+  {
+   "condition": "control fee_by_n",
+   "worst_bp": 0.29751753947754417,
+   "power": {
+    "same": {
+     "max_shift_bp": 0.0,
+     "at_epoch": 8,
+     "base_closes_there": true,
+     "max_shift_on_closing_rows_bp": 0.0,
+     "exceeds_on_closing_rows": false
+    },
+    "offset": {
+     "max_shift_bp": 0.0014457109555912175,
+     "at_epoch": 4,
+     "base_closes_there": true,
+     "max_shift_on_closing_rows_bp": 0.0014457109555912175,
+     "exceeds_on_closing_rows": false
+    },
+    "exit": {
+     "max_shift_bp": 0.3828033317147329,
+     "at_epoch": 5,
+     "base_closes_there": false,
+     "max_shift_on_closing_rows_bp": 0.2975175394791407,
+     "exceeds_on_closing_rows": false
+    }
+   },
+   "note": "the control moves the residual by less than the bound, or towards zero, on every row: a lack of power on this data, not a defect of its implementation"
+  }
+ ],
+ "decision": null,
  "original_formula_verdict": "FAIL",
  "scope": "the events reproduce the state, the fee-leg approximation and the share terms; not the benchmark's economic meaning",
- "disclosed": "m_perBlock raised in the harness (E0a-tier.json); TEST tier otherwise",
+ "disclosed": "m_perBlock raised in the harness to 12000000000000 (the shipped TEST value is 3805175038, 2.2%/yr at 12 s blocks; about 3153x); TEST tier otherwise. The identity's share terms equal the truth's per-call sum once the share rows close (record minted = the vault's Transfer mints); only the share rows test them, the identity adds no independent timing test.",
  "tier": {
   "W_TICKS": 2000,
   "TICK_SPACING": 10,
@@ -123,6 +402,11 @@
    "breaches": 0,
    "flows": 0,
    "non_poke_first_epochs": [],
+   "non_poke_first_centre_drift": 0,
+   "fallback_source_drift": 0,
+   "fallback_refresh_later": false,
+   "max_segments_in_epoch": 4,
+   "dust_checkpoints": 8,
    "max_liveTick_minus_anchor": 29,
    "share_rows_close": true,
    "share_rows": [
@@ -198,6 +482,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 2
     },
     {
@@ -214,6 +499,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 3
     },
     {
@@ -230,6 +516,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 3
     },
     {
@@ -246,6 +533,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 4
     },
     {
@@ -262,6 +550,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 3
     },
     {
@@ -278,6 +567,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 3
     },
     {
@@ -294,6 +584,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 3
     },
     {
@@ -310,6 +601,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 3
     }
    ],
@@ -328,6 +620,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 2
     },
     {
@@ -344,6 +637,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 3
     },
     {
@@ -360,6 +654,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 3
     },
     {
@@ -376,6 +671,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 4
     },
     {
@@ -392,6 +688,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 3
     },
     {
@@ -408,6 +705,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 3
     },
     {
@@ -424,6 +722,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 3
     },
     {
@@ -440,6 +739,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 3
     }
    ]
@@ -469,6 +769,11 @@
    "non_poke_first_epochs": [
     5
    ],
+   "non_poke_first_centre_drift": 49,
+   "fallback_source_drift": 0,
+   "fallback_refresh_later": false,
+   "max_segments_in_epoch": 6,
+   "dust_checkpoints": 4,
    "max_liveTick_minus_anchor": 47,
    "share_rows_close": true,
    "share_rows": [
@@ -551,6 +856,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 2
     },
     {
@@ -567,6 +873,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 2
     },
     {
@@ -583,6 +890,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 6
     },
     {
@@ -599,6 +907,7 @@
      "unresolved": false,
      "flags": 64,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 1,
      "segments": 2
     },
     {
@@ -615,6 +924,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 3
     },
     {
@@ -631,6 +941,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 3
     },
     {
@@ -647,6 +958,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 2
     },
     {
@@ -663,6 +975,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 3
     },
     {
@@ -679,6 +992,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 2
     }
    ],
@@ -697,6 +1011,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 2
     },
     {
@@ -713,6 +1028,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 2
     },
     {
@@ -729,6 +1045,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 6
     },
     {
@@ -745,6 +1062,7 @@
      "unresolved": false,
      "flags": 64,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 1,
      "segments": 2
     },
     {
@@ -761,6 +1079,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 3
     },
     {
@@ -777,6 +1096,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 3
     },
     {
@@ -793,6 +1113,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 2
     },
     {
@@ -809,6 +1130,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 3
     },
     {
@@ -825,6 +1147,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 2
     }
    ]
@@ -872,6 +1195,11 @@
    "breaches": 1,
    "flows": 0,
    "non_poke_first_epochs": [],
+   "non_poke_first_centre_drift": 0,
+   "fallback_source_drift": 705,
+   "fallback_refresh_later": true,
+   "max_segments_in_epoch": 7,
+   "dust_checkpoints": 3,
    "max_liveTick_minus_anchor": 27,
    "share_rows_close": true,
    "share_rows": [
@@ -947,6 +1275,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 2
     },
     {
@@ -963,6 +1292,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 2
     },
     {
@@ -979,6 +1309,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 2
     },
     {
@@ -995,6 +1326,7 @@
      "unresolved": false,
      "flags": 112,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 1,
      "segments": 4
     },
     {
@@ -1011,6 +1343,7 @@
      "unresolved": false,
      "flags": 116,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 1,
      "segments": 1
     },
     {
@@ -1027,6 +1360,7 @@
      "unresolved": false,
      "flags": 116,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 1,
      "segments": 1
     },
     {
@@ -1043,6 +1377,7 @@
      "unresolved": false,
      "flags": 76,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 1,
      "segments": 7
     },
     {
@@ -1059,6 +1394,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 1
     }
    ],
@@ -1077,6 +1413,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 2
     },
     {
@@ -1093,6 +1430,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 2
     },
     {
@@ -1109,6 +1447,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 2
     },
     {
@@ -1125,6 +1464,7 @@
      "unresolved": false,
      "flags": 112,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 1,
      "segments": 4
     },
     {
@@ -1141,6 +1481,7 @@
      "unresolved": false,
      "flags": 116,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 1,
      "segments": 1
     },
     {
@@ -1157,6 +1498,7 @@
      "unresolved": false,
      "flags": 116,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 1,
      "segments": 1
     },
     {
@@ -1173,6 +1515,7 @@
      "unresolved": false,
      "flags": 76,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 1,
      "segments": 7
     },
     {
@@ -1189,6 +1532,7 @@
      "unresolved": false,
      "flags": 0,
      "tauV_gate_tagged": 0,
+     "stale_or_gap_calls": 0,
      "segments": 1
     }
    ]

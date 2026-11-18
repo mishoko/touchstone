@@ -396,6 +396,22 @@ def original(led, meta, tier):
 
 # ---------------------------------------------------------------- main
 
+def power(rows, cr):
+    """A control's own power: its largest residual shift against the base, row by row, where it is, whether the base
+    closes there, and whether the control exceeds the bound on a row whose base closes (fix review S21F-01)."""
+    assert len(rows) == len(cr)
+    bm = {r['e']: r['residual_bp'] for r in rows}
+    pw = [(abs(r['residual_bp'] - bm[r['e']]), r['e'], abs(bm[r['e']]) <= BOUND_BP) for r in cr]
+    best = max(pw, default=(0.0, None, True))
+    if best[0] == 0.0:
+        best = (0.0, None, True)
+    best_closing = max((x for x in pw if x[2]), default=(0.0, None, True))
+    return dict(max_shift_bp=best[0], at_epoch=best[1], base_closes_there=best[2],
+                max_shift_on_closing_rows_bp=best_closing[0],
+                exceeds_on_closing_rows=any(abs(r['residual_bp']) > BOUND_BP and abs(bm[r['e']]) <= BOUND_BP for r in cr))
+
+
+
 def evaluate(d):
     tier = json.load(open(os.path.join(d, 'E0a-tier.json')))
     tier = {k: int(v) for k, v in tier.items()}
@@ -406,9 +422,13 @@ def evaluate(d):
         T = {t['c']: t for t in truth}
         led, meta = ledger(logs, tier)
         rows = identity(led, truth)
-        # S21F2-02: the power metric's self-test: a control aliased to the base must shift no row
+        # S21F2-02, S21F3-01: the power metric's self-test, through `power()`: a control aliased to the base must report
+        # zero power and no location
         alias, _ = ledger(logs, tier)
-        assert all(abs(x['residual_bp'] - y['residual_bp']) == 0 for x, y in zip(identity(alias, truth), rows))
+        ar = identity(alias, truth)
+        assert len(ar) == len(rows)
+        ap = power(rows, ar)
+        assert ap['max_shift_bp'] == 0 and ap['at_epoch'] is None, ap
         rows_orig = identity(led, truth, orig=original(led, meta, tier))
         # the share rows: the record's minted and the recomputed burns against the shares that actually moved
         share_rows = []
@@ -434,16 +454,7 @@ def evaluate(d):
                 cr = identity(cl, truth, ctl=c)
             res['controls'][c][run] = max((abs(r['residual_bp']) for r in cr), default=0.0)
             # S21F-01: the control's own power, row by row against the base, and whether the base closes there
-            bm = {r['e']: r['residual_bp'] for r in rows}
-            pw = [(abs(r['residual_bp'] - bm[r['e']]), r['e'], abs(bm[r['e']]) <= BOUND_BP) for r in cr]
-            best = max(pw, default=(0.0, None, True))
-            if best[0] == 0.0:
-                best = (0.0, None, True)  # S21F2-02: no location when the control moves no row
-            best_closing = max((x for x in pw if x[2]), default=(0.0, None, True))
-            res['power'][c][run] = dict(max_shift_bp=best[0], at_epoch=best[1], base_closes_there=best[2],
-                                        max_shift_on_closing_rows_bp=best_closing[0],
-                                        exceeds_on_closing_rows=any(abs(r['residual_bp']) > BOUND_BP and
-                                                                    abs(bm[r['e']]) <= BOUND_BP for r in cr))
+            res['power'][c][run] = power(rows, cr)
         # row presence (from the truth and the logs)
         bc = meta['by_call']
         place_calls = [t for t in truth if t['k'] == K_PLACE]

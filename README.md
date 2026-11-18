@@ -42,6 +42,16 @@ placement at exactly the minimum deployment just before the cure window (edge-6h
 lower bound −0.052 ETH) and the cheapest legal clock reset (mean −0.016 ETH, lower bound −0.102 ETH). All other gated rows pass. The smallest rate that would close the gap is estimated at no less than about 2.4% a year on the held-out paths and has not
 been measured; m was not changed after seeing the data.
 
+The same rule was then run once more, on 200 fresh simulated paths per bucket (seeds not used by any earlier run),
+with the run's form, seeds and pass rule written and reviewed before it started (test U-IC). The result is the same:
+at 120% volatility, edge-6h minus the minimum-deployment strategy is +0.086 ETH (lower bound −0.011 ETH) and minus
+the clock reset +0.012 ETH (lower bound −0.084 ETH). The other 50 comparisons pass at 40%, 60% and 120% volatility
+and on a path that hovers at the range edge. So do the conditions on the reference curator's own net, and the
+control (with no base fee, the lazy curator beats the reference curator in every volatility bucket). On these paths
+the smallest passing rate is estimated at 2.38% a year, extrapolated beyond the simulated rates. U-IC is therefore
+published as failed and stays unmet; m stays 2.2% a year. These are simulations on synthetic 180-day paths with no
+third-party liquidity, not the historical replay. Result: `eval/results/U-IC.json`.
+
 **Allocation ledger (measured, two negative results).** The allocation ledger is published for disclosure only and
 never affects pay. Its pre-registered test requires each epoch's allocation to reconcile the vault's value change for a
 fixed depositor to within 0.3 bp. Both registered forms fail, and both are published as failed:

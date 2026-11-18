@@ -7,15 +7,21 @@ import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {TouchstoneVault} from "../../src/TouchstoneVault.sol";
 import {IVaultEntries} from "../../src/interfaces/ITouchstoneVaultExtension.sol";
+import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
+import {SqrtPriceMath} from "@uniswap/v4-core/src/libraries/SqrtPriceMath.sol";
+import {Holdings} from "../../src/types/Holdings.sol";
+import {VaultView} from "../utils/VaultView.sol";
 import {MainnetVaultFork, ContractDepositor} from "./MainnetVaultFork.sol";
+
+using VaultView for TouchstoneVault;
 
 /// @notice K-1 (spec §9.1) on an Ethereum mainnet fork (chain 1, through `ForkBase._fork`): the factory against the
 ///         canonical v4 PoolManager, the MAINNET tier against the canonical USDC/WETH 0.05% reference pool, the
 ///         first placement through `CuratorBundler.deployAndPlace` with real USDC and WETH, then
 ///         - a quote through the canonical V4Quoter equal to the output of the same swap through the canonical
 ///           Universal Router (Permit2 approvals, V4_SWAP), both directions;
-///         - deposit and withdraw from an EOA and from a contract, never profiting (U-5) and losing at most 1e-6 of what
-///           it paid (rounding in the vault's favour).
+///         - deposit and withdraw from an EOA and from a contract, never profiting (U-5) and losing at most two
+///           liquidity units (rounding in the vault's favour).
 ///         Runs with `FOUNDRY_PROFILE=fork forge test --mp test/fork` (`FORK_BLOCK_1=<n>` pins the block); skips when
 ///         MAINNET_RPC_URL is unset and fails unless it is chain 1.
 contract K1ForkTest is MainnetVaultFork {
@@ -50,17 +56,24 @@ contract K1ForkTest is MainnetVaultFork {
         assertEq(out, q, "quote = swap (WETH->USDC)");
     }
 
-    /// @dev U-5's property on real tokens (a round trip never profits), and a loss of at most 1e-6 of what was paid
-    ///      plus 2 wei per token (rounding in the vault's favour; logged by the callers).
-    function _roundTripAssert(uint256 p0, uint256 p1, uint256 r0, uint256 r1) internal pure {
+    /// @dev U-5's property on real tokens (a round trip never profits), and a loss of at most the token amounts of
+    ///      two units of liquidity over the vault's live range plus 2 wei per token (the deposit rounds its liquidity
+    ///      up and the withdrawal down; the idle legs round by at most 1 wei each).
+    function _roundTripAssert(uint256 p0, uint256 p1, uint256 r0, uint256 r1) internal view {
+        Holdings memory h = TouchstoneVault(payable(vault)).holdings();
+        (uint160 sp,,,) = pm.getSlot0(key.toId());
+        uint160 sa = TickMath.getSqrtPriceAtTick(h.lo);
+        uint160 sb = TickMath.getSqrtPriceAtTick(h.hi);
+        uint256 u0 = sp < sb ? SqrtPriceMath.getAmount0Delta(sp > sa ? sp : sa, sb, 2, true) : 0;
+        uint256 u1 = sp > sa ? SqrtPriceMath.getAmount1Delta(sa, sp < sb ? sp : sb, 2, true) : 0;
         assertLe(r0, p0, "no more USDC out than in");
         assertLe(r1, p1, "no more WETH out than in");
-        assertGe(r0 + p0 / 1e6 + 2, p0, "USDC back within 1e-6");
-        assertGe(r1 + p1 / 1e6 + 2, p1, "WETH back within 1e-6");
+        assertGe(r0 + u0 + 2, p0, "USDC back within two liquidity units");
+        assertGe(r1 + u1 + 2, p1, "WETH back within two liquidity units");
     }
 
-    ///         what it paid, less at most rounding in the vault's favour: it never gets back more
-    ///         than it paid (U-5) and loses at most 1e-6 of it (measured: one liquidity unit, ~1,168 wei of WETH).
+    /// @notice An EOA deposits real USDC and WETH (a quarter of the vault's supply), then withdraws the same shares in
+    ///         the same block: it never gets back more than it paid (U-5) and loses at most two liquidity units.
     function test_K_1__depositAndWithdrawFromAnEOA() public {
         if (!_setUp()) return;
         deal(address(usdc), alice, 1e12);

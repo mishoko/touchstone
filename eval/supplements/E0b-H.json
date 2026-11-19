@@ -1,0 +1,54 @@
+{
+ "eval": "E0b",
+ "withdrawn": true,
+ "verdict": "FAIL",
+ "registration": "392784ee6802fca50e730098605a1c82cba7ddca",
+ "decision": "H (panel 2026-11-19 D8, applied s25, spec decision log #195): the ledger's closure claim is withdrawn and it stays disclosure with no guarantee; no third attempt. E0b was run once on its pre-registered held-out seeds 1100-1107 and failed.",
+ "result": {
+  "worst_bp": {
+   "e0b-1100": 2.4915,
+   "e0b-1101": 2.9654,
+   "e0b-1102": 1.982,
+   "e0b-1103": 1.4198,
+   "e0b-1104": 2.0007,
+   "e0b-1105": 1.2668,
+   "e0b-1106": 1.3761,
+   "e0b-1107": 4.0857
+  },
+  "failed_scripts": [],
+  "share_rows_close": true,
+  "nonvacuity": {
+   "presence": true,
+   "a": true,
+   "b": true,
+   "c": true,
+   "alloc": true
+  },
+  "controls_powered_at_registration": true
+ },
+ "diagnosis": {
+  "note": "computed after the verdict from the held-out data (reported only; the verdict is unchanged): with the passive fee leg L_b*dtau_b*f_w replaced by its true value (the witness range's fee growth read after the opening and before the closing vault call, valued at the segment's p1), every resolved row closes",
+  "worst_bp_with_true_passive_leg": {
+   "e0b-1100": 0.0139,
+   "e0b-1101": 0.0172,
+   "e0b-1102": 0.0135,
+   "e0b-1103": 0.0139,
+   "e0b-1104": 0.0219,
+   "e0b-1105": 0.0173,
+   "e0b-1106": 0.0087,
+   "e0b-1107": 0.0057
+  },
+  "attribution": "the failure is the passive leg's time-based fee rate f_w: a witness lifetime's fees are attributed to segments in proportion to credited time rather than to when they were earned, so neighbouring epochs carry large opposite-signed residuals (e.g. seed 1107: e2 +4.09 bp, e3 -3.72 bp); the vault fee leg (read from pool state), the price leg, the L_b sizing and the share terms reconcile",
+  "valuation_remainder": "f_w values the witness fees at the lifetime's last p1 while the truth values each segment at its own p1; on the fit data this remainder is at most 0.014 bp (frozen-state review S25R-02)",
+  "evaluator_exceptions": "none (no script reported an evaluator error; failed_scripts is empty)"
+ },
+ "fit": {
+  "worst_bp": {
+   "same": 0.0973,
+   "offset": 0.186,
+   "exit": 0.1012
+  },
+  "note": "E0a's three scripts as fit data; exit closes by construction (the vault read is the truth's own quantity)"
+ },
+ "future_work": "reading the witness's fee growth at each vault call would make the passive fee leg exact (diagnosis above); that is a different ledger outside panel D6 and is not counted toward E0, E0a or E0b"
+}

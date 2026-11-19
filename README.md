@@ -84,9 +84,23 @@ extrapolated beyond the simulated rates. U-IC stays failed and is never re-run; 
 changed wait, not a replacement. On U-IC2's paths edge-6h fails against the clock reset (+0.049 ETH, lower bound −0.022
 ETH); against the smallest-deployment placement it passes there (+0.088 ETH, lower bound +0.017 ETH). Results: `eval/results/U-IC.json`, `eval/supplements/U-IC-observer.json`.
 
-**Allocation ledger (measured, two negative results).** The allocation ledger is published for disclosure only and
-never affects pay. Its pre-registered test requires each epoch's allocation to reconcile the vault's value change for a
-fixed depositor to within 0.3 bp. Both registered forms fail, and both are published as failed:
+**Allocation ledger (disclosure only; no closure guarantee).** The allocation ledger is published for disclosure and
+never affects pay. Its pre-registered test asks each epoch's allocation to reconcile the vault's value change for a fixed
+depositor to within 0.3 bp. In the current configuration that test, E0b, failed, so the ledger carries no closure claim:
+- E0b reads the vault's own fee leg from pool state at each vault call (no contract change) and was run once on eight
+  pre-registered scripts (seeds 1100–1107) built to stress the remaining approximation, the passive leg's time-based fee
+  rate. Every script completed, the share terms reconciled exactly and every control and non-vacuity condition held, but
+  59 of 112 epoch rows exceeded the bound (worst 4.09 bp; per script 1.27–4.09 bp), mostly in pairs of
+  neighbouring epochs with opposite signs. A diagnosis made after the run attributes the whole residual to that fee rate: with the passive leg's
+  fees replaced by their true values from pool state, every row closes within 0.022 bp. The ledger attributes a witness
+  lifetime's fees in proportion to credited time, not to when they were earned; its per-epoch figures can therefore be
+  off by a few basis points under bursty trading and late pokes. The runs use the test tier with the base rate raised,
+  as in E0a.
+- The test was registered before any held-out script existed (commit `392784e`, branch `e0b`); its frozen form,
+  generator, harness and evaluator are in `eval/E0b-form.md`, `eval/e0b_gen.py`, `test/eval/E0bData.t.sol` and
+  `eval/E0b.py`. Results: `eval/results/E0b.json`, `eval/results/E0b-fit.json`, `eval/supplements/E0b-H.json`.
+
+Earlier configuration (published as failed, final):
 - E0, the original formula: worst residual 58.6 bp in an epoch for a curator offset from the benchmark (reduced
   form); on the E0a runs the same formula misses by up to 0.99, 38.6 and 147 bp.
 - E0a, the ledger amended once after E0's data: worst residual 0.0074 bp (`same`) and 0.0058 bp (`offset`), but 0.556
@@ -102,7 +116,6 @@ fixed depositor to within 0.3 bp. Both registered forms fail, and both are publi
   three scripted runs on the test tier with the base rate raised about 3,150 times (to make the base terms
   measurable); every share row closes exactly.
 
-No further amendment will be made for this release; a fee leg based on fee growth is left as future work.
 Results: `eval/results/E0.json`, `eval/results/E0a.json`.
 
 There is no keeper, operator, admin or off-chain feed. The one external input is the reference pool's TWAP, because a

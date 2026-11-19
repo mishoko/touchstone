@@ -44,11 +44,31 @@ def test_text(root):
     return '\n'.join(open(p).read() for p in files)
 
 
-NO_SUCCESSOR = ('U-IC', 'E0', 'E0a')   # run-once rows: a FAIL is final (s23 S23D2-01; s24 panel D7)
+NO_SUCCESSOR = ('U-IC', 'E0', 'E0a', 'E0b')   # run-once rows: a FAIL is final (s23 S23D2-01; s24 panel D7, D8)
 # Rows of the earlier configuration (edge-6h reference policy; the τ-based ledger) that failed and are final (spec
 # §14 #193 D7). They are never met; while each carries its published final negative result, it is reported on the same
 # line as the current count ("+ k historical failed") instead of blocking the current configuration's phase exit.
 HISTORICAL = ('U-IC', 'E0', 'E0a')
+
+
+# Rows of the current configuration whose pre-registered test failed and whose claim is therefore withdrawn (spec §10
+# E0b, panel D8 "H"): never met; while the failed result and the published withdrawal record exist, reported on the same
+# line as the current count ("+ k withdrawn") instead of blocking the phase exit, because no claim is made for them.
+WITHDRAWN = ('E0b',)
+
+
+def withdrawn_h(i, root):
+    """True iff `i` is a withdrawn row: its result is FAIL and `eval/supplements/<i>-H.json` records the withdrawal
+    (`withdrawn` true, a non-empty `decision`). Without both the row is an ordinary missing row."""
+    if i not in WITHDRAWN:
+        return False
+    try:
+        r = json.load(open(os.path.join(root, 'eval', 'results', i + '.json')))
+        h = json.load(open(os.path.join(root, 'eval', 'supplements', i + '-H.json')))
+    except (OSError, ValueError):
+        return False
+    return (isinstance(r, dict) and r.get('verdict') == 'FAIL' and isinstance(h, dict) and h.get('withdrawn') is True
+            and isinstance(h.get('decision'), str) and bool(h.get('decision')))
 
 
 def historical_failed(i, root):
@@ -127,7 +147,12 @@ def decision_refs_ok(root):
 def missing(rows, tests, phase, root):
     lim = PHASES.index(phase)
     return [i for i, due, k in rows if PHASES.index(due) <= lim and not covered(i, tests, root, k)
-            and not historical_failed(i, root)]
+            and not historical_failed(i, root) and not withdrawn_h(i, root)]
+
+
+def withdrawn(rows, phase, root):
+    lim = PHASES.index(phase)
+    return [i for i, due, _ in rows if PHASES.index(due) <= lim and withdrawn_h(i, root)]
 
 
 def historical(rows, phase, root):
@@ -142,14 +167,17 @@ def table_status(i, k, tests, miss, root):
         return 'covered'
     if historical_failed(i, root):
         return 'failed, earlier configuration, final'
+    if withdrawn_h(i, root):
+        return 'failed, claim withdrawn (H, panel D8)'
     return 'MISSING' if i in miss else 'not due'
 
 
-def count_line(n_ok, n_req, hist, phase):
+def count_line(n_ok, n_req, hist, phase, wd=()):
     """The one count line: the current configuration's rows, and on the same line every historical failed row (D7:
-    the current count never stands alone)."""
+    the current count never stands alone) and every withdrawn row (D8 H)."""
     return (f'{n_ok}/{n_req} current claim IDs due by {phase} covered + {len(hist)} historical failed'
-            f' ({", ".join(hist) if hist else "none"}; earlier configuration, final, never met)')
+            f' ({", ".join(hist) if hist else "none"}; earlier configuration, final, never met)'
+            f' + {len(wd)} withdrawn ({", ".join(wd) if wd else "none"}; failed, claim withdrawn, never met)')
 
 
 # ------------------------------------------------------------------ generation from the specification
@@ -292,6 +320,28 @@ def selftest(rows):
             errs.append('fixture: the count line must carry the historical rows on the same line')
         if '+ 0 historical failed' not in count_line(1, 1, [], 'P1'):
             errs.append('fixture: the count line always names the historical count')
+    with tempfile.TemporaryDirectory() as d:  # D8 (s25): a withdrawn row
+        os.makedirs(os.path.join(d, 'eval', 'results'))
+        os.makedirs(os.path.join(d, 'eval', 'supplements'))
+        rp = os.path.join(d, 'eval', 'results', 'E0b.json')
+        hp = os.path.join(d, 'eval', 'supplements', 'E0b-H.json')
+        json.dump({'verdict': 'FAIL'}, open(rp, 'w'))
+        if missing([('E0b', 'P5', 'eval')], '', 'P5', d) != ['E0b']:
+            errs.append('fixture: a failed row without its withdrawal record must stay missing')
+        json.dump({'withdrawn': True, 'decision': 'x'}, open(hp, 'w'))
+        if missing([('E0b', 'P5', 'eval')], '', 'P5', d) or withdrawn([('E0b', 'P5', 'eval')], 'P5', d) != ['E0b']:
+            errs.append('fixture: a withdrawn row is reported as withdrawn, not missing')
+        if covered('E0b', '', d, 'eval'):
+            errs.append('fixture: a withdrawn row is never covered')
+        json.dump({'verdict': 'PASS'}, open(rp, 'w'))
+        if withdrawn([('E0b', 'P5', 'eval')], 'P5', d):
+            errs.append('fixture: only a FAIL can be withdrawn')
+        if missing([('E0c', 'P5', 'eval')], '', 'P5', d) != ['E0c']:
+            errs.append('fixture: an unlisted row is never withdrawn')
+        if '+ 1 withdrawn (E0b' not in count_line(5, 5, [], 'P5', ['E0b']):
+            errs.append('fixture: the count line carries the withdrawn rows on the same line')
+    if WITHDRAWN != ('E0b',) or not set(WITHDRAWN) <= set(NO_SUCCESSOR):
+        errs.append('fixture: WITHDRAWN is pinned to E0b (s25 D8) and is a subset of NO_SUCCESSOR')
     # S24F-06: the historical set is exactly the earlier configuration's failed rows, and each is run-once
     if HISTORICAL != ('U-IC', 'E0', 'E0a') or not set(HISTORICAL) <= set(NO_SUCCESSOR):
         errs.append('fixture: HISTORICAL is pinned to U-IC, E0, E0a (s24 D7) and is a subset of NO_SUCCESSOR')
@@ -333,8 +383,9 @@ def main(argv):
             st = table_status(i, k, tests, miss, ROOT)
             print(f'| {i} | {due} | {st} |')
     hist = historical(rows, phase, ROOT)
-    req = [i for i, due, _ in rows if PHASES.index(due) <= PHASES.index(phase) and i not in hist]
-    print(count_line(len(req) - len(miss), len(req), hist, phase))
+    wd = withdrawn(rows, phase, ROOT)
+    req = [i for i, due, _ in rows if PHASES.index(due) <= PHASES.index(phase) and i not in hist and i not in wd]
+    print(count_line(len(req) - len(miss), len(req), hist, phase, wd))
     bad = decision_refs_ok(ROOT)
     for e in bad:
         print('decision reference:', e)

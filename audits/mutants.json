@@ -3725,7 +3725,7 @@
    "find": "            _modify(key, ModifyLiquidityParams(nlo, nhi, int256(uint256(lw)), _witSalt(epoch)));",
    "replace": "            _modify(key, ModifyLiquidityParams(nlo - TICK_SPACING, nhi, int256(uint256(lw)), _witSalt(epoch)));",
    "status": "KILLED",
-   "basis": "9154801367702df0"
+   "basis": "61ef9bf8194c4ce0"
   },
   {
    "id": "MU-310",
@@ -3737,7 +3737,7 @@
    "find": "            _book(_modify(-int256(uint256(l))));",
    "replace": "            _book(_modify(-int256(uint256(l - 1))));",
    "status": "KILLED",
-   "basis": "893b8fe9e0593747"
+   "basis": "53134fa240109939"
   },
   {
    "id": "MU-311",
@@ -3749,7 +3749,7 @@
    "find": "            _transfer(payer, address(this), s);",
    "replace": "            _transfer(address(this), payer, s);",
    "status": "KILLED",
-   "basis": "3f9a374ef65efba8"
+   "basis": "1a8ce496b9b8fea4"
   },
   {
    "id": "MU-312",

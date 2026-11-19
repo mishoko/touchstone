@@ -65,9 +65,12 @@ creation code carries a metadata hash over source comments changed since E0a's r
   anchors; optional ops are placed in draw order on disjoint block intervals, shifted past a conflict (vault calls also
   `COOLDOWN` = 14 blocks apart; a re-placement and a rebalance at least `COOLDOWN` after the poke), and dropped unless
   they end by +110; per epoch, pre-swaps (1.5% of NAV each, worst case) and the rebalance stay under 4% of NAV
-  (`MAX_SWAP_EPOCH` = 5%). Presence by construction: if no non-poke-first epoch, re-placement, stale window or crossing
-  survives the clamps, one is forced into the first epoch from epoch 2 where it survives, else with that epoch's other
-  optional ops dropped. Every clamp is logged in the script.
+  (`MAX_SWAP_EPOCH` = 5%). Presence by construction, to a fixed point: if no non-poke-first epoch, re-placement, stale
+  window or crossing survives the clamps, one is forced into the first epoch from epoch 2 where it survives as drawn;
+  else where it survives once that epoch's rebalance, unobserved span, flow and claim are dropped; else where it survives
+  once a re-placement, stale window or crossing that also survives in another epoch is dropped; else a required op
+  whose only survivor blocks the epoch is first moved to another epoch (dropping only that epoch's rebalance,
+  unobserved span, flow and claim) and then dropped from it. Every clamp is logged in the script.
 - Legality in the harness: a placement or rebalance first moves spot within the fence of the live reference by a
   third-party swap (as E0a's placements do); a rebalance is capped at 90% of the input token's idle. There is no
   clamp keeping a placement around the walk's target; a placement the vault rejects (e.g. `NotContained`, `DeltaMin`)

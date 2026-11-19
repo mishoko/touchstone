@@ -25,6 +25,7 @@ spec, a settlement other than the frozen one, a second start of a part (`output/
 already existing; the verdict refuses parts from different commits or model hashes, and an incomplete set (a harness
 defect: the whole test is recorded not run).
 """
+import hashlib
 import json
 import math
 import multiprocessing as mp
@@ -63,7 +64,21 @@ def part_file(first):
 
 def job(args):
     R.MIMIC = MIMIC                      # the honest-cost row and L8 use the mimic (spawned workers re-import)
-    return R.job(args)
+    rows, l8 = R.job(args)
+    if l8 is not None:
+        l8["bot"] = R.MIMIC              # S24U-06: the data shows which policy L8 ran
+    return rows, l8
+
+
+def form_hash():
+    """sha256 (16 hex) of the spec's "U-IC2 frozen form" block (S24U-08: the parts and the verdict must share the frozen
+    form, not an internal commit, so an unrelated internal commit between the parts cannot void the run)."""
+    if not os.path.exists(SPEC):
+        return None
+    t = open(SPEC).read()
+    a = t.index("**U-IC2 frozen form")
+    b = t.index("\n**Headline outputs:**", a)
+    return hashlib.sha256(t[a:b].encode()).hexdigest()[:16]
 
 
 def preflight_common():
@@ -81,17 +96,18 @@ def preflight_common():
         if U.git("status", "--porcelain", "--", "TOUCHSTONE-SPEC.md", cwd=idir):
             sys.exit("the spec has uncommitted changes: the frozen form must be committed before the run")
         internal = U.git("rev-parse", "HEAD", cwd=idir)
-    meta: dict = dict(commit=U.git("rev-parse", "HEAD"), internal_commit=internal, model_hash=U.model_hash())
+    meta: dict = dict(commit=U.git("rev-parse", "HEAD"), internal_commit=internal, model_hash=U.model_hash(),
+                      form_hash=form_hash())
     return meta
 
 
 def run_part(first, procs):
     if first not in PARTS:
         sys.exit(f"part must be one of {PARTS}")
-    meta = preflight_common()
     for p in (started(first), part_file(first)):
         if os.path.exists(p):
             sys.exit(f"{p} exists: each U-IC2 part runs once (spec §10); a restart needs the owner")
+    meta = preflight_common()
     os.makedirs(OUT, exist_ok=True)
     with open(started(first), "w") as fh:
         json.dump(dict(meta, started=time.strftime("%Y-%m-%dT%H:%M:%S"), argv=sys.argv), fh)
@@ -129,6 +145,24 @@ def observer_table(res):
                 if bot in B.GATED} for b, envs in res.items()}
 
 
+def nav_end_table(rows, m=M):
+    """D5/S24U-02 (reported): the depositors' mean end NAV (ETH, 180 days, NAV 1000 at start) per bucket, environment
+    and bot, at m 2.2%/yr, both mimics included; the zero-depth model (third-party depth 0)."""
+    acc = {}
+    for r in rows:
+        if r["m"] != m:
+            continue
+        k = (I.bucket(r["kind"], r["sigma"]), "observer" if r["observer"] else "no-observer", r["bot"])
+        acc.setdefault(k, []).append(r["nav_end"])
+    out: dict = {}
+    for (b, env, bot), xs in sorted(acc.items()):
+        out.setdefault(b, {}).setdefault(env, {})[bot] = dict(mean=sum(xs) / len(xs), n=len(xs))
+    return out
+
+
+REPORTED_KEYS = ("observer_environment", "nav_end", "edge6h_form")   # spec §10 U-IC2 "Reported, not gated"
+
+
 def finite(x):
     """Strict JSON (F-054): a non-finite float (`gate_min_m`'s inf: no m up to 10%/yr passes) is written as null."""
     if isinstance(x, float) and not math.isfinite(x):
@@ -140,18 +174,28 @@ def finite(x):
     return x
 
 
+FROZEN_KEYS = ("model_hash", "form_hash")
+
+
+def check_frozen(metas, now):
+    """S24U-01/08: both parts and the verdict's own code share the model hash and the frozen form's hash (no re-script
+    after the data); commits are recorded, not compared."""
+    for k in FROZEN_KEYS:
+        vals = {m.get(k) for m in metas} | {now.get(k)}
+        if len(vals) != 1:
+            sys.exit(f"{k} differs between the parts and the verdict ({sorted(map(str, vals))}): not one frozen run; "
+                     "record U-IC2 as not run")
+
+
 def verdict_main():
-    meta = preflight_common()
     parts = []
     for first in PARTS:
         if not os.path.exists(part_file(first)):
             sys.exit(f"{part_file(first)} missing: the verdict needs both parts; a cut part means U-IC2 is not run")
         with open(part_file(first)) as fh:
             parts.append(json.load(fh))
-    for p in parts:
-        for k in ("commit", "internal_commit", "model_hash"):
-            if p["meta"][k] != parts[0]["meta"][k]:
-                sys.exit(f"parts differ in {k}: not one frozen run; record U-IC2 as not run")
+    meta = preflight_common()
+    check_frozen([p["meta"] for p in parts], meta)
     rows = [r for p in parts for r in p["rows"]]
     l8 = [x for p in parts for x in p["l8"]]
     seeds = range(FIRST, FIRST + N)
@@ -175,6 +219,7 @@ def verdict_main():
     obs6 = observer_table(res6)
     U.MIMIC = MIMIC
     R.MIMIC = MIMIC
+    I.MIMIC = MIMIC
     meta.update(parts=[p["meta"] for p in parts], runs=len(rows), settlement=R.RULE, int_closes=R.INT_CLOSES)
     out = dict(
         eval="U-IC2", verdict="PASS" if ok else "FAIL", fails=fails,
@@ -189,6 +234,7 @@ def verdict_main():
         buckets=table, lever_control=lever, gate=res, l3_form=l3form, nonvacuity=U.nonvacuity(rows),
         reported=dict(
             observer_environment={MIMIC: obs12, OLD: obs6},
+            nav_end=nav_end_table(rows),
             edge6h_form=dict(verdict="PASS" if ok6 else "FAIL", fails=fails6, buckets=table6,
                              uic_reference=dict(dodge=0.0862, breach_reset=0.0120))),
         scope="simulation: 180-day synthetic paths (driftless GBM, hover OU), third-party depth 0, NAV 1000 ETH, "
@@ -196,8 +242,12 @@ def verdict_main():
               "not the replay (E-IC)",
         history="U-IC (edge-6h, seeds 500-699) and L3 (edge-6h, seeds 300-499) failed and stay published; U-IC2 "
                 "never supersedes them",
-        null_means="an m_need of null: no m up to 10%/yr passes (gate_min_m returned inf; F-054)",
+        null_means="an m_need of null: the last simulated m does not pass (gate_min_m returned inf; F-054: when only "
+                   "the extrapolation beyond the last simulated m fails, the minimum is read on the simulated range; "
+                   "U-IC.json was written before this change, at its pinned model hash)",
         meta=meta)
+    missing = [k for k in REPORTED_KEYS if k not in out["reported"]]
+    assert not missing, f"a pre-registered reported item has no producer: {missing}"
     if not ok:
         out.update(negative_result=True,
                    decision="spec §10 U-IC2 frozen form: published as failed; no third attempt (panel D8); "
@@ -255,21 +305,65 @@ def selfcheck():
                 if "runs once" not in str(e.code):
                     errs.append(f"wrong refusal for the result: {e.code}")
             os.remove(RESULT)
+            # S24U-07: the guard tests point at spent seeds, so a regressed guard can never simulate a held-out seed,
+            # and each must give its own refusal (checked before the tree's state, so a dirty tree cannot pass them)
+            sp = (PARTS, PART_N)
+            globals().update(PARTS=(650, 651), PART_N=1)
             try:
-                verdict_main()
-                errs.append("the verdict must refuse a missing part")
-            except SystemExit as e:
-                if "not run" not in str(e.code) and "uncommitted" not in str(e.code):
-                    errs.append(f"wrong refusal for a missing part: {e.code}")
-            open(started(700), "w").close()
-            try:
-                run_part(700, 1)
-                errs.append("a started part must refuse a second start")
-            except SystemExit as e:
-                if "runs once" not in str(e.code) and "uncommitted" not in str(e.code):
-                    errs.append(f"wrong refusal for a second part start: {e.code}")
+                try:
+                    verdict_main()
+                    errs.append("the verdict must refuse a missing part")
+                except SystemExit as e:
+                    if "missing" not in str(e.code) or "not run" not in str(e.code):
+                        errs.append(f"wrong refusal for a missing part: {e.code}")
+                open(started(650), "w").close()
+                try:
+                    run_part(650, 1)
+                    errs.append("a started part must refuse a second start")
+                except SystemExit as e:
+                    if "each U-IC2 part runs once" not in str(e.code):
+                        errs.append(f"wrong refusal for a second part start: {e.code}")
+            finally:
+                globals().update(PARTS=sp[0], PART_N=sp[1])
     finally:
         R.RULE, RESULT, OUT = saved
+    # S24U-01/08: the verdict refuses parts whose model or frozen form differ from its own
+    same = dict(model_hash="x", form_hash="f", commit="c1", internal_commit="i1")
+    try:
+        check_frozen([same, dict(same, commit="c2", internal_commit="i2")], same)
+    except SystemExit:
+        errs.append("commits alone must not void the run (S24U-08)")
+    for k in FROZEN_KEYS:
+        try:
+            check_frozen([same, same], dict(same, **{k: "y"}))
+            errs.append(f"a verdict at a different {k} must be refused")
+        except SystemExit as e:
+            if "not run" not in str(e.code):
+                errs.append(f"wrong refusal for {k}: {e.code}")
+    if form_hash() is None and os.path.exists(SPEC):
+        errs.append("the frozen form's hash is missing")
+    # S24U-04: gate_min_m on a non-monotone lower bound (fixture: mimic A, bot Z, grid 0 / 1% / 2.2%)
+    saved_mimic = I.MIMIC
+    try:
+        I.MIMIC = "A"
+
+        def ix_of(d):          # d: m -> mean(mimic - bot); per seed +/-0.001, so the CI follows the mean's sign
+            ix = {}
+            for sd in range(40):
+                e = 0.001 if sd % 2 else -0.001
+                for m, v in d.items():
+                    ix[("b", sd, "Z", m)] = {False: dict(net=0.0)}
+                    ix[("b", sd, "A", m)] = {False: dict(net=v + e)}
+            return ix, range(40)
+        ix, sds = ix_of({0.0: -0.1, 0.01: 0.1, 0.022: -0.1})
+        if I.gate_min_m(ix, "b", sds, "Z", grid=(0.0, 0.01, 0.022)) != math.inf:
+            errs.append("gate_min_m: a failing last simulated m must give inf, never a passing lower grid point")
+        ix, sds = ix_of({0.0: -0.1, 0.01: 0.1, 0.022: 0.05})   # the extrapolation to 10% fails (F-054 branch)
+        v = I.gate_min_m(ix, "b", sds, "Z", grid=(0.0, 0.01, 0.022))
+        if not 0.0 < v < 0.01:
+            errs.append(f"gate_min_m: the crossing must be bisected inside (0, 1%), not a grid point; got {v}")
+    finally:
+        I.MIMIC = saved_mimic
     fake = {"gbm-120": {"no-observer": {"cmp": {OLD: dict(diff=0.1, ci_lo=-0.01)}}},
             "gbm-40": {"no-observer": {"cmp": {OLD: dict(diff=-0.1, ci_lo=-0.2)}}}}
     lv = lever_control(fake)

@@ -134,7 +134,8 @@ def fit(rows):
 
 
 def gate_min_m(ix, b, seeds, bot, lo=0.0, hi=0.10, env=False, grid=(0.0, 0.01)):
-    """Smallest m (bisection) with the paired one-sided 95% CI lower bound of (mimic − bot) > 0, from the per-path
+    """Smallest m (bisection; F-054: within the simulated range when the extrapolation fails) with the paired
+    one-sided 95% CI lower bound of (mimic − bot) > 0, from the per-path
     piecewise-linear interpolation of net(m) over the simulated `grid` of m values (paired by `paired`: the same
     environment, no observer). Beyond the last grid point the last segment is extrapolated (S17F2-01: an affine fit on
     {0, 1%} extrapolated to 2.2% overstated the margin, because the difference is concave in m; pass every simulated m)."""
@@ -157,10 +158,24 @@ def gate_min_m(ix, b, seeds, bot, lo=0.0, hi=0.10, env=False, grid=(0.0, 0.01)):
         return mean_ci([at(pts, m) for pts in P])[1]
 
     if lo_ci(hi) <= 0:
-        # F-054: only the extrapolated segment may fail; then the smallest simulated m that passes is the answer.
-        # math.inf means no simulated m and no m up to `hi` passes (writers map it to null, never a bare Infinity).
-        sim_ok = [m for m in grid if m <= hi and lo_ci(m) > 0]
-        return min(sim_ok) if sim_ok else math.inf
+        # F-054 (s24 design review S24U-04): the extrapolation beyond the last simulated m fails. The answer is then
+        # read on the simulated range only: inf unless the last simulated m passes; otherwise the bisection inside the
+        # segment above the LAST simulated m that fails, so every simulated m from the answer up passes (no grid point
+        # is returned while a larger one fails). Writers map inf to null, never a bare Infinity.
+        sim = [m for m in grid if lo <= m <= hi]
+        if not sim or lo_ci(sim[-1]) <= 0:
+            return math.inf
+        bad = [m for m in sim if lo_ci(m) <= 0]
+        if not bad:
+            return sim[0] if lo_ci(lo) <= 0 else lo
+        lo, hi = bad[-1], sim[sim.index(bad[-1]) + 1]
+        for _ in range(40):
+            mid = (lo + hi) / 2
+            if lo_ci(mid) > 0:
+                hi = mid
+            else:
+                lo = mid
+        return hi
     if lo_ci(lo) > 0:
         return lo
     for _ in range(40):

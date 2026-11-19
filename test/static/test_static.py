@@ -356,6 +356,47 @@ def test_S_2__hard_size_gate_with_an_anvil_deploy_and_the_oversized_fixture_fail
         a.wait()
 
 
+TIER_FIELDS = ('REF_WINDOW', 'GRID_SEC', 'CURE_BLOCKS', 'EPOCH', 'GRID', 'COOLDOWN', 'FORFEIT_DRIP_BLOCKS', 'H_MARKOUT',
+               'EDGE_DELAY')
+
+
+def tier_literals(src):
+    """Per tier function of `script/Tiers.sol`, its numeric `t.<FIELD> = <literal>;` assignments and blocktime."""
+    out = {}
+    for name, body in re.findall(r'function (mainnet|demo|testing)\(\)[^{]*\{(.*?)\n    \}', src, re.S):
+        d = {f: int(v.replace('_', '')) for f, v in re.findall(r'\bt\.([A-Z_]+) = ([0-9_]+);', body)}
+        bt = re.search(r'blocktime = ([0-9]+);', body)
+        if bt:
+            d['BLOCKTIME'] = int(bt.group(1))
+        out[name] = d
+    return out
+
+
+def tier_mismatches(src, ref):
+    pairs = (('mainnet', ref.MAINNET), ('demo', ref.DEMO), ('testing', ref.TEST))
+    lit = tier_literals(src)
+    bad = []
+    for name, tr in pairs:
+        for f in TIER_FIELDS + ('BLOCKTIME',):
+            if f not in lit.get(name, {}):
+                bad.append(f'{name}.{f} missing in Tiers.sol')
+            elif lit[name][f] != getattr(tr, f):
+                bad.append(f'{name}.{f}: Tiers.sol {lit[name][f]} != reference {getattr(tr, f)}')
+    return bad
+
+
+def test_tiers_literals_match_the_independent_reference_model():
+    """The deployment constants and the reference model's tiers agree (s24 design review S24U-03: the model kept
+    mainnet EDGE_DELAY 1800 after Tiers.sol moved to 3600)."""
+    sys.path.insert(0, os.path.join(ROOT, 'model'))
+    import reference as ref
+    src = open(os.path.join(ROOT, 'script', 'Tiers.sol')).read()
+    bad = tier_mismatches(src, ref)
+    assert not bad, bad
+    # control: a changed literal is caught
+    assert tier_mismatches(src.replace('t.EDGE_DELAY = 3600;', 't.EDGE_DELAY = 1800;'), ref), 'control'
+
+
 if __name__ == '__main__':
     tests = [v for k, v in sorted(globals().items()) if k.startswith('test_') and callable(v)]
     for t in tests:

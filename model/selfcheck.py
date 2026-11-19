@@ -2000,7 +2000,7 @@ def rules_r7():
     w.place(T0 - 1010, T0 + 990)
     # per-chain tables (spec §6), pinned as literals
     for tr, row in ((R.TEST, (12, 20, 240, 120, 200, 14, 600, 20, 120)), (R.DEMO, (1, 300, 300, 3600, 1800, 30, 300, 300, 3600)),
-                    (R.MAINNET, (12, 300, 3600, 50400, 7200, 30, 600, 1800, 50400))):
+                    (R.MAINNET, (12, 300, 3600, 50400, 7200, 30, 600, 3600, 50400))):
         got = (tr.BLOCKTIME, tr.GRID, tr.GRID_SEC, tr.EPOCH, tr.CURE_BLOCKS, tr.COOLDOWN, tr.REF_WINDOW, tr.EDGE_DELAY,
                tr.FORFEIT_DRIP_BLOCKS)
         check(got == row, f"{tr.NAME} per-chain parameters", got)

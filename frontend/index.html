@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Touchstone results</title>
+<meta name="description" content="Touchstone: a Uniswap v4 hook vault in which the pool keeps the curator's books. Published results and limits.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#results">Skip to results</a>
+
+<header class="wrap hero">
+  <p class="eyebrow">Uniswap v4 hook vault</p>
+  <h1>Touchstone</h1>
+  <p class="lede">A Uniswap v4 hook vault in which the pool keeps the curator's books.</p>
+  <p class="claim">Your curator pays for its own trades, as the pool measures them.</p>
+</header>
+
+<main>
+<section class="wrap" id="how" aria-labelledby="how-h">
+  <h2 id="how-h">How a charge works</h2>
+  <div class="stepper" id="stepper">
+    <ol class="track" aria-hidden="true">
+      <li>Curator acts</li><li>Vault valued</li><li>Shortfall burned</li><li>Uncovered reverts</li>
+    </ol>
+    <ol class="steps" id="steps">
+      <li>
+        <h3>The curator acts.</h3>
+        <p>It places liquidity or swaps inside the vault.</p>
+      </li>
+      <li>
+        <h3>The pool values the vault.</h3>
+        <p>It takes the worse of spot and the reference TWAP.</p>
+        <p>The reference is a deep pool fixed at deployment.</p>
+      </li>
+      <li>
+        <h3>The shortfall is burned.</h3>
+        <p>It comes from the curator's unvested pay first.</p>
+        <p>Then it comes from the curator's bond.</p>
+      </li>
+      <li>
+        <h3>An action they cannot cover reverts.</h3>
+        <p>The trade does not happen.</p>
+      </li>
+    </ol>
+    <div class="step-nav" hidden>
+      <button type="button" id="prev">Previous</button>
+      <span id="step-pos" aria-live="polite"></span>
+      <button type="button" id="next">Next</button>
+    </div>
+  </div>
+</section>
+
+<section class="wrap" id="results" aria-labelledby="results-h">
+  <h2 id="results-h">Results</h2>
+  <p class="note">Each row is a pre-registered evaluation. Each links its result file.</p>
+  <div class="first-screen">
+    <div class="glance" aria-labelledby="glance-h">
+      <h3 id="glance-h">Verdicts</h3>
+      <ul id="glance" class="glance-list"><li>Loading the result files.</li></ul>
+    </div>
+    <aside class="limits" id="limits" aria-labelledby="limits-h">
+      <h2 id="limits-h">Limits</h2>
+      <ul id="limits-list"><li>Loading the result files.</li></ul>
+    </aside>
+  </div>
+
+  <div class="table-wrap">
+    <table class="results">
+      <caption>Every number below is read from its result file.</caption>
+      <thead><tr><th scope="col">ID</th><th scope="col">Question</th><th scope="col">Verdict</th><th scope="col">Key number</th><th scope="col">Source</th></tr></thead>
+      <tbody id="results-body"></tbody>
+    </table>
+  </div>
+
+  <figure class="figure" id="e8-charges"></figure>
+  <figure class="figure" id="kref"></figure>
+
+  <details class="history" id="history">
+    <summary>Earlier configuration and history</summary>
+    <p class="note">These failed or were superseded. They stay published.</p>
+    <table class="results">
+      <thead><tr><th scope="col">ID</th><th scope="col">Question</th><th scope="col">Verdict</th><th scope="col">Key number</th><th scope="col">Source</th></tr></thead>
+      <tbody id="history-body"></tbody>
+    </table>
+  </details>
+  <noscript><p class="note">The results table needs JavaScript. The raw files are in <a href="data/">data/</a>.</p></noscript>
+</section>
+
+<section class="wrap" id="testnet" aria-labelledby="testnet-h">
+  <h2 id="testnet-h">Testnet</h2>
+  <p class="tag">Unichain Sepolia (chain 1301) · demo tier · our own mock reference pool</p>
+  <dl id="addresses" class="addresses"></dl>
+  <p class="note" id="deploy-src"></p>
+</section>
+</main>
+
+<footer class="wrap footer">
+  <ul>
+    <li><a href="https://github.com/mishoko/touchstone/blob/main/README.md">README</a></li>
+    <li><a href="https://github.com/mishoko/touchstone/blob/main/REVIEWERS.md">REVIEWERS.md</a></li>
+    <li><a href="https://github.com/mishoko/touchstone/blob/main/SECURITY.md">SECURITY.md</a></li>
+    <li>Video: to come</li>
+  </ul>
+</footer>
+<script src="app.js"></script>
+</body>
+</html>

@@ -159,6 +159,31 @@ contract VaultRecordsTest is VaultRecordsBase {
         assertEq(hv.record(e2).flags & F_WITNESS_MISSING, 0, "control: a poked epoch closes clear");
     }
 
+    /// @notice `withdraw` never rolls the witness (spec §3.10): in a new epoch a withdrawal emits no `WitnessRolled` and
+    ///         the epoch's record stays `witnessMissing`; control: a `poke` in the same epoch then rolls it and clears
+    ///         the flag. Kills MU-067 (s24).
+    function test_U_record__withdrawNeverRollsTheWitness() public {
+        hv.placeForTest(-600, 600);
+        _keepAlive(20);
+        _ve().poke();
+        advance(tier.EPOCH);
+        vm.recordLogs();
+        _withdraw(alice, 1e18); // its checkpoint rolls the epoch; no witness roll
+        assertEq(_witnessRolls(vm.getRecordedLogs()), 0, "withdraw rolls no witness");
+        assertTrue(hv.record(_epochNow()).flags & F_WITNESS_MISSING != 0, "the epoch is still unwitnessed");
+        vm.recordLogs();
+        _ve().poke();
+        assertEq(_witnessRolls(vm.getRecordedLogs()), 1, "control: the poke rolls this epoch's witness");
+        assertEq(hv.record(_epochNow()).flags & F_WITNESS_MISSING, 0, "control: a funded roll clears the flag");
+    }
+
+    function _witnessRolls(Vm.Log[] memory logs) internal view returns (uint256 n) {
+        bytes32 t = keccak256("WitnessRolled(uint32,uint256,uint256,uint128)");
+        for (uint256 i; i < logs.length; ++i) {
+            if (logs[i].emitter == hook && logs[i].topics[0] == t) ++n;
+        }
+    }
+
     /// @notice A successful roll with `L_W = 0` (an unfunded witness) leaves the record's `witnessMissing` set; control:
     ///         the funded roll of `test_U_gap__atMostTwoRecordsAcrossAGap` clears it.
     function test_U_record__unfundedWitnessStaysMissing() public {

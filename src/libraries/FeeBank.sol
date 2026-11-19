@@ -58,6 +58,7 @@ library FeeBank {
             return _exit(b, Ladder.EV_RETIRE, 0, abi.decode(args, (uint40)));
         }
         if (op == Op.Claim) {
+            // [MU-054] claim pays the vested pay only: vesting happens at checkpoints, through the gate
             payShares = b.vestedUnclaimed;
             b.vestedUnclaimed = 0;
             return (0, payShares, payShares, 0);

@@ -137,6 +137,7 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
         (bool liveRead, int24 liveTick) = _checkpoint(o);
         // [MU-073] the mode gate runs after the prologue checkpoint, which may have moved the mode to EXITED
         if (!Ladder.allowed(_bank.mode, uint8(entry))) revert Ladder.BadMode();
+        // [MU-063] a removed curator (EXITED) reaches only the OPEN_EXITED entries
         return _dispatch(entry, payer, args, liveRead, liveTick);
     }
 
@@ -440,6 +441,7 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
         // [MU-168]
         if (b.forfeitPool > 0) _burnBank(Op.Drip, abi.encode(now_));
         // (3) pending breaches, before any accrual or vesting
+        // [MU-122] no ring write (accrual) before the pending breaches are processed
         uint32 n = o.pendingBreaches;
         // [MU-049] every checkpoint processes pending breaches
         if (n > 0) {
@@ -448,6 +450,7 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
             uint64 cutTau = o.tauVAtLastPending > _tauV0 ? o.tauVAtLastPending - _tauV0 : 0;
             // [MU-294]
             r.lTau = _a192(r.lTau, uint256(_L) * cutTau);
+            // [MU-051] the cut span's base is recorded and forfeited, never minted
             uint256 cut = b.placedByCurator && b.mode != Ladder.EXITED ? _baseAmount(cutTau) : 0;
             r.base = _a96(r.base, cut);
             // [MU-295] the forfeited base value: the cut span and the deferred base

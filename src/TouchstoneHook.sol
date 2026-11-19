@@ -519,7 +519,7 @@ contract TouchstoneHook is BaseHook, Extsload, ITouchstoneHook {
             _breachSeq = seq;
             if (_pendingBreaches != type(uint32).max) ++_pendingBreaches;
             uint40 at = uint40(last + (j * c - oldOut));
-            // [MU-052] the forfeit cutoff is the LAST pending crossing
+            // [MU-052] [MU-121] the forfeit cutoff is the LAST pending crossing, recorded at every latch
             _lastPendingBlock = at;
             _tauVAtLastPending = _tauV;
             emit BreachLatched(seq, at);

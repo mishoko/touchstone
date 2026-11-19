@@ -348,6 +348,7 @@ contract TouchstoneVaultExtension is VaultCommon {
         if (a0 > 0) MANAGER.take(C0, to, a0);
         if (a1 > 0) MANAGER.take(C1, to, a1);
         if (a0 < min0 || a1 < min1) revert Slippage();
+        // [MU-067] withdraw never rolls the witness (spec §3.10)
         _rebase(S, S - s);
         emit Withdraw(owner, s, a0, a1);
         return abi.encode(a0, a1);

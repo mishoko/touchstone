@@ -388,7 +388,7 @@
   {
    "id": "MU-033",
    "area": "bank",
-   "desc": "δ cap removed",
+   "desc": "δ cap removed. EQUIVALENT (s09 F9-05, s1 model r3; s24): posValue ≤ NAV at every price (q is monotone in the amount and NAV adds idle to the position's amounts), so min(WAD, ·) never binds in ExecLedger.actionCharge or Placement.size; kept unwired with this reason (an EQUIVALENT status in mutate.py is s25 work).",
    "killer_id": null,
    "kill": "pending",
    "file": null,
@@ -602,12 +602,12 @@
   {
    "id": "MU-051",
    "area": "ladder",
-   "desc": "base up to `b_last` minted instead of forfeited",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
+   "desc": "base up to `b_last` minted instead of forfeited (the cut span's base made owed, so step (4) mints it; the τ_v0 cut itself is MU-050)",
+   "killer_id": "U-forfeit-quiet",
+   "kill": "test_U_forfeit_quiet__noCheckpointForDaysThenABreach",
+   "file": "src/TouchstoneVault.sol",
+   "find": "_baseOwed = 0;\n            uint8 m0 = b.mode;",
+   "replace": "_baseOwed = _u128(cut);\n            uint8 m0 = b.mode;",
    "status": "PENDING"
   },
   {
@@ -637,12 +637,12 @@
   {
    "id": "MU-054",
    "area": "ladder",
-   "desc": "vesting by time without a checkpoint",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
+   "desc": "vesting by time without a checkpoint (claim pays maturedPending; model: claim pays maturedPending)",
+   "killer_id": "U-4",
+   "kill": "test_U_4__claimNeverPaysMaturedPending",
+   "file": "src/libraries/FeeBank.sol",
+   "find": "            payShares = b.vestedUnclaimed;\n            b.vestedUnclaimed = 0;",
+   "replace": "            payShares = uint256(b.vestedUnclaimed) + b.maturedPending;\n            b.vestedUnclaimed = 0;\n            b.maturedPending = 0;",
    "status": "PENDING"
   },
   {
@@ -660,12 +660,12 @@
   {
    "id": "MU-056",
    "area": "ladder",
-   "desc": "cohort-slot overwrite without vesting",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
+   "desc": "cohort-slot overwrite without vesting or moving its occupant (merged into the new epoch's cohort; model: ring overwrite merges occupant)",
+   "killer_id": "U-4",
+   "kill": "test_U_4__bankVectorsBitForBit",
+   "file": "src/libraries/FeeBank.sol",
+   "find": "        Cohort storage s = b.cohorts[e % RING];\n        if (s.shares > 0 && s.epoch != e) {",
+   "replace": "        Cohort storage s = b.cohorts[e % RING];\n        if (false) {",
    "status": "PENDING"
   },
   {
@@ -743,12 +743,12 @@
   {
    "id": "MU-063",
    "area": "ladder",
-   "desc": "removal flag ignored",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
+   "desc": "removal flag ignored (the vault's mode gate skipped: a removed curator can act)",
+   "killer_id": "U-guard",
+   "kill": "test_U_guard__rebalanceSwapKeepsTheMode",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        if (!Ladder.allowed(_bank.mode, uint8(entry))) revert Ladder.BadMode();\n",
+   "replace": "",
    "status": "PENDING"
   },
   {
@@ -791,11 +791,11 @@
    "id": "MU-067",
    "area": "witness",
    "desc": "roll on the withdraw path",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
+   "killer_id": "U-record",
+   "kill": "test_U_record__withdrawNeverRollsTheWitness",
+   "file": "src/TouchstoneVaultExtension.sol",
+   "find": "        _rebase(S, S - s);\n        emit Withdraw(owner, s, a0, a1);",
+   "replace": "        _rebase(S, S - s);\n        HOOK.rollWitness(_epoch);\n        emit Withdraw(owner, s, a0, a1);",
    "status": "PENDING"
   },
   {
@@ -1437,23 +1437,23 @@
   {
    "id": "MU-121",
    "area": "additional",
-   "desc": "pre-breach base not forfeited",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
+   "desc": "pre-breach base not forfeited (the hook does not record τ_v at the latch: the breach's τ_v0 cut falls back to a stale value)",
+   "killer_id": "U-forfeit-quiet",
+   "kill": "test_U_forfeit_quiet__noCheckpointForDaysThenABreach",
+   "file": "src/TouchstoneHook.sol",
+   "find": "            _tauVAtLastPending = _tauV;\n",
+   "replace": "",
    "status": "PENDING"
   },
   {
    "id": "MU-122",
    "area": "additional",
-   "desc": "ring overwrite before breach processing",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
+   "desc": "ring overwrite before breach processing (an injected accrual, whose slot overwrite runs before step (3), vests a forfeitable occupant; an injected statement, not a reordering)",
+   "killer_id": "U-forfeit",
+   "kill": "test_U_forfeit__aPendingBreachForfeitsBeforeTheVest",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        // (3) pending breaches, before any accrual or vesting\n",
+   "replace": "        FeeBank.bankApply(b, Op.Accrue, abi.encode(ne, uint256(1), gateOpen));\n        // (3) pending breaches, before any accrual or vesting\n",
    "status": "PENDING"
   },
   {
@@ -1591,7 +1591,7 @@
   {
    "id": "MU-134",
    "area": "additional",
-   "desc": "no ≥ 1 wei bucket rule",
+   "desc": "no ≥ 1 wei bucket rule. EQUIVALENT (s07 D1-08; s24): no separate ≥ 1 wei branch exists; ceilDiv per bucket gives ≥ 1 for a non-zero bucket at s ≥ 1, and the rounding is MU-016's; kept unwired.",
    "killer_id": null,
    "kill": "pending",
    "file": null,
@@ -2202,12 +2202,12 @@
   {
    "id": "MU-185",
    "area": "ledger",
-   "desc": "the settlement runs after the snapshot and collect-first (s09 D9-04). EQUIVALENT since s15: the fee-aware settlement reads only its record (no live holdings or supply), and the checkpoint mints nothing before base accrual; re-wired with base accrual (s17), whose mints inside the window must enter the record's sAct (S15D-07)",
-   "killer_id": "U-settle",
+   "desc": "the settlement runs after the snapshot and collect-first (s09 D9-04). EQUIVALENT since s15 (s24 re-check): the fee-aware settlement reads only its record, the bank reserve and the reference window, and the prologue (snapshot, collect) reads nothing the settlement writes; base accrual mints only in the checkpoint, after both steps in either order (MU-270 covers the sAct rule); only the gas left at the settlement's guard differs; kept unwired",
+   "killer_id": null,
    "kill": "pending",
-   "file": "src/TouchstoneVault.sol",
-   "find": "        _settle();\n        Obs memory o = _prologue();",
-   "replace": "        Obs memory o = _prologue();\n        _settle();",
+   "file": null,
+   "find": null,
+   "replace": null,
    "status": "PENDING"
   },
   {

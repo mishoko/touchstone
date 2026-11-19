@@ -411,6 +411,25 @@ def test_U_IC2__observer_supplement_is_complete():
         assert uic2_observer.check(t.name) == [('edge-12h', 'gbm-120', 'dodge', m) for m in uic2_observer.MS]
     finally:
         os.remove(t.name)
+    # the README's U-IC2 figures are the files' (s24; the s23 rule: result text from the data); line wraps ignored
+    readme = ' '.join(open(os.path.join(ROOT, 'README.md')).read().split())
+    r = json.load(open(os.path.join(ROOT, 'eval', 'results', 'U-IC2.json')))
+    assert r['verdict'] == 'PASS' and 'U-IC2' in readme
+    g = r['buckets']['gbm-120']['cmp']
+    for bot in ('breach-reset', 'dodge'):
+        assert f"+{g[bot]['diff']:.3f} ETH" in readme and f"+{g[bot]['ci_lo']:.3f} ETH" in readme, bot
+    lv = r['lever_control']['gbm-120']
+    assert f"+{lv['diff']:.3f}" in readme and f"+{lv['ci_lo']:.3f} ETH" in readme
+    sys.path.insert(0, os.path.join(ROOT, 'model', 'cells'))
+    import bots as B
+    lazy_lo = min(t['cmp'][b]['ci_lo'] for t in r['buckets'].values() for b in B.LAZY_FAMILY if b in t['cmp'])
+    assert f"+{lazy_lo:.2f} ETH" in readme
+    o = json.load(open(uic2_observer.OUT))['comparisons']['edge-12h']['gbm-120']
+    assert f"{-o['breach-reset']['0.022']['diff']:.3f} and {-o['dodge']['0.022']['diff']:.3f} ETH" in readme
+    nv = r['reported']['nav_end']['gbm-120']['no-observer']
+    assert f"about {nv['breach-reset']['mean']:.0f} and {nv['dodge']['mean']:.0f} against {nv['edge-12h']['mean']:.0f}" in readme
+    e6 = r['reported']['edge6h_form']['buckets']['gbm-120']['cmp']['breach-reset']
+    assert f"+{e6['diff']:.3f} ETH, lower bound {e6['ci_lo']:.3f} ETH".replace('-', '−') in readme
 
 
 if __name__ == '__main__':

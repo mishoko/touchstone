@@ -23,8 +23,8 @@ of a deep Uniswap v3 pool for the same pair fixed at deployment, and charges tha
 deferred pay and bond; an action they cannot cover, or one taken more than a published band from that reference, reverts. The curator's
 pay never vests while the vault is outside the reference price; observed absence past a published cure window forfeits all
 its unvested pay, three breaches remove it, and depositors can always exit in kind. Market moves, positioning and token mix are not covered, skill is not
-rewarded, and the reference TWAP is assumed not to be moved; the measured cost of moving it will be published with
-the security results.
+rewarded, and the reference TWAP is assumed not to be moved; the measured cost of moving it is listed under
+Evaluation results (E8).
 
 **Lag leak and its repair (measured).** Every price an action can read is at least one block behind the market, so
 a charge at the worse of spot and the TWAP alone leaves a lag leak: a curator colluding with a trader can place
@@ -120,6 +120,40 @@ Earlier configuration (published as failed, final):
   measurable); every share row closes exactly.
 
 Results: `eval/results/E0.json`, `eval/results/E0a.json`.
+
+## Evaluation results
+
+Each row is a pre-registered evaluation with its result file in `eval/results/`. "Synthetic" means simulated 180-day
+price paths (driftless GBM at 40/60/120% annual volatility and a path hovering at the range edge), with no third-party
+liquidity and gas at 5 gwei. No row uses a historical replay.
+
+| ID | Question | Result | Data |
+|---|---|---|---|
+| E1 | Is the witness a real position? | PASS: 0 wei difference, exact equality on 256 fuzz runs | Foundry |
+| E2 | Does the charge cover the realised loss of an honest placement? | PASS: 0 of 2,016 / 2,100 placements under-charged (σ 60 / 120%); overcharge mean 0.012 / 0.023 bp, p99 0.13 / 0.34 bp | Synthetic, one placement per path |
+| E3 | Is the charge zero without a curator action? | PASS: 0 wei over 10,000 segments and 20,034 third-party swaps; control: one swap is charged | Independent model |
+| E4 | Does the reference curator out-earn idle, dust, stale and wide curators? | PASS in every bucket; idle nets exactly 0 before gas and loses its pokes' gas (−0.136 ETH) | Synthetic (U-IC2 runs) |
+| E5 | Does every attack lose money? | PASS: 17 attack cells, every attack test passes, each cell has a positive control that profits | Foundry |
+| E6 | Does churning pay? | PASS: churner minus reference curator, t = −129 to −691 per bucket (follows from construction) | Synthetic |
+| E7 | Gas and size within budget? | PASS: largest runtime 19,877 B (limit 22,000); first swap per block 26.7k gas (budget 30k); worst action 871k (1.2M) | Foundry and mainnet fork |
+| E8 | Operating numbers | REPORTED: 11 items measured, 6 not run (listed in the file) | Mixed, labelled per item |
+| E9 | Why is positioning not paid? | REPORTED: a carry benchmark pays a random curator +40% / +6% / −13% above base across three regimes | Design-phase simulator |
+| E-IC | Incentive compatibility on the historical replay | NOT RUN: the replay was never fetched; U-IC2 covers the same rule on synthetic paths | — |
+
+**Rebalancing cost charged to the reference curator** (E8; synthetic): 1.6 / 4.0 / 15.7 bps of NAV a year at 40 / 60 /
+120% volatility, 0.8 bps on the hovering path.
+
+**Cost of moving the reference TWAP** (E8; measured on a mainnet fork at block 26443420, the USDC/WETH 0.05% pool):
+
+| Push | Cost to hold one block | Round trip | Hold for the 24 h cure window (arithmetic) |
+|---|---|---|---|
+| 10 ticks | 0.047 WETH | 0.048 WETH | 341 WETH |
+| 30 ticks | 0.294 WETH | 0.148 WETH | 2,113 WETH |
+| 60 ticks | 1.04 WETH | 0.298 WETH | 7,466 WETH |
+| 120 ticks | 3.85 WETH | 0.596 WETH | 27,714 WETH |
+
+The 24-hour figures assume arbitrage restores the price every block. A single builder that wins every block and censors
+arbitrage pays about one round trip instead; that case is outside the model.
 
 There is no keeper, operator, admin or off-chain feed. The one external input is the reference pool's TWAP, because a
 new hook pool whose vault is out of range has no reliable price of its own.

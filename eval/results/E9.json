@@ -1,0 +1,64 @@
+{
+ "id": "E9",
+ "question": "the D1 regime table: zero-skill curators paid by a carry benchmark across regimes (the derivation behind \"positioning is not paid\")",
+ "pass_rule": "reported; matches the published design table",
+ "verdict": "REPORTED",
+ "data": "design-phase benchmark simulator",
+ "scope": "a property of carry-based benchmark designs, not of the Touchstone contracts; it supports the design choice (no benchmark built from in-range carry pays for positioning without paying zero-skill curators for the regime)",
+ "numbers": {
+  "random_curator_pay_above_base": {
+   "Mandate benchmark": {
+    "carry+": {
+     "pay_above_base_pct": 39.94,
+     "se_pct": 9.52,
+     "table": 40
+    },
+    "balanced": {
+     "pay_above_base_pct": 5.95,
+     "se_pct": 5.74,
+     "table": 6
+    },
+    "LVR>fees": {
+     "pay_above_base_pct": -13.41,
+     "se_pct": 6.28,
+     "table": -13
+    }
+   },
+   "Exposure-matched": {
+    "carry+": {
+     "pay_above_base_pct": 0.14,
+     "se_pct": 1.69,
+     "table": 0.1
+    },
+    "balanced": {
+     "pay_above_base_pct": 0.14,
+     "se_pct": 1.69,
+     "table": 0.1
+    },
+    "LVR>fees": {
+     "pay_above_base_pct": -0.89,
+     "se_pct": 1.51,
+     "table": -0.9
+    }
+   }
+  },
+  "idle_curator_pay_over_base_phi_a_10pct": {
+   "carry+": -37.61,
+   "bal": -3.35,
+   "lvr>fee": 3.41
+  },
+  "idle_range_x_base": [
+   -37.61,
+   3.41
+  ]
+ },
+ "consistency_with_published_table": true,
+ "evidence": {
+  "cand_w24.json": "1f0ca0c1687e5d6adb812d1fd72990a118f1d498051231b1b847b756c100ee1b",
+  "cand_w24.txt": "12e1c8b7a03db7d9eef1265b06eb1a1d43bce62d4472bd7aa5aa882f09aca2cd",
+  "alloc_out.txt": "89762e381a093ea500b2d2ea8ad696b376b68be029b644247e190f87ad162466"
+ },
+ "limits": "design-phase simulator (24-segment trailing window, three stylised regimes); the simulator scripts are not published, only their outputs; not re-run (the table is reported, not re-measured)",
+ "commit_public": "3e6f4e3cebcd1d6ec520a834760290ef75d69ea2",
+ "commit_internal": "6bbbad2808bd29e7ae27e4a3bb95f5a23c28a113"
+}

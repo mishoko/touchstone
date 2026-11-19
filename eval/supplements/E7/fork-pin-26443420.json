@@ -1,0 +1,91 @@
+{
+  "chain": 1,
+  "fork_block": 26443420,
+  "hash": "0xd88117a852fdc824ad305fbb8bfed9687874e9138ed56968aa0e1af400e79acb",
+  "hash_publicnode": "0xd88117a852fdc824ad305fbb8bfed9687874e9138ed56968aa0e1af400e79acb",
+  "chosen_at_latest": 26443484,
+  "chosen_utc": "2026-11-18T17:36:33Z",
+  "ref_slot0": {
+    "sqrtPriceX96": "1885298222915962178984386380520319",
+    "tick": 201555,
+    "observationIndex": 416,
+    "cardinality": 723,
+    "cardinalityNext": 723,
+    "feeProtocol": 68,
+    "unlocked": true
+  },
+  "windows_recomputed": false,
+  "reason": "cardinality 723 equals the cardinality the hard-coded windows were computed at",
+  "G1b": {
+    "live_card_723": {
+      "typical": 88738,
+      "anchored_worst": 100784,
+      "markout_worst": 104609,
+      "refresh_block": 160279
+    },
+    "full_ring_65535": {
+      "typical": 133587,
+      "anchored_worst": 144887,
+      "markout_worst": 171837,
+      "refresh_block": 185117
+    },
+    "W": 171837,
+    "rule": "W<=173,333 keep 260,000",
+    "decision": "keep 260,000",
+    "confirm_publicnode": "identical (all logged values)"
+  },
+  "K_ref": {
+    "L_deep": "4206649160438186480",
+    "tick": 201555,
+    "push": {
+      "10": {
+        "one_block_hold_wei": "47287434259515673",
+        "round_trip_wei": "48194581335674452",
+        "notional_wei": "48206177622825872344"
+      },
+      "30": {
+        "one_block_hold_wei": "293532997083090678",
+        "round_trip_wei": "148211068025651712",
+        "notional_wei": "148320805281043613270"
+      },
+      "60": {
+        "one_block_hold_wei": "1036938997510846941",
+        "round_trip_wei": "298056741719404353",
+        "notional_wei": "298500801449544719818"
+      },
+      "120": {
+        "one_block_hold_wei": "3849146032575090155",
+        "round_trip_wei": "595659311326953060",
+        "notional_wei": "597435402739772098400"
+      }
+    },
+    "fence": {
+      "ref_tick": 201557,
+      "band": 60,
+      "above_and_below_reverts": "Fence (r +/- (band + 20))",
+      "at_reference": "passes, reserve held"
+    },
+    "twap_now": 201589,
+    "twap_1h_back": 201633,
+    "charge_leg": {
+      "swap": "rebalanceSwap 0.02 WETH -> USDC (~0.5% NAV)",
+      "charge_at_reference_wei_WETH": 7347623487668,
+      "charge_at_plus_band_half_wei_WETH": 51432163804225,
+      "legs_at_plus_band_half": {
+        "spot": 7358744434120,
+        "reference": 51432163804225
+      },
+      "units": "NAV units = wei of WETH (token1)",
+      "note": "legs valued with the vault library ExecLedger.value; the reference window is entirely the fork-block tick (72 blocks warped)"
+    },
+    "confirm_publicnode": "identical (all logged values)"
+  },
+  "disclosure": {
+    "forge": "forge Version: 1.5.0-stable",
+    "evm_version": "cancun (foundry.toml), not the live mainnet fork rules",
+    "commit": "the public tree at the measurement",
+    "solc": "0.8.26 via_ir",
+    "endpoints": "a keyed mainnet endpoint and https://ethereum-rpc.publicnode.com, same block",
+    "match_rule": "every logged value identical on both endpoints; whole-test gas totals differ by 16-1,680 gas, cause not established; no claimed gas figure differs (the measured reads are identical)"
+  }
+}

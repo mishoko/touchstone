@@ -421,7 +421,7 @@
    "find": "        uint256 base = b.placedByCurator && b.mode != Ladder.EXITED ? _baseAmount(o.tauV - _tauV0) : 0;",
    "replace": "        uint256 base = b.placedByCurator ? _baseAmount(o.tauV - _tauV0) : 0;",
    "status": "KILLED",
-   "basis": "dd267c4ee5e515d7"
+   "basis": "1ade29cd959bdb6e"
   },
   {
    "id": "MU-035",
@@ -433,7 +433,7 @@
    "find": "bool creditV = refIn && !_emptyRange &&",
    "replace": "bool creditV = !_emptyRange &&",
    "status": "KILLED",
-   "basis": "a7e34b8746690c14"
+   "basis": "305e606fa9740604"
   },
   {
    "id": "MU-036",
@@ -487,7 +487,7 @@
    "find": "j * c <= newOut && n < 3",
    "replace": "j * c < newOut && n < 3",
    "status": "KILLED",
-   "basis": "ff4247fb3b2c96c4"
+   "basis": "cb217977793ab392"
   },
   {
    "id": "MU-040",
@@ -499,7 +499,7 @@
    "find": "bool refIn = lo <= ref && ref < hi;",
    "replace": "bool refIn = lo <= tick && tick < hi;",
    "status": "KILLED",
-   "basis": "3003aab44bc4055e"
+   "basis": "a6b3ce205694feec"
   },
   {
    "id": "MU-041",
@@ -511,7 +511,7 @@
    "find": "uint256 end = now_ < freshEnd ? now_ : freshEnd;",
    "replace": "uint256 end = now_;",
    "status": "KILLED",
-   "basis": "3003aab44bc4055e"
+   "basis": "a6b3ce205694feec"
   },
   {
    "id": "MU-042",
@@ -535,7 +535,7 @@
    "find": "        _resetStreak = 0;\n        _outBlocks = 0;\n        emit RangeRegistered",
    "replace": "        emit RangeRegistered",
    "status": "KILLED",
-   "basis": "174fb18442789c93"
+   "basis": "284f67e6d25b8570"
   },
   {
    "id": "MU-044",
@@ -715,7 +715,7 @@
    "find": "if (read) (ok, t) = _readAnchor(k);",
    "replace": "if (read) {\n            (ok, t) = _readAnchor(k);\n            _commit(ok, t, k);\n            read = false;\n        }",
    "status": "KILLED",
-   "basis": "3003aab44bc4055e"
+   "basis": "a6b3ce205694feec"
   },
   {
    "id": "MU-059",
@@ -727,7 +727,7 @@
    "find": "_latch(oldOut, newOut, last);",
    "replace": "_latch(0, newOut, last);",
    "status": "KILLED",
-   "basis": "3003aab44bc4055e"
+   "basis": "a6b3ce205694feec"
   },
   {
    "id": "MU-060",
@@ -751,7 +751,7 @@
    "find": "if (streak >= RESET_RUN) {",
    "replace": "if (streak >= 1) {",
    "status": "KILLED",
-   "basis": "0a4a9ba88d435b28"
+   "basis": "c1915cade0db1480"
   },
   {
    "id": "MU-062",
@@ -835,7 +835,7 @@
    "find": "            _gapSinceVerify = false;\n            emit GapCleared(1);",
    "replace": "            emit GapCleared(1);",
    "status": "KILLED",
-   "basis": "0a4a9ba88d435b28"
+   "basis": "c1915cade0db1480"
   },
   {
    "id": "MU-069",
@@ -943,7 +943,7 @@
    "find": "bool refIn = lo <= ref && ref < hi;",
    "replace": "bool refIn = _emptyRange || (lo <= ref && ref < hi);",
    "status": "KILLED",
-   "basis": "3003aab44bc4055e"
+   "basis": "a6b3ce205694feec"
   },
   {
    "id": "MU-078",
@@ -967,7 +967,7 @@
    "find": "if (now_ > freshEnd) {",
    "replace": "if (now_ >= freshEnd) {",
    "status": "KILLED",
-   "basis": "3003aab44bc4055e"
+   "basis": "a6b3ce205694feec"
   },
   {
    "id": "MU-080",
@@ -991,7 +991,7 @@
    "find": "        _gapSinceVerify = false;\n        emit GapCleared(0);",
    "replace": "        emit GapCleared(0);",
    "status": "KILLED",
-   "basis": "174fb18442789c93"
+   "basis": "284f67e6d25b8570"
   },
   {
    "id": "MU-082",
@@ -1015,7 +1015,7 @@
    "find": "                    // [MU-083]\n                    _baseOwed = 0;\n",
    "replace": "                    // [MU-083]\n",
    "status": "KILLED",
-   "basis": "76b21a71181c5ee6"
+   "basis": "5270a2a456ee330f"
   },
   {
    "id": "MU-084",
@@ -1039,7 +1039,7 @@
    "find": "uint256 end = now_ < freshEnd ? now_ : freshEnd;",
    "replace": "uint256 end = (now_ < freshEnd || (read && ok)) ? now_ : freshEnd;",
    "status": "KILLED",
-   "basis": "3003aab44bc4055e"
+   "basis": "a6b3ce205694feec"
   },
   {
    "id": "MU-086",
@@ -1051,7 +1051,7 @@
    "find": "            _gapSinceVerify = true;\n            emit GapSet",
    "replace": "            emit GapSet",
    "status": "KILLED",
-   "basis": "3003aab44bc4055e"
+   "basis": "a6b3ce205694feec"
   },
   {
    "id": "MU-087",
@@ -1063,7 +1063,7 @@
    "find": "if (_vaultLo <= t && t < _vaultHi) {",
    "replace": "if (_vaultLo <= t && t < _vaultHi) {\n            _gapSinceVerify = false;",
    "status": "KILLED",
-   "basis": "0a4a9ba88d435b28"
+   "basis": "c1915cade0db1480"
   },
   {
    "id": "MU-088",
@@ -1099,7 +1099,7 @@
    "find": "        _outBlocks = 0;\n        emit RangeRegistered(lo, hi, liveTick);",
    "replace": "        _outBlocks = 0;\n        _pendingBreaches = 0;\n        emit RangeRegistered(lo, hi, liveTick);",
    "status": "KILLED",
-   "basis": "174fb18442789c93"
+   "basis": "284f67e6d25b8570"
   },
   {
    "id": "MU-091",
@@ -1111,7 +1111,7 @@
    "find": "_pendingBreaches = n >= p ? 0 : p - n;",
    "replace": "_pendingBreaches = 0;",
    "status": "KILLED",
-   "basis": "a284bb0a7a7337e1"
+   "basis": "d7e53b085f2a00d7"
   },
   {
    "id": "MU-092",
@@ -1123,7 +1123,7 @@
    "find": "(tick > lo || (tick == lo && sqrtP > TickMath.getSqrtPriceAtTick(lo)))",
    "replace": "(tick >= lo)",
    "status": "KILLED",
-   "basis": "3003aab44bc4055e"
+   "basis": "a6b3ce205694feec"
   },
   {
    "id": "MU-093",
@@ -1207,7 +1207,7 @@
    "find": "_writeCache(liveTick, _anchor());",
    "replace": "_writeCache(_refTick, _anchor());",
    "status": "KILLED",
-   "basis": "174fb18442789c93"
+   "basis": "284f67e6d25b8570"
   },
   {
    "id": "MU-100",
@@ -1219,7 +1219,7 @@
    "find": "if (gasleft() < REFRESH_GAS_MIN) revert RefGas();",
    "replace": "",
    "status": "KILLED",
-   "basis": "0e0c0509cf505444"
+   "basis": "0548d282c961ee4f"
   },
   {
    "id": "MU-101",
@@ -1231,7 +1231,7 @@
    "find": "if (d < 0 && d % w != 0) --q;",
    "replace": "",
    "status": "KILLED",
-   "basis": "9e10b1284d5f7cc8"
+   "basis": "2515614c22b52d57"
   },
   {
    "id": "MU-102",
@@ -1243,7 +1243,7 @@
    "find": "ok := and(s, eq(returndatasize(), 0x100))",
    "replace": "ok := s",
    "status": "KILLED",
-   "basis": "9e10b1284d5f7cc8"
+   "basis": "2515614c22b52d57"
   },
   {
    "id": "MU-103",
@@ -1255,7 +1255,7 @@
    "find": "let s := staticcall(cap, pool, p, 0x84, p, 0x100)",
    "replace": "let s := staticcall(cap, pool, p, 0x84, 0, 0)\n            returndatacopy(p, 0, returndatasize())",
    "status": "KILLED",
-   "basis": "9e10b1284d5f7cc8"
+   "basis": "2515614c22b52d57"
   },
   {
    "id": "MU-104",
@@ -1279,7 +1279,7 @@
    "find": "return uint32(block.timestamp / GRID_SEC);",
    "replace": "return uint32(block.number / GRID);",
    "status": "KILLED",
-   "basis": "aa962e5f75fa34ce"
+   "basis": "a690f749b6e84755"
   },
   {
    "id": "MU-106",
@@ -1303,7 +1303,7 @@
    "find": "for (uint256 j = oldOut / c + 1; j * c <= newOut",
    "replace": "for (uint256 j = oldOut / c + 1; j == 1 && j * c <= newOut",
    "status": "KILLED",
-   "basis": "ff4247fb3b2c96c4"
+   "basis": "cb217977793ab392"
   },
   {
    "id": "MU-108",
@@ -1339,7 +1339,7 @@
    "find": "        if (k > _refGrid) {",
    "replace": "        if (k >= _refGrid) {",
    "status": "KILLED",
-   "basis": "0e0c0509cf505444"
+   "basis": "0548d282c961ee4f"
   },
   {
    "id": "MU-111",
@@ -1351,7 +1351,7 @@
    "find": "return _readRef(block.timestamp - uint256(k) * GRID_SEC);",
    "replace": "return _readRef(0);",
    "status": "KILLED",
-   "basis": "0325e535affed9dd"
+   "basis": "3c6090c1188b199b"
   },
   {
    "id": "MU-112",
@@ -1363,7 +1363,7 @@
    "find": "        _snapshot();\n        _refresh();",
    "replace": "        _refresh();\n        _snapshot();",
    "status": "KILLED",
-   "basis": "46604a862d0717f4"
+   "basis": "023aa3abd7cd39c0"
   },
   {
    "id": "MU-113",
@@ -1387,7 +1387,7 @@
    "find": "if (r.token0() != Currency.unwrap(a.currency0) || r.token1() != Currency.unwrap(a.currency1)) revert BadRef();",
    "replace": "",
    "status": "KILLED",
-   "basis": "63168c17f53fd2b7"
+   "basis": "50c9b9549fdd0e8f"
   },
   {
    "id": "MU-115",
@@ -1399,7 +1399,7 @@
    "find": "uint256 streak;",
    "replace": "uint256 streak = _resetStreak;",
    "status": "KILLED",
-   "basis": "0a4a9ba88d435b28"
+   "basis": "c1915cade0db1480"
   },
   {
    "id": "MU-116",
@@ -1411,7 +1411,7 @@
    "find": "streak = _refGrid + 1 == k ? _resetStreak + 1 : 1;",
    "replace": "streak = _resetStreak + 1;",
    "status": "KILLED",
-   "basis": "0a4a9ba88d435b28"
+   "basis": "c1915cade0db1480"
   },
   {
    "id": "MU-117",
@@ -1459,7 +1459,7 @@
    "find": "        _armed = true;\n",
    "replace": "\n",
    "status": "KILLED",
-   "basis": "1b77aa6b4df8bad2"
+   "basis": "5258027d6898d7b7"
   },
   {
    "id": "MU-121",
@@ -1531,7 +1531,7 @@
    "find": "return _window(uint32(secondsAgo) + REF_WINDOW, uint32(secondsAgo));",
    "replace": "return _window(uint32(secondsAgo) + 12, uint32(secondsAgo));",
    "status": "KILLED",
-   "basis": "e5baf99c6663fd48"
+   "basis": "91580c407ec2110f"
   },
   {
    "id": "MU-127",
@@ -1543,7 +1543,7 @@
    "find": "if (!ok) revert RefUnreadable();\n    }\n\n    function tryRef()",
    "replace": "\n    }\n\n    function tryRef()",
    "status": "KILLED",
-   "basis": "fbe9ecf556df2edb"
+   "basis": "7456d2e2339b8b68"
   },
   {
    "id": "MU-128",
@@ -1555,7 +1555,7 @@
    "find": "address public immutable REF_POOL;",
    "replace": "address public REF_POOL;",
    "status": "KILLED",
-   "basis": "5976ff4c86592db6"
+   "basis": "0ea219c16c2ef01b"
   },
   {
    "id": "MU-129",
@@ -1639,7 +1639,7 @@
    "find": "bytes32 sv = keccak256(abi.encode(msg.sender, saltV));",
    "replace": "bytes32 sv = saltV;",
    "status": "KILLED",
-   "basis": "83e62c5c5c271040"
+   "basis": "a7174d0b35849a09"
   },
   {
    "id": "MU-136",
@@ -1687,7 +1687,7 @@
    "find": "// [MU-139] the markout read covers exactly (now - a, now - b]\n        return _window(a, b);",
    "replace": "// [MU-139] the markout read covers exactly (now - a, now - b]\n        return _readRef(b);",
    "status": "KILLED",
-   "basis": "fbdc16c6590b59c9"
+   "basis": "0cebf9537ee20c99"
   },
   {
    "id": "MU-140",
@@ -1699,7 +1699,7 @@
    "find": "&& (tick < hi - 1 || (tick == hi - 1",
    "replace": "&& (tick < hi || (tick == hi - 1",
    "status": "KILLED",
-   "basis": "3003aab44bc4055e"
+   "basis": "a6b3ce205694feec"
   },
   {
    "id": "MU-141",
@@ -1711,7 +1711,7 @@
    "find": "|| t.RESET_RUN < 2) revert BadTier();",
    "replace": ") revert BadTier();",
    "status": "KILLED",
-   "basis": "5fae8e5d80594aee"
+   "basis": "ee0225bc7aef9dc2"
   },
   {
    "id": "MU-142",
@@ -1723,7 +1723,7 @@
    "find": "< uint256(t.EDGE_DELAY) + 3 * uint256(t.GRID) + t.REF_WINDOW / (t.GRID_SEC / t.GRID)",
    "replace": "< 0",
    "status": "KILLED",
-   "basis": "5fae8e5d80594aee"
+   "basis": "ee0225bc7aef9dc2"
   },
   {
    "id": "MU-143",
@@ -1735,7 +1735,7 @@
    "find": "t.GRID_SEC == 0 || t.GRID_SEC % t.GRID != 0 ||",
    "replace": "t.GRID_SEC == 0 ||",
    "status": "KILLED",
-   "basis": "5fae8e5d80594aee"
+   "basis": "ee0225bc7aef9dc2"
   },
   {
    "id": "MU-144",
@@ -1747,7 +1747,7 @@
    "find": "t.W_TICKS <= 0 || t.W_TICKS % (2 * a.tickSpacing) != 0",
    "replace": "t.W_TICKS <= 0",
    "status": "KILLED",
-   "basis": "63168c17f53fd2b7"
+   "basis": "50c9b9549fdd0e8f"
   },
   {
    "id": "MU-145",
@@ -1819,7 +1819,7 @@
    "find": "        uint256 burnS = b.reserveShares;",
    "replace": "        uint256 burnS = 0;",
    "status": "KILLED",
-   "basis": "2b21989ff0ac2abf"
+   "basis": "283585d49c337657"
   },
   {
    "id": "MU-151",
@@ -1831,7 +1831,7 @@
    "find": "        uint256 a = block.timestamp - tA - BLOCKTIME;",
    "replace": "        uint256 a = block.timestamp - tA;",
    "status": "KILLED",
-   "basis": "2b21989ff0ac2abf"
+   "basis": "283585d49c337657"
   },
   {
    "id": "MU-152",
@@ -1843,7 +1843,7 @@
    "find": "        // [MU-152] no deposit while a curator action awaits its markout settlement\n        if (_tAction != 0) revert MarkoutPending();",
    "replace": "        // [MU-152] no deposit while a curator action awaits its markout settlement\n        if (false) revert MarkoutPending();",
    "status": "KILLED",
-   "basis": "1a68b096c0e83031"
+   "basis": "cc075237ceb1f421"
   },
   {
    "id": "MU-153",
@@ -2261,7 +2261,7 @@
    "find": "        if (gasleft() < _settleGasMin()) revert RefGas();",
    "replace": "",
    "status": "KILLED",
-   "basis": "2b21989ff0ac2abf"
+   "basis": "283585d49c337657"
   },
   {
    "id": "MU-187",
@@ -2273,7 +2273,7 @@
    "find": "abi.encode(burnS, uint32(block.number / EPOCH), uint40(block.number))",
    "replace": "abi.encode(burnS, _epoch, uint40(block.number))",
    "status": "KILLED",
-   "basis": "2b21989ff0ac2abf"
+   "basis": "283585d49c337657"
   },
   {
    "id": "MU-188",
@@ -2285,7 +2285,7 @@
    "find": "block.timestamp < tA + 2 * BLOCKTIME + H_MARKOUT",
    "replace": "block.timestamp < tA + BLOCKTIME + H_MARKOUT",
    "status": "KILLED",
-   "basis": "2b21989ff0ac2abf"
+   "basis": "283585d49c337657"
   },
   {
    "id": "MU-189",
@@ -2309,7 +2309,7 @@
    "find": "abi.encode(burnS, uint32(block.number / EPOCH), uint40(block.number))",
    "replace": "abi.encode(burnS, uint32(block.number / EPOCH), uint40(block.timestamp))",
    "status": "KILLED",
-   "basis": "2b21989ff0ac2abf"
+   "basis": "283585d49c337657"
   },
   {
    "id": "MU-191",
@@ -2321,7 +2321,7 @@
    "find": "        _tAction = 0;\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "2b21989ff0ac2abf"
+   "basis": "283585d49c337657"
   },
   {
    "id": "MU-192",
@@ -2957,7 +2957,7 @@
    "find": "ExecLedger.settleExtra(_pBefore, _pAfter, _pend,",
    "replace": "ExecLedger.settleExtra(_pAfter, _pAfter, _pend,",
    "status": "KILLED",
-   "basis": "2b21989ff0ac2abf"
+   "basis": "283585d49c337657"
   },
   {
    "id": "MU-245",
@@ -3125,7 +3125,7 @@
    "find": "        if (a.fee >= 1_000_000) revert BadTier();",
    "replace": "        if (false) revert BadTier();",
    "status": "KILLED",
-   "basis": "5fae8e5d80594aee"
+   "basis": "ee0225bc7aef9dc2"
   },
   {
    "id": "MU-260",
@@ -3269,7 +3269,7 @@
    "find": "                if (navp > amount) {",
    "replace": "                if (navp >= amount) {",
    "status": "KILLED",
-   "basis": "dd267c4ee5e515d7"
+   "basis": "1ade29cd959bdb6e"
   },
   {
    "id": "MU-272",
@@ -3509,7 +3509,7 @@
    "find": "        if (forf) r.forfeited = _a128(r.forfeited, relNb);\n",
    "replace": "",
    "status": "KILLED",
-   "basis": "ed6211d749d0eeae"
+   "basis": "2ca29c3fc3cb98b6"
   },
   {
    "id": "MU-292",
@@ -3689,7 +3689,7 @@
    "find": "        if (t.EPOCH == 0 || t.FORFEIT_DRIP_BLOCKS != t.EPOCH) revert BadTier();",
    "replace": "        if (false) revert BadTier();",
    "status": "KILLED",
-   "basis": "5fae8e5d80594aee"
+   "basis": "ee0225bc7aef9dc2"
   },
   {
    "id": "MU-307",
@@ -3701,7 +3701,7 @@
    "find": "        if (t.EPOCH == 0 || t.FORFEIT_DRIP_BLOCKS != t.EPOCH) revert BadTier();",
    "replace": "        if (t.EPOCH == 0 || t.FORFEIT_DRIP_BLOCKS < t.EPOCH) revert BadTier();",
    "status": "KILLED",
-   "basis": "5fae8e5d80594aee"
+   "basis": "ee0225bc7aef9dc2"
   },
   {
    "id": "MU-308",
@@ -3713,7 +3713,7 @@
    "find": "        if (t.EPOCH == 0 || t.FORFEIT_DRIP_BLOCKS != t.EPOCH) revert BadTier();",
    "replace": "        if (t.FORFEIT_DRIP_BLOCKS != t.EPOCH) revert BadTier();",
    "status": "KILLED",
-   "basis": "5fae8e5d80594aee"
+   "basis": "ee0225bc7aef9dc2"
   },
   {
    "id": "MU-309",
@@ -3725,7 +3725,7 @@
    "find": "            _modify(key, ModifyLiquidityParams(nlo, nhi, int256(uint256(lw)), _witSalt(epoch)));",
    "replace": "            _modify(key, ModifyLiquidityParams(nlo - TICK_SPACING, nhi, int256(uint256(lw)), _witSalt(epoch)));",
    "status": "KILLED",
-   "basis": "1cc2ca3099c24375"
+   "basis": "9154801367702df0"
   },
   {
    "id": "MU-310",
@@ -3737,7 +3737,7 @@
    "find": "            _book(_modify(-int256(uint256(l))));",
    "replace": "            _book(_modify(-int256(uint256(l - 1))));",
    "status": "KILLED",
-   "basis": "8c9480d9d04e9f49"
+   "basis": "893b8fe9e0593747"
   },
   {
    "id": "MU-311",
@@ -3749,7 +3749,7 @@
    "find": "            _transfer(payer, address(this), s);",
    "replace": "            _transfer(address(this), payer, s);",
    "status": "KILLED",
-   "basis": "0c0ac23214a55e79"
+   "basis": "3f9a374ef65efba8"
   },
   {
    "id": "MU-312",
@@ -3882,6 +3882,10 @@
     {
      "file": "src/TouchstoneVaultExtension.sol",
      "find": "            if (_seeded) revert OnlyFactory();\n            return _seed(args);"
+    },
+    {
+     "file": "src/TouchstoneVaultExtension.sol",
+     "find": "        // [MU-321] seed once\n        if (_seeded) revert OnlyFactory();\n"
     }
    ]
   },
@@ -3919,7 +3923,7 @@
    "find": "        if (hookArgs.poolManager != POOL_MANAGER || hookArgs.vault != vaultAddr) revert WrongArgs();\n",
    "replace": "\n",
    "status": "KILLED",
-   "basis": "b2c036c12381e77c"
+   "basis": "ce0ab4195e646999"
   },
   {
    "id": "MU-325",
@@ -3931,7 +3935,7 @@
    "find": "        if (c0.isAddressZero() || c1.isAddressZero()) revert BadToken();\n",
    "replace": "\n",
    "status": "KILLED",
-   "basis": "a4b7614280889e91"
+   "basis": "ce0ab4195e646999"
   },
   {
    "id": "MU-326",
@@ -3943,7 +3947,7 @@
    "find": "            revert TierMismatch();\n",
    "replace": "\n",
    "status": "KILLED",
-   "basis": "a4b7614280889e91"
+   "basis": "ce0ab4195e646999"
   },
   {
    "id": "MU-327",

@@ -1,0 +1,185 @@
+{
+ "id": "E4",
+ "question": "base-accrual identity and bot ordering",
+ "pass_rule": "mimic net >= 0 and mimic > idle/dust/stale/wide (idle nets 0)",
+ "verdict": "PASS",
+ "rule_applied": "every bucket: mimic mean net >= 0; U-IC2's paired one-sided 95% lower bound of mimic - bot > 0 for idle, dust, stale, wide; idle net + gas exactly 0 on every path (before gas); the F-6 identity test passed",
+ "data": "gbm-synthetic + foundry",
+ "identity_test": {
+  "name": "test_F_6__baseAmountIndependentOfSegmentation",
+  "passed": true,
+  "log": "eval/supplements/forge-s27-tests.log"
+ },
+ "buckets": {
+  "gbm-40": {
+   "mimic_net_mean": 6.748785623731378,
+   "mimic_net_p5": 4.975367071341368,
+   "mimic_net_before_gas": 6.973473873731378,
+   "bots": {
+    "idle": {
+     "net_after_gas": -0.1357500000000011,
+     "net_before_gas": 0.0,
+     "mimic_minus_bot": 6.884535623731378,
+     "ci_lo": 6.809847625326721,
+     "ok": true
+    },
+    "dust": {
+     "net_after_gas": -0.06347150863304489,
+     "net_before_gas": 0.07460161636695496,
+     "mimic_minus_bot": 6.812257132364423,
+     "ci_lo": 6.729546521263709,
+     "ok": true
+    },
+    "stale": {
+     "net_after_gas": -0.004990301928781816,
+     "net_before_gas": -0.0034903019287818244,
+     "mimic_minus_bot": 6.75377592566016,
+     "ci_lo": 6.679068804191959,
+     "ok": true
+    },
+    "wide": {
+     "net_after_gas": -0.13799999999999968,
+     "net_before_gas": 0.0,
+     "mimic_minus_bot": 6.886785623731379,
+     "ci_lo": 6.812097625326722,
+     "ok": true
+    }
+   },
+   "idle_net_plus_gas_abs_max": 0.0
+  },
+  "gbm-60": {
+   "mimic_net_mean": 5.651699804564889,
+   "mimic_net_p5": 3.665948853447663,
+   "mimic_net_before_gas": 5.922462554564887,
+   "bots": {
+    "idle": {
+     "net_after_gas": -0.1357500000000011,
+     "net_before_gas": 0.0,
+     "mimic_minus_bot": 5.787449804564889,
+     "ci_lo": 5.698526658432313,
+     "ok": true
+    },
+    "dust": {
+     "net_after_gas": -0.10975217660443214,
+     "net_before_gas": 0.02830219839556765,
+     "mimic_minus_bot": 5.761451981169322,
+     "ci_lo": 5.671079664570053,
+     "ok": true
+    },
+    "stale": {
+     "net_after_gas": -0.009864303041134661,
+     "net_before_gas": -0.008364303041134669,
+     "mimic_minus_bot": 5.661564107606024,
+     "ci_lo": 5.572644979117795,
+     "ok": true
+    },
+    "wide": {
+     "net_after_gas": -0.13799999999999968,
+     "net_before_gas": 0.0,
+     "mimic_minus_bot": 5.789699804564889,
+     "ci_lo": 5.700776658432313,
+     "ok": true
+    }
+   },
+   "idle_net_plus_gas_abs_max": 0.0
+  },
+  "gbm-120": {
+   "mimic_net_mean": 2.107442530081578,
+   "mimic_net_p5": 0.6371035305858449,
+   "mimic_net_before_gas": 2.5493547800815755,
+   "bots": {
+    "idle": {
+     "net_after_gas": -0.1357500000000011,
+     "net_before_gas": 0.0,
+     "mimic_minus_bot": 2.2431925300815783,
+     "ci_lo": 2.1628320456409202,
+     "ok": true
+    },
+    "dust": {
+     "net_after_gas": -0.1318406074762896,
+     "net_before_gas": 0.006185642523710122,
+     "mimic_minus_bot": 2.239283137557868,
+     "ci_lo": 2.1591412781657024,
+     "ok": true
+    },
+    "stale": {
+     "net_after_gas": -0.04445895419458843,
+     "net_before_gas": -0.042958954194588436,
+     "mimic_minus_bot": 2.151901484276167,
+     "ci_lo": 2.0716282717667416,
+     "ok": true
+    },
+    "wide": {
+     "net_after_gas": -0.13799999999999968,
+     "net_before_gas": 0.0,
+     "mimic_minus_bot": 2.2454425300815783,
+     "ci_lo": 2.1650820456409203,
+     "ok": true
+    }
+   },
+   "idle_net_plus_gas_abs_max": 0.0
+  },
+  "hover-60": {
+   "mimic_net_mean": 8.227621811772638,
+   "mimic_net_p5": 7.773033499904966,
+   "mimic_net_before_gas": 8.310212061772637,
+   "bots": {
+    "idle": {
+     "net_after_gas": -0.1357500000000011,
+     "net_before_gas": 0.0,
+     "mimic_minus_bot": 8.363371811772637,
+     "ci_lo": 8.342402853347023,
+     "ok": true
+    },
+    "dust": {
+     "net_after_gas": -0.13810960779353432,
+     "net_before_gas": -8.710779353460207e-05,
+     "mimic_minus_bot": 8.365731419566172,
+     "ci_lo": 8.34476162198958,
+     "ok": true
+    },
+    "stale": {
+     "net_after_gas": -0.011632356064434954,
+     "net_before_gas": -0.010132356064434963,
+     "mimic_minus_bot": 8.239254167837073,
+     "ci_lo": 8.218312328835776,
+     "ok": true
+    },
+    "wide": {
+     "net_after_gas": -0.13799999999999968,
+     "net_before_gas": 0.0,
+     "mimic_minus_bot": 8.365621811772638,
+     "ci_lo": 8.344652853347023,
+     "ok": true
+    }
+   },
+   "idle_net_plus_gas_abs_max": 0.0
+  }
+ },
+ "note": "idle nets 0 before gas; after gas it loses its daily pokes (about -0.136 ETH per 180 days at 5 gwei)",
+ "evidence": {
+  "eval/results/U-IC2.json": "ac4efd0ceaeb554cbe22b31c5d5b0701cfad60f87523331cfa585f2de6fea45f",
+  "u_ic2_parts": [
+   {
+    "path": "output/uic2/part-700-200.json",
+    "sha256": "5692afd6263b930133a6d66c28656cff6b88e663fd762c7ce60386813b78d37e",
+    "commit": "f223b5dbfe59739383ea14974a31b7bb9433adf4",
+    "model_hash": "42d38a381c72287c",
+    "first": 700,
+    "n": 200
+   },
+   {
+    "path": "output/uic2/part-900-200.json",
+    "sha256": "c12f7fcefdda01a785083e1fd447df22bb77fe39f2cf4129de6db7ebe91b11ec",
+    "commit": "f223b5dbfe59739383ea14974a31b7bb9433adf4",
+    "model_hash": "42d38a381c72287c",
+    "first": 900,
+    "n": 200
+   }
+  ],
+  "eval/e4.py": "cf7eaef6d84b3778400d0fca2b3225802e8695c7b0ba3546933630139bf0ab02"
+ },
+ "limits": "the U-IC2 per-path parts (two files, 670 MB) are not in the repository; their sha256 is recorded and eval/supplements/U-IC2-agg.json holds the aggregates used here; synthetic 180-day paths (U-IC2: driftless GBM and the hover path, third-party depth 0, NAV 1000 ETH, gas 5 gwei); not replay",
+ "commit_public": "5744424105607c8911f8ab4cac96a1515f904b69",
+ "commit_internal": "b9bd502ee1ab3c38ca04792e8a0bbc90864e3918"
+}

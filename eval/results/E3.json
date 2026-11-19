@@ -1,0 +1,35 @@
+{
+ "id": "E3",
+ "question": "no action => zero charge over 10^4 segments",
+ "pass_rule": "within rounding",
+ "verdict": "PASS",
+ "data": "model",
+ "data_detail": "the independent reference model, TEST tier; third-party swaps as a seeded random walk",
+ "numbers": {
+  "control_charge_wei": 346590601783487,
+  "segments": 10000,
+  "third_party_swaps": 20034,
+  "epochs": 1717,
+  "charge_wei": 0,
+  "bank_burned_shares": 0,
+  "bond_burned_shares": 0,
+  "pending_markout": false,
+  "reserve_shares": 0,
+  "records_with_a_charge": [],
+  "minted_base_shares": 347262425504370350782,
+  "seconds": 223.1
+ },
+ "rule_applied": "exactly 0: charge, bank burn, bond burn over every no-action segment; no pending markout; positive control: one curator swap in the same harness prices a charge > 0",
+ "seed": 1108,
+ "evidence": {
+  "model/reference.py": "50fd11cdedcb40f112c1b8d8010c2d2cc4348027f80577984c533a95014531d7",
+  "eval/e3.py": "75fed7812019e37f75a97fe1b6b857caf922d1d00832fe97845caac23f28c241",
+  "tests": [
+   "test_F_5__noActionMeasuresZero",
+   "test_F_5__noActionMeasuresZeroOnTheVault"
+  ]
+ },
+ "limits": "independent model, not the contracts (F-5 covers the contracts at <= 8 swaps x 64 runs); the reference follows the pool, so the fence never binds; not on replay swaps",
+ "commit_public": "4cfd5d6866e633b2baca38e540cd5e4bd6da6521",
+ "commit_internal": "448efc0dd9cce15307f4fae8ad23e37eeaf4333b"
+}

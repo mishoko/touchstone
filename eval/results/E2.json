@@ -1,0 +1,61 @@
+{
+ "id": "E2",
+ "question": "mimic: realized action loss vs charge",
+ "pass_rule": "charge >= realized loss; overcharge from reference lag reported",
+ "verdict": "PASS",
+ "rule_applied": "fee-aware settlement (c_fa): 0 rows with realised > c_fa + 1 wei at both sigma",
+ "data": "gbm-synthetic",
+ "cell": "single-placement cell (edge60 range shape, honest flow): the expected charge over 400 window-error draws vs the realised loss",
+ "seeds": [
+  1108,
+  1307
+ ],
+ "sigmas": [
+  0.6,
+  1.2
+ ],
+ "numbers": {
+  "sigma_60": {
+   "placements": 2016,
+   "short_fee_aware": 0,
+   "max_shortfall_wei": 0,
+   "max_shortfall_bp": 0,
+   "short_c120_reported": 16,
+   "overcharge_mean_bp": 0.012332,
+   "overcharge_p99_bp": 0.132633
+  },
+  "sigma_120": {
+   "placements": 2100,
+   "short_fee_aware": 0,
+   "max_shortfall_wei": 0,
+   "max_shortfall_bp": 0,
+   "short_c120_reported": 21,
+   "overcharge_mean_bp": 0.022883,
+   "overcharge_p99_bp": 0.34479
+  }
+ },
+ "raw": {
+  "path": "output/e2/l9_1108-1307.json",
+  "sha256": "73e73b7f71e7bef630c9c895f3c13c9217cab52e54d3fc7d78390c4109b94937",
+  "meta": {
+   "commit": "4cfd5d6866e633b2baca38e540cd5e4bd6da6521",
+   "dirty": true,
+   "model_dirty": false,
+   "model_hash": "42d38a381c72287c",
+   "argv": [
+    "/Users/mishoko/projects/touchstone/model/cells/regate_l4_l9.py",
+    "1108:1308",
+    "4",
+    "--l9-only",
+    "--out",
+    "/Users/mishoko/projects/touchstone/output/e2"
+   ],
+   "wall_s": 3.0,
+   "l9_rows": 4116,
+   "l4_rows": 0
+  }
+ },
+ "limits": "not path-level (one sampled exit state per seed and sigma), not the edge-12h policy, the charge in expectation over the window error (no per-draw shortfall), GBM, not replay",
+ "commit_public": "4cfd5d6866e633b2baca38e540cd5e4bd6da6521",
+ "commit_internal": "448efc0dd9cce15307f4fae8ad23e37eeaf4333b"
+}

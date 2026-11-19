@@ -1,0 +1,82 @@
+{
+ "id": "E6",
+ "question": "churner",
+ "pass_rule": "t < -3 (follows from construction; labelled so)",
+ "verdict": "PASS",
+ "label": "follows from construction: every action is charged at least its measured cost and pays gas, and re-placing earns no extra base",
+ "data": "gbm-synthetic",
+ "seeds": [
+  1308,
+  1507
+ ],
+ "m": 0.022,
+ "mimic": "edge-12h",
+ "observer": false,
+ "buckets": {
+  "gbm-40": {
+   "n": 200,
+   "mean_diff_eth": -14.050415,
+   "sd_eth": 0.747948,
+   "t": -265.664,
+   "churner_net_mean": -7.470368,
+   "mimic_net_mean": 6.580047,
+   "churner_actions_mean": 3956.7,
+   "mimic_actions_mean": 22.3,
+   "churner_charges_mean": 1.928754,
+   "churner_gas_mean": 11.971006,
+   "churner_reverts_mean": 0.1,
+   "nonvacuous": true
+  },
+  "gbm-60": {
+   "n": 200,
+   "mean_diff_eth": -14.386539,
+   "sd_eth": 0.972918,
+   "t": -209.12,
+   "churner_net_mean": -8.759095,
+   "mimic_net_mean": 5.627444,
+   "churner_actions_mean": 3819.6,
+   "mimic_actions_mean": 30.5,
+   "churner_charges_mean": 3.204991,
+   "churner_gas_mean": 11.590718,
+   "churner_reverts_mean": 0.1,
+   "nonvacuous": true
+  },
+  "gbm-120": {
+   "n": 200,
+   "mean_diff_eth": -13.639089,
+   "sd_eth": 1.498441,
+   "t": -128.724,
+   "churner_net_mean": -11.381999,
+   "mimic_net_mean": 2.25709,
+   "churner_actions_mean": 3247.0,
+   "mimic_actions_mean": 57.8,
+   "churner_charges_mean": 6.157481,
+   "churner_gas_mean": 9.977169,
+   "churner_reverts_mean": 0.5,
+   "nonvacuous": true
+  },
+  "hover-60": {
+   "n": 200,
+   "mean_diff_eth": -16.590488,
+   "sd_eth": 0.339584,
+   "t": -690.919,
+   "churner_net_mean": -8.323648,
+   "mimic_net_mean": 8.266839,
+   "churner_actions_mean": 4174.0,
+   "mimic_actions_mean": 3.9,
+   "churner_charges_mean": 3.713615,
+   "churner_gas_mean": 12.570335,
+   "churner_reverts_mean": 0.2,
+   "nonvacuous": true
+  }
+ },
+ "nonvacuous": true,
+ "wall_s": 1061.5,
+ "model_hash": "a8d69f2076fd27d6f395510af49096fc347bf7007a18de76dca3da52f24a038a",
+ "evidence": {
+  "eval/e6.py": "643b64f2cb00c884c19477d1c9816244dcfdf2d580842447478001d4695f4648"
+ },
+ "limits": "synthetic 180-day paths (driftless GBM and the hover path), third-party depth 0, NAV 1000 ETH, gas 5 gwei; the churner acts at hourly marks (the simulation grid), not every COOLDOWN; not replay",
+ "commit_public": "3e6f4e3cebcd1d6ec520a834760290ef75d69ea2",
+ "commit_internal": "6bbbad2808bd29e7ae27e4a3bb95f5a23c28a113"
+}

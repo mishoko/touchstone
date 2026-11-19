@@ -1,0 +1,168 @@
+carry+/mimic           h_b  +100.1  vi_bo       0 vo_bi      0 amp p99/max 2.82/153.53
+     spec       eps  -0.018±0.066 bp sd   1.08  pay/base-1 -0.004±0.014
+     rep        eps  -8.724±0.550 bp sd   8.98  pay/base-1 -1.820±0.115
+     a_tw       eps  -9.218±0.546 bp sd   8.92  pay/base-1 -1.923±0.114
+     b_seg      eps  -8.966±0.319 bp sd   5.21  pay/base-1 -1.870±0.067
+     dS_price   eps  -9.526±0.548 bp sd   8.95  pay/base-1 -1.987±0.114
+     dS_full    eps  -9.289±0.471 bp sd   7.68  pay/base-1 -1.938±0.098
+     price_only eps  -0.061±0.088 bp sd   1.43  pay/base-1 -0.013±0.018
+carry+/mimic_noswap    h_b  +141.5  vi_bo       0 vo_bi  12401 amp p99/max 2.82/59.80
+     spec       eps  +1.856±0.096 bp sd   1.57  pay/base-1 +0.387±0.020
+     rep        eps  +0.178±0.243 bp sd   3.96  pay/base-1 +0.037±0.051
+     a_tw       eps  -0.026±0.241 bp sd   3.93  pay/base-1 -0.005±0.050
+     b_seg      eps  -0.065±0.031 bp sd   0.51  pay/base-1 -0.014±0.006
+     dS_price   eps  -0.467±0.254 bp sd   4.14  pay/base-1 -0.097±0.053
+     dS_full    eps  -0.320±0.196 bp sd   3.20  pay/base-1 -0.067±0.041
+     price_only eps  +1.867±0.099 bp sd   1.62  pay/base-1 +0.389±0.021
+carry+/idle            h_b  +182.8  vi_bo       0 vo_bi  45221 amp p99/max 0.00/0.00
+     spec       eps  +0.000±0.000 bp sd   0.00  pay/base-1 +0.000±0.000
+     rep        eps  +0.000±0.000 bp sd   0.00  pay/base-1 +0.000±0.000
+     a_tw       eps  +0.000±0.000 bp sd   0.00  pay/base-1 +0.000±0.000
+     b_seg      eps  +0.000±0.000 bp sd   0.00  pay/base-1 +0.000±0.000
+     dS_price   eps  +0.000±0.000 bp sd   0.00  pay/base-1 +0.000±0.000
+     dS_full    eps  +0.000±0.000 bp sd   0.00  pay/base-1 +0.000±0.000
+     price_only eps  +0.000±0.000 bp sd   0.00  pay/base-1 +0.000±0.000
+carry+/wide            h_b  +139.0  vi_bo    5440 vo_bi      0 amp p99/max 2.82/3.78
+     spec       eps  +0.015±0.650 bp sd  10.62  pay/base-1 +0.003±0.136
+     rep        eps  -2.937±0.710 bp sd  11.60  pay/base-1 -0.613±0.148
+     a_tw       eps  -2.936±0.710 bp sd  11.60  pay/base-1 -0.612±0.148
+     b_seg      eps  -8.664±0.325 bp sd   5.31  pay/base-1 -1.807±0.068
+     dS_price   eps  -8.714±0.357 bp sd   5.83  pay/base-1 -1.818±0.075
+     dS_full    eps  -8.648±0.343 bp sd   5.60  pay/base-1 -1.804±0.071
+     price_only eps -11.123±0.650 bp sd  10.62  pay/base-1 -2.320±0.136
+carry+/narrow          h_b  +121.9  vi_bo       0 vo_bi  12720 amp p99/max 3.69/303.13
+     spec       eps  -1.643±0.243 bp sd   3.97  pay/base-1 -0.343±0.051
+     rep        eps  -8.635±0.504 bp sd   8.23  pay/base-1 -1.801±0.105
+     a_tw       eps  -8.993±0.490 bp sd   8.00  pay/base-1 -1.876±0.102
+     b_seg      eps  -9.375±0.328 bp sd   5.35  pay/base-1 -1.955±0.068
+     dS_price   eps -10.670±0.580 bp sd   9.47  pay/base-1 -2.225±0.121
+     dS_full    eps -10.583±0.503 bp sd   8.21  pay/base-1 -2.207±0.105
+     price_only eps  +0.622±0.170 bp sd   2.78  pay/base-1 +0.130±0.035
+carry+/offset          h_b  +112.4  vi_bo    1862 vo_bi   6574 amp p99/max 2.82/77.86
+     spec       eps  +1.928±0.872 bp sd  14.24  pay/base-1 +0.402±0.182
+     rep        eps  -5.341±0.960 bp sd  15.67  pay/base-1 -1.114±0.200
+     a_tw       eps  -5.427±0.958 bp sd  15.64  pay/base-1 -1.132±0.200
+     b_seg      eps -10.103±0.418 bp sd   6.82  pay/base-1 -2.107±0.087
+     dS_price   eps -11.092±0.622 bp sd  10.16  pay/base-1 -2.313±0.130
+     dS_full    eps -10.863±0.552 bp sd   9.02  pay/base-1 -2.266±0.115
+     price_only eps  -6.673±1.042 bp sd  17.01  pay/base-1 -1.392±0.217
+carry+/random          h_b  +150.4  vi_bo    1709 vo_bi  18271 amp p99/max 2.93/303.44
+     spec       eps  +3.063±0.427 bp sd   6.98  pay/base-1 +0.639±0.089
+     rep        eps  +1.915±0.456 bp sd   7.45  pay/base-1 +0.399±0.095
+     a_tw       eps  +1.925±0.460 bp sd   7.51  pay/base-1 +0.401±0.096
+     b_seg      eps  +0.006±0.081 bp sd   1.32  pay/base-1 +0.001±0.017
+     dS_price   eps  -0.448±0.287 bp sd   4.69  pay/base-1 -0.093±0.060
+     dS_full    eps  -0.684±0.308 bp sd   5.02  pay/base-1 -0.143±0.064
+     price_only eps  -0.711±0.708 bp sd  11.56  pay/base-1 -0.148±0.148
+bal/mimic              h_b   +17.0  vi_bo       0 vo_bi      0 amp p99/max 2.82/153.53
+     spec       eps  +0.030±0.049 bp sd   0.81  pay/base-1 +0.006±0.010
+     rep        eps  -8.673±0.549 bp sd   8.96  pay/base-1 -1.809±0.114
+     a_tw       eps  -9.091±0.546 bp sd   8.92  pay/base-1 -1.896±0.114
+     b_seg      eps  -8.966±0.319 bp sd   5.21  pay/base-1 -1.870±0.067
+     dS_price   eps  -9.526±0.548 bp sd   8.95  pay/base-1 -1.987±0.114
+     dS_full    eps  -9.288±0.471 bp sd   7.68  pay/base-1 -1.937±0.098
+     price_only eps  -0.061±0.088 bp sd   1.43  pay/base-1 -0.013±0.018
+bal/mimic_noswap       h_b   +16.5  vi_bo       0 vo_bi  12401 amp p99/max 2.82/59.80
+     spec       eps  +1.881±0.094 bp sd   1.53  pay/base-1 +0.392±0.020
+     rep        eps  +0.203±0.242 bp sd   3.95  pay/base-1 +0.042±0.050
+     a_tw       eps  +0.038±0.241 bp sd   3.94  pay/base-1 +0.008±0.050
+     b_seg      eps  -0.065±0.031 bp sd   0.51  pay/base-1 -0.014±0.006
+     dS_price   eps  -0.467±0.254 bp sd   4.14  pay/base-1 -0.097±0.053
+     dS_full    eps  -0.319±0.196 bp sd   3.20  pay/base-1 -0.067±0.041
+     price_only eps  +1.867±0.099 bp sd   1.62  pay/base-1 +0.389±0.021
+bal/idle               h_b   +16.6  vi_bo       0 vo_bi  45221 amp p99/max 0.00/0.00
+     spec       eps  +0.000±0.000 bp sd   0.00  pay/base-1 +0.000±0.000
+     rep        eps  +0.000±0.000 bp sd   0.00  pay/base-1 +0.000±0.000
+     a_tw       eps  +0.000±0.000 bp sd   0.00  pay/base-1 +0.000±0.000
+     b_seg      eps  +0.000±0.000 bp sd   0.00  pay/base-1 +0.000±0.000
+     dS_price   eps  +0.000±0.000 bp sd   0.00  pay/base-1 +0.000±0.000
+     dS_full    eps  +0.000±0.000 bp sd   0.00  pay/base-1 +0.000±0.000
+     price_only eps  +0.000±0.000 bp sd   0.00  pay/base-1 +0.000±0.000
+bal/wide               h_b   +16.6  vi_bo    5440 vo_bi      0 amp p99/max 2.82/3.78
+     spec       eps  -4.929±0.241 bp sd   3.93  pay/base-1 -1.028±0.050
+     rep        eps  -7.882±0.380 bp sd   6.20  pay/base-1 -1.644±0.079
+     a_tw       eps  -7.881±0.380 bp sd   6.20  pay/base-1 -1.644±0.079
+     b_seg      eps  -8.664±0.325 bp sd   5.31  pay/base-1 -1.807±0.068
+     dS_price   eps  -8.714±0.357 bp sd   5.83  pay/base-1 -1.818±0.075
+     dS_full    eps  -8.648±0.343 bp sd   5.60  pay/base-1 -1.804±0.071
+     price_only eps -11.123±0.650 bp sd  10.62  pay/base-1 -2.320±0.136
+bal/narrow             h_b   +16.3  vi_bo       0 vo_bi  12720 amp p99/max 3.69/303.13
+     spec       eps  -1.477±0.238 bp sd   3.88  pay/base-1 -0.308±0.050
+     rep        eps  -8.391±0.503 bp sd   8.21  pay/base-1 -1.750±0.105
+     a_tw       eps  -8.898±0.490 bp sd   7.99  pay/base-1 -1.856±0.102
+     b_seg      eps  -9.375±0.328 bp sd   5.35  pay/base-1 -1.955±0.068
+     dS_price   eps -10.670±0.580 bp sd   9.47  pay/base-1 -2.225±0.121
+     dS_full    eps -10.577±0.503 bp sd   8.21  pay/base-1 -2.206±0.105
+     price_only eps  +0.622±0.170 bp sd   2.78  pay/base-1 +0.130±0.035
+bal/offset             h_b   +16.7  vi_bo    1862 vo_bi   6574 amp p99/max 2.82/77.86
+     spec       eps  -1.248±0.503 bp sd   8.21  pay/base-1 -0.260±0.105
+     rep        eps  -8.480±0.647 bp sd  10.56  pay/base-1 -1.769±0.135
+     a_tw       eps  -8.606±0.643 bp sd  10.50  pay/base-1 -1.795±0.134
+     b_seg      eps -10.103±0.418 bp sd   6.82  pay/base-1 -2.107±0.087
+     dS_price   eps -11.092±0.622 bp sd  10.16  pay/base-1 -2.313±0.130
+     dS_full    eps -10.858±0.552 bp sd   9.02  pay/base-1 -2.265±0.115
+     price_only eps  -6.673±1.042 bp sd  17.01  pay/base-1 -1.392±0.217
+bal/random             h_b   +16.2  vi_bo    1709 vo_bi  18271 amp p99/max 2.93/303.44
+     spec       eps  +1.415±0.196 bp sd   3.20  pay/base-1 +0.295±0.041
+     rep        eps  +0.285±0.275 bp sd   4.49  pay/base-1 +0.060±0.057
+     a_tw       eps  +0.288±0.259 bp sd   4.23  pay/base-1 +0.060±0.054
+     b_seg      eps  +0.006±0.081 bp sd   1.32  pay/base-1 +0.001±0.017
+     dS_price   eps  -0.448±0.287 bp sd   4.69  pay/base-1 -0.093±0.060
+     dS_full    eps  -0.680±0.308 bp sd   5.02  pay/base-1 -0.142±0.064
+     price_only eps  -0.711±0.708 bp sd  11.56  pay/base-1 -0.148±0.148
+lvr>fee/mimic          h_b   -31.0  vi_bo       0 vo_bi      0 amp p99/max 2.82/53.03
+     spec       eps  -0.027±0.076 bp sd   1.24  pay/base-1 -0.006±0.016
+     rep        eps  -1.544±0.133 bp sd   2.17  pay/base-1 -0.322±0.028
+     a_tw       eps  -2.025±0.135 bp sd   2.21  pay/base-1 -0.422±0.028
+     b_seg      eps  -1.640±0.084 bp sd   1.37  pay/base-1 -0.342±0.017
+     dS_price   eps  -1.769±0.537 bp sd   8.76  pay/base-1 -0.369±0.112
+     dS_full    eps  -1.779±0.533 bp sd   8.70  pay/base-1 -0.371±0.111
+     price_only eps  -0.132±0.106 bp sd   1.73  pay/base-1 -0.028±0.022
+lvr>fee/mimic_noswap   h_b   -23.8  vi_bo       0 vo_bi  12084 amp p99/max 2.82/139.88
+     spec       eps  +0.305±0.042 bp sd   0.68  pay/base-1 +0.064±0.009
+     rep        eps  -0.010±0.063 bp sd   1.03  pay/base-1 -0.002±0.013
+     a_tw       eps  -0.177±0.063 bp sd   1.03  pay/base-1 -0.037±0.013
+     b_seg      eps  -0.084±0.033 bp sd   0.53  pay/base-1 -0.018±0.007
+     dS_price   eps  -0.378±0.295 bp sd   4.82  pay/base-1 -0.079±0.062
+     dS_full    eps  -0.377±0.293 bp sd   4.78  pay/base-1 -0.079±0.061
+     price_only eps  +0.263±0.054 bp sd   0.89  pay/base-1 +0.055±0.011
+lvr>fee/idle           h_b   -15.5  vi_bo       0 vo_bi  45060 amp p99/max 0.00/0.00
+     spec       eps  -0.000±0.000 bp sd   0.00  pay/base-1 -0.000±0.000
+     rep        eps  -0.000±0.000 bp sd   0.00  pay/base-1 -0.000±0.000
+     a_tw       eps  -0.000±0.000 bp sd   0.00  pay/base-1 -0.000±0.000
+     b_seg      eps  -0.000±0.000 bp sd   0.00  pay/base-1 -0.000±0.000
+     dS_price   eps  -0.000±0.000 bp sd   0.00  pay/base-1 -0.000±0.000
+     dS_full    eps  -0.000±0.000 bp sd   0.00  pay/base-1 -0.000±0.000
+     price_only eps  -0.000±0.000 bp sd   0.00  pay/base-1 -0.000±0.000
+lvr>fee/wide           h_b   -23.6  vi_bo    5612 vo_bi      0 amp p99/max 2.82/3.78
+     spec       eps  -1.850±0.170 bp sd   2.77  pay/base-1 -0.386±0.035
+     rep        eps  -2.366±0.178 bp sd   2.90  pay/base-1 -0.494±0.037
+     a_tw       eps  -2.365±0.178 bp sd   2.90  pay/base-1 -0.493±0.037
+     b_seg      eps  -1.450±0.054 bp sd   0.88  pay/base-1 -0.302±0.011
+     dS_price   eps  -1.328±0.192 bp sd   3.14  pay/base-1 -0.277±0.040
+     dS_full    eps  -1.336±0.190 bp sd   3.11  pay/base-1 -0.279±0.040
+     price_only eps  -7.723±0.742 bp sd  12.11  pay/base-1 -1.611±0.155
+lvr>fee/narrow         h_b   -27.1  vi_bo       0 vo_bi  13027 amp p99/max 3.77/303.60
+     spec       eps  -0.036±0.198 bp sd   3.23  pay/base-1 -0.008±0.041
+     rep        eps  -1.460±0.214 bp sd   3.49  pay/base-1 -0.305±0.045
+     a_tw       eps  -2.004±0.140 bp sd   2.29  pay/base-1 -0.418±0.029
+     b_seg      eps  -2.051±0.127 bp sd   2.07  pay/base-1 -0.428±0.026
+     dS_price   eps  -2.923±0.592 bp sd   9.67  pay/base-1 -0.610±0.124
+     dS_full    eps  -2.960±0.589 bp sd   9.61  pay/base-1 -0.617±0.123
+     price_only eps  +0.427±0.211 bp sd   3.45  pay/base-1 +0.089±0.044
+lvr>fee/offset         h_b   -29.3  vi_bo    1899 vo_bi   6510 amp p99/max 2.95/102.41
+     spec       eps  -1.272±0.327 bp sd   5.33  pay/base-1 -0.265±0.068
+     rep        eps  -2.548±0.330 bp sd   5.39  pay/base-1 -0.531±0.069
+     a_tw       eps  -2.762±0.312 bp sd   5.10  pay/base-1 -0.576±0.065
+     b_seg      eps  -1.897±0.106 bp sd   1.73  pay/base-1 -0.396±0.022
+     dS_price   eps  -2.577±0.596 bp sd   9.73  pay/base-1 -0.537±0.124
+     dS_full    eps  -2.536±0.593 bp sd   9.68  pay/base-1 -0.529±0.124
+     price_only eps  -6.672±1.155 bp sd  18.87  pay/base-1 -1.392±0.241
+lvr>fee/random         h_b   -21.1  vi_bo    1753 vo_bi  18125 amp p99/max 3.25/141.33
+     spec       eps  -0.376±0.301 bp sd   4.91  pay/base-1 -0.079±0.063
+     rep        eps  -0.643±0.301 bp sd   4.92  pay/base-1 -0.134±0.063
+     a_tw       eps  -0.648±0.228 bp sd   3.72  pay/base-1 -0.135±0.048
+     b_seg      eps  -0.043±0.073 bp sd   1.18  pay/base-1 -0.009±0.015
+     dS_price   eps  -0.415±0.345 bp sd   5.63  pay/base-1 -0.086±0.072
+     dS_full    eps  -0.434±0.340 bp sd   5.54  pay/base-1 -0.090±0.071
+     price_only eps  -2.567±0.798 bp sd  13.02  pay/base-1 -0.535±0.166

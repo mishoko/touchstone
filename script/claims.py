@@ -44,6 +44,9 @@ def test_text(root):
     return '\n'.join(open(p).read() for p in files)
 
 
+# Rows whose spec §10 pass cell is "reported" (s27 P6 design review S27P6D-05/08): a result with verdict REPORTED
+# covers them (each listed item present, a value or `not_run`), and on no other ID does REPORTED cover anything.
+REPORTED_ROWS = ('E8', 'E9')
 NO_SUCCESSOR = ('U-IC', 'E0', 'E0a', 'E0b')   # run-once rows: a FAIL is final (s23 S23D2-01; s24 panel D7, D8)
 # Rows of the earlier configuration (edge-6h reference policy; the τ-based ledger) that failed and are final (spec
 # §14 #193 D7). They are never met; while each carries its published final negative result, it is reported on the same
@@ -96,6 +99,8 @@ def eval_passed(path):
         r = json.load(open(path))
         if r.get('verdict') == 'PASS':
             return True
+        if r.get('verdict') == 'REPORTED':
+            return os.path.basename(path)[:-5] in REPORTED_ROWS
         sup = r.get('superseded_by')
         dec = r.get('decision')
         if os.path.basename(path)[:-5] in NO_SUCCESSOR:
@@ -164,6 +169,11 @@ def table_status(i, k, tests, miss, root):
     """The `--table` status of one row, by its kind (s24 S24F-07/S24F2-01: an eval row is covered only by a PASS
     result, never by a same-named test)."""
     if covered(i, tests, root, k):
+        rp = os.path.join(root, 'eval', 'results', i + '.json')
+        r = json.load(open(rp)) if k == 'eval' and os.path.exists(rp) else {}
+        if r.get('verdict') == 'REPORTED':
+            nr = sum(1 for v in (r.get('items') or {}).values() if isinstance(v, dict) and 'not_run' in v)
+            return f'REPORTED ({nr} not run)'
         return 'covered'
     if historical_failed(i, root):
         return 'failed, earlier configuration, final'
@@ -288,6 +298,17 @@ def selftest(rows):
         json.dump({'verdict': 'PASS'}, open(rp, 'w'))
         if unmet([('E0', 'P4', 'eval')], '', 'P4', d):
             errs.append('fixture: a PASS eval result must cover its ID')
+        # REPORTED covers only the rows whose pass cell is "reported" (S27P6D-05)
+        json.dump({'verdict': 'REPORTED'}, open(rp, 'w'))
+        if unmet([('E0', 'P4', 'eval')], '', 'P4', d) != ['E0']:
+            errs.append('fixture: REPORTED must not cover a row outside REPORTED_ROWS')
+        e8 = os.path.join(d, 'eval', 'results', 'E8.json')
+        json.dump({'verdict': 'REPORTED', 'items': {'a': {'value': 1}, 'b': {'not_run': 'x'}}}, open(e8, 'w'))
+        if unmet([('E8', 'P6', 'eval')], '', 'P6', d):
+            errs.append('fixture: REPORTED must cover E8')
+        if table_status('E8', 'eval', '', [], d) != 'REPORTED (1 not run)':
+            errs.append('fixture: the table must count the not-run items of a REPORTED row')
+        json.dump({'verdict': 'PASS'}, open(rp, 'w'))
         up = os.path.join(d, 'eval', 'results', 'U-IC.json')   # a test row with a FAIL result (S23D-04)
         json.dump({'verdict': 'FAIL', 'negative_result': True, 'decision': 'x'}, open(up, 'w'))
         if unmet([('U-IC', 'P5', 'test')], 'def test_U_IC__x():', 'P5', d) != ['U-IC']:

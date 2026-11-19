@@ -203,6 +203,26 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         assertEq(handler.realMintVests(), rv, "a vest after a seam is not counted");
     }
 
+    /// @notice S27F2-02: pay planted through `pend` alone (its non-bond reserve settles into a cohort that later vests)
+    ///         is never counted as a real-mint vest: `bankSeeds` stays 0, so only the `planted == 0` gate excludes it.
+    function test_P5_Ad_05__aPendPlantedVestIsNotCounted() public {
+        for (uint256 i; i < 3; ++i) handler.deposit(i, 5e22);
+        handler.refresh();
+        handler.pend(1e15, 1e14, 1e14, 1e21, 0); // bondPart 0: the whole reserve is planted, non-bond pay
+        for (uint256 i; i < 14; ++i) handler.advance(0);
+        handler.settle(); // the planted non-bond reserve enters a cohort
+        handler.place(3, 0, 1, 1); // in range, so the gate can open and the cohort can vest
+        assertEq(handler.bankSeeds(), 0, "precondition: no seedBank");
+        assertGt(handler.planted(), 0, "precondition: pend planted pay");
+        for (uint256 i; i < 400 && handler.vests() == 0; ++i) {
+            handler.advance(512);
+            handler.refresh();
+            handler.withdraw(i, 1e18 + i);
+        }
+        assertGt(handler.vests(), 0, "a vest happened");
+        assertEq(handler.realMintVests(), 0, "a vest after a pend seam is not counted");
+    }
+
     function test_I_15__everyNonVacuityCounterIsReachable() public {
         for (uint256 i; i < 3; ++i) handler.deposit(i, 5e22);
         for (uint256 k; k < 3; ++k) handler.seedBank(k, 1e20);

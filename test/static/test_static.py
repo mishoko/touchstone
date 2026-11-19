@@ -605,7 +605,8 @@ def test_F_056__mutate_deletes_the_counterexamples_a_mutant_run_writes_and_names
 
 # A guard: a custom-error or string revert, a `require`, a revert split from its error onto the next line, or a call
 # of the curator-check helper (each call site is its own guard; S27F-03).
-GUARD = re.compile(r'\brevert\s+[A-Za-z_][\w.]*\s*\(|\brevert\s*\(\s*"|\brequire\s*\(|\brevert\s*$|\b_onlyCurator\s*\(\s*\)\s*;')
+GUARD = re.compile(r'\brevert\s+[A-Za-z_][\w.]*\s*\(|\brevert\s*\(\s*"|\brevert\s*\(\s*\)|\brequire\s*\(|\brevert\s*$'
+                   r'|\b_onlyCurator\s*\(\s*\)\s*;')
 
 # Guards that carry no mutant, each with its reason (P5 code panel D2, F-057). Key: (file, the guard's code, a context
 # string that must appear in the guard's line or the three lines above it). Each entry must match exactly one guard.
@@ -635,16 +636,24 @@ GUARD_ALLOW = {
 
 
 def guard_scan(root, allow, muts):
-    """Returns (unbound, hits). Every guard in src/ (GUARD) must be bound to a mutant: some entry of `muts` for the same
-    file whose `find` holds one line (>= 8 characters) of the guard's statement as a whole line, or is (whitespace-normalised, >= 8 characters) a part
-    of the statement (a sub-expression mutant; an EQUIVALENT entry binds through its `anchors`), or
-    be on the allow-list. Tags are not counted (S27F-01: a tag proves nothing about which guard it mutates). `hits`
-    counts the guards each allow-list entry matched."""
-    finds = {}
+    """Returns (unbound, hits). Every guard in src/ (GUARD) must be bound to a mutant by POSITION (S27F2-01): some
+    entry of `muts` for the same file whose `find` (an EQUIVALENT entry: one of its `anchors`) occurs exactly once in
+    the file and whose occurrence overlaps the guard's statement lines; or be on the allow-list. Neither tags nor
+    equal text bind (two identical guard lines need two mutants). `hits` counts the guards each allow-list entry
+    matched."""
+    spans = {}
     for m in muts:
         for f, txt in ([(m.get('file'), m.get('find'))] + [(x.get('file'), x.get('find')) for x in m.get('anchors') or []]):
-            if f and txt:
-                finds.setdefault(f, []).append(txt)
+            if not f or not txt:
+                continue
+            fp = os.path.join(root, f)
+            src = open(fp).read() if os.path.isfile(fp) else ''
+            if src.count(txt) != 1:
+                continue
+            i = src.index(txt)
+            lo = src.count('\n', 0, i)
+            hi = lo + txt.rstrip('\n').count('\n')
+            spans.setdefault(f, []).append((lo, hi))
     bad, hits = [], {k: 0 for k in allow}
     for p in sorted(glob.glob(os.path.join(root, 'src', '**', '*.sol'), recursive=True)):
         rel = os.path.relpath(p, root)
@@ -652,7 +661,9 @@ def guard_scan(root, allow, muts):
         code = [l.split('//')[0] for l in lines]
         for i in range(len(lines)):
             c = code[i]
-            if not GUARD.search(c) or re.search(r'\bfunction\b', c):
+            if re.search(r'\bfunction\b', c):
+                c = c.split('{', 1)[1] if '{' in c else ''   # a guard inside a one-line body counts (S27F2-05)
+            if not GUARD.search(c):
                 continue
             s, e = i, i
             if re.search(r'\brevert\s*$', c):
@@ -663,17 +674,13 @@ def guard_scan(root, allow, muts):
             while s > 0 and code[s - 1].strip() and not re.search(r'[;{}]\s*$', code[s - 1].rstrip()) \
                     and not lines[s - 1].strip().startswith('//'):
                 s -= 1                                      # a multi-line condition
-            span = [lines[x].strip() for x in range(s, e + 1) if lines[x].strip()]
             g, ctx = lines[i].strip(), '\n'.join(lines[max(0, i - 3):i + 1])
             keys = [k for k in allow if k[0] == rel and k[1] == g and k[2] in ctx]
             for k in keys:
                 hits[k] += 1
             if keys:
                 continue
-            joined = ' '.join(span)
-            flines = {x.strip() for f in finds.get(rel, []) for x in f.split('\n') if len(x.strip()) >= 8}
-            if not any(ln in flines for ln in span) and \
-                    not any(len(f.strip()) >= 8 and ' '.join(f.split()) in joined for f in finds.get(rel, [])):
+            if not any(lo <= e and s <= hi for lo, hi in spans.get(rel, [])):
                 bad.append(f'{rel}:{i + 1}: {g}')
     return bad, hits
 
@@ -710,6 +717,16 @@ def test_F_057__every_src_guard_has_a_mutant_or_an_allow_list_reason():
         found, hits = guard_scan(d, allow, mu)
         assert found == [], found
         assert all(n == 1 for n in hits.values()), hits
+        # S27F2-01/05: equal text does not bind (the second identical guard needs its own mutant); `revert()` and a
+        # guard in a one-line function body are seen
+        open(os.path.join(d, 'src', 'Y.sol'), 'w').write(
+            'contract Y {\n  function f(uint a) external {\n    // [MU-903] first\n    if (a == 0) revert Z();\n'
+            '    if (a == 0) revert Z();\n    if (a == 9) revert();\n  }\n'
+            '  function g(uint a) external view { if (a == 3) revert Q(); }\n}\n')
+        found, _ = guard_scan(d, allow, mu + [{'file': 'src/Y.sol', 'find': '    // [MU-903] first\n    if (a == 0) revert Z();\n'}])
+        ys = [b for b in found if b.startswith('src/Y.sol')]
+        assert ys == ['src/Y.sol:5: if (a == 0) revert Z();', 'src/Y.sol:6: if (a == 9) revert();',
+                      'src/Y.sol:8: function g(uint a) external view { if (a == 3) revert Q(); }'], ys
 
 
 if __name__ == '__main__':

@@ -1,0 +1,77 @@
+{
+ "id": "E7",
+ "question": "gas and size",
+ "pass_rule": "budgets",
+ "verdict": "PASS",
+ "data": "foundry (local) and fork (chain 1, block 26443420, for G-1b)",
+ "sizes_runtime_bytes": {
+  "CuratorBundler": 9189,
+  "ExecLedger": 7716,
+  "FeeBank": 4394,
+  "Ladder": 57,
+  "LiquidityValue": 57,
+  "MedianOracle": 57,
+  "Placement": 57,
+  "TouchstoneFactory": 6416,
+  "TouchstoneHook": 14329,
+  "TouchstoneVault": 19877,
+  "TouchstoneVaultExtension": 15046
+ },
+ "size_limit_bytes": 22000,
+ "size_errors": [],
+ "gas": {
+  "G-1 first swap per block": {
+   "gas": 26742,
+   "budget": 30000,
+   "ok": true
+  },
+  "G-1 grid-boundary block without a read": {
+   "gas": 28679,
+   "budget": 30000,
+   "ok": true
+  },
+  "G-1b refresh block, fork, full ring 65,535": {
+   "gas": 185117,
+   "budget": 314126,
+   "ok": true
+  },
+  "G-1b refresh block, fork, live cardinality 723": {
+   "gas": 160279,
+   "budget": 314126,
+   "ok": true
+  },
+  "G-2 later swap in the block": {
+   "gas": 4862,
+   "budget": 6000,
+   "ok": true
+  },
+  "G-3 poke (3 breaches, freeze, settle, gap roll, witness)": {
+   "gas": 627266,
+   "budget": 700000,
+   "ok": true
+  },
+  "G-3 poke (vest, mint, settle, gap roll, witness)": {
+   "gas": 615122,
+   "budget": 700000,
+   "ok": true
+  },
+  "G-4 setPositions worst case": {
+   "gas": 871306,
+   "budget": 1200000,
+   "ok": true
+  },
+  "G-4 rebalanceSwap worst case": {
+   "gas": 660338,
+   "budget": 1200000,
+   "ok": true
+  }
+ },
+ "evidence": {
+  "snapshots/TouchstoneHook.json": "b56d9fd02dd068bddf44629a33a9af09774f7b476413ea165f738474a9a06e29",
+  "snapshots/TouchstoneVault.json": "d12c34460f4098d9394f10e7fd9de61fe1bb99feb493c64d2dee6e260729ed2c",
+  "eval/supplements/E7/fork-pin-26443420.json": "32f0a529392c156bef5408ab04462b50e415b4b71bdc969c41da69ea7527d8da"
+ },
+ "limits": "G-1b was measured on the fork in s22; src/ has changed since only in comments (mutant tags) and is byte-identical in runtime apart from the metadata hash; the anvil deploy check runs in ci-local",
+ "commit_public": "5744424105607c8911f8ab4cac96a1515f904b69",
+ "commit_internal": "b9bd502ee1ab3c38ca04792e8a0bbc90864e3918"
+}

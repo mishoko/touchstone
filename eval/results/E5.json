@@ -1,0 +1,520 @@
+{
+ "id": "E5",
+ "question": "every attack cell",
+ "pass_rule": "<= 0, with a positive control > 0",
+ "verdict": "PASS",
+ "rule_applied": "every attack test of every cell passes (each asserts the attack does not profit) and every cell has a passing positive control (a control test, or the named inline assertion)",
+ "data": "foundry (the shipped contracts; mainnet fork for the K-ref costs, block 26443420)",
+ "cells": {
+  "M_10": {
+   "tests": 7,
+   "passed": 7,
+   "controls": [
+    {
+     "test": "test_M_10__ctlAnInstantBurnReachesHoldersAtProcessing",
+     "passed": true
+    },
+    {
+     "test": "test_M_10__ctlInstantBurnLetsTheSameBlockSnipeProfit",
+     "passed": true
+    },
+    {
+     "test": "test_M_10__ctlSnipeHeldThroughTheDripGainsItsTimeWeightedShare",
+     "passed": true
+    }
+   ],
+   "logs": {
+    "ctlAnInstantBurnReachesHoldersAtProcessing": [
+     "M-10 control, minted before the forfeit",
+     "154929577464788732"
+    ],
+    "ctlInstantBurnLetsTheSameBlockSnipeProfit": [
+     "M-10 control, instant burn pct 1",
+     "18003273322422258",
+     "M-10 control, instant burn pct 5",
+     "83969465648854960",
+     "M-10 control, instant burn pct 10",
+     "154929577464788732",
+     "M-10 control, instant burn pct 50",
+     "478260869565217390"
+    ],
+    "ctlSnipeHeldThroughTheDripGainsItsTimeWeightedShare": [
+     "M-10 control, held through the drip",
+     "154929577464788732"
+    ],
+    "depositBeforeAPendingBaseMintIsPricedAfterIt": [
+     "M-10 lane B deposit pct 1",
+     "-4",
+     "M-10 lane B deposit pct 5",
+     "-4",
+     "M-10 lane B deposit pct 10",
+     "-4",
+     "M-10 lane B deposit pct 50",
+     "-4"
+    ],
+    "forfeitSnipeInTheSameBlockLoses": [
+     "M-10 lane A same-block pct 1",
+     "0",
+     "M-10 lane A same-block pct 5",
+     "0",
+     "M-10 lane A same-block pct 10",
+     "0",
+     "M-10 lane A same-block pct 50",
+     "0"
+    ],
+    "withdrawBeforeAPendingBaseMintCannotEscapeIt": [
+     "M-10 lane B pct 1",
+     "849015638",
+     "M-10 lane B pct 5",
+     "4245078186",
+     "M-10 lane B pct 10",
+     "8490156371",
+     "M-10 lane B pct 50",
+     "42450781846"
+    ]
+   },
+   "positive_control": "control test",
+   "ok": true
+  },
+  "M_1": {
+   "tests": 2,
+   "passed": 2,
+   "controls": [
+    {
+     "test": "test_M_1__ctlReferenceFollowingThePushProfits",
+     "passed": true
+    }
+   ],
+   "logs": {
+    "sameBlockPushAtTheValuationPointLoses": [
+     "M-1 rows acted (no swap, pre-swap, rebalanceSwap) of 20 each 20 20 20",
+     "M-1 rows whose vault swap filled (pre-swap, rebalanceSwap) 20 20"
+    ]
+   },
+   "positive_control": "control test",
+   "ok": true
+  },
+  "M_2": {
+   "tests": 2,
+   "passed": 2,
+   "controls": [
+    {
+     "test": "test_M_2__ctlReferenceFollowingAHeldPushProfits",
+     "passed": true
+    }
+   ],
+   "logs": {},
+   "positive_control": "control test",
+   "ok": true
+  },
+  "M_2b": {
+   "tests": 3,
+   "passed": 3,
+   "controls": [
+    {
+     "test": "test_M_2b__ctlReferenceFollowingTheThinPoolProfits",
+     "passed": true
+    }
+   ],
+   "logs": {},
+   "positive_control": "control test",
+   "ok": true
+  },
+  "M_2d": {
+   "tests": 12,
+   "passed": 12,
+   "controls": [
+    {
+     "test": "test_M_2d__ctlGriefWithoutReAlignmentProfits",
+     "passed": true
+    },
+    {
+     "test": "test_M_2d__ctlGuardOffProfits",
+     "passed": true
+    },
+    {
+     "test": "test_M_2d__ctlLagLaneWithoutMarkoutProfits",
+     "passed": true
+    }
+   ],
+   "logs": {
+    "ctlGriefWithoutReAlignmentProfits": [
+     "M-2d grief control: griefer net (wei) 85786424701408661"
+    ],
+    "ctlGuardOffProfits": [
+     "M-2d guard-off control net (wei) 2292595806632145772"
+    ],
+    "ctlLagLaneWithoutMarkoutProfits": [
+     "M-2d lag-lane control: best net (wei) 182668154910845142"
+    ],
+    "lagLaneGridLoses": [
+     "M-2d lag grid: rows acted and charged 64 of 72"
+    ],
+    "oneShotRowsAct": [
+     "M-2d one-shot rows acted and charged of 36 24"
+    ],
+    "pinnedPythonM2dcRow1": [
+     "m2dc #1 net (wei) -396857928668342"
+    ],
+    "pinnedPythonM2dcRow2": [
+     "m2dc #2 net (wei) -528127662"
+    ],
+    "pinnedPythonWorstLagRows": [
+     "m2dc lag row net (wei) -561569592935800",
+     "m2dc lag row net (wei) -561569592935800",
+     "m2dc lag row net (wei) -561569592935800"
+    ],
+    "pinnedPythonWorstOneShotRow": [
+     "m2d #1 net (wei) -2442056592894208",
+     "m2d #1 net (wei) -2819757493369712",
+     "m2d #1 net (wei) -4708259550852499",
+     "m2d #1 net (wei) -9996065434048644",
+     "m2d #1 net (wei) -25104082810741915"
+    ]
+   },
+   "positive_control": "control test",
+   "ok": true
+  },
+  "M_3": {
+   "tests": 3,
+   "passed": 3,
+   "controls": [
+    {
+     "test": "test_M_3__ctlFeeLinkedPayProfits",
+     "passed": true
+    }
+   ],
+   "logs": {
+    "ctlFeeLinkedPayProfits": [
+     "M-3 control net (wei) 1922845536292427"
+    ]
+   },
+   "positive_control": "control test",
+   "ok": true
+  },
+  "M_5b": {
+   "tests": 3,
+   "passed": 3,
+   "controls": [
+    {
+     "test": "test_M_5b__ctlNoCollectFirstUndercharges",
+     "passed": true
+    }
+   ],
+   "logs": {
+    "ctlNoCollectFirstUndercharges": [
+     "M-5b control: charge, realised loss 0 2462740995873646"
+    ],
+    "pinnedFeeRichReRatio": [
+     "M-5b: charge, realised loss 3326500186678622 2462740995873646"
+    ]
+   },
+   "positive_control": "control test",
+   "ok": true
+  },
+  "M_7": {
+   "tests": 2,
+   "passed": 2,
+   "controls": [
+    {
+     "test": "test_M_7__controlNaiveVaultProfits",
+     "passed": true
+    }
+   ],
+   "logs": {},
+   "positive_control": "control test",
+   "ok": true
+  },
+  "M_ADV1": {
+   "tests": 4,
+   "passed": 4,
+   "controls": [
+    {
+     "test": "test_M_ADV1__ctlNoWidthRuleAdmitsANeedle",
+     "passed": true
+    }
+   ],
+   "logs": {
+    "ctlNoWidthRuleAdmitsANeedle": [
+     "M-ADV1 control: needle beta (1e18 = 1) 97565657934171250207"
+    ],
+    "edgePlacementReachesTheBound": [
+     "M-ADV1 edge placement beta (1e18 = 1) 1024483889107030290"
+    ]
+   },
+   "positive_control": "control test",
+   "ok": true
+  },
+  "M_ADV3": {
+   "tests": 7,
+   "passed": 7,
+   "controls": [
+    {
+     "test": "test_M_ADV3__ctlReferenceFollowingThePushProfits",
+     "passed": true
+    }
+   ],
+   "logs": {
+    "ctlReferenceFollowingThePushProfits": [
+     "M-ADV3 control net (wei) 27258132313148968"
+    ],
+    "gridLoses": [
+     "M-ADV3 grid: rows acted and charged 48 of 144"
+    ],
+    "pinnedPythonWorstRow1": [
+     "adv3 #1 net (wei) -1464480666622579"
+    ],
+    "pinnedPythonWorstRow1PreSwap": [
+     "adv3 #1 pre-swap net (wei) -1158297431224887"
+    ],
+    "pinnedPythonWorstRow3": [
+     "adv3 #3 net (wei) -1295762877309319"
+    ]
+   },
+   "positive_control": "control test",
+   "ok": true
+  },
+  "M_ADV3_move": {
+   "tests": 10,
+   "passed": 10,
+   "controls": [
+    {
+     "test": "test_M_ADV3_move__ctlS14SettlementProfitsPerDraw",
+     "passed": true
+    },
+    {
+     "test": "test_M_ADV3_move__ctlUncappedMoveProfits",
+     "passed": true
+    },
+    {
+     "test": "test_M_ADV3_move__ctlUncountedMovesPassTheEpochCap",
+     "passed": true
+    }
+   ],
+   "logs": {
+    "bothWorldsOvershootReported": [
+     "M-ADV3-move both worlds overshooting: uncapped rows 119",
+     "604977450049590"
+    ],
+    "ctlS14SettlementProfitsPerDraw": [
+     "M-ADV3-move control (s14 settlement): best uncapped net (wei) 10256422213972351"
+    ],
+    "ctlUncappedMoveProfits": [
+     "control: reserve 691665739262307252",
+     "M-ADV3-move control: net, depositors' loss (wei) 1547581067878526874 1544888274124931700"
+    ],
+    "offLegStopsReported": [
+     "M-ADV3-move off-leg stops (mk +/- 3): uncapped rows 238",
+     "worst net, the arbitrage's side / past the market (wei):",
+     "-392374317743147",
+     "231001701772917"
+    ],
+    "oneMovePinned": [
+     "M-ADV3-move 1.9% / 12 ticks: net (wei) -27220811618879514",
+     "depositors' loss, reserve 0 691665739262307252"
+    ],
+    "perDrawUncappedOnLegLoses": [
+     "M-ADV3-move size 1000000000000000: break-even markout, adverse / favourable (0: none to 600) 240 / 0",
+     "M-ADV3-move size 10000000000000000: break-even markout, adverse / favourable (0: none to 600) 180 / 0",
+     "M-ADV3-move size 19000000000000000: break-even markout, adverse / favourable (0: none to 600) 150 / 0",
+     "M-ADV3-move uncapped on-leg rows 2103",
+     "worst uncapped net (wei) -118359848765498",
+     "worst capped net (wei; the disclosed tail) 934793194607487998"
+    ],
+    "protocolFeeStopsReported": [
+     "M-ADV3-move protocol-fee stops: uncapped rows 119",
+     "4097169626153024"
+    ]
+   },
+   "positive_control": "control test",
+   "ok": true
+  },
+  "M_N1": {
+   "tests": 2,
+   "passed": 2,
+   "controls": [],
+   "logs": {
+    "parkingWhileTheCacheLagsIsBoundedByItsInRangeTime": [
+     "M-N1 lane B pct-index, tau_v credit, cache-in-range blocks, 2*GRID 0 53 53",
+     "231405920633778",
+     "M-N1 lane B pct-index, tau_v credit, cache-in-range blocks, 2*GRID 1 53 53",
+     "231405920633779",
+     "M-N1 lane B pct-index, tau_v credit, cache-in-range blocks, 2*GRID 2 33 33",
+     "144082931715371",
+     "M-N1 lane B pct-index, tau_v credit, cache-in-range blocks, 2*GRID 3 13 13",
+     "56759942796961"
+    ],
+    "pushOrParkWithTheReferenceOutEarnsNothingAndLoses": [
+     "M-N1 lane A up/pct-index/park 0 0 0",
+     "-4",
+     "M-N1 lane A up/pct-index/park 0 0 1",
+     "-557286296712404188",
+     "M-N1 lane A up/pct-index/park 0 1 0",
+     "-4",
+     "M-N1 lane A up/pct-index/park 0 1 1",
+     "-547000518380607954",
+     "M-N1 lane A up/pct-index/park 0 2 0",
+     "-4",
+     "M-N1 lane A up/pct-index/park 0 2 1",
+     "-535187835691128274"
+    ]
+   },
+   "positive_control": "inline: test/manipulation/MN1.t.sol:135 (parking earns tau_v and base at the tier m: credit > 0)",
+   "ok": true
+  },
+  "M_N2": {
+   "tests": 4,
+   "passed": 4,
+   "controls": [],
+   "logs": {
+    "aMintAtALowNavPerShareEarnsOnlyTheVaultsReturnOnTheBase": [
+     "M-N2 mint at -1500: amount, worth at 0, vault return on it 933917474035 1037653472883 1037653472883"
+    ],
+    "flowsRebaseNav0ProRata": [
+     "M-N2 NAV0 before, after flows 2199999999999999996 3299999999999982163"
+    ],
+    "forcedCheckpointsNeitherRaiseNorEscapeTheBase": [
+     "M-N2 base: single, forced, deferred 1545633419529 1545633419506 1358849924702",
+     "M-N2 base: hook-only on the failing schedule 1358849924722"
+    ]
+   },
+   "positive_control": "inline: test/manipulation/MN2.t.sol:122 and :184 (one more in-range step moves the base amount; the timing gain is visible to the measure)",
+   "ok": true
+  },
+  "M_N3": {
+   "tests": 1,
+   "passed": 1,
+   "controls": [],
+   "logs": {
+    "oscillationCannotForgeTheLedgerAndLoses": [
+     "M-N3 forgery cost: lane 1 loss per round trip (token1 units) 588418822603826569",
+     "M-N3 forgery cost: lane 2 loss per block of tau_v moved 588423188753283311",
+     "M-N3 lane 2: frozen boundary medians moved / in the window 3 4",
+     "M-N3 forgery cost: lane 2 loss per boundary median moved 7845642516710444150"
+    ]
+   },
+   "positive_control": "inline: test/manipulation/MN3.t.sol:99 (a forgery cell: the frozen-median comparison discriminates)",
+   "ok": true
+  },
+  "M_N4": {
+   "tests": 6,
+   "passed": 6,
+   "controls": [
+    {
+     "test": "test_M_N4__ctlReferenceFollowingThePushProfits",
+     "passed": true
+    }
+   ],
+   "logs": {
+    "ctlReferenceFollowingThePushProfits": [
+     "M-N4 control net (wei) 15462104634183963"
+    ],
+    "gridLoses": [
+     "M-N4 state 0 rows acted and charged 27",
+     "max net (wei) -11789874218719271",
+     "M-N4 state 1 rows acted and charged 36",
+     "max net (wei) 0",
+     "M-N4 state 2 rows acted and charged 27",
+     "max net (wei) 0"
+    ],
+    "pinnedPythonWorstRow1": [
+     "n4 #1 net (wei) -2442056592894208"
+    ],
+    "pinnedPythonWorstRow2": [
+     "n4 #2 net (wei) -2698173725677137"
+    ],
+    "pinnedPythonWorstRow3": [
+     "n4 #3 net (wei) -2989733769164281"
+    ]
+   },
+   "positive_control": "control test",
+   "ok": true
+  },
+  "M_N4edge": {
+   "tests": 5,
+   "passed": 5,
+   "controls": [
+    {
+     "test": "test_M_N4edge__ctlReferenceFollowingThePushProfits",
+     "passed": true
+    }
+   ],
+   "logs": {
+    "ctlReferenceFollowingThePushProfits": [
+     "M-N4edge control net (wei) 62683507020470843"
+    ],
+    "pinnedPythonWorstRow1": [
+     "n4edge #1 net (wei) -336746675775323"
+    ],
+    "pinnedPythonWorstRow2": [
+     "n4edge #2 net (wei) -336746675775323"
+    ],
+    "pinnedPythonWorstRow3": [
+     "n4edge #3 net (wei) -677317400"
+    ]
+   },
+   "positive_control": "control test",
+   "ok": true
+  },
+  "M_snipe_forfeit": {
+   "tests": 3,
+   "passed": 3,
+   "controls": [
+    {
+     "test": "test_M_snipe_forfeit__ctlInstantBurnProfits",
+     "passed": true
+    }
+   ],
+   "logs": {
+    "breachLaneGainsAtMostTheTimeWeightedShare": [
+     "breach 120 1 0",
+     "0",
+     "breach 120 1 30",
+     "2789046653144016",
+     "breach 120 1 60",
+     "6387921022067362",
+     "breach 120 1 140",
+     "18003273322422258",
+     "breach 120 10 0",
+     "0",
+     "breach 120 10 30",
+     "25345622119815668"
+    ],
+    "ctlInstantBurnProfits": [
+     "control, instant burn, lane 0",
+     "154929577464788732",
+     "control, instant burn, lane 1",
+     "153856806536490790"
+    ],
+    "retireLaneGainsAtMostTheTimeWeightedShare": [
+     "retire 120 1 0",
+     "0",
+     "retire 120 1 30",
+     "2785550240194160",
+     "retire 120 1 60",
+     "6369609338271548",
+     "retire 120 1 140",
+     "17858578064972432",
+     "retire 120 10 0",
+     "0",
+     "retire 120 10 30",
+     "25316744143651444"
+    ]
+   },
+   "positive_control": "control test",
+   "ok": true
+  }
+ },
+ "python_cells_reported": {
+  "lag_leak_L1_L2": "0.000% / 0.000% NAV/yr at sigma 60 / 120% (bounds 0.1 / 0.6), held-out seeds 300-499, s17 configuration; status-quo control 8.31% / 37.2%",
+  "grief_L4": "griefer net > 0 on 0 rows (s5/s17); control without re-alignment profits",
+  "adv3_phi_scaled": "ADV-3 under a phi = 10% charge earns about 10x base (control); under the 100% charge max net -2.9e9 wei"
+ },
+ "forge_log": {
+  "path": "eval/supplements/E5/forge-manipulation-s27.log",
+  "sha256": "426857fde5129416c13c164ec6c376f9539618250137f38e352c1b48ebac9c99"
+ },
+ "limits": "the cells are scripted attacks (with searched parameters) on a local pool, not an exhaustive search; the Python cells come from earlier configurations and are reported, not gated; MK-1 (a single builder holding the reference over the markout window) is outside the model",
+ "commit_public": "3e6f4e3cebcd1d6ec520a834760290ef75d69ea2",
+ "commit_internal": "6bbbad2808bd29e7ae27e4a3bb95f5a23c28a113"
+}

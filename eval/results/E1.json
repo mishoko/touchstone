@@ -1,0 +1,25 @@
+{
+ "id": "E1",
+ "question": "witness = a real position",
+ "pass_rule": "0 wei (measured)",
+ "verdict": "PASS",
+ "rule_applied": "exact equality (assertEq) of the witness fee leg and an independent reference position, on every fuzz run",
+ "data": "foundry (fuzzed swap sequences on a local pool)",
+ "numbers": {
+  "max_difference_wei": 0,
+  "fuzz_runs": 256,
+  "fuzz_seed": "0x5309",
+  "related_tests_passed": [
+   "test_F_4__failedRollIsFailSoft",
+   "test_F_4__witnessFallsBackToThePreviousEpochStartRef",
+   "test_F_4__witnessFeeLegEqualsA1e18ReferencePosition"
+  ]
+ },
+ "forge_log": {
+  "path": "eval/supplements/forge-s27-tests.log",
+  "sha256": "4ce521c2fd142aca0d9387e467e08c24a6e5cbc0b4b1141c523e9d8cf2a63839"
+ },
+ "limits": "synthetic swap sequences, not replay swaps; the fixed seed makes the run a regression check (fresh seeds go through script/explore.sh)",
+ "commit_public": "3e6f4e3cebcd1d6ec520a834760290ef75d69ea2",
+ "commit_internal": "6bbbad2808bd29e7ae27e4a3bb95f5a23c28a113"
+}

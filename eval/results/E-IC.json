@@ -1,0 +1,17 @@
+{
+ "id": "E-IC",
+ "question": "curator incentive compatibility on the replay: net and in-range share for lazy, edge60, delayed, centre per sigma bucket; the per-tier term sheet",
+ "pass_rule": "mimic > each lazy variant (lazy, lazy-under-ladder, lazy-quiet, lazy-silent, lazy-park, lazy-timed, lazy-keepalive), dodge and breach-reset in every bucket; term sheet published; curator p5 net >= 0 at sigma p90 and the depositor ceiling reported",
+ "verdict": "NOT_RUN",
+ "reason": "the 180-day historical replay was never fetched, and one historical path cannot carry the per-bucket paired inference the rule needs; no valid resampling scheme was registered before the data, so a run now could not be judged against the rule",
+ "synthetic_evidence": {
+  "id": "U-IC2",
+  "verdict": "PASS",
+  "path": "eval/results/U-IC2.json",
+  "sha256": "ac4efd0ceaeb554cbe22b31c5d5b0701cfad60f87523331cfa585f2de6fea45f",
+  "scope": "the same rule on synthetic 180-day paths (driftless GBM at sigma 40/60/120% and a hover path), held-out seeds 700-1099; not a replay and not relabelled as one"
+ },
+ "future_work": "a replay supplement: one 180-day USDC/WETH 0.05% path, point estimates per bot (net, in-range share, charges, actions), no verdict; the depositor ceiling as spec section 3.5 defines it (f_actual(mimic) - f_actual(never-re-placing lazy), no observer)",
+ "commit_public": "3e6f4e3cebcd1d6ec520a834760290ef75d69ea2",
+ "commit_internal": "6bbbad2808bd29e7ae27e4a3bb95f5a23c28a113"
+}

@@ -1,0 +1,33 @@
+Logs:
+  K-1 USDC->WETH 100e6: quote, out 56838866818656594 56838866818656594
+  K-1 WETH->USDC 0.05e18: quote, out 87894622 87894622
+
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 967.26ms (3.85s CPU time)
+
+Ran 4 tests for test/fork/KRefFork.t.sol:KRefForkTest
+[PASS] test_K_ref__deepPoolPushCostPerTick() (gas: 1555862)
+Logs:
+  K-ref L_deep (liquidity at the fork block) 4206649160438186480
+  201555
+  K-ref push t ticks; one-block hold (wei WETH); round trip (wei WETH); notional WETH in
+  10
+  47287434259515673
+  48194581335674452
+  48206177622825872344
+  K-ref push t ticks; one-block hold (wei WETH); round trip (wei WETH); notional WETH in
+  30
+  293532997083090678
+  148211068025651712
+  148320805281043613270
+  K-ref push t ticks; one-block hold (wei WETH); round trip (wei WETH); notional WETH in
+  60
+  1036938997510846941
+  298056741719404353
+  298500801449544719818
+  K-ref push t ticks; one-block hold (wei WETH); round trip (wei WETH); notional WETH in
+  120
+  3849146032575090155
+  595659311326953060
+  597435402739772098400
+
+[PASS] test_K_ref__fenceOnRealData() (gas: 126574355)

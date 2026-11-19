@@ -1,0 +1,282 @@
+{
+ "id": "E8",
+ "question": "operating numbers (spec \u00a710 row E8, itemised)",
+ "pass_rule": "reported",
+ "verdict": "REPORTED",
+ "items": {
+  "bond_exhaustion_sigma_120": {
+   "value": {
+    "actions": 23563,
+    "reverts": {},
+    "breached_paths": 0,
+    "fallbacks": 0
+   },
+   "source": "U-IC2 l3_form.l8 (eroding BOND_RATIO bond, solvency gate enforced, m 1%/yr)",
+   "data": "gbm-synthetic (U-IC2 held-out seeds 700-1099, mimic edge-12h, m 2.2%/yr, no observer, NAV 1000 ETH, gas 5 gwei)"
+  },
+  "liveness_share_at_shipped_bands": {
+   "value": {
+    "gbm-40": 1.0,
+    "gbm-60": 1.0,
+    "gbm-120": 1.0,
+    "hover-60": 1.0
+   },
+   "source": "U-IC2 l3_form.l8 blocked_share",
+   "data": "gbm-synthetic (U-IC2 held-out seeds 700-1099, mimic edge-12h, m 2.2%/yr, no observer, NAV 1000 ETH, gas 5 gwei)"
+  },
+  "suspect_segment_share": {
+   "not_run": "the suspect flag belongs to the allocation ledger (claim withdrawn, H); the simulation does not compute it"
+  },
+  "fence_blocking_share_REF_BAND_60": {
+   "value": {
+    "test-gbm-40": 1.1574074074074073e-07,
+    "test-gbm-60": 0.00024571759259259257,
+    "test-gbm-120": 0.06594907407407408,
+    "test-t3-40": 0.001209375,
+    "test-t3-60": 0.004868981481481481,
+    "test-t3-120": 0.055919328703703704
+   },
+   "source": "refband cell (30-day paths, 1-minute steps, held-out \"test\" keys), conservative column, REF_BAND 60",
+   "data": "gbm-synthetic and t3 (fat tails)"
+  },
+  "reference_charge_distribution": {
+   "value": {
+    "gbm-40": {
+     "charges_per_path_eth": 0.0767,
+     "charges_bps_of_nav_per_year": 1.56,
+     "actions_per_path": 21.1,
+     "settlement_extra_mean_frac_nav": 5.774932711630709e-07,
+     "settlement_extra_max_frac_nav": 2.6033953016570116e-05
+    },
+    "gbm-60": {
+     "charges_per_path_eth": 0.1947,
+     "charges_bps_of_nav_per_year": 3.95,
+     "actions_per_path": 31.9,
+     "settlement_extra_mean_frac_nav": 1.2268762763204965e-06,
+     "settlement_extra_max_frac_nav": 0.00011925329547842663
+    },
+    "gbm-120": {
+     "charges_per_path_eth": 0.7719,
+     "charges_bps_of_nav_per_year": 15.65,
+     "actions_per_path": 59.1,
+     "settlement_extra_mean_frac_nav": 5.068257380214674e-06,
+     "settlement_extra_max_frac_nav": 0.0005762161895756753
+    },
+    "hover-60": {
+     "charges_per_path_eth": 0.0377,
+     "charges_bps_of_nav_per_year": 0.76,
+     "actions_per_path": 4.1,
+     "settlement_extra_mean_frac_nav": 2.8932796046480908e-06,
+     "settlement_extra_max_frac_nav": 8.668493611587469e-05
+    }
+   },
+   "source": "U-IC2 per-path rows (eval/supplements/U-IC2-agg.json) and l3_form.honest_cost",
+   "data": "gbm-synthetic (U-IC2 held-out seeds 700-1099, mimic edge-12h, m 2.2%/yr, no observer, NAV 1000 ETH, gas 5 gwei)"
+  },
+  "lag_leak_per_sigma": {
+   "value": {
+    "sigma_60_pct_nav_per_year": 0.0,
+    "sigma_120_pct_nav_per_year": 0.0,
+    "bounds_pct_nav_per_year": [
+     0.1,
+     0.6
+    ],
+    "cycles_per_sigma": 600
+   },
+   "source": "row L1 (model/cells/m2d_rate.py) on held-out seeds 300-499, configuration of s17",
+   "data": "gbm-synthetic"
+  },
+  "swap_cap_binding_frequency": {
+   "value": {
+    "gbm-40": {
+     "mimic_SwapCap_reverts": 0,
+     "mimic_actions_per_path": 21.1,
+     "l8_reverts": {}
+    },
+    "gbm-60": {
+     "mimic_SwapCap_reverts": 0,
+     "mimic_actions_per_path": 31.9,
+     "l8_reverts": {}
+    },
+    "gbm-120": {
+     "mimic_SwapCap_reverts": 0,
+     "mimic_actions_per_path": 59.1,
+     "l8_reverts": {}
+    },
+    "hover-60": {
+     "mimic_SwapCap_reverts": 0,
+     "mimic_actions_per_path": 4.1,
+     "l8_reverts": {}
+    }
+   },
+   "source": "U-IC2 per-path rows and l3_form.l8 (mimic only)",
+   "data": "gbm-synthetic (U-IC2 held-out seeds 700-1099, mimic edge-12h, m 2.2%/yr, no observer, NAV 1000 ETH, gas 5 gwei)"
+  },
+  "p99_actions_per_epoch_per_tier": {
+   "not_run": "the simulation keeps per-path totals, not per-epoch series",
+   "per_path_mean_actions_per_epoch": {
+    "gbm-40": 0.82,
+    "gbm-60": 1.24,
+    "gbm-120": 2.3,
+    "hover-60": 0.16
+   }
+  },
+  "forfeiture_manipulation_cost_kref": {
+   "value": {
+    "per_block_measured": [
+     {
+      "push_ticks": 10,
+      "one_block_hold_weth": 0.0473,
+      "round_trip_weth": 0.0482,
+      "notional_weth": 48.2
+     },
+     {
+      "push_ticks": 30,
+      "one_block_hold_weth": 0.2935,
+      "round_trip_weth": 0.1482,
+      "notional_weth": 148.3
+     },
+     {
+      "push_ticks": 60,
+      "one_block_hold_weth": 1.0369,
+      "round_trip_weth": 0.2981,
+      "notional_weth": 298.5
+     },
+     {
+      "push_ticks": 120,
+      "one_block_hold_weth": 3.8491,
+      "round_trip_weth": 0.5957,
+      "notional_weth": 597.4
+     }
+    ],
+    "hold_24h_competitive_bound_weth": {
+     "10": 340.6,
+     "30": 2113.2,
+     "60": 7465.7,
+     "120": 27713.5
+    },
+    "hold_10min_twap_competitive_bound_weth": {
+     "10": 2.4,
+     "30": 14.7,
+     "60": 51.8,
+     "120": 192.5
+    },
+    "single_builder_bound": "about one round trip per push (the round_trip_weth column), if one builder wins every block of the hold and censors arbitrage on the reference pool (outside the model, spec \u00a75.1 MK-1)"
+   },
+   "source": "test_K_ref__deepPoolPushCostPerTick on the fork at block 26443420 (eval/supplements/E8/kref-fork-26443420.log)",
+   "data": "fork (per block, measured); holds = arithmetic",
+   "note": "an edge-placed vault keeps the reference near one edge, so a push of about 10 ticks can move its TWAP out of range; forcing a breach needs CURE_BLOCKS (7,200 blocks, 24 h) of observed time out"
+  },
+  "cheapest_legal_clock_reset": {
+   "value": {
+    "gbm-40": {
+     "breach_reset_charges_per_path_eth": 0.0154,
+     "breach_reset_actions_per_path": 3.21,
+     "charge_per_reset_eth": 0.00481,
+     "gas_per_placement_eth": 0.0022500000000000003
+    },
+    "gbm-60": {
+     "breach_reset_charges_per_path_eth": 0.0356,
+     "breach_reset_actions_per_path": 4.12,
+     "charge_per_reset_eth": 0.00864,
+     "gas_per_placement_eth": 0.0022500000000000003
+    },
+    "gbm-120": {
+     "breach_reset_charges_per_path_eth": 0.1538,
+     "breach_reset_actions_per_path": 6.3,
+     "charge_per_reset_eth": 0.02442,
+     "gas_per_placement_eth": 0.0022500000000000003
+    },
+    "hover-60": {
+     "breach_reset_charges_per_path_eth": 0.0117,
+     "breach_reset_actions_per_path": 0.16,
+     "charge_per_reset_eth": 0.07195,
+     "gas_per_placement_eth": 0.0022500000000000003
+    }
+   },
+   "source": "U-IC2 per-path rows, bot breach-reset (one real placement just before CURE)",
+   "data": "gbm-synthetic (U-IC2 held-out seeds 700-1099, mimic edge-12h, m 2.2%/yr, no observer, NAV 1000 ETH, gas 5 gwei)"
+  },
+  "curator_recapture_share_of_burns": {
+   "not_run": "needs the curator-held share at each burn; not instrumented"
+  },
+  "time_to_feasibility_one_sided_inventory": {
+   "not_run": "no cell measures it (R2d-10)"
+  },
+  "calendar_window_epoch_swap_cap": {
+   "value": {
+    "max_swapped_frac_nav_across_a_boundary": 0.1
+   },
+   "source": "closed form: MAX_SWAP_EPOCH (5% of NAV) per epoch, twice across one epoch boundary",
+   "data": "closed-form"
+  },
+  "rejected_design_numbers": {
+   "value": {
+    "skill_reimbursement_adv3_multiple_of_base": "about 10x base (ADV-3 under a phi-scaled charge)",
+    "carry_benchmark_random_curator_pay_above_base_pct": "see E9: +40 / +6 / -13",
+    "idle_curator_under_phi_10pct_x_base": [
+     -37.6,
+     3.4
+    ]
+   },
+   "source": "E9 and the ADV-3 phi-scaled control",
+   "data": "design-phase benchmark simulator"
+  },
+  "keepalive_pings_per_year_and_cost": {
+   "value": {
+    "gbm-40": {
+     "pings_per_path_year": 520.6,
+     "cost_eth_per_year": 0.2603
+    },
+    "gbm-60": {
+     "pings_per_path_year": 550.0,
+     "cost_eth_per_year": 0.275
+    },
+    "gbm-120": {
+     "pings_per_path_year": 847.5,
+     "cost_eth_per_year": 0.4238
+    },
+    "hover-60": {
+     "pings_per_path_year": 193.4,
+     "cost_eth_per_year": 0.0967
+    }
+   },
+   "source": "U-IC2 nonvacuity (pings), 100,000 gas per ping at 5 gwei (model/cells/sim.py)",
+   "data": "gbm-synthetic (U-IC2 held-out seeds 700-1099, mimic edge-12h, m 2.2%/yr, no observer, NAV 1000 ETH, gas 5 gwei)"
+  },
+  "gate_closed_share": {
+   "not_run": "the simulation does not count vest-gate closures"
+  },
+  "depositor_observer_break_even": {
+   "not_run": "no closed form was registered before this run; the observer environment numbers are in eval/supplements/U-IC2-observer.json"
+  }
+ },
+ "not_run_count": 6,
+ "evidence": {
+  "eval/results/U-IC2.json": "ac4efd0ceaeb554cbe22b31c5d5b0701cfad60f87523331cfa585f2de6fea45f",
+  "u_ic2_parts": [
+   {
+    "path": "output/uic2/part-700-200.json",
+    "sha256": "5692afd6263b930133a6d66c28656cff6b88e663fd762c7ce60386813b78d37e",
+    "commit": "f223b5dbfe59739383ea14974a31b7bb9433adf4",
+    "model_hash": "42d38a381c72287c",
+    "first": 700,
+    "n": 200
+   },
+   {
+    "path": "output/uic2/part-900-200.json",
+    "sha256": "c12f7fcefdda01a785083e1fd447df22bb77fe39f2cf4129de6db7ebe91b11ec",
+    "commit": "f223b5dbfe59739383ea14974a31b7bb9433adf4",
+    "model_hash": "42d38a381c72287c",
+    "first": 900,
+    "n": 200
+   }
+  ],
+  "eval/supplements/E8/kref-fork-26443420.log": "1adbe91c7b3eb15cb0c677d878121d0c6a137d42fb71fd78dae6c37085232c5f",
+  "eval/supplements/E8/refband.json": "f224c62bdc9ecbf436123ebe7104beb7abda587b829804f28d11d73f7bc0d182",
+  "eval/e8.py": "e4a39f2c1337b2adc8e40058c8567fb6f1d51dc6caf675a7a864df21d1ca9102"
+ },
+ "limits": "the U-IC2 per-path parts (two files, 670 MB) are not in the repository; their sha256 is recorded and eval/supplements/U-IC2-agg.json holds the aggregates used here; GBM items are synthetic paths with third-party depth 0 and gas at 5 gwei (a placeholder, not the replay window's p50); the lag leak is from the s17 configuration (before EDGE_DELAY 12 GRID); no item is from a historical replay",
+ "commit_public": "5744424105607c8911f8ab4cac96a1515f904b69",
+ "commit_internal": "b9bd502ee1ab3c38ca04792e8a0bbc90864e3918"
+}

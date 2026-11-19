@@ -29,6 +29,16 @@ rows = {r["id"]: r for r in man["results"]}
 app = (DIST / "app.js").read_text(encoding="utf-8")
 renderers = set(re.findall(r'^    "([A-Za-z0-9-]+)": function', app, re.M))
 
+# s28 fix review (F-01..F-03, m-06): no free-text data field is rendered verbatim (it carries internal identifiers);
+# the D1 E5 sentence and the testnet base rate are on the page
+html = (DIST / "index.html").read_text(encoding="utf-8")
+for field in ("fail_reason", "disclosed_unasserted_tails", "single_builder_bound", "d.fails", "d.note"):
+    check(field not in app, f"app.js renders the data field {field} verbatim")
+for word in ("§", "M_N1", "tau_v", "GRID_SEC", "cells.*"):
+    check(word not in app and word not in html, f"internal identifier on the page: {word}")
+check("cells have a control test that profits with the defence removed" in app, "E5: the D1 control sentence is missing")
+check("provisional base rate of 1% a year" in html, "testnet: the base rate note is missing")
+
 for path in sorted((ROOT / "eval" / "results").glob("*.json")):
     rid = path.stem
     check(rid in rows, f"{rid}: missing from the manifest")
@@ -48,7 +58,7 @@ for rid in ("U-IC", "E0", "E0a"):
     check(rows.get(rid, {}).get("section") == "history", f"{rid}: not in the history section")
 check(rows.get("U-IC2", {}).get("section") == "main", "U-IC2: not in the main table")
 check((DIST / "data" / man["deployments"]).exists(), "deployments file not copied")
-check("disclosed_unasserted_tails" in app, "app.js does not render E5 disclosed_unasserted_tails")
+check("reported_unasserted_tails_wei" in app and "parkingWhileTheCacheLagsIsBoundedByItsInRangeTime" in app, "app.js does not render the E5 tails (all four, incl. M-N1 lane B)")
 check(not re.search(r"<script[^>]+src=\"https?:", (DIST / "index.html").read_text()), "external script")
 
 if errors:

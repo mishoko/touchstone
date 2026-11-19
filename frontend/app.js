@@ -128,15 +128,18 @@
       var ok = cells.filter(function (c) { return c.ok; }).length;
       var controls = [];
       cells.forEach(function (c) { (c.controls || []).forEach(function (t) { controls.push(t.test); }); });
+      var withCtl = cells.filter(function (c) { return (c.controls || []).length > 0; }).length;
       return [p("Every asserted attack row nets ≤ 0 in " + ok + " of " + cells.length + " cells."),
-              el("p", { cls: "fail-text" }, ["Why FAIL: " + d.fail_reason + "."]),
+              p(withCtl + " cells have a control test that profits with the defence removed."),
+              el("p", { cls: "fail-text" }, ["Why FAIL: two cells have only inline sensitivity checks. " +
+                "The registered rule exempted one forgery cell alone."]),
               p("Under the rule as amended after the data: " + d.amended_rule_verdict + "."),
               tests(controls, controls.length + " control tests")];
     },
     "E6": function (d) {
       var t = vals(d.buckets).map(function (b) { return b.t; });
-      return [p("Churner minus reference curator: t = " + num(Math.max.apply(null, t), 0) +
-                " to " + num(Math.min.apply(null, t), 0) + " per bucket."),
+      return [p("Churning loses to the reference curator in every bucket."),
+              p("t-statistic " + num(Math.max.apply(null, t), 0) + " to " + num(Math.min.apply(null, t), 0) + "."),
               p("This follows from construction.")];
     },
     "E7": function (d) {
@@ -179,11 +182,12 @@
               p("The closure claim is withdrawn.")];
     },
     "U-IC": function (d) {
-      return (d.fails || []).map(p).concat([p("Published as failed. Never re-run.")]);
+      return [p("Earlier 6-hour reference policy."), p("Two comparisons failed at 120% volatility."),
+              p("Published as failed. Never re-run.")];
     },
     "E0": function (d) { return [p("Registered form failed."), p("Superseded by " + d.superseded_by + ".")]; },
     "E0a": function (d) { return [p("Amended form failed."), p("Published as a negative result.")]; },
-    "E0b-fit": function (d) { return [p("Fit data, no verdict."), p(d.note + ".")]; }
+    "E0b-fit": function (d) { return [p("Fit data, no verdict.")]; }
   };
 
   function renderRow(row, d) {
@@ -231,7 +235,7 @@
       el("thead", null, [el("tr", null, ["Push", "Hold one block", "Round trip", "Hold 24 h"].map(function (h, i) {
         return el("th", { scope: "col", cls: i ? "n" : "", text: h }); }))]),
       el("tbody", null, rows)]));
-    fig.appendChild(el("p", { cls: "note", text: "Single builder: " + v.single_builder_bound + "." }));
+    fig.appendChild(el("p", { cls: "note", text: "One builder that wins every block pays about one round trip. That case is outside the model." }));
   }
 
   // ---------- limits ----------
@@ -244,13 +248,20 @@
         id ? [el("a", { href: REPO + "eval/results/" + id + ".json", cls: "cite", text: "[" + id + "]" })] : [])));
     }
     var ll = docs.E8.items.lag_leak_per_sigma.value;
-    item("Lag leak.", ["It measured " + ll.sigma_60_pct_nav_per_year.toFixed(3) + "% of NAV a year at σ 60%.",
-      "It measured " + ll.sigma_120_pct_nav_per_year.toFixed(3) + "% at σ 120%.",
-      "Both are on held-out simulated paths.",
-      "It comes from an earlier configuration.",
-      "The repair holds in expectation, not on every draw."], "E8");
-    item("Reported, not asserted.", ["Some attack rows net a positive amount:",
-      el("q", { cls: "verbatim", text: docs.E5.disclosed_unasserted_tails })], "E5");
+    item("Lag leak.", ["Prices an action reads lag the market by a block.",
+      "A delayed settlement closes the gap in expectation, not on every draw.",
+      "Measured leak: " + ll.sigma_60_pct_nav_per_year.toFixed(3) + "% / " + ll.sigma_120_pct_nav_per_year.toFixed(3) +
+        "% of NAV a year at σ 60% / 120%, simulated, from an earlier configuration."], "E8");
+    var tw = {};
+    vals(docs.E5.cells).forEach(function (c) { var t = c.reported_unasserted_tails_wei || {}; Object.keys(t).forEach(function (k) { tw[k] = t[k]; }); });
+    function u(k) { return tw[k] == null ? "—" : "+" + num(tw[k] / 1e18, 5); }
+    item("Reported, not asserted.", ["Some attack rows net a positive amount. No test asserts them.",
+      "A markout past the settlement cap: " + u("perDrawUncappedOnLegLoses") + " (about 8e-4 of NAV).",
+      "A protocol fee switched on: " + u("protocolFeeStopsReported") + ".",
+      "Arbitrage stopping off the legs: up to " + u("bothWorldsOvershootReported") + ".",
+      "Parking while the cached reference lags: " + u("parkingWhileTheCacheLagsIsBoundedByItsInRangeTime") +
+        " per exit on the test tier; at most about 5e-6 of NAV per exit on mainnet.",
+      "Units: tokens in a test vault of about 1,150 NAV."], "E5");
     item("E-IC was not run.", ["No historical price path was fetched.",
       "The incentives result " + docs["E-IC"].synthetic_evidence.id + " is synthetic.",
       "It has no outside observer."], "E-IC");
@@ -321,6 +332,7 @@
         if (r.section === "main") {
           body.appendChild(renderRow(r, docs[r.id]));
           glance.appendChild(el("li", null, [el("a", { href: "#r-" + r.id, text: r.id }), " ", badgeEl(r.badge, r.verdict)]));
+          if (r.id === "E5") glance.appendChild(el("li", { cls: "note" }, ["Every asserted attack loses. Two controls are inline."]));
         } else {
           hist.appendChild(renderRow(r, docs[r.id]));
         }

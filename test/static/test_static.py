@@ -397,6 +397,22 @@ def test_tiers_literals_match_the_independent_reference_model():
     assert tier_mismatches(src.replace('t.EDGE_DELAY = 3600;', 't.EDGE_DELAY = 1800;'), ref), 'control'
 
 
+def test_U_IC2__observer_supplement_is_complete():
+    """The U-IC2 observer supplement (both mimics, every gated bot but lazy, bucket and simulated m) is complete; it is
+    the reported item the harness table lacked (s24); control: a dropped row is caught."""
+    sys.path.insert(0, os.path.join(ROOT, 'script'))
+    import uic2_observer
+    assert uic2_observer.check() == [], uic2_observer.check()
+    with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False) as t:
+        r = json.load(open(uic2_observer.OUT))
+        r['comparisons']['edge-12h']['gbm-120'].pop('dodge')
+        json.dump(r, t)
+    try:
+        assert uic2_observer.check(t.name) == [('edge-12h', 'gbm-120', 'dodge', m) for m in uic2_observer.MS]
+    finally:
+        os.remove(t.name)
+
+
 if __name__ == '__main__':
     tests = [v for k, v in sorted(globals().items()) if k.startswith('test_') and callable(v)]
     for t in tests:

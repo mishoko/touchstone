@@ -3,8 +3,8 @@
 ## Scope and trust model
 
 - **No admin, keeper, operator or off-chain feed.** The one external input is one immutable Uniswap v3 pool's
-  oracle (`observe`; never its `slot0`): the 10-minute TWAP, and a 120-second window after each curator action for the
-  markout settlement. Anyone can call `poke`, `processBreach`, `settle` and `snapshotIfNewBlock`.
+  oracle (`observe`; never its `slot0` price): the 10-minute TWAP, and a 120-second window after each curator action for the
+  markout settlement. Anyone can call `poke`, `processBreach`, `settle`, `refreshRef` and `snapshotIfNewBlock`.
 - **Block building is assumed competitive.** Each block in which an attacker holds the reference pool's price off the
   market costs it fees or that block's arbitrage value. Under that model the markout is safe up to the tier's NAV cap
   (1,850 WETH on the mainnet tier). A single builder that wins the action's block and every block of the window,
@@ -17,10 +17,12 @@
 
 ## Threats, mitigations and regression tests
 
-Tests are named `test_<ID>__<claim>` (dashes as underscores); the file column says where they live. Run one row with
-`forge test --mt 'test_<ID>__'`. An attack row ("M-") asserts that the attack loses money and has a positive control
-that profits with the defence removed, except N1 and N2, which have inline sensitivity checks (E5, FAIL by control form
-under its registered rule).
+Tests are named `test_<ID>__<claim>` or `invariant_<ID>__<claim>` (dashes as underscores); the file column says where
+they live. Run one row with `forge test --mt '_<ID>__'`. Fork tests (K-1, K-ref, gas) return early and print PASS when
+`MAINNET_RPC_URL` is unset; set it to run them. An attack row ("M-") asserts that the attack loses money and has a
+positive control that profits with the defence removed, except N1 and N2, which have inline sensitivity checks (E5,
+FAIL by control form under its registered rule), and N3, a forgery cell with an inline discrimination check;
+M-ADV3-move's and M-N1's reported rows are not asserted (open cells below).
 
 | # | Threat | Mitigation | Tests |
 |---|---|---|---|
@@ -31,7 +33,7 @@ under its registered rule).
 | R11-V | Vesting while out of range or after an unobserved absence | vest gate: fresh cache in range, live reference in range, no open gap | U-vest-gate (`test/unit/VaultCheckpoint.t.sol`, `VaultCheckpointLive.t.sol`), U-vest-park (`test/unit/VaultLadder.t.sol`) |
 | R11-O | Nobody observes, so an absence is not counted | observed time only; unobserved time earns no base and vests nothing | E8 (`eval/results/E8.json`); **open:** observer economics only partly measured |
 | N2 | Forced checkpoints to escape the malus | the base amount does not depend on segmentation (≤ 1 wei per segment); a mint timed for a low NAV per share earns only the vault's return on the base from that block (disclosed) | M-N2 (`test/manipulation/MN2.t.sol`) |
-| N3 | Forging the disclosure ledger by oscillation | endpoint LVR term; boundary medians move only at a measured cost (about 7.8 token units per moved median in the test vault); suspect and thin-pool flags | M-N3 (`test/manipulation/MN3.t.sol`) |
+| N3 | Forging the disclosure ledger by oscillation | endpoint LVR term; boundary medians move only at a measured cost (about 7.8 token units per moved median in the test vault, about 7e-3 of NAV); suspect and thin-pool flags | M-N3 (`test/manipulation/MN3.t.sol`) |
 | N4 | Self-sandwich around a placement without a swap | 100% worse-of charge | M-N4 (`test/manipulation/MN4.t.sol`, `MPinned.t.sol`) |
 | ADV-1 | Needle position for leverage | width exactly W; β is not in pay | M-ADV1 (`test/manipulation/MADV1.t.sol`) |
 | ADV-3 | JIT self-dealing on the curator's own swap | 100% worse-of charge; spot read first | M-ADV3 (`test/manipulation/MADV3.t.sol`, `MPinned.t.sol`) |
@@ -85,7 +87,8 @@ under its registered rule).
    overshoot: up to +0.0006 (`…offLegStopsReported`, `…bothWorldsOvershootReported`).
 3. **Boundary parking while the cached reference lags (M-N1 lane B).** Parking the pool price one unit inside the
    range while the cached reference still reads in range earns base for at most one anchor plus the TWAP's lag (2
-   hours on the mainnet tier) per exit: up to +0.00023 per exit in the test vault
+   hours on the mainnet tier) per exit: up to +0.00023 per exit in the test vault on the test tier (about 11 minutes of
+   credit at 1% a year); on the mainnet tier at most m·δ·NAV over 2 h ≈ 5e-6 of NAV per exit
    (`test_M_N1__parkingWhileTheCacheLagsIsBoundedByItsInRangeTime` asserts the bound, not the sign).
 4. **Single block builder (MK-1).** Outside the model; safe NAV about 150 WETH against the 1,850 WETH cap. A missed
    slot after the action block lets that block's closing reference tick weigh one block in the window.

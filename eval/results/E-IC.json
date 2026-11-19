@@ -9,7 +9,7 @@
   "verdict": "PASS",
   "path": "eval/results/U-IC2.json",
   "sha256": "ac4efd0ceaeb554cbe22b31c5d5b0701cfad60f87523331cfa585f2de6fea45f",
-  "scope": "the same rule on synthetic 180-day paths (driftless GBM at sigma 40/60/120% and a hover path), held-out seeds 700-1099; not a replay and not relabelled as one"
+  "scope": "E-IC's comparison clause on synthetic 180-day paths (driftless GBM at sigma 40/60/120% and a hover path), held-out seeds 700-1099, without an outside observer or third-party liquidity; not the per-tier term sheet, the curator's 5th-percentile condition or the depositor ceiling; not a replay and not relabelled as one (s28 panel D3)"
  },
  "future_work": "a replay supplement: one 180-day USDC/WETH 0.05% path, point estimates per bot (net, in-range share, charges, actions), no verdict; the depositor ceiling as spec section 3.5 defines it (f_actual(mimic) - f_actual(never-re-placing lazy), no observer)",
  "commit_public": "987f48c36c679a51dbe41d4f11892e6bc96a7449",

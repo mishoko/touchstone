@@ -28,9 +28,12 @@ P4_FLOORS = {'claims': 5000, 'topUps': 170, 'retires': 270, 'releases': 2800, 'p
 P5 = ['i8Checks', 'chargedRecords', 'breachesProcessed', 'removals', 'vests', 'epochCloses', 'refreshes', 'refreshFails',
       'truncatedSpans', 'gapSets', 'gapClears', 'gateClosedLive', 'resetsByRefresh', 'ringWraps', 'i13Checks']
 # P5-Ad-05 (P5 code panel, s27): vests in runs that planted no pay through the harness seam, so the real chain base mint
-# -> cohort -> vest ran (column 33). Floor: the structural minimum until a 256 x 128 campaign measures it.
-REAL = ['realMintVests']
-REAL_FLOORS = {'realMintVests': 1}
+# -> cohort -> vest ran (column 33); `mintAndVestCalls` (column 34, s28): the seam-free sequence's completed runs.
+# Floors (s28 fix review S28M-02): about 20% of the first measured 256 x 128 campaign with the sequence (realMintVests
+# 4,985 / 5,468; mintAndVestCalls 3,136 / 3,278 at the s28 re-run with
+# the counters separated: realMintVests 5,423 / 5,404).
+REAL = ['realMintVests', 'mintAndVestCalls']
+REAL_FLOORS = {'realMintVests': 1000, 'mintAndVestCalls': 600}
 NCOL = 7 + len(P4) + len(P5) + len(REAL)
 
 
@@ -75,13 +78,13 @@ def check(rows):
         print(f'{pool}: ' + ', '.join(f'{k} {v}' for k, v in real.items()))
         for k in REAL:
             if real[k] < REAL_FLOORS[k]:
-                errs.append(f'{pool}: {k} {real[k]} < {REAL_FLOORS[k]} (the real base-mint vest path is not fuzzed)')
+                errs.append(f'{pool}: {k} {real[k]} < {REAL_FLOORS[k]} (the real base-mint vest path is under-fuzzed)')
     return errs
 
 
 def main(argv):
     if argv[1:2] == ['--selftest']:
-        tail = [str(P4_FLOORS[k] * 3) for k in P4] + ['5'] * len(P5) + ['5'] * len(REAL)
+        tail = [str(P4_FLOORS[k] * 3) for k in P4] + ['5'] * len(P5) + [str(REAL_FLOORS[k] * 3) for k in REAL]
         good = [['tick0', '100', '8', '100', '5', '30', '40', '3'] + tail, ['tick196k', '100', '8', '100', '5', '30', '40', '3'] + tail]
         bad = [['tick0', '100', '0', '100', '5', '30', '40', '3'] + tail, good[1]]
         ok = not check(good) and len(check(bad)) == 1 and check(good[:1])
@@ -93,6 +96,8 @@ def main(argv):
             ok = ok and len(check([g[:j] + ['0'] + g[j + 1:] for g in good])) == 2
         j = 8 + len(P4) + len(P5)  # P5-Ad-05: no real-mint vest fails on both pools
         ok = ok and len(check([g[:j] + ['0'] + g[j + 1:] for g in good])) == 2
+        ok = ok and len(check([g[:j + 1] + ['0'] for g in good])) == 2  # s28: no completed mintAndVest fails on both
+        ok = ok and len(check([g[:j + 1] for g in good])) >= 1  # an s27-format row (no mintAndVestCalls column) fails
         ok = ok and len(check([g[:j] for g in good])) >= 1  # an s26-format row (no real-mint column) fails
         ok = ok and len(check([g[:8] for g in good])) >= 1  # an old-format row (no P4 counters) fails
         ok = ok and len(check([g[:8 + len(P4)] for g in good])) >= 1  # an s19-format row (no P5 counters) fails

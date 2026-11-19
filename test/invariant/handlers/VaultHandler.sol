@@ -129,6 +129,11 @@ contract VaultHandler is Test, SettleExtraOracle {
     uint256 public realMintVests;
     /// @dev `mintAndVest` calls that ran their sequence (the vault NORMAL, deployed, the price strictly inside).
     uint256 public mintAndVestCalls;
+    /// @dev S28M-01: placements and pokes made by `mintAndVest`'s own steps, counted apart from the random paths'
+    ///      `placeCalls`/`curatorPlacements`/`pokes`, so the non-vacuity floors keep measuring the fuzzed paths.
+    uint256 public seqPlacements;
+    uint256 public seqPokes;
+    bool internal _inSeq;
     uint256 public epochCloses;
     uint256 public refreshes;
     uint256 public refreshFails;
@@ -500,11 +505,12 @@ contract VaultHandler is Test, SettleExtraOracle {
             uint256 f = ExecLedger.swapFrac(h, ps.zeroForOne, ps.amountIn, TickMath.getSqrtPriceAtTick(ref));
             capOk = f > tr.MAX_SWAP_ACTION || _epochUsed(tr) + f > tr.MAX_SWAP_EPOCH;
         }
-        ++placeCalls;
+        if (!_inSeq) ++placeCalls;
         (, bool due, bool okS) = _expectedSettleBurn();
         vm.prank(hv.curator());
         try hv.setPositions(lo, lo + tr.W_TICKS, ps, moveTo, type(uint256).max) {
-            ++curatorPlacements;
+            if (_inSeq) ++seqPlacements;
+            else ++curatorPlacements;
             if (moveTo != 0) ++placementsMoved;
             if (ps.active) ++placementsPreSwapped;
             if (due) _countSettled(okS);
@@ -956,11 +962,17 @@ contract VaultHandler is Test, SettleExtraOracle {
     ///         unless the range is already W wide with the price strictly inside; then, for eight epochs plus up to
     ///         three grids, a roll of one grid, a `refresh` and the open `poke`. Each step is its own `checked` handler
     ///         call (no nesting, so the I-15 counters stay exact). Plants nothing.
+    ///         Limit (S28M-04): the `checked` checks run after every step, but the `invariant_*` functions (I-1, F-3
+    ///         exact, the U-record closure) see only the sequence's end state, as for `endgame` and `driveBreach`.
     function mintAndVest(uint256 seed) external {
         if (hv.bankFull().mode != Ladder.NORMAL) return;
+        _inSeq = true;
         if (!_wideAndInside()) {
             this.place(seed, 0, 1, 1);
-            if (!_wideAndInside()) return;
+            if (!_wideAndInside()) {
+                _inSeq = false;
+                return;
+            }
         }
         uint256 steps = 8 * uint256(hv.tier().EPOCH) / gridBlocks + seed % 4;
         for (uint256 i; i < steps; ++i) {
@@ -968,7 +980,20 @@ contract VaultHandler is Test, SettleExtraOracle {
             this.refresh();
             this.poke(false);
         }
+        _inSeq = false;
         ++mintAndVestCalls;
+    }
+
+    /// @notice The counterfactual of `mintAndVest` for its ratchet's control: the same roll / refresh / poke steps
+    ///         without the real placement (test-only; not a fuzz target: excluded in the invariant setUp).
+    function observeOnly(uint256 steps) external {
+        _inSeq = true;
+        for (uint256 i; i < steps; ++i) {
+            _roll(gridBlocks);
+            this.refresh();
+            this.poke(false);
+        }
+        _inSeq = false;
     }
 
     function _wideAndInside() internal view returns (bool) {
@@ -980,7 +1005,8 @@ contract VaultHandler is Test, SettleExtraOracle {
     /// @notice The open `poke` and `processBreach`: never revert with full gas.
     function poke(bool processOnly) external checked {
         try this.callOpen(processOnly) {
-            ++pokes;
+            if (_inSeq) ++seqPokes;
+            else ++pokes;
         } catch (bytes memory err) {
             _entryFailed(err);
         }

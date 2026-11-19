@@ -54,8 +54,8 @@ Each command prints `[PASS]` for every matched test; `-vv` shows the logged numb
    ```
    Expected: `[PASS] test_U_breach__anEmptyVaultReachesExitedAndWithdrawalsStayOpen()`.
 
-All tests: `forge test` (fork tests need `MAINNET_RPC_URL` and `UNICHAIN_SEPOLIA_RPC_URL`; numbers quoted from them use
-`FORK_BLOCK_1=26443420`). Evaluation results: `eval/results/`, summarised in the README.
+All tests: `forge test`. Fork tests need `MAINNET_RPC_URL` and `UNICHAIN_SEPOLIA_RPC_URL`; without them they return early
+and print PASS without running. Numbers quoted from them use `FORK_BLOCK_1=26443420`. Evaluation results: `eval/results/`, summarised in the README.
 
 ## Files to read first
 
@@ -75,6 +75,12 @@ All tests: `forge test` (fork tests need `MAINNET_RPC_URL` and `UNICHAIN_SEPOLIA
 - Incentives are measured on synthetic paths only; with an outside observer refreshing the reference, two lax
   strategies out-earn the reference curator at 120% volatility. The historical replay (E-IC) was not run.
 - The allocation ledger carries no closure claim (E0b failed).
+- The NAV cap is checked on the NAV priced at the last action, so a vault left unplaced through a large move can exceed
+  it (about +25% after a 50% move with half the NAV in token0).
+- Withdrawals while a settlement is pending exit at the pre-settlement price.
+- The testnet demo uses our own mock-token v3 reference pool and a provisional 1% base rate (2.2% is set at the
+  parameter freeze).
+- The contracts are not audited.
 - Two small disclosed effects of supply changes: a supply change inside a markout window moves the settlement's burn
   (`test_U_settle__inWindowDripBurnOverBurnsTheCuratorsReserve`); a holder who leaves during a reference outage skips
   its share of the deferred base (`test_U_base__deferredBaseSkipsALeaverDuringTheOutage`).

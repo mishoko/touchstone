@@ -122,9 +122,11 @@ def main(argv):
                                       '(a markout past the cap break-even) a coalition nets up to +0.93 ETH; with a '
                                       'protocol fee on, +0.004 ETH; off-leg stops and both-worlds overshoot up to +0.0006 '
                                       'ETH; M-N1 lane B (parking at the edge while the cached reference lags in range) nets up to +2.3e14 '
-                                      'token1 wei per exit, bounded by GRID*(1+ceil(REF_WINDOW/GRID_SEC)) blocks of '
-                                      'tau_v credit (2*GRID on the mainnet and DEMO tiers), asserted as a credit bound '
-                                      'only (see cells.*.reported_unasserted_tails_wei)',
+                                      'token1 wei per exit on the TEST tier (about 11 minutes of credit at m 1%/yr), '
+                                      'bounded by GRID*(1+ceil(REF_WINDOW/GRID_SEC)) blocks of tau_v credit (2*GRID, '
+                                      '2 h, on the mainnet and DEMO tiers: at most m*delta*NAV over 2 h, about 5e-6 of '
+                                      'NAV at m 2.2%/yr), asserted as a credit bound only (see '
+                                      'cells.*.reported_unasserted_tails_wei)',
         'data': 'foundry (the shipped contracts on a local pool)',
         'cells': cells, 'python_cells_reported': PY_CELLS,
         'forge_log': {'path': log, 'sha256': sha(log)},

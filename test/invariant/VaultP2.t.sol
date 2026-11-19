@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import {console} from "forge-std/console.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {LiquidPoolBase} from "../utils/LiquidPoolBase.sol";
@@ -34,6 +33,10 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
             IPoolManager(address(manager)), hv, hook, refPool, token0, token1, key, blocktime, c, m0, m1
         );
         targetContract(address(handler));
+        // `observeOnly` is the ratchet control's counterfactual, not a fuzz target (s28 S28M-03)
+        bytes4[] memory ex = new bytes4[](1);
+        ex[0] = VaultHandler.observeOnly.selector;
+        excludeSelector(FuzzSelector({addr: address(handler), selectors: ex}));
     }
 
     function invariant_I_1__claimsAndPositionCoverTheLedger() public view {
@@ -109,7 +112,8 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
             a, vm.toString(handler.refreshFails()), ",", vm.toString(handler.truncatedSpans()), ",",
             vm.toString(handler.gapSets()), ",", vm.toString(handler.gapClears()), ",",
             vm.toString(handler.gateClosedLive()), ",", vm.toString(handler.resetsByRefresh()), ",",
-            vm.toString(handler.ringWraps()), ",", vm.toString(handler.i13Checks()), ",", vm.toString(handler.realMintVests())
+            vm.toString(handler.ringWraps()), ",", vm.toString(handler.i13Checks()), ",", vm.toString(handler.realMintVests()), ",",
+            vm.toString(handler.mintAndVestCalls())
         );
     }
 
@@ -205,22 +209,22 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
     }
 
     /// @notice s28 (the first 256 × 128 campaign measured `realMintVests` 0 < 1): one `mintAndVest` call from the
-    ///         set-up state reaches the real base-mint → vest path with no seam. Control: the set-up state has vested
-    ///         nothing, and the sequence is a no-op (it does not run, nothing vests) once the vault has left NORMAL.
+    ///         set-up state reaches the real base-mint → vest path with no seam. Controls (S28M-03): the same
+    ///         roll / refresh / poke steps without the real placement vest nothing (the set-up range is a seam's and
+    ///         earns no base); the sequence is a no-op once the vault has left NORMAL.
     function test_P5_Ad_05__mintAndVestReachesTheRealVestPath() public {
         assertEq(handler.vests(), 0, "control: nothing vested before the sequence");
         uint256 snap = vm.snapshotState();
         handler.mintAndVest(0);
-        {
-            Bank memory b = hv.bankFull();
-            uint256 coh;
-            for (uint256 k; k < RING; ++k) coh += b.cohorts[k].shares;
-            console.log("mintAndVest: mode, vests, cohort shares", b.mode, handler.vests(), coh);
-            console.log("  maturedPending, vestedUnclaimed, placedByCurator", b.maturedPending, b.vestedUnclaimed, b.placedByCurator ? 1 : 0);
-        }
         assertEq(handler.mintAndVestCalls(), 1, "the sequence ran");
+        assertEq(handler.seqPlacements(), 1, "one real placement, counted apart from the random paths");
+        assertEq(handler.curatorPlacements() + handler.pokes(), 0, "the random-path counters are untouched");
         assertGt(handler.realMintVests(), 0, "a vest of really minted base");
+        assertGt(hv.bankFull().vestedUnclaimed, 0, "vested pay is held for the curator");
         assertEq(handler.bankSeeds() + handler.planted(), 0, "no seam was used");
+        vm.revertToState(snap);
+        handler.observeOnly(8 * uint256(hv.tier().EPOCH) / hv.tier().GRID + 3);
+        assertEq(handler.vests() + handler.realMintVests(), 0, "control: without the real placement nothing vests");
         vm.revertToState(snap);
         handler.driveBreach();
         handler.poke(false); // the checkpoint processes the latched breach

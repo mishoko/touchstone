@@ -18,12 +18,14 @@ expectation; a curator who walks away forfeits its unvested pay.
 - Testnet (Unichain Sepolia, chain 1301, demo tier; the reference pool there is our own mock-token v3 pool, see
   Limitations): vault `0x299c05ED130F340593499772b1F14Fb790bD985D`, hook `0x9131d3ceb82af6D29075F6D3a2bb6A4f252b60A0`,
   factory `0x6E12d9D0648a2323cF57FdEa98c09f331dc48384`, curator bundler `0xF35580c164136F38E7a8Fed8E01a611E9419AA15`,
-  reference pool `0x84517dBDaa924A8d9bc2abb97BAAB40A648EC972` (all in `script/demo/deployments-1301.json`).
+  reference pool `0x84517dBDaa924A8d9bc2abb97BAAB40A648EC972` (all in `script/demo/deployments-1301.json`; deployed from
+  commit 6061d68 with the provisional 1% base rate; the final deployment follows the parameter freeze).
 
 ## Four worked examples
 
-Each example names the test or evaluation that shows it. Parameters are the mainnet tier's (see Terms). Amounts
-from the attack tests are in token units (18 decimals) of a test vault filled by depositors up to its bond cap, with
+Each example names the test or evaluation that shows it. Parameters are the mainnet tier's (see Terms). The attack tests
+run on the test tier (12 s blocks, 20-block grid, base rate 1% a year) with the mainnet tier's fence, swap caps,
+reserve and markout window. Amounts from them are in token units (18 decimals) of a test vault filled by depositors up to its bond cap, with
 a NAV of about 1,150 units (its 0.69-unit reserve is 6e-4 of NAV).
 
 ### 1. A curator action is charged, and an uncoverable one reverts
@@ -100,7 +102,7 @@ a NAV of about 1,150 units (its 0.69-unit reserve is 6e-4 of NAV).
  curator acts ──▶ each charge burns curator-owned shares; the depositors' shares are untouched
     │
     ▼
- base fee: 2.2% a year × the share of the vault deployed in range, minted to the curator as shares,
+ base fee: m (2.2% a year, see Terms) × the share of the vault deployed in range, minted to the curator as shares,
            vesting 4 to 5 epochs later through the vest gate, forfeited on a breach
     │
     ▼
@@ -157,8 +159,9 @@ to be moved; the measured cost of moving it is listed under Results (E8).
 - **Reported, not asserted, attack rows with a positive net** (E5): a markout past the settlement cap after the
   vault's own move, up to +0.93 token units (about 8e-4 of NAV); a protocol fee switched on, +0.004 (about 4e-6 of
   NAV); arbitrage stopping off the settlement's legs or overshooting in both worlds, up to +0.0006; parking the pool
-  price just inside the range while the cached reference lags, up to +0.00023 per exit, bounded by about two hours of
-  base-fee credit per exit on the mainnet tier (M-N1 lane B). Units: 18-decimal tokens in a test vault of about 1,150
+  price just inside the range while the cached reference lags, up to +0.00023 per exit on the test tier (about 11
+  minutes of base-fee credit at 1% a year); on the mainnet tier the asserted bound is two hours of credit per exit,
+  at most m·δ·NAV over 2 h ≈ 5e-6 of NAV (M-N1 lane B). Units: 18-decimal tokens in a test vault of about 1,150
   units of NAV (its reserve of 0.69 units is 6e-4 of NAV).
 - **One block builder.** The markout assumes competitive block building. A single builder that wins the action's block
   and every block of the window, censors arbitrage on the reference pool and unwinds once is outside the model; against
@@ -169,6 +172,7 @@ to be moved; the measured cost of moving it is listed under Results (E8).
   comparison clause on synthetic paths without an outside observer or third-party liquidity; it does not cover the
   per-tier term sheet, the curator's 5th-percentile condition or the depositor ceiling.
 - **The allocation ledger carries no closure claim** (E0b failed; below).
+- **Not audited.** The contracts have not been audited; the tests, evaluations and SECURITY.md are the evidence.
 - **Testnet.** Unichain Sepolia has no usable v3 reference pool, so the demo deploys its own mock-token pool; the
   security evidence for the reference is the mainnet-fork test K-ref.
 
@@ -179,14 +183,14 @@ liquidity at a stale price and let the trader take the difference (on synthetic 
 the reference pool's TWAP over a short window that opens one block after the action, with a fixed reserve held until
 settlement; the curator commits before that price exists. On held-out paths the leak measured 0.000% of NAV a year at
 both volatilities (a model cell on the shipped settlement, run before the 12-hour reference policy was adopted; E8
-copies the value). The guarantee is in expectation: the reserve caps what one settlement can recover, so a colluding
+copies the value; its source record is not public). The guarantee is in expectation: the reserve caps what one settlement can recover, so a colluding
 pair can still profit on an extreme markout draw (beyond about 150 ticks for a 1.9%-of-NAV action), and an arbitrage
 that stops outside the settlement's fee band is not covered by its legs.
 
 **Curator incentives (measured without a third-party refresher of the reference; pre-registered test U-IC2,
-passed).** With the shipped base rate m = 2.2% a year and no third-party refresher of the reference, the reference curator, which re-places its range once the reference price has been outside it for 12 hours (edge-12h),
+passed).** With the evaluated base rate m = 2.2% a year and no third-party refresher of the reference, the reference curator, which re-places its range once the reference price has been outside it for 12 hours (edge-12h),
 out-earns every gated strategy on 400 fresh simulated 180-day paths per bucket, run once with its form, seeds and pass
-rule written and reviewed before it started. The strategies are seven lazy variants that never re-place (minimum lower
+rule frozen and committed before it started. The strategies are seven lazy variants that never re-place (minimum lower
 bound of the difference +1.00 ETH), a placement of the smallest legal deployment just before the cure window, the
 cheapest legal clock reset, and idle, dust, stale and wide curators. The binding case is 120% annual volatility:
 edge-12h minus the clock reset is +0.235 ETH (one-sided 95% lower bound +0.166 ETH) and minus the smallest-deployment
@@ -204,8 +208,8 @@ out-earn the reference curator at 120% volatility (by 0.151 and 0.102 ETH), the 
 and edges it on the hovering path. Incentive compatibility here refers to the curator's net pay only: in this model,
 the vault ends with more value under the two lax strategies than under the reference curator in every volatility
 bucket (at 120%: about 558 and 569 against 314, from 1,000; not on the hovering path), because time in range at zero third-party depth is mostly loss to
-arbitrage. The 12-hour wait is a trade made for high volatility: on the earlier test's paths it earns 0.09 to 0.13 ETH
-less than the 6-hour wait at 40% and 60% volatility and on the hovering path (it still passes there), and at 120%
+arbitrage. The 12-hour wait is a trade made for high volatility: on the same paths it earns 0.11 to 0.13 ETH
+less than the 6-hour wait at 40% and 60% volatility and on the hovering path (U-IC2 lever rows; it still passes there), and at 120%
 volatility the vault is in range 76% of the time instead of 82%. The wait was chosen after the earlier test failed,
 from the three waits simulated since the start (3, 6 and 12 hours; edge-12h was a reported column of that test), as the
 only one passing on all three earlier seed sets; waits between 13 and 20 hours were not simulated, and a 24-hour wait
@@ -220,7 +224,7 @@ that would close the gap was estimated at no less than about 2.4% a year and was
 seeing the data.
 
 The same rule was then run once more, on 200 fresh simulated paths per bucket (test U-IC), with its form, seeds and
-pass rule written and reviewed before it started. The same two comparisons failed: at 120% volatility, edge-6h minus
+pass rule frozen and committed before it started. The same two comparisons failed: at 120% volatility, edge-6h minus
 the strategy that places the smallest legal deployment at or above the minimum just before the cure window was +0.086
 ETH (lower bound −0.011 ETH), and minus the clock reset +0.012 ETH (lower bound −0.084 ETH). The other 50 comparisons
 passed, as did the conditions on the reference curator's own net; the power control passed in the three volatility
@@ -302,7 +306,7 @@ Results: `eval/results/E0.json`, `eval/results/E0a.json`.
   placement starts a new run. The third breach moves the vault to EXITED (curator removed, deposits closed,
   withdrawals open). No one can re-place the range for the curator.
 - **No keeper, operator, admin or off-chain feed.** The one external input is the reference pool's TWAP, read through
-  its oracle's `observe`, never its `slot0`. Anyone can call `poke`, `processBreach`, `settle` and
+  its oracle's `observe`, never its `slot0` price. Anyone can call `poke`, `processBreach`, `settle`, `refreshRef` and
   `snapshotIfNewBlock`. The records' resolution equals the poke cadence.
 
 ## Terms
@@ -311,7 +315,7 @@ Mainnet tier (USDC/WETH 0.05% reference pool `0x88e6A0c2dDD26FEEb64F039a2c41296F
 
 | Term | Value |
 |---|---|
-| Base fee m | 2.2% a year × δ (the deployed share), in range only |
+| Base fee m | 2.2% a year × δ (the deployed share), in range only; the evaluated rate, written into `script/Tiers.sol` at the parameter freeze (the file and the testnet demo carry a provisional 1% until then) |
 | Range width W | 2,000 ticks (about ±10%) |
 | Fence around the reference | 60 ticks |
 | Swap caps | 2% of NAV per action, 5% per epoch, 20 swaps per epoch |
@@ -339,7 +343,7 @@ are not in the repository; their hashes and aggregates are (`eval/supplements/U-
 | E2 | Does the charge cover the realised loss of an honest placement? | PASS: the expected charge (over 400 draws of the reference window's error) covers the realised loss on all 2,016 / 2,100 sampled exit states (σ 60 / 120%, the shipped settlement); overcharge 0.012 / 0.023 bp of NAV per placement (mean), p99 0.13 / 0.34 bp. A simpler settlement rule, not shipped, falls short on 16 / 21 | Synthetic (GBM), single-placement cell |
 | E3 | Is the charge zero without a curator action? | PASS: 0 wei over 10,000 segments and 20,034 third-party swaps; control: one swap is charged | Independent model |
 | E4 | Does the reference curator out-earn idle, dust, stale and wide curators? | PASS in every bucket; idle nets exactly 0 before gas and loses its pokes' gas (−0.136 ETH) | Synthetic (U-IC2 runs) |
-| E5 | Do the asserted attacks lose money? | FAIL (control form) under the registered rule: every asserted attack row in all 17 cells nets ≤ 0; 14 cells have a control test that profits with the defence removed; N1 and N2 have only inline sensitivity checks (the rule exempted N3, a forgery cell, alone). Under the rule as amended after the data: PASS. Reported, not asserted, positive rows: +0.93 (capped markout), +0.004 (protocol fee), +0.0006 (off-leg stops), up to +0.00023 per exit (M-N1 parking), in token units of a vault of about 1,150 | Foundry |
+| E5 | Do the asserted attacks lose money? | FAIL (control form) under the registered rule: every asserted attack row in all 17 cells nets ≤ 0; 14 cells have a control test that profits with the defence removed; N1 and N2 have only inline sensitivity checks (the rule exempted N3, a forgery cell, alone). Under the rule as amended after the data: PASS. Reported, not asserted, positive rows: +0.93 (capped markout), +0.004 (protocol fee), +0.0006 (off-leg stops), up to +0.00023 per exit on the test tier (M-N1 parking; ≤ 5e-6 of NAV per exit on the mainnet tier), in token units of a vault of about 1,150 | Foundry |
 | E6 | Does churning pay? | PASS: churner minus reference curator, t = −129 to −691 per bucket (follows from construction) | Synthetic |
 | E7 | Gas and size within budget? | PASS: largest runtime 19,877 B (limit 22,000); first swap per block 26.7k gas (budget 30k); worst action 871k (1.2M) | Foundry and mainnet fork |
 | E8 | Operating numbers | REPORTED: 11 items (one closed form, two from earlier configurations); 6 not run: suspect-segment share, p99 actions per epoch, curator recapture of burns, time to feasibility with one-sided inventory, gate-closed share, depositor observer break-even | Mixed, labelled per item |
@@ -382,19 +386,19 @@ Every claim ID in the specification has a test named `test_<ID>__<claim>` (or `i
 SECURITY.md lists every threat with its mitigation and its regression test, and the open cells. In short: 17
 attack cells assert that the attack loses money (E5); the reported, not asserted, rows with a positive net are listed
 under Limitations and in SECURITY.md. Forging the disclosure ledger by price oscillation costs the coalition about 7.8
-token units per moved boundary median in the test setting (`test_M_N3__oscillationCannotForgeTheLedgerAndLoses`).
+token units per moved boundary median in the test vault (about 7e-3 of NAV) (`test_M_N3__oscillationCannotForgeTheLedgerAndLoses`).
 REVIEWERS.md gives five claims to check in a few minutes.
 
 ## Run
 
 ```
 forge build --sizes src                                   # every runtime ≤ 22,000 B
-export FORK_BLOCK_1=26443420 MAINNET_RPC_URL=<archive RPC> # fork tests (K-1, K-ref, gas) pin this block
+export FORK_BLOCK_1=26443420 MAINNET_RPC_URL=<archive RPC> # fork tests pin this block; unset, they return early (PASS)
 forge test                                                # unit, fuzz, manipulation, invariant (64 × 64), fork
 CLAIMS_PHASE=P6 script/ci-local.sh                        # the CI steps, 256 × 128 invariants, non-vacuity
 python3 model/reference.py --selfcheck                    # the independent reference model
 python3 script/mutate.py --audit                          # the curated mutant list
-python3 eval/e5.py                                        # re-derive an evaluation (e1.py … e9.py)
+python3 eval/e5.py --forge-log eval/supplements/E5/forge-manipulation-s27.log  # re-derive E5 from its saved log
 ```
 
 ## Uniswap v4 pitfalls we hit

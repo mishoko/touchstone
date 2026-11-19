@@ -3727,7 +3727,8 @@
    "file": "src/TouchstoneVaultExtension.sol",
    "find": "uint256 o0 = FullMath.mulDiv(_idle0, s, S);",
    "replace": "uint256 o0 = FullMath.mulDivRoundingUp(_idle0, s, S);",
-   "status": "PENDING"
+   "status": "KILLED",
+   "basis": "8e801d529d93b257"
   },
   {
    "id": "MU-313",
@@ -3738,7 +3739,8 @@
    "file": "src/TouchstoneVaultExtension.sol",
    "find": "uint256 o1 = FullMath.mulDiv(_idle1, s, S);",
    "replace": "uint256 o1 = FullMath.mulDivRoundingUp(_idle1, s, S);",
-   "status": "PENDING"
+   "status": "KILLED",
+   "basis": "8e801d529d93b257"
   }
  ]
 }

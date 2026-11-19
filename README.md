@@ -36,8 +36,8 @@ both volatilities. The guarantee is in expectation: the reserve caps what one se
 pair can still profit on an extreme markout draw (beyond about 150 ticks for a 1.9%-of-NAV action), and an arbitrage
 that stops outside the settlement's fee band is not covered by its legs.
 
-**Curator incentives (measured; pre-registered test U-IC2, passed).** With the shipped base rate m = 2.2% a year,
-the reference curator, which re-places its range once the reference price has been outside it for 12 hours (edge-12h),
+**Curator incentives (measured without a third-party refresher of the reference; pre-registered test U-IC2,
+passed).** With the shipped base rate m = 2.2% a year and no third-party refresher of the reference, the reference curator, which re-places its range once the reference price has been outside it for 12 hours (edge-12h),
 out-earns every gated strategy on 400 fresh simulated 180-day paths per bucket, run once with its form, seeds and pass
 rule written and reviewed before it started. The strategies are seven lazy variants that never re-place (minimum lower
 bound of the difference +1.00 ETH), a placement of the smallest legal deployment just before the cure window, the
@@ -45,17 +45,18 @@ cheapest legal clock reset, and idle, dust, stale and wide curators. The binding
 edge-12h minus the clock reset is +0.235 ETH (one-sided 95% lower bound +0.166 ETH) and minus the smallest-deployment
 placement +0.275 ETH (lower bound +0.205 ETH); at 40%, 60% and on a path that hovers at the range edge every lower bound
 exceeds 1.4 ETH. The power controls pass in the three volatility buckets (with no base fee, the lazy curator beats the
-reference curator). On the same paths the 12-hour wait out-earns the earlier 6-hour wait at 120% volatility by +0.187
+reference curator) and not on the hovering path (−0.026 ETH; reported, not gated). On the same paths the 12-hour wait out-earns the earlier 6-hour wait at 120% volatility by +0.187
 ETH (lower bound +0.163 ETH), the gated check that the result comes from the change. Results:
-`eval/results/U-IC2.json`, `eval/supplements/U-IC2-observer.json`.
+`eval/results/U-IC2.json`, `eval/supplements/U-IC2-observer.json` (the observer-environment comparisons for every
+strategy were computed after the run from the same per-run rows).
 
 **Limits of this result.** These are simulations on synthetic paths with no third-party liquidity, not the historical
 replay. The gated comparisons assume that no outside party refreshes the reference price. With an outside observer
 refreshing it every two hours (reported, not gated), the cheapest clock reset and the smallest-deployment placement
 out-earn the reference curator at 120% volatility (by 0.151 and 0.102 ETH), the clock reset roughly ties it at 40%
 and edges it on the hovering path. Incentive compatibility here refers to the curator's net pay only: in this model,
-the vault ends with more value under the two lax strategies than under the reference curator at 120% volatility
-(about 558 and 569 against 314, from 1,000), because time in range at zero third-party depth is mostly loss to
+the vault ends with more value under the two lax strategies than under the reference curator in every volatility
+bucket (at 120%: about 558 and 569 against 314, from 1,000; not on the hovering path), because time in range at zero third-party depth is mostly loss to
 arbitrage. The 12-hour wait is a trade made for high volatility: on the earlier test's paths it earns 0.09 to 0.13 ETH
 less than the 6-hour wait at 40% and 60% volatility and on the hovering path (it still passes there), and at 120%
 volatility the vault is in range 76% of the time instead of 82%. The wait was chosen after the earlier test failed,
@@ -80,8 +81,8 @@ buckets and not on the hovering path (−0.020 ETH; reported, not gated). With a
 reference every two hours (reported, not gated), both strategies out-earned edge-6h at 120% volatility (by 0.32 and
 0.39 ETH). The smallest passing rate was estimated at 2.38% a year without an observer and about 8.1% with one, both
 extrapolated beyond the simulated rates. U-IC stays failed and is never re-run; U-IC2 is a separate test of the
-changed wait, not a replacement. On U-IC2's paths edge-6h fails the same way (minus the clock reset: +0.049 ETH, lower
-bound −0.022 ETH). Results: `eval/results/U-IC.json`, `eval/supplements/U-IC-observer.json`.
+changed wait, not a replacement. On U-IC2's paths edge-6h fails against the clock reset (+0.049 ETH, lower bound −0.022
+ETH); against the smallest-deployment placement it passes there (+0.088 ETH, lower bound +0.017 ETH). Results: `eval/results/U-IC.json`, `eval/supplements/U-IC-observer.json`.
 
 **Allocation ledger (measured, two negative results).** The allocation ledger is published for disclosure only and
 never affects pay. Its pre-registered test requires each epoch's allocation to reconcile the vault's value change for a

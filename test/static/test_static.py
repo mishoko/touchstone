@@ -428,8 +428,25 @@ def test_U_IC2__observer_supplement_is_complete():
     assert f"{-o['breach-reset']['0.022']['diff']:.3f} and {-o['dodge']['0.022']['diff']:.3f} ETH" in readme
     nv = r['reported']['nav_end']['gbm-120']['no-observer']
     assert f"about {nv['breach-reset']['mean']:.0f} and {nv['dodge']['mean']:.0f} against {nv['edge-12h']['mean']:.0f}" in readme
-    e6 = r['reported']['edge6h_form']['buckets']['gbm-120']['cmp']['breach-reset']
-    assert f"+{e6['diff']:.3f} ETH, lower bound {e6['ci_lo']:.3f} ETH".replace('-', '−') in readme
+    e6 = r['reported']['edge6h_form']['buckets']['gbm-120']['cmp']
+    for bot in ('breach-reset', 'dodge'):   # both D4 rows (S24F-03)
+        x = e6[bot]
+        assert f"+{x['diff']:.3f} ETH, lower bound {x['ci_lo']:+.3f} ETH".replace('-', '−').replace('bound +', 'bound +') \
+            in readme, bot
+    # S24F-01: the bold headline carries the scope (D5); control: a stripped headline fails
+    def scoped(text):
+        h = re.search(r'\*\*Curator incentives \(([^)]*)\)', text)
+        return bool(h) and 'without a third-party refresher of the reference' in h.group(1)
+    assert scoped(readme)
+    assert not scoped(readme.replace('measured without a third-party refresher of the reference;', 'measured;'))
+    # S24F-02: the hover power control's figure; S24F-04: the NAV limit's scope
+    c0 = r['buckets']['hover-60']['control_m0']['diff_lazy_minus_mimic']
+    assert f"{c0:.3f} ETH; reported, not gated".replace('-', '−') in readme
+    assert 'in every volatility bucket (at 120%: about' in readme and 'not on the hovering path), because' in readme
+    # S24F-05: the supplement's disclosure and the frozen artefact as disclosed
+    assert 'computed after the run from the same per-run rows' in readme
+    assert 'harness table holds only lazy-under-ladder' in json.load(open(uic2_observer.OUT))['why']
+    assert all(len(v) <= 1 for v in r['reported']['observer_environment']['edge-12h'].values())
 
 
 if __name__ == '__main__':

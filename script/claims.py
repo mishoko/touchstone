@@ -282,6 +282,14 @@ def selftest(rows):
             errs.append('fixture: the count line must carry the historical rows on the same line')
         if '+ 0 historical failed' not in count_line(1, 1, [], 'P1'):
             errs.append('fixture: the count line always names the historical count')
+    # S24F-06: the historical set is exactly the earlier configuration's failed rows, and each is run-once
+    if HISTORICAL != ('U-IC', 'E0', 'E0a') or not set(HISTORICAL) <= set(NO_SUCCESSOR):
+        errs.append('fixture: HISTORICAL is pinned to U-IC, E0, E0a (s24 D7) and is a subset of NO_SUCCESSOR')
+    # S24F-07: an eval row is covered only by a PASS result, in the table as in the count (a same-named test never)
+    with tempfile.TemporaryDirectory() as d:
+        os.makedirs(os.path.join(d, 'eval', 'results'))
+        if covered('E9', 'function test_E9__x()', d, 'eval') or not unmet([('E9', 'P4', 'eval')], 'function test_E9__x()', 'P4', d):
+            errs.append('fixture: an eval row without a PASS result is uncovered even with a same-named test')
     if _eval_ids('| E0 | q | p |\n| E0a | q | p |\n') != ['E0', 'E0a']:
         errs.append('fixture: a suffixed eval ID (E0a) must be listed')
     if not ROW.search('| E0a | P4 | eval |'):
@@ -307,8 +315,8 @@ def main(argv):
     tests = test_text(ROOT)
     miss = missing(rows, tests, phase, ROOT)
     if '--table' in argv:
-        for i, due, _ in rows:
-            st = ('covered' if covered(i, tests, ROOT) else 'failed, earlier configuration, final'
+        for i, due, k in rows:
+            st = ('covered' if covered(i, tests, ROOT, k) else 'failed, earlier configuration, final'
                   if historical_failed(i, ROOT) else ('MISSING' if i in miss else 'not due'))
             print(f'| {i} | {due} | {st} |')
     hist = historical(rows, phase, ROOT)

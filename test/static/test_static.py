@@ -449,28 +449,31 @@ def test_U_IC2__observer_supplement_is_complete():
     assert all(len(v) <= 1 for v in r['reported']['observer_environment']['edge-12h'].values())
 
 
-def uncovered_roundings(src, muts):
-    """Every `FullMath.mulDiv*` line in the extension's `_deposit` and `_withdraw` is inside some wired mutant's find
-    (s24 S24M-01, S24R2-01: a rule's rounding has one arithmetic site per bucket, each needs its own mutant)."""
-    finds = [m['find'] for m in muts if m.get('file') == 'src/TouchstoneVaultExtension.sol' and m.get('find')
-             and m.get('kill') not in (None, 'pending')]
+VAULT_FILES = ('src/TouchstoneVault.sol', 'src/TouchstoneVaultBase.sol', 'src/TouchstoneVaultExtension.sol')
+
+
+def uncovered_roundings(srcs, muts):
+    """Every `FullMath.mulDiv*` line of the vault's three files lies in at least as many wired mutants' finds as it has
+    `mulDiv` calls (s24 S24M-01, S24R2-01, S24R3-01: a rule's rounding has one arithmetic site per call, and each needs
+    its own mutant). `srcs` maps a repo path to its text."""
     bad = []
-    for fn in ('_deposit', '_withdraw'):
-        m = re.search(r'function ' + fn + r'\(.*?\n    \}', src, re.S)
-        assert m, fn
-        for line in m.group(0).split('\n'):
-            if 'FullMath.mulDiv' in line and not any(line.strip() in f or f.strip() in line for f in finds):
-                bad.append(f'{fn}: {line.strip()}')
+    for f, src in srcs.items():
+        finds = [m['find'] for m in muts if m.get('file') == f and m.get('find') and m.get('kill') not in (None, 'pending')]
+        for n, line in enumerate(src.split('\n'), 1):
+            k = line.count('FullMath.mulDiv')
+            if k and sum(1 for x in finds if line.strip() in x or x.strip() in line) < k:
+                bad.append(f'{f}:{n}: {line.strip()}')
     return bad
 
 
-def test_every_deposit_and_withdraw_rounding_has_a_mutant():
-    src = open(os.path.join(ROOT, 'src', 'TouchstoneVaultExtension.sol')).read()
+def test_every_vault_rounding_has_a_mutant():
+    srcs = {f: open(os.path.join(ROOT, f)).read() for f in VAULT_FILES}
     muts = json.load(open(os.path.join(ROOT, 'audits', 'mutants.json')))['mutants']
-    assert uncovered_roundings(src, muts) == [], uncovered_roundings(src, muts)
-    # control: dropping a mutant's wiring exposes its line
-    cut = [dict(m, kill='pending') if m['id'] == 'MU-313' else m for m in muts]
-    assert any('o1 = FullMath.mulDiv' in b for b in uncovered_roundings(src, cut))
+    assert uncovered_roundings(srcs, muts) == [], uncovered_roundings(srcs, muts)
+    # controls: dropping one of a line's two mutants exposes it; so does dropping a single-call line's mutant
+    for mid, needle in (('MU-315', 'M_PER_BLOCK'), ('MU-313', 'o1 = FullMath.mulDiv')):
+        cut = [dict(m, kill='pending') if m['id'] == mid else m for m in muts]
+        assert any(needle in b for b in uncovered_roundings(srcs, cut)), mid
 
 
 if __name__ == '__main__':

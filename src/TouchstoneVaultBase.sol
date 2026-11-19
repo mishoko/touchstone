@@ -227,6 +227,7 @@ abstract contract VaultCommon is VaultConfig {
     /// @dev The price-free epilogue of a pro-rata flow: NAV0 := NAV0·S'/S; δ0 unchanged.
     function _rebase(uint256 S, uint256 S2) internal returns (uint256 rebased) {
         // [MU-055] [MU-096] no price is read on a deposit or withdrawal
+        // [MU-317] NAV₀ := floor(NAV₀·S′/S)
         rebased = FullMath.mulDiv(_nav0, S2, S);
         _nav0 = _u128(rebased);
     }

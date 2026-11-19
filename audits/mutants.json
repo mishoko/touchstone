@@ -3741,6 +3741,50 @@
    "replace": "uint256 o1 = FullMath.mulDivRoundingUp(_idle1, s, S);",
    "status": "KILLED",
    "basis": "8e801d529d93b257"
+  },
+  {
+   "id": "MU-314",
+   "area": "ledger",
+   "desc": "base amount: the inner m_perBlock·NAV₀ product rounded up instead of floored (s24 S24R3-01)",
+   "killer_id": "U-base",
+   "kill": "test_U_base__scenarioVectorsBitForBit",
+   "file": "src/TouchstoneVault.sol",
+   "find": "return FullMath.mulDiv(FullMath.mulDiv(M_PER_BLOCK, _nav0, WAD), uint256(_delta0) * dtau, WAD);",
+   "replace": "return FullMath.mulDiv(FullMath.mulDivRoundingUp(M_PER_BLOCK, _nav0, WAD), uint256(_delta0) * dtau, WAD);",
+   "status": "PENDING"
+  },
+  {
+   "id": "MU-315",
+   "area": "ledger",
+   "desc": "base amount: the outer δ₀·dtau product rounded up instead of floored (s24 S24R3-01)",
+   "killer_id": "U-base",
+   "kill": "test_U_base__scenarioVectorsBitForBit",
+   "file": "src/TouchstoneVault.sol",
+   "find": "return FullMath.mulDiv(FullMath.mulDiv(M_PER_BLOCK, _nav0, WAD), uint256(_delta0) * dtau, WAD);",
+   "replace": "return FullMath.mulDivRoundingUp(FullMath.mulDiv(M_PER_BLOCK, _nav0, WAD), uint256(_delta0) * dtau, WAD);",
+   "status": "PENDING"
+  },
+  {
+   "id": "MU-316",
+   "area": "ledger",
+   "desc": "base shares floor(base·S/(NAV' − base)) rounded up (s24 S24R3-01)",
+   "killer_id": "U-base",
+   "kill": "test_U_base__scenarioVectorsBitForBit",
+   "file": "src/TouchstoneVault.sol",
+   "find": "uint256 shares = FullMath.mulDiv(amount, totalSupply(), navp - amount);",
+   "replace": "uint256 shares = FullMath.mulDivRoundingUp(amount, totalSupply(), navp - amount);",
+   "status": "PENDING"
+  },
+  {
+   "id": "MU-317",
+   "area": "ledger",
+   "desc": "flow re-base NAV₀ := floor(NAV₀·S′/S) rounded up (s24 S24R3-03)",
+   "killer_id": "M-N2",
+   "kill": "test_M_N2__flowsRebaseNav0ProRata",
+   "file": "src/TouchstoneVaultBase.sol",
+   "find": "rebased = FullMath.mulDiv(_nav0, S2, S);",
+   "replace": "rebased = FullMath.mulDivRoundingUp(_nav0, S2, S);",
+   "status": "PENDING"
   }
  ]
 }

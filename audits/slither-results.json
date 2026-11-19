@@ -1,8 +1,8 @@
 {
  "tool": "Slither 0.11.5",
  "command": "slither . --filter-paths 'lib/|test/|script/' --exclude-dependencies --json <out>",
- "input_sha256": "cec1484ecd99bcf75ca55aab5623187e89b929a4076e869a29afbf4603c28b2b",
- "raw_sha256": "00c2c66c959ba4ddc05efff6feae401bc5abe812491bf79c6b0eea5457103510",
+ "input_sha256": "ccbaae599e1afc87b09d315769f684daba8b8b69a75dc66d01aa35236e097c63",
+ "raw_sha256": "2f3c832ab7ba27b0e9826e5bd79796e917c2d2e2bd49204192cde1a071201c75",
  "results": [
   {
    "check": "arbitrary-send-erc20",
@@ -474,7 +474,7 @@
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
       29,
-      356
+      357
      ]
     },
     {
@@ -1685,7 +1685,7 @@
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
       29,
-      356
+      357
      ]
     }
    ]
@@ -1710,7 +1710,7 @@
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
       29,
-      356
+      357
      ]
     }
    ]
@@ -1735,7 +1735,7 @@
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
       29,
-      356
+      357
      ]
     }
    ]
@@ -1760,7 +1760,7 @@
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
       29,
-      356
+      357
      ]
     }
    ]
@@ -1785,7 +1785,7 @@
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
       29,
-      356
+      357
      ]
     }
    ]
@@ -1810,7 +1810,7 @@
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
       29,
-      356
+      357
      ]
     }
    ]
@@ -2706,7 +2706,7 @@
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
       326,
-      355
+      356
      ]
     },
     {
@@ -2714,8 +2714,8 @@
      "name": "d = _modify(- int256(dL))",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      338,
-      338
+      339,
+      339
      ]
     },
     {
@@ -2732,8 +2732,8 @@
      "name": "MANAGER.burn(address(this),C0.toId(),o0)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      344,
-      344
+      345,
+      345
      ]
     },
     {
@@ -2741,22 +2741,13 @@
      "name": "MANAGER.burn(address(this),C1.toId(),o1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      345,
-      345
+      346,
+      346
      ]
     },
     {
      "type": "node",
      "name": "MANAGER.take(C0,to,a0)",
-     "file": "src/TouchstoneVaultExtension.sol",
-     "lines": [
-      348,
-      348
-     ]
-    },
-    {
-     "type": "node",
-     "name": "MANAGER.take(C1,to,a1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
       349,
@@ -2765,11 +2756,20 @@
     },
     {
      "type": "node",
+     "name": "MANAGER.take(C1,to,a1)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      350,
+      350
+     ]
+    },
+    {
+     "type": "node",
      "name": "d = _modify(- int256(dL))",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      338,
-      338
+      339,
+      339
      ]
     },
     {
@@ -2786,8 +2786,8 @@
      "name": "MANAGER.burn(address(this),C0.toId(),o0)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      344,
-      344
+      345,
+      345
      ]
     },
     {
@@ -2795,8 +2795,8 @@
      "name": "MANAGER.burn(address(this),C1.toId(),o1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      345,
-      345
+      346,
+      346
      ]
     },
     {
@@ -2804,8 +2804,8 @@
      "name": "MANAGER.take(C0,to,a0)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      348,
-      348
+      349,
+      349
      ]
     },
     {
@@ -2813,8 +2813,8 @@
      "name": "MANAGER.take(C1,to,a1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      349,
-      349
+      350,
+      350
      ]
     },
     {
@@ -2822,8 +2822,8 @@
      "name": "_rebase(S,S - s)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      352,
-      352
+      353,
+      353
      ]
     },
     {
@@ -3414,7 +3414,7 @@
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
       326,
-      355
+      356
      ]
     },
     {
@@ -3422,8 +3422,8 @@
      "name": "d = _modify(- int256(dL))",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      338,
-      338
+      339,
+      339
      ]
     },
     {
@@ -3440,8 +3440,8 @@
      "name": "MANAGER.burn(address(this),C0.toId(),o0)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      344,
-      344
+      345,
+      345
      ]
     },
     {
@@ -3449,22 +3449,13 @@
      "name": "MANAGER.burn(address(this),C1.toId(),o1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      345,
-      345
+      346,
+      346
      ]
     },
     {
      "type": "node",
      "name": "MANAGER.take(C0,to,a0)",
-     "file": "src/TouchstoneVaultExtension.sol",
-     "lines": [
-      348,
-      348
-     ]
-    },
-    {
-     "type": "node",
-     "name": "MANAGER.take(C1,to,a1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
       349,
@@ -3473,11 +3464,20 @@
     },
     {
      "type": "node",
+     "name": "MANAGER.take(C1,to,a1)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      350,
+      350
+     ]
+    },
+    {
+     "type": "node",
      "name": "Withdraw(owner,s,a0,a1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      353,
-      353
+      354,
+      354
      ]
     }
    ]
@@ -5192,7 +5192,7 @@
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
       326,
-      355
+      356
      ]
     },
     {
@@ -5200,8 +5200,8 @@
      "name": "d = _modify(- int256(dL))",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      338,
-      338
+      339,
+      339
      ]
     },
     {
@@ -5218,8 +5218,8 @@
      "name": "_L -= uint128(dL)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      340,
-      340
+      341,
+      341
      ]
     },
     {
@@ -5227,8 +5227,8 @@
      "name": "_idle0 -= uint128(o0)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      342,
-      342
+      343,
+      343
      ]
     },
     {
@@ -5236,8 +5236,8 @@
      "name": "_idle1 -= uint128(o1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      343,
-      343
+      344,
+      344
      ]
     }
    ]
@@ -5718,8 +5718,8 @@
      "name": "r0",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      335,
-      335
+      336,
+      336
      ]
     }
    ]
@@ -5734,8 +5734,8 @@
      "name": "r1",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      336,
-      336
+      337,
+      337
      ]
     }
    ]

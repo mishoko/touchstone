@@ -53,6 +53,7 @@ contract VaultSharesTest is VaultBase {
         assertEq(o0, uint256(h.idle0) * s / S, "token0 rounded down, pre-burn supply");
         assertEq(o1, uint256(h.idle1) * s / S, "token1 rounded down, pre-burn supply");
         assertLt(o0 * S, uint256(h.idle0) * s, "strictly below the exact share");
+        assertLt(o1 * S, uint256(h.idle1) * s, "token1 strictly below the exact share (MU-313)");
         assertEq(token0.balanceOf(alice), 10e18 - _ceilDiv(1e18 * 7e23, 1e24) + o0);
     }
 

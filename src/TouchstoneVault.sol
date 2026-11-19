@@ -493,6 +493,7 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
                 (uint256 navp,) = ExecLedger.value(_holdings(), TickMath.getSqrtPriceAtTick(pt));
                 // [MU-271] strict: at navp == amount the share count is unbounded (a mulDiv by zero would revert)
                 if (navp > amount) {
+                    // [MU-316] base shares floor(base·S/(NAV' − base))
                     uint256 shares = FullMath.mulDiv(amount, totalSupply(), navp - amount);
                     FeeBank.bankApply(b, Op.Accrue, abi.encode(ne, shares, gateOpen));
                     _mint(address(this), shares);
@@ -528,6 +529,7 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
 
     /// @dev The base amount for `dtau` in-range blocks: `mulDiv(mulDiv(m_perBlock, NAV₀, WAD), δ₀·dtau, WAD)`, both floor.
     function _baseAmount(uint64 dtau) internal view returns (uint256) {
+        // [MU-314] [MU-315] both products floored
         return FullMath.mulDiv(FullMath.mulDiv(M_PER_BLOCK, _nav0, WAD), uint256(_delta0) * dtau, WAD);
     }
 

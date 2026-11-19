@@ -1,8 +1,8 @@
 {
  "tool": "Slither 0.11.5",
  "command": "slither . --filter-paths 'lib/|test/|script/' --exclude-dependencies --json <out>",
- "input_sha256": "ccbaae599e1afc87b09d315769f684daba8b8b69a75dc66d01aa35236e097c63",
- "raw_sha256": "2f3c832ab7ba27b0e9826e5bd79796e917c2d2e2bd49204192cde1a071201c75",
+ "input_sha256": "a3e2e8098a90087092ae2dbe7c8fbe2ea2da2fc69964c9db899ca4f5b5b6b435",
+ "raw_sha256": "c784e75c548717fc6f845f72c006fdaf9fce124c5388b1bc16a2e6e054341458",
  "results": [
   {
    "check": "arbitrary-send-erc20",
@@ -14,8 +14,8 @@
      "name": "_payIn",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      239,
-      245
+      240,
+      246
      ]
     },
     {
@@ -23,8 +23,8 @@
      "name": "IERC20(Currency.unwrap(c)).safeTransferFrom(from,address(MANAGER),amount)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      243,
-      243
+      244,
+      244
      ]
     }
    ]
@@ -142,7 +142,7 @@
      "file": "src/TouchstoneVault.sol",
      "lines": [
       417,
-      527
+      528
      ]
     }
    ]
@@ -166,8 +166,8 @@
      "name": "_modify",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      234,
-      236
+      235,
+      237
      ]
     },
     {
@@ -175,8 +175,8 @@
      "name": "_holdings",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      255,
-      257
+      256,
+      258
      ]
     }
    ]
@@ -200,8 +200,8 @@
      "name": "_modify",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      234,
-      236
+      235,
+      237
      ]
     },
     {
@@ -209,8 +209,8 @@
      "name": "_holdings",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      255,
-      257
+      256,
+      258
      ]
     }
    ]
@@ -417,7 +417,7 @@
      "file": "src/TouchstoneVault.sol",
      "lines": [
       417,
-      527
+      528
      ]
     }
    ]
@@ -1660,7 +1660,7 @@
      "file": "src/TouchstoneVault.sol",
      "lines": [
       43,
-      570
+      572
      ]
     }
    ]
@@ -2011,8 +2011,8 @@
      "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      235,
-      235
+      236,
+      236
      ]
     },
     {
@@ -2092,8 +2092,8 @@
      "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      235,
-      235
+      236,
+      236
      ]
     },
     {
@@ -2173,8 +2173,8 @@
      "name": "_epochSwapFrac += uint64(moveFrac)",
      "file": "src/TouchstoneVault.sol",
      "lines": [
-      562,
-      562
+      564,
+      564
      ]
     }
    ]
@@ -2190,7 +2190,7 @@
      "file": "src/TouchstoneVault.sol",
      "lines": [
       417,
-      527
+      528
      ]
     },
     {
@@ -2216,8 +2216,8 @@
      "name": "_pend.sAct = _u128(uint256(_pend.sAct) + shares)",
      "file": "src/TouchstoneVault.sol",
      "lines": [
-      500,
-      500
+      501,
+      501
      ]
     },
     {
@@ -2234,8 +2234,8 @@
      "name": "_segStart = now_",
      "file": "src/TouchstoneVault.sol",
      "lines": [
-      514,
-      514
+      515,
+      515
      ]
     }
    ]
@@ -2251,7 +2251,7 @@
      "file": "src/TouchstoneVault.sol",
      "lines": [
       417,
-      527
+      528
      ]
     },
     {
@@ -2268,8 +2268,8 @@
      "name": "_delegate(abi.encodeCall(ITouchstoneVaultExtension.roll,(o,ne)))",
      "file": "src/TouchstoneVault.sol",
      "lines": [
-      522,
-      522
+      523,
+      523
      ]
     },
     {
@@ -2295,8 +2295,8 @@
      "name": "_delegate(abi.encodeCall(ITouchstoneVaultExtension.roll,(o,ne)))",
      "file": "src/TouchstoneVault.sol",
      "lines": [
-      522,
-      522
+      523,
+      523
      ]
     },
     {
@@ -2313,8 +2313,8 @@
      "name": "_epochSwapFrac = 0",
      "file": "src/TouchstoneVault.sol",
      "lines": [
-      524,
-      524
+      525,
+      525
      ]
     },
     {
@@ -2322,8 +2322,8 @@
      "name": "_swapCount = 0",
      "file": "src/TouchstoneVault.sol",
      "lines": [
-      525,
-      525
+      526,
+      526
      ]
     }
    ]
@@ -2365,8 +2365,8 @@
      "name": "MANAGER.sync(c)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      241,
-      241
+      242,
+      242
      ]
     },
     {
@@ -2374,8 +2374,8 @@
      "name": "MANAGER.settle()",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      244,
-      244
+      245,
+      245
      ]
     },
     {
@@ -2392,8 +2392,8 @@
      "name": "MANAGER.sync(c)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      241,
-      241
+      242,
+      242
      ]
     },
     {
@@ -2401,8 +2401,8 @@
      "name": "MANAGER.settle()",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      244,
-      244
+      245,
+      245
      ]
     },
     {
@@ -2419,8 +2419,8 @@
      "name": "MANAGER.mint(address(this),c.toId(),amount)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      248,
-      248
+      249,
+      249
      ]
     },
     {
@@ -2437,8 +2437,8 @@
      "name": "MANAGER.mint(address(this),c.toId(),amount)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      248,
-      248
+      249,
+      249
      ]
     },
     {
@@ -2500,8 +2500,8 @@
      "name": "MANAGER.sync(c)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      241,
-      241
+      242,
+      242
      ]
     },
     {
@@ -2509,8 +2509,8 @@
      "name": "MANAGER.settle()",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      244,
-      244
+      245,
+      245
      ]
     },
     {
@@ -2527,8 +2527,8 @@
      "name": "MANAGER.sync(c)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      241,
-      241
+      242,
+      242
      ]
     },
     {
@@ -2536,8 +2536,8 @@
      "name": "MANAGER.settle()",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      244,
-      244
+      245,
+      245
      ]
     },
     {
@@ -2554,8 +2554,8 @@
      "name": "MANAGER.mint(address(this),c.toId(),amount)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      248,
-      248
+      249,
+      249
      ]
     },
     {
@@ -2572,8 +2572,8 @@
      "name": "MANAGER.mint(address(this),c.toId(),amount)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      248,
-      248
+      249,
+      249
      ]
     },
     {
@@ -2653,8 +2653,8 @@
      "name": "(r.start,r.med9Start,r.tauV,r.tauB) = (uint40(block.number),med9,tauV,tauB)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      269,
-      269
+      270,
+      270
      ]
     },
     {
@@ -2662,8 +2662,8 @@
      "name": "r.flags |= F_WITNESS_MISSING",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      271,
-      271
+      272,
+      272
      ]
     },
     {
@@ -2723,8 +2723,8 @@
      "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      235,
-      235
+      236,
+      236
      ]
     },
     {
@@ -2777,8 +2777,8 @@
      "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      235,
-      235
+      236,
+      236
      ]
     },
     {
@@ -2831,8 +2831,8 @@
      "name": "_nav0 = _u128(rebased)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      231,
-      231
+      232,
+      232
      ]
     }
    ]
@@ -3003,8 +3003,8 @@
      "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      235,
-      235
+      236,
+      236
      ]
     },
     {
@@ -3075,8 +3075,8 @@
      "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      235,
-      235
+      236,
+      236
      ]
     },
     {
@@ -3147,8 +3147,8 @@
      "name": "_epochSwapFrac = 0",
      "file": "src/TouchstoneVault.sol",
      "lines": [
-      524,
-      524
+      525,
+      525
      ]
     },
     {
@@ -3174,8 +3174,8 @@
      "name": "_segStart = now_",
      "file": "src/TouchstoneVault.sol",
      "lines": [
-      514,
-      514
+      515,
+      515
      ]
     },
     {
@@ -3192,8 +3192,8 @@
      "name": "_swapCount = 0",
      "file": "src/TouchstoneVault.sol",
      "lines": [
-      525,
-      525
+      526,
+      526
      ]
     }
    ]
@@ -3226,8 +3226,8 @@
      "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      235,
-      235
+      236,
+      236
      ]
     },
     {
@@ -3307,8 +3307,8 @@
      "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      235,
-      235
+      236,
+      236
      ]
     },
     {
@@ -3352,8 +3352,8 @@
      "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      235,
-      235
+      236,
+      236
      ]
     },
     {
@@ -3388,8 +3388,8 @@
      "name": "ModeChanged(m0,m)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      263,
-      263
+      264,
+      264
      ]
     },
     {
@@ -3431,8 +3431,8 @@
      "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      235,
-      235
+      236,
+      236
      ]
     },
     {
@@ -3586,7 +3586,7 @@
      "file": "src/TouchstoneVault.sol",
      "lines": [
       417,
-      527
+      528
      ]
     },
     {
@@ -3621,8 +3621,8 @@
      "name": "_tAction != 0",
      "file": "src/TouchstoneVault.sol",
      "lines": [
-      500,
-      500
+      501,
+      501
      ]
     }
    ]
@@ -3908,7 +3908,7 @@
      "file": "src/TouchstoneVault.sol",
      "lines": [
       417,
-      527
+      528
      ]
     },
     {
@@ -3957,8 +3957,8 @@
      "name": "_payIn",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      239,
-      245
+      240,
+      246
      ]
     },
     {
@@ -3966,8 +3966,8 @@
      "name": "amount == 0",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      240,
-      240
+      241,
+      241
      ]
     }
    ]
@@ -4100,8 +4100,8 @@
      "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      235,
-      235
+      236,
+      236
      ]
     },
     {
@@ -4233,8 +4233,8 @@
      "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      235,
-      235
+      236,
+      236
      ]
     },
     {
@@ -4314,8 +4314,8 @@
      "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      235,
-      235
+      236,
+      236
      ]
     },
     {
@@ -4429,8 +4429,8 @@
      "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      235,
-      235
+      236,
+      236
      ]
     },
     {
@@ -4510,8 +4510,8 @@
      "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      235,
-      235
+      236,
+      236
      ]
     },
     {
@@ -4555,8 +4555,8 @@
      "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      235,
-      235
+      236,
+      236
      ]
     },
     {
@@ -4830,8 +4830,8 @@
      "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      235,
-      235
+      236,
+      236
      ]
     },
     {
@@ -4936,8 +4936,8 @@
      "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      235,
-      235
+      236,
+      236
      ]
     },
     {
@@ -4979,8 +4979,8 @@
      "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      235,
-      235
+      236,
+      236
      ]
     },
     {
@@ -5049,8 +5049,8 @@
      "name": "MANAGER.sync(c)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      241,
-      241
+      242,
+      242
      ]
     },
     {
@@ -5058,8 +5058,8 @@
      "name": "MANAGER.settle()",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      244,
-      244
+      245,
+      245
      ]
     },
     {
@@ -5076,8 +5076,8 @@
      "name": "MANAGER.sync(c)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      241,
-      241
+      242,
+      242
      ]
     },
     {
@@ -5085,8 +5085,8 @@
      "name": "MANAGER.settle()",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      244,
-      244
+      245,
+      245
      ]
     },
     {
@@ -5103,8 +5103,8 @@
      "name": "MANAGER.mint(address(this),c.toId(),amount)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      248,
-      248
+      249,
+      249
      ]
     },
     {
@@ -5121,8 +5121,8 @@
      "name": "MANAGER.mint(address(this),c.toId(),amount)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      248,
-      248
+      249,
+      249
      ]
     },
     {
@@ -5209,8 +5209,8 @@
      "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      235,
-      235
+      236,
+      236
      ]
     },
     {
@@ -6024,7 +6024,7 @@
      "file": "src/TouchstoneVault.sol",
      "lines": [
       417,
-      527
+      528
      ]
     },
     {
@@ -6049,7 +6049,7 @@
      "file": "src/TouchstoneVault.sol",
      "lines": [
       417,
-      527
+      528
      ]
     },
     {
@@ -6057,8 +6057,8 @@
      "name": "FeeBank.bankApply(b,Op.Accrue,abi.encode(ne,shares,gateOpen))",
      "file": "src/TouchstoneVault.sol",
      "lines": [
-      497,
-      497
+      498,
+      498
      ]
     }
    ]
@@ -6074,7 +6074,7 @@
      "file": "src/TouchstoneVault.sol",
      "lines": [
       417,
-      527
+      528
      ]
     },
     {
@@ -6082,8 +6082,8 @@
      "name": "FeeBank.bankApply(b,Op.VestTime,abi.encode(ne,gateOpen))",
      "file": "src/TouchstoneVault.sol",
      "lines": [
-      519,
-      519
+      520,
+      520
      ]
     }
    ]
@@ -6148,8 +6148,8 @@
      "name": "_modify",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      234,
-      236
+      235,
+      237
      ]
     },
     {
@@ -6157,8 +6157,8 @@
      "name": "(d,None) = MANAGER.modifyLiquidity(_key(),ModifyLiquidityParams(_lo,_hi,liquidityDelta,bytes32(0)),)",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      235,
-      235
+      236,
+      236
      ]
     }
    ]
@@ -6223,8 +6223,8 @@
      "name": "_payIn",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      239,
-      245
+      240,
+      246
      ]
     },
     {
@@ -6232,8 +6232,8 @@
      "name": "MANAGER.settle()",
      "file": "src/TouchstoneVaultBase.sol",
      "lines": [
-      244,
-      244
+      245,
+      245
      ]
     }
    ]
@@ -6398,8 +6398,8 @@
      "name": "_tryRef",
      "file": "src/TouchstoneVault.sol",
      "lines": [
-      566,
-      569
+      568,
+      571
      ]
     },
     {
@@ -6407,8 +6407,8 @@
      "name": "HOOK.tryRef()",
      "file": "src/TouchstoneVault.sol",
      "lines": [
-      568,
-      568
+      570,
+      570
      ]
     }
    ]

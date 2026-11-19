@@ -29,7 +29,7 @@
    "test_F_5__noActionMeasuresZeroOnTheVault"
   ]
  },
- "limits": "independent model, not the contracts (F-5 covers the contracts at <= 8 swaps x 64 runs); the reference follows the pool, so the fence never binds; not on replay swaps",
+ "limits": "independent model, not the contracts (F-5 covers the contracts at <= 8 swaps x 256 fuzz runs); the reference follows the pool, so the fence never binds; not on replay swaps; seed 1108 is also the first seed of E2 (a different harness and generator)",
  "commit_public": "987f48c36c679a51dbe41d4f11892e6bc96a7449",
  "commit_internal": "b9bd502ee1ab3c38ca04792e8a0bbc90864e3918"
 }

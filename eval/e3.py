@@ -95,7 +95,7 @@ def main(argv):
         'seed': a.seed,
         'evidence': {'model/reference.py': sha('model/reference.py'), 'eval/e3.py': sha('eval/e3.py'),
                      'tests': ['test_F_5__noActionMeasuresZero', 'test_F_5__noActionMeasuresZeroOnTheVault']},
-        'limits': 'independent model, not the contracts (F-5 covers the contracts at <= 8 swaps x 64 runs); the '
+        'limits': 'independent model, not the contracts (F-5 covers the contracts at <= 8 swaps x 256 fuzz runs); the '
                   'reference follows the pool, so the fence never binds; not on replay swaps',
         'commit_public': git('rev-parse', 'HEAD'),
         'commit_internal': git('rev-parse', 'HEAD', cwd=os.path.join(ROOT, 'internal')),

@@ -12,7 +12,7 @@
     "fallbacks": 0
    },
    "source": "U-IC2 l3_form.l8 (eroding BOND_RATIO bond, solvency gate enforced, m 1%/yr)",
-   "data": "gbm-synthetic (U-IC2 held-out seeds 700-1099, mimic edge-12h, m 2.2%/yr, no observer, NAV 1000 ETH, gas 5 gwei)"
+   "data": "gbm-synthetic (U-IC2 held-out seeds 700-1099, mimic edge-12h, L8 form: m 1%/yr, an eroding bond, the gate enforced, no observer)"
   },
   "liveness_share_at_shipped_bands": {
    "value": {
@@ -22,7 +22,7 @@
     "hover-60": 1.0
    },
    "source": "U-IC2 l3_form.l8 blocked_share",
-   "data": "gbm-synthetic (U-IC2 held-out seeds 700-1099, mimic edge-12h, m 2.2%/yr, no observer, NAV 1000 ETH, gas 5 gwei)"
+   "data": "gbm-synthetic (U-IC2 held-out seeds 700-1099, mimic edge-12h, L8 form: m 1%/yr, an eroding bond, the gate enforced, no observer)"
   },
   "suspect_segment_share": {
    "not_run": "the suspect flag belongs to the allocation ledger (claim withdrawn, H); the simulation does not compute it"
@@ -83,7 +83,7 @@
     ],
     "cycles_per_sigma": 600
    },
-   "source": "row L1 (model/cells/m2d_rate.py) on held-out seeds 300-499, configuration of s17",
+   "source": "row L1 (model/cells/m2d_rate.py) on held-out seeds 300-499, an earlier configuration (before EDGE_DELAY 12 GRID); the source record is not public, the value is copied",
    "data": "gbm-synthetic"
   },
   "swap_cap_binding_frequency": {
@@ -109,7 +109,7 @@
      "l8_reverts": {}
     }
    },
-   "source": "U-IC2 per-path rows and l3_form.l8 (mimic only)",
+   "source": "U-IC2 per-path rows (m 2.2%/yr) and l3_form.l8 (the l8_reverts column: m 1%/yr, eroding bond); mimic only",
    "data": "gbm-synthetic (U-IC2 held-out seeds 700-1099, mimic edge-12h, m 2.2%/yr, no observer, NAV 1000 ETH, gas 5 gwei)"
   },
   "p99_actions_per_epoch_per_tier": {
@@ -274,9 +274,9 @@
   ],
   "eval/supplements/E8/kref-fork-26443420.log": "1adbe91c7b3eb15cb0c677d878121d0c6a137d42fb71fd78dae6c37085232c5f",
   "eval/supplements/E8/refband.json": "f224c62bdc9ecbf436123ebe7104beb7abda587b829804f28d11d73f7bc0d182",
-  "eval/e8.py": "e4a39f2c1337b2adc8e40058c8567fb6f1d51dc6caf675a7a864df21d1ca9102"
+  "eval/e8.py": "69bfe3515c3019eec93001dcf47671dc9280c0c278d619767edc9cd983c934a3"
  },
  "limits": "the U-IC2 per-path parts (two files, 670 MB) are not in the repository; their sha256 is recorded and eval/supplements/U-IC2-agg.json holds the aggregates used here; GBM items are synthetic paths with third-party depth 0 and gas at 5 gwei (a placeholder, not the replay window's p50); the lag leak is from the s17 configuration (before EDGE_DELAY 12 GRID); no item is from a historical replay",
- "commit_public": "987f48c36c679a51dbe41d4f11892e6bc96a7449",
- "commit_internal": "b9bd502ee1ab3c38ca04792e8a0bbc90864e3918"
+ "commit_public": "c6ba81942db8fc25199da0e9fd89f9f11a99ede5",
+ "commit_internal": "93b0ed0ba01449c110fc6729e3c00b8eede9a194"
 }

@@ -67,11 +67,12 @@
   }
  },
  "evidence": {
+  "eval/supplements/E7/sizes-src.json": "5df7815d7771802438808ca00e2e6237563d1971435a02e7bdcd9c2c8b4c8a33",
   "snapshots/TouchstoneHook.json": "b56d9fd02dd068bddf44629a33a9af09774f7b476413ea165f738474a9a06e29",
   "snapshots/TouchstoneVault.json": "d12c34460f4098d9394f10e7fd9de61fe1bb99feb493c64d2dee6e260729ed2c",
   "eval/supplements/E7/fork-pin-26443420.json": "32f0a529392c156bef5408ab04462b50e415b4b71bdc969c41da69ea7527d8da"
  },
  "limits": "G-1b was measured on the fork in s22; src/ has changed since only in comments (mutant tags) and is byte-identical in runtime apart from the metadata hash; the anvil deploy check runs in ci-local",
- "commit_public": "987f48c36c679a51dbe41d4f11892e6bc96a7449",
- "commit_internal": "b9bd502ee1ab3c38ca04792e8a0bbc90864e3918"
+ "commit_public": "c6ba81942db8fc25199da0e9fd89f9f11a99ede5",
+ "commit_internal": "93b0ed0ba01449c110fc6729e3c00b8eede9a194"
 }

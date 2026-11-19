@@ -125,19 +125,20 @@ Results: `eval/results/E0.json`, `eval/results/E0a.json`.
 
 Each row is a pre-registered evaluation with its result file in `eval/results/`. "Synthetic" means simulated 180-day
 price paths (driftless GBM at 40/60/120% annual volatility and a path hovering at the range edge), with no third-party
-liquidity and gas at 5 gwei. No row uses a historical replay.
+liquidity and gas at 5 gwei. No row uses a historical replay. The per-path simulation rows behind E4 and E8 (670 MB)
+are not in the repository; their hashes and aggregates are (`eval/supplements/U-IC2-agg.json`).
 
 | ID | Question | Result | Data |
 |---|---|---|---|
 | E1 | Is the witness a real position? | PASS: 0 wei difference, exact equality on 256 fuzz runs | Foundry |
-| E2 | Does the charge cover the realised loss of an honest placement? | PASS: 0 of 2,016 / 2,100 placements under-charged (σ 60 / 120%); overcharge mean 0.012 / 0.023 bp, p99 0.13 / 0.34 bp | Synthetic, one placement per path |
+| E2 | Does the charge cover the realised loss of an honest placement? | PASS: the expected charge (over 400 draws of the reference window's error) covers the realised loss on all 2,016 / 2,100 sampled exit states (σ 60 / 120%, the shipped settlement); overcharge 0.012 / 0.023 bp of NAV per placement (mean), p99 0.13 / 0.34 bp. A simpler settlement rule, not shipped, falls short on 16 / 21 | Synthetic (GBM), single-placement cell |
 | E3 | Is the charge zero without a curator action? | PASS: 0 wei over 10,000 segments and 20,034 third-party swaps; control: one swap is charged | Independent model |
 | E4 | Does the reference curator out-earn idle, dust, stale and wide curators? | PASS in every bucket; idle nets exactly 0 before gas and loses its pokes' gas (−0.136 ETH) | Synthetic (U-IC2 runs) |
-| E5 | Does every attack lose money? | PASS: 17 attack cells, every attack test passes, each cell has a positive control that profits | Foundry |
+| E5 | Do the asserted attacks lose money? | PASS: in 17 attack cells every asserted attack row nets ≤ 0, and each cell has a positive control (a test that profits with the defence removed; for N1–N3, a control asserted inside the attack test, accepted after the plan named N3 only). Disclosed and not asserted: when the vault's own move meets a markout past the settlement cap, a colluding pair can net up to +0.93 ETH; with a protocol fee on, up to +0.004 ETH | Foundry |
 | E6 | Does churning pay? | PASS: churner minus reference curator, t = −129 to −691 per bucket (follows from construction) | Synthetic |
 | E7 | Gas and size within budget? | PASS: largest runtime 19,877 B (limit 22,000); first swap per block 26.7k gas (budget 30k); worst action 871k (1.2M) | Foundry and mainnet fork |
-| E8 | Operating numbers | REPORTED: 11 items measured, 6 not run (listed in the file) | Mixed, labelled per item |
-| E9 | Why is positioning not paid? | REPORTED: a carry benchmark pays a random curator +40% / +6% / −13% above base across three regimes | Design-phase simulator |
+| E8 | Operating numbers | REPORTED: 11 items (one closed form, two from earlier configurations); 6 not run: suspect-segment share, p99 actions per epoch, curator recapture of burns, time to feasibility with one-sided inventory, gate-closed share, depositor observer break-even | Mixed, labelled per item |
+| E9 | Why is positioning not paid? | REPORTED: a carry benchmark pays a random curator +40 ± 10% / +6 ± 6% / −13 ± 6% above base across three regimes; an exposure-matched one +0.1 ± 1.7% / +0.1 ± 1.7% / −0.9 ± 1.5% | Design-phase simulator |
 | E-IC | Incentive compatibility on the historical replay | NOT RUN: the replay was never fetched; U-IC2 covers the same rule on synthetic paths | — |
 
 **Rebalancing cost charged to the reference curator** (E8; synthetic): 1.6 / 4.0 / 15.7 bps of NAV a year at 40 / 60 /
@@ -157,7 +158,5 @@ arbitrage pays about one round trip instead; that case is outside the model.
 
 There is no keeper, operator, admin or off-chain feed. The one external input is the reference pool's TWAP, because a
 new hook pool whose vault is out of range has no reliable price of its own.
-
-> Status: under active development. Results, run commands, the claims → tests table and limitations will be listed here.
 
 Partner integrations: None.

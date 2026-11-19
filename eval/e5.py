@@ -5,11 +5,14 @@ Built from one `forge test -vv` log of the shipped contracts (this session's, fo
 (the `test_M_<cell>__` prefix). Pre-registered in the s27 P6 plan (design review S27P6D-06), before the log existed:
 - each cell's attack tests assert that the attack does not profit (net <= 0); they must all pass;
 - each cell has a positive control: a control test (`ctl`/`control` in its name, asserting that the attack profits
-  with the defence removed) that passes, or, for the three cells whose controls are assertions inside the attack test,
-  that inline assertion (named below with its line); a cell without either is reported "no positive control" and
-  E5 is FAIL;
-- the logged numbers (worst net, control net) are copied from the log as printed; a cell whose test logs no number is
-  listed with its assertion only.
+  with the defence removed) that passes; the registered plan exempted N3 only (its discrimination control,
+  MN3.t.sol:99), and a cell without a control test is "no positive control", E5 FAIL;
+- RULE DEVIATION (recorded after the data, fix review S27P6F-02): N1 and N2 also have no separate control test; their
+  positive controls are asserted inside the attack tests (MN1.t.sol:135, MN2.t.sol:122/184). Under the registered rule
+  E5 would be FAIL on these two cells; the verdict below accepts the inline controls and says so;
+- the logged lines are copied from the log in full; tests named `…Reported` and the capped-settlement line log rows
+  that are reported, not asserted (spec §9.1 M-ADV3-move): their positive values are collected apart as disclosed
+  tails.
 Python cells (lag leak L1/L2, grief L4, ADV-3 under a phi-scaled charge) are cited from earlier sessions with their
 configuration and are not gated here.
 
@@ -24,12 +27,14 @@ INLINE = {
             'visible to the measure)',
     'M_N3': 'test/manipulation/MN3.t.sol:99 (a forgery cell: the frozen-median comparison discriminates)',
 }
-PY_CELLS = {
-    'lag_leak_L1_L2': '0.000% / 0.000% NAV/yr at sigma 60 / 120% (bounds 0.1 / 0.6), held-out seeds 300-499, s17 '
-                      'configuration; status-quo control 8.31% / 37.2%',
-    'grief_L4': 'griefer net > 0 on 0 rows (s5/s17); control without re-alignment profits',
+PY_CELLS = {   # earlier configurations; their source records are not public (reported, not gated)
+    'lag_leak_L1_L2': '0.000% / 0.000% NAV/yr at sigma 60 / 120% (bounds 0.1 / 0.6), model/cells/m2d_rate.py on '
+                      'held-out seeds 300-499, 600 cycles per sigma, earlier configuration (before EDGE_DELAY 12 GRID); '
+                      'status-quo control 8.31% / 37.2%',
+    'grief_L4': 'griefer net > 0 on 0 rows, model/cells/regate_l4_l9.py on held-out seeds 300-499, earlier '
+                'configuration; control without re-alignment profits',
     'adv3_phi_scaled': 'ADV-3 under a phi = 10% charge earns about 10x base (control); under the 100% charge max net '
-                       '-2.9e9 wei',
+                       '-2.9e9 wei; design-phase cell, seeds of that run not public',
 }
 
 
@@ -71,7 +76,15 @@ def main(argv):
         if re.search(r'ctl|control', rest, re.I):
             c['controls'].append(dict(test=name, passed=st == 'PASS'))
         if lines:
-            c['logs'][rest] = lines[:12]
+            c['logs'][rest] = lines
+        if rest.endswith('Reported') or any('disclosed tail' in x for x in lines):
+            vals = []
+            for j, x in enumerate(lines):
+                if rest.endswith('Reported') or 'disclosed tail' in x:
+                    vals += [int(v) for v in re.findall(r'(?<![\w.])-?\d{6,}(?![\w.])', x)]
+            pos = [v for v in vals if v > 0]
+            if pos:
+                c.setdefault('reported_unasserted_tails_wei', {})[rest] = max(pos)
     for cell, c in cells.items():
         has_ctl = any(x['passed'] for x in c['controls'])
         c['positive_control'] = 'control test' if has_ctl else (('inline: ' + INLINE[cell]) if cell in INLINE
@@ -81,12 +94,18 @@ def main(argv):
     res = {
         'id': 'E5', 'question': 'every attack cell', 'pass_rule': '<= 0, with a positive control > 0',
         'verdict': 'PASS' if ok else 'FAIL',
-        'rule_applied': 'every attack test of every cell passes (each asserts the attack does not profit) and every cell '
-                        'has a passing positive control (a control test, or the named inline assertion)',
-        'data': 'foundry (the shipped contracts; mainnet fork for the K-ref costs, block 26443420)',
+        'rule_applied': 'every asserted attack row of every cell nets <= 0 (its test passes) and every cell has a passing '
+                        'positive control (a control test; for N1-N3 an assertion inside the attack test)',
+        'rule_deviation': 'the registered plan exempted N3 only; N1 and N2 inline controls were accepted after the data '
+                          '(fix review S27P6F-02); under the registered rule E5 is FAIL on N1 and N2',
+        'disclosed_unasserted_tails': 'M-ADV3-move reports rows it does not assert (spec §9.1): with the settlement capped '
+                                      '(a markout past the cap break-even) a coalition nets up to +0.93 ETH; with a '
+                                      'protocol fee on, +0.004 ETH; off-leg stops and both-worlds overshoot up to +0.0006 '
+                                      'ETH (see cells.M_ADV3_move.reported_unasserted_tails_wei)',
+        'data': 'foundry (the shipped contracts on a local pool)',
         'cells': cells, 'python_cells_reported': PY_CELLS,
         'forge_log': {'path': log, 'sha256': sha(log)},
-        'limits': 'the cells are scripted attacks (with searched parameters) on a local pool, not an exhaustive search; '
+        'limits': 'M-ADV3-move has disclosed, unasserted positive tails (see disclosed_unasserted_tails); the cells are scripted attacks (with searched parameters) on a local pool, not an exhaustive search; '
                   'the Python cells come from earlier configurations and are reported, not gated; MK-1 (a single '
                   'builder holding the reference over the markout window) is outside the model',
         'commit_public': git('rev-parse', 'HEAD'),

@@ -55,9 +55,9 @@
    "l4_rows": 0
   }
  },
- "limits": "not path-level (one sampled exit state per seed and sigma), not the edge-12h policy, the charge in expectation over the window error (no per-draw shortfall), GBM, not replay",
+ "limits": "not path-level (one sampled exit state per seed and sigma), not the edge-12h policy, the charge in expectation over the window error (no per-draw shortfall), GBM, not replay; the raw rows (output/e2/, regenerable in about 3 s with the command in raw.meta) are not in the repository (their sha256 is recorded); the seed-disjointness check compared keys per generator but tagged by kind, so one raw Python RNG key is shared across generators (39120: seed 1260 L9 at sigma 60% and spent seed 39 GBM at sigma 120%; S27P6F-04), a negligible overlap stated rather than re-run",
  "commit_public": "4cfd5d6866e633b2baca38e540cd5e4bd6da6521",
  "commit_internal": "448efc0dd9cce15307f4fae8ad23e37eeaf4333b",
  "assembler_commit": "987f48c",
- "commit_note": "commit_public is the tree the run started from (its script uncommitted then); the script is committed unchanged at assembler_commit"
+ "commit_note": "commit_public is the tree the run started from (its script uncommitted then); the script is committed unchanged at assembler_commit; after the run only a docstring note was added to eval/e2.py (S27P6F-04)"
 }

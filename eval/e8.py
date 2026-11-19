@@ -46,14 +46,16 @@ def main(argv):
     l8, nv, hc = u['l3_form']['l8'], u['nonvacuity'], u['l3_form']['honest_cost']
     yr = 365.0 / DAYS
     k = kref()
+    gs8 = ('gbm-synthetic (U-IC2 held-out seeds 700-1099, mimic edge-12h, L8 form: m 1%/yr, an eroding bond, the gate '
+           'enforced, no observer)')
     gs = 'gbm-synthetic (U-IC2 held-out seeds 700-1099, mimic edge-12h, m 2.2%/yr, no observer, NAV 1000 ETH, gas 5 gwei)'
     items = {
         'bond_exhaustion_sigma_120': dict(
             value={'actions': l8['gbm-120']['actions'], 'reverts': l8['gbm-120']['reverts'],
                    'breached_paths': l8['gbm-120']['breached'], 'fallbacks': l8['gbm-120']['fallbacks']},
-            source='U-IC2 l3_form.l8 (eroding BOND_RATIO bond, solvency gate enforced, m 1%/yr)', data=gs),
+            source='U-IC2 l3_form.l8 (eroding BOND_RATIO bond, solvency gate enforced, m 1%/yr)', data=gs8),
         'liveness_share_at_shipped_bands': dict(
-            value={b: 1.0 - l8[b]['blocked_share'] for b in buckets}, source='U-IC2 l3_form.l8 blocked_share', data=gs),
+            value={b: 1.0 - l8[b]['blocked_share'] for b in buckets}, source='U-IC2 l3_form.l8 blocked_share', data=gs8),
         'suspect_segment_share': dict(not_run='the suspect flag belongs to the allocation ledger (claim withdrawn, H); '
                                               'the simulation does not compute it'),
         'fence_blocking_share_REF_BAND_60': dict(
@@ -70,13 +72,15 @@ def main(argv):
         'lag_leak_per_sigma': dict(
             value={'sigma_60_pct_nav_per_year': 0.0, 'sigma_120_pct_nav_per_year': 0.0,
                    'bounds_pct_nav_per_year': [0.1, 0.6], 'cycles_per_sigma': 600},
-            source='row L1 (model/cells/m2d_rate.py) on held-out seeds 300-499, configuration of s17',
+            source='row L1 (model/cells/m2d_rate.py) on held-out seeds 300-499, an earlier configuration (before EDGE_DELAY '
+                   '12 GRID); the source record is not public, the value is copied',
             data='gbm-synthetic'),
         'swap_cap_binding_frequency': dict(
             value={b: {'mimic_SwapCap_reverts': rows[(b, 'edge-12h')]['reverts'].get('SwapCap', 0),
                        'mimic_actions_per_path': round(rows[(b, 'edge-12h')]['actions_mean'], 1),
                        'l8_reverts': l8[b]['reverts']} for b in buckets},
-            source='U-IC2 per-path rows and l3_form.l8 (mimic only)', data=gs),
+            source='U-IC2 per-path rows (m 2.2%/yr) and l3_form.l8 (the l8_reverts column: m 1%/yr, eroding bond); mimic only',
+            data=gs),
         'p99_actions_per_epoch_per_tier': dict(
             not_run='the simulation keeps per-path totals, not per-epoch series',
             per_path_mean_actions_per_epoch={b: round(rows[(b, 'edge-12h')]['actions_mean'] / (DAYS * 86400 / BLOCKTIME

@@ -54,7 +54,8 @@ def main(argv):
         'id': 'E7', 'question': 'gas and size', 'pass_rule': 'budgets', 'verdict': 'PASS' if ok else 'FAIL',
         'data': 'foundry (local) and fork (chain 1, block 26443420, for G-1b)',
         'sizes_runtime_bytes': sizes, 'size_limit_bytes': size_gate.LIMIT, 'size_errors': errs, 'gas': gas,
-        'evidence': {'snapshots/TouchstoneHook.json': sha('snapshots/TouchstoneHook.json'),
+        'evidence': {'eval/supplements/E7/sizes-src.json': sha('eval/supplements/E7/sizes-src.json'),
+                     'snapshots/TouchstoneHook.json': sha('snapshots/TouchstoneHook.json'),
                      'snapshots/TouchstoneVault.json': sha('snapshots/TouchstoneVault.json'),
                      'eval/supplements/E7/fork-pin-26443420.json': sha('eval/supplements/E7/fork-pin-26443420.json')},
         'limits': 'G-1b was measured on the fork in s22; src/ has changed since only in comments (mutant tags) and is '

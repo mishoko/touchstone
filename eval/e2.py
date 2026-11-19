@@ -22,7 +22,9 @@ RAW = os.path.join(ROOT, 'output', 'e2')
 
 
 def keys(seed):
-    """Every RNG key `regate_l4_l9.l9` derives from a seed (l9, eta_honest, lags, sample_state -> gbm_ticks)."""
+    """Every RNG key `regate_l4_l9.l9` derives from a seed (l9, eta_honest, lags, sample_state -> gbm_ticks). Note
+    (S27P6F-04): the tags separate generators that share one Python RNG family (l9 and gbm both use random.Random),
+    so a raw-key overlap across them is not detected; the published result states the one overlap."""
     out = set()
     for sg in SIGMAS:
         out |= {('l9', seed * 31 + int(sg * 100)), ('eta', 5_000_011 + seed * 17 + int(sg * 100)),

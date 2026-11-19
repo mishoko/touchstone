@@ -75,7 +75,7 @@ def l8_job(args):
         sim = S.Sim(path, 0.01, observer=False, sigma=sigma, rng_seed=R.sim_key(seed, sigma) + 1)   # L8, as regate_l3
         r = sim.run(B.make(name), I.DAYS * 24)
         out.append(dict(row="L8", bot=name, seed=seed, kind=kind, sigma=sigma, actions=r["actions"],
-                        reverts=sum(r["revert_kinds"].values()), fallbacks=r["fallbacks"], breaches=r["breaches"],
+                        reverts=dict(r["revert_kinds"]), fallbacks=r["fallbacks"], breaches=r["breaches"],
                         bond_burn=r["bond_burn"]))
         sim = S.Sim(path, R.HONEST_M, observer=False, place=B.PLACES.get(name, True), sigma=sigma,
                     rng_seed=R.sim_key(seed, sigma), bond_ratio=R.WAD)                            # honest-cost row
@@ -93,8 +93,9 @@ def l8_summary(rows):
             l8 = [r for r in rows if r["row"] == "L8" and r["bot"] == n and r["kind"] == kind and r["sigma"] == sigma]
             hc = [r for r in rows if r["row"] == "honest" and r["bot"] == n and r["kind"] == kind and r["sigma"] == sigma]
             acts = sum(r["actions"] for r in l8)
+            blocked = sum(v for r in l8 for k, v in r["reverts"].items() if k != "NoLegalPlacement")   # as analyse
             out[f"{b}|{n}"] = dict(
-                paths=len(l8), l8_blocked_share=(sum(r["reverts"] for r in l8) / acts if acts else 0.0),
+                paths=len(l8), l8_blocked_share=blocked / max(1, acts + blocked),
                 l8_fallbacks=sum(r["fallbacks"] for r in l8), l8_breached_paths=sum(1 for r in l8 if r["breaches"]),
                 l8_bond_burn_mean=sum(r["bond_burn"] for r in l8) / len(l8),
                 honest_net=sum(r["net"] for r in hc) / len(hc), honest_charges=sum(r["charges"] for r in hc) / len(hc),

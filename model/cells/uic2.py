@@ -22,8 +22,9 @@ Usage:
   python3 model/cells/uic2.py --selfcheck
 A part prints progress only, never a gate number (D3: no look after the first 200). Guards: a dirty `model/` or
 spec, a settlement other than the frozen one, a second start of a part (`output/uic2/STARTED-<first>`), the result
-already existing; the verdict refuses parts from different commits or model hashes, and an incomplete set (a harness
-defect: the whole test is recorded not run).
+already existing; the verdict refuses parts whose model hash or frozen-form hash differs from each other or from the
+verdict's own (commits are recorded, not compared; S24U-08), and an incomplete set (a harness defect: the whole test is
+recorded not run).
 """
 import hashlib
 import json
@@ -146,8 +147,9 @@ def observer_table(res):
 
 
 def nav_end_table(rows, m=M):
-    """D5/S24U-02 (reported): the depositors' mean end NAV (ETH, 180 days, NAV 1000 at start) per bucket, environment
-    and bot, at m 2.2%/yr, both mimics included; the zero-depth model (third-party depth 0)."""
+    """D5/S24U-02 (reported): the vault's mean end NAV (ETH, 180 days, NAV 1000 at start; `sim` `nav_end`, the vault's
+    whole holdings, curator bank and bond claims included) per bucket, environment and bot, at m 2.2%/yr, both mimics
+    included; the zero-depth model (third-party depth 0)."""
     acc = {}
     for r in rows:
         if r["m"] != m:
@@ -164,7 +166,8 @@ REPORTED_KEYS = ("observer_environment", "nav_end", "edge6h_form")   # spec §10
 
 
 def finite(x):
-    """Strict JSON (F-054): a non-finite float (`gate_min_m`'s inf: no m up to 10%/yr passes) is written as null."""
+    """Strict JSON (F-054): a non-finite float (`gate_min_m`'s inf: the last simulated m does not pass) is written as
+    null."""
     if isinstance(x, float) and not math.isfinite(x):
         return None
     if isinstance(x, dict):
@@ -223,13 +226,17 @@ def verdict_main():
     meta.update(parts=[p["meta"] for p in parts], runs=len(rows), settlement=R.RULE, int_closes=R.INT_CLOSES)
     out = dict(
         eval="U-IC2", verdict="PASS" if ok else "FAIL", fails=fails,
-        frozen="spec §10 'U-IC2 frozen form' (s24, committed before the run: meta.internal_commit)",
+        frozen="spec §10 'U-IC2 frozen form' (s24, committed before the run: meta.parts[*].internal_commit and "
+               "form_hash)",
         rule="incentives.verdict (L3's rule): mimic edge-12h, m 2.2%/yr, hover m = 0 control reported; plus the "
              "lever control edge-12h > edge-6h at gbm-120 (gated)",
         configuration="EDGE_DELAY = 12 GRID (mainnet tier); m 2.2%/yr; contract bytecode unchanged",
-        selection="edge-12h: the only edge variant passing this rule on all three spent seed sets (100-299, "
-                  "300-499, 500-699); named a candidate in F-025 at s2; selected after U-IC failed (panel "
-                  "2026-11-19-s24-fix-uic-e0)",
+        selection="edge-12h is the only edge variant of the screened set (edge-3h, edge-6h, edge-12h, all simulated "
+                  "since s2) that passes this rule on all three spent seed sets 100-299, 300-499 and 500-699; it was "
+                  "named a candidate in F-025 at s2; it was selected after U-IC failed, and it was a reported column of "
+                  "U-IC's run. Not screened: waits of 13-20 h (never simulated); delayed-24h (a 23 h wait) is excluded "
+                  "because a 24-GRID EDGE_DELAY fails the deploy check (at most 6,250 blocks, about 20.8 h, on "
+                  "mainnet). Panel 2026-11-19-s24-fix-uic-e0",
         seeds=[FIRST, FIRST + N - 1], m=M, mimic=MIMIC, gated_bots=list(B.GATED), section_9_1_bots=list(U.SECTION91),
         buckets=table, lever_control=lever, gate=res, l3_form=l3form, nonvacuity=U.nonvacuity(rows),
         reported=dict(
@@ -246,6 +253,8 @@ def verdict_main():
                    "the extrapolation beyond the last simulated m fails, the minimum is read on the simulated range; "
                    "U-IC.json was written before this change, at its pinned model hash)",
         meta=meta)
+    # tautological by construction (the dict is built just above): it documents the §10 list and fails loudly if a
+    # later edit drops an item from `reported` (S24U-02, S24U2-03)
     missing = [k for k in REPORTED_KEYS if k not in out["reported"]]
     assert not missing, f"a pre-registered reported item has no producer: {missing}"
     if not ok:

@@ -152,8 +152,6 @@ contract VaultP4EntriesTest is HarnessVaultBase {
 
     // ------------------------------------------------------------------ claim, topUpBond, releaseBond (U-4, I-5)
 
-    /// @notice `claim` pays exactly `vestedUnclaimed` to the curator, in every mode; the vault's held balance falls by
-    ///         the same amount (custody, F-3's vault form). A non-curator reverts `OnlyCurator`.
     /// @notice `claim` pays `vestedUnclaimed` only: pay that matured behind a closed gate (`maturedPending`) stays in the
     ///         bank until a checkpoint with the gate open vests it (this vault's EMPTY range keeps its gate closed).
     ///         Kills MU-054 (s24).
@@ -166,6 +164,8 @@ contract VaultP4EntriesTest is HarnessVaultBase {
         assertEq(hv.bankFull().vestedUnclaimed, 0, "cleared");
     }
 
+    /// @notice `claim` pays exactly `vestedUnclaimed` to the curator, in every mode; the vault's held balance falls by
+    ///         the same amount (custody, F-3's vault form). A non-curator reverts `OnlyCurator`.
     function test_U_4__claimPaysVestedSharesInEveryMode() public {
         _plant(0, 0, 0, 2e18);
         vm.prank(mallory);

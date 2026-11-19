@@ -1598,12 +1598,12 @@
   {
    "id": "MU-134",
    "area": "additional",
-   "desc": "no ≥ 1 wei bucket rule. EQUIVALENT (s07 D1-08; s24): no separate ≥ 1 wei branch exists; ceilDiv per bucket gives ≥ 1 for a non-zero bucket at s ≥ 1, and the rounding is MU-016's; kept unwired.",
-   "killer_id": null,
-   "kill": "pending",
-   "file": null,
-   "find": null,
-   "replace": null,
+   "desc": "no ≥ 1 wei bucket rule: the token1 bucket floored, so a non-zero bucket can cost 0 wei (the token0 bucket is MU-016, the L leg MU-162; s24 fix review S24M-01: not equivalent)",
+   "killer_id": "U-5",
+   "kill": "test_U_5__oneShareOfANonZeroBucketCostsAtLeastOneWei",
+   "file": "src/TouchstoneVaultExtension.sol",
+   "find": "uint256 d1 = FullMath.mulDivRoundingUp(_idle1, s, S);",
+   "replace": "uint256 d1 = FullMath.mulDiv(_idle1, s, S);",
    "status": "PENDING"
   },
   {

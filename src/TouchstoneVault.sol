@@ -129,8 +129,8 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
         // [MU-268] seed runs at once in the extension: no step 0, prologue, checkpoint or mode gate (spec §4.6 seed)
         if (entry == Entry.Seed) return _extension(entry, payer, args);
         if (!_seeded) revert NotSeeded(); // [MU-273] nothing but seed runs before seed
-        // [MU-185] step 0, before the snapshot and collect-first (the binding order; since s15 the settlement reads only its
-        // record, so the order matters again once the checkpoint mints base shares)
+        // [MU-185] step 0, before the snapshot and collect-first (the binding order; swapping the two is equivalent since
+        // s15: neither reads what the other writes, and base is minted only in the checkpoint after both)
         _settle();
         Obs memory o = _prologue();
         // [MU-037] [MU-278] every entry point checkpoints

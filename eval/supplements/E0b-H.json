@@ -40,7 +40,8 @@
   },
   "attribution": "the failure is the passive leg's time-based fee rate f_w: a witness lifetime's fees are attributed to segments in proportion to credited time rather than to when they were earned, so neighbouring epochs carry large opposite-signed residuals (e.g. seed 1107: e2 +4.09 bp, e3 -3.72 bp); the vault fee leg (read from pool state), the price leg, the L_b sizing and the share terms reconcile",
   "valuation_remainder": "f_w values the witness fees at the lifetime's last p1 while the truth values each segment at its own p1; on the fit data this remainder is at most 0.014 bp (frozen-state review S25R-02)",
-  "evaluator_exceptions": "none (no script reported an evaluator error; failed_scripts is empty)"
+  "evaluator_exceptions": "none (no script reported an evaluator error; failed_scripts is empty)",
+  "reproducer": "python3 eval/supplements/e0b_diagnosis.py <held-out data dir> (checks the numbers above)"
  },
  "fit": {
   "worst_bp": {

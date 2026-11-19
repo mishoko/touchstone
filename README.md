@@ -89,16 +89,19 @@ never affects pay. Its pre-registered test asks each epoch's allocation to recon
 depositor to within 0.3 bp. In the current configuration that test, E0b, failed, so the ledger carries no closure claim:
 - E0b reads the vault's own fee leg from pool state at each vault call (no contract change) and was run once on eight
   pre-registered scripts (seeds 1100–1107) built to stress the remaining approximation, the passive leg's time-based fee
-  rate. Every script completed, the share terms reconciled exactly and every control and non-vacuity condition held, but
-  59 of 112 epoch rows exceeded the bound (worst 4.09 bp; per script 1.27–4.09 bp), mostly in pairs of
-  neighbouring epochs with opposite signs. A diagnosis made after the run attributes the whole residual to that fee rate: with the passive leg's
-  fees replaced by their true values from pool state, every row closes within 0.022 bp. The ledger attributes a witness
-  lifetime's fees in proportion to credited time, not to when they were earned; its per-epoch figures can therefore be
-  off by a few basis points under bursty trading and late pokes. The runs use the test tier with the base rate raised,
-  as in E0a.
+  rate. Every script completed, the share terms reconciled exactly, every non-vacuity condition held and every gated
+  control had been shown powered before registration, but 59 of 112 epoch rows exceeded the bound (worst 4.09 bp; per
+  script 1.27–4.09 bp), mostly in pairs of neighbouring epochs with opposite signs. A diagnosis made after the run
+  attributes the residual to the passive leg (its time-based rate and its valuation): with the passive leg's fees
+  replaced by their true values from pool state, every row closes within 0.022 bp (`eval/supplements/e0b_diagnosis.py`).
+  The ledger attributes a witness lifetime's fees in proportion to credited time, not to when they were earned; on these
+  scripts its per-epoch figures were off by up to 4.09 bp, and no bound is claimed outside them. The runs use the test
+  tier with the base rate raised, as in E0a. No third attempt is made; reading the witness's fee growth at each call is
+  future work and would not count toward E0, E0a or E0b.
 - The test was registered before any held-out script existed (commit `392784e`, branch `e0b`); its frozen form,
   generator, harness and evaluator are in `eval/E0b-form.md`, `eval/e0b_gen.py`, `test/eval/E0bData.t.sol` and
-  `eval/E0b.py`. Results: `eval/results/E0b.json`, `eval/results/E0b-fit.json`, `eval/supplements/E0b-H.json`.
+  `eval/E0b.py`; reproducing the verdict needs the branch `e0b` (the per-seed manifests committed after registration).
+  Results: `eval/results/E0b.json`, `eval/results/E0b-fit.json`, `eval/supplements/E0b-H.json`.
 
 Earlier configuration (published as failed, final):
 - E0, the original formula: worst residual 58.6 bp in an epoch for a curator offset from the benchmark (reduced

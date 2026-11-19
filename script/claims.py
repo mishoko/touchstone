@@ -336,8 +336,17 @@ def selftest(rows):
         json.dump({'verdict': 'PASS'}, open(rp, 'w'))
         if withdrawn([('E0b', 'P5', 'eval')], 'P5', d):
             errs.append('fixture: only a FAIL can be withdrawn')
+        json.dump({'verdict': 'FAIL'}, open(os.path.join(d, 'eval', 'results', 'E0c.json'), 'w'))
+        json.dump({'withdrawn': True, 'decision': 'x'}, open(os.path.join(d, 'eval', 'supplements', 'E0c-H.json'), 'w'))
         if missing([('E0c', 'P5', 'eval')], '', 'P5', d) != ['E0c']:
-            errs.append('fixture: an unlisted row is never withdrawn')
+            errs.append('fixture: an unlisted row is never withdrawn, even with a FAIL and a withdrawal record')
+        json.dump({'verdict': 'FAIL'}, open(rp, 'w'))
+        for bad in ({'withdrawn': False, 'decision': 'x'}, {'withdrawn': True, 'decision': ''}, {'decision': 'x'}):
+            json.dump(bad, open(hp, 'w'))
+            if missing([('E0b', 'P5', 'eval')], '', 'P5', d) != ['E0b']:
+                errs.append(f'fixture: a withdrawal record {bad} must not withdraw the row')
+        if '+ 0 withdrawn (none' not in count_line(1, 1, [], 'P1'):
+            errs.append('fixture: the count line always names the withdrawn count')
         if '+ 1 withdrawn (E0b' not in count_line(5, 5, [], 'P5', ['E0b']):
             errs.append('fixture: the count line carries the withdrawn rows on the same line')
     if WITHDRAWN != ('E0b',) or not set(WITHDRAWN) <= set(NO_SUCCESSOR):

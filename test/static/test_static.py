@@ -452,17 +452,42 @@ def test_U_IC2__observer_supplement_is_complete():
 VAULT_FILES = ('src/TouchstoneVault.sol', 'src/TouchstoneVaultBase.sol', 'src/TouchstoneVaultExtension.sol')
 
 
+CALL = re.compile(r'FullMath\.mulDiv(RoundingUp)?\(')
+# lines whose rounding is not mutated, each with its reason (S24R4-01)
+ROUNDING_ALLOWLIST = {
+    'if (FullMath.mulDiv(navRef, S_SEED - DEAD, S_SEED) < BOND_MIN) revert BondMin();':
+        'the seed bond floor: rounding up would accept a bond at most 1 wei below BOND_MIN (a parameter floor, not an '
+        'accounting identity); its comparison and price are mutated by MU-130 and MU-161',
+}
+
+
+def flipped_calls(find, replace):
+    """Indices of the `mulDiv` calls in `find` whose rounding the mutant flips (same call count, name changed)."""
+    a = [m.group(1) or '' for m in CALL.finditer(find)]
+    b = [m.group(1) or '' for m in CALL.finditer(replace)]
+    return [i for i in range(len(a)) if len(a) == len(b) and a[i] != b[i]]
+
+
 def uncovered_roundings(srcs, muts):
-    """Every `FullMath.mulDiv*` line of the vault's three files lies in at least as many wired mutants' finds as it has
-    `mulDiv` calls (s24 S24M-01, S24R2-01, S24R3-01: a rule's rounding has one arithmetic site per call, and each needs
-    its own mutant). `srcs` maps a repo path to its text."""
+    """Every `FullMath.mulDiv*` call of the vault's three files has a wired mutant that flips exactly its rounding
+    (s24 S24M-01, S24R2-01, S24R3-01, S24R4-01: one arithmetic site per call, each with its own flip; a mutant that
+    changes something else on the line does not count). `srcs` maps a repo path to its text."""
     bad = []
     for f, src in srcs.items():
-        finds = [m['find'] for m in muts if m.get('file') == f and m.get('find') and m.get('kill') not in (None, 'pending')]
+        wired = [m for m in muts if m.get('file') == f and m.get('find') and m.get('kill') not in (None, 'pending')]
         for n, line in enumerate(src.split('\n'), 1):
-            k = line.count('FullMath.mulDiv')
-            if k and sum(1 for x in finds if line.strip() in x or x.strip() in line) < k:
-                bad.append(f'{f}:{n}: {line.strip()}')
+            k = len(CALL.findall(line))
+            if not k or line.strip() in ROUNDING_ALLOWLIST:
+                continue
+            covered = set()
+            for m in wired:
+                fd = m['find']
+                if line.strip() not in fd:
+                    continue
+                off = len(CALL.findall(fd[:fd.index(line.strip())]))
+                covered |= {i - off for i in flipped_calls(fd, m['replace']) if 0 <= i - off < k}
+            if covered != set(range(k)):
+                bad.append(f'{f}:{n}: {line.strip()} (flipped calls {sorted(covered)} of {k})')
     return bad
 
 
@@ -470,10 +495,15 @@ def test_every_vault_rounding_has_a_mutant():
     srcs = {f: open(os.path.join(ROOT, f)).read() for f in VAULT_FILES}
     muts = json.load(open(os.path.join(ROOT, 'audits', 'mutants.json')))['mutants']
     assert uncovered_roundings(srcs, muts) == [], uncovered_roundings(srcs, muts)
-    # controls: dropping one of a line's two mutants exposes it; so does dropping a single-call line's mutant
-    for mid, needle in (('MU-315', 'M_PER_BLOCK'), ('MU-313', 'o1 = FullMath.mulDiv')):
+    # controls: dropping one of a line's two flips, a single-call line's flip, or the re-base flip (whose line other
+    # mutants also touch, S24R4-01) exposes the line
+    for mid, needle in (('MU-315', 'M_PER_BLOCK'), ('MU-313', 'o1 = FullMath.mulDiv'), ('MU-317', 'rebased = FullMath')):
         cut = [dict(m, kill='pending') if m['id'] == mid else m for m in muts]
         assert any(needle in b for b in uncovered_roundings(srcs, cut)), mid
+    # control: two mutants flipping the same call of a two-call line leave the other call uncovered
+    dup = [dict(m, replace=next(x['replace'] for x in muts if x['id'] == 'MU-314')) if m['id'] == 'MU-315' else m
+           for m in muts]
+    assert any('M_PER_BLOCK' in b for b in uncovered_roundings(srcs, dup))
 
 
 if __name__ == '__main__':

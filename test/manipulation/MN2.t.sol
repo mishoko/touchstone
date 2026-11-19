@@ -194,6 +194,7 @@ contract MN2Test is LiquidPoolBase {
         uint256 S2 = hv.totalSupply();
         assertGt(S2 - s, s, "precondition: the deposit's prologue minted base (the supply moved)");
         assertEq(hv.scalars().nav0, FullMath.mulDiv(nav0, S2, S2 - s), "a deposit re-bases NAV0 with the supply");
+        assertLt(uint256(hv.scalars().nav0) * (S2 - s), nav0 * S2, "floored strictly below the exact quotient (MU-317)");
         uint256 nav1 = hv.scalars().nav0;
         _keepAlive(60);
         uint256 sPre = hv.totalSupply();
@@ -201,6 +202,7 @@ contract MN2Test is LiquidPoolBase {
         S2 = hv.totalSupply();
         assertGt(S2 + s / 2, sPre, "precondition: the withdrawal's prologue minted base (the supply moved)");
         assertEq(hv.scalars().nav0, FullMath.mulDiv(nav1, S2, S2 + s / 2), "a withdrawal re-bases it down");
+        assertLt(uint256(hv.scalars().nav0) * (S2 + s / 2), nav1 * S2, "floored strictly below the exact quotient (MU-317)");
         console.log("M-N2 NAV0 before, after flows", nav0, hv.scalars().nav0);
     }
 }

@@ -327,6 +327,7 @@ contract TouchstoneVaultExtension is VaultCommon {
         (uint256 s, uint256 min0, uint256 min1, address to) = abi.decode(args, (uint256, uint256, uint256, address));
         // [MU-017] the supply before the burn
         uint256 S = totalSupply();
+        // [MU-312] [MU-313] the idle legs round down (spec §9.1 I-2: exact − 1 < out ≤ exact)
         uint256 o0 = FullMath.mulDiv(_idle0, s, S);
         uint256 o1 = FullMath.mulDiv(_idle1, s, S);
         // [MU-163] the L leg rounds down like the idle legs

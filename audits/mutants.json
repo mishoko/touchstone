@@ -3717,6 +3717,28 @@
    "replace": "            _transfer(address(this), payer, s);",
    "status": "KILLED",
    "basis": "a179a3fba0bda967"
+  },
+  {
+   "id": "MU-312",
+   "area": "ledger",
+   "desc": "withdraw's token0 idle leg rounded up instead of down (s24 fix review S24R2-01)",
+   "killer_id": "U-5",
+   "kill": "test_U_5__withdrawPaysRoundedDownOnThePreBurnSupply",
+   "file": "src/TouchstoneVaultExtension.sol",
+   "find": "uint256 o0 = FullMath.mulDiv(_idle0, s, S);",
+   "replace": "uint256 o0 = FullMath.mulDivRoundingUp(_idle0, s, S);",
+   "status": "PENDING"
+  },
+  {
+   "id": "MU-313",
+   "area": "ledger",
+   "desc": "withdraw's token1 idle leg rounded up instead of down (s24 fix review S24R2-01)",
+   "killer_id": "U-5",
+   "kill": "test_U_5__withdrawPaysRoundedDownOnThePreBurnSupply",
+   "file": "src/TouchstoneVaultExtension.sol",
+   "find": "uint256 o1 = FullMath.mulDiv(_idle1, s, S);",
+   "replace": "uint256 o1 = FullMath.mulDivRoundingUp(_idle1, s, S);",
+   "status": "PENDING"
   }
  ]
 }

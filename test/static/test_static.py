@@ -449,6 +449,30 @@ def test_U_IC2__observer_supplement_is_complete():
     assert all(len(v) <= 1 for v in r['reported']['observer_environment']['edge-12h'].values())
 
 
+def uncovered_roundings(src, muts):
+    """Every `FullMath.mulDiv*` line in the extension's `_deposit` and `_withdraw` is inside some wired mutant's find
+    (s24 S24M-01, S24R2-01: a rule's rounding has one arithmetic site per bucket, each needs its own mutant)."""
+    finds = [m['find'] for m in muts if m.get('file') == 'src/TouchstoneVaultExtension.sol' and m.get('find')
+             and m.get('kill') not in (None, 'pending')]
+    bad = []
+    for fn in ('_deposit', '_withdraw'):
+        m = re.search(r'function ' + fn + r'\(.*?\n    \}', src, re.S)
+        assert m, fn
+        for line in m.group(0).split('\n'):
+            if 'FullMath.mulDiv' in line and not any(line.strip() in f or f.strip() in line for f in finds):
+                bad.append(f'{fn}: {line.strip()}')
+    return bad
+
+
+def test_every_deposit_and_withdraw_rounding_has_a_mutant():
+    src = open(os.path.join(ROOT, 'src', 'TouchstoneVaultExtension.sol')).read()
+    muts = json.load(open(os.path.join(ROOT, 'audits', 'mutants.json')))['mutants']
+    assert uncovered_roundings(src, muts) == [], uncovered_roundings(src, muts)
+    # control: dropping a mutant's wiring exposes its line
+    cut = [dict(m, kill='pending') if m['id'] == 'MU-313' else m for m in muts]
+    assert any('o1 = FullMath.mulDiv' in b for b in uncovered_roundings(src, cut))
+
+
 if __name__ == '__main__':
     tests = [v for k, v in sorted(globals().items()) if k.startswith('test_') and callable(v)]
     for t in tests:

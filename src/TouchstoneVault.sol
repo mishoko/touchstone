@@ -205,7 +205,7 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
         if (place) {
             // [MU-225] the placement rules on the pre-action (post-move, pre-swap) spot
             uint8 code = Placement.check(lo, hi, tickSpot, ref, REF_BAND, W_TICKS, SPACING);
-            // [MU-226] [MU-227] each rule its own error (the fence, code 1, has already passed)
+            // [MU-226] [MU-227] [MU-333] each rule its own error (the fence, code 1, has already passed)
             if (code == 2) revert Width();
             if (code == 3) revert Alignment();
             if (code != 0) revert NotContained();

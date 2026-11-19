@@ -124,6 +124,9 @@ contract VaultHandler is Test, SettleExtraOracle {
     uint256 public breachesProcessed;
     uint256 public removals;
     uint256 public vests;
+    /// @dev P5-Ad-05: vests in a run that never planted pay through `seedBank`, so the vested pay came from the real
+    ///      base mint (checkpoint → cohort → vest), not from a harness seam.
+    uint256 public realMintVests;
     uint256 public epochCloses;
     uint256 public refreshes;
     uint256 public refreshFails;
@@ -806,6 +809,7 @@ contract VaultHandler is Test, SettleExtraOracle {
         // pending breach still exits by retire; the ladder removes exactly when the count reaches REMOVAL)
         if (p.mode != Ladder.EXITED && b.mode == Ladder.EXITED && b.breaches >= Ladder.REMOVAL) ++removals;
         if (b.vestedUnclaimed > p.vested) ++vests;
+        if (b.vestedUnclaimed > p.vested && bankSeeds == 0) ++realMintVests;
         if (hv.scalars().epoch > p.epoch) ++epochCloses;
         if (_refGrid(w) > _refGrid(p.hook0)) ++refreshes;
         if (_lastSnap(p.hook0) < now_ && _lastSnap(w) == now_) {

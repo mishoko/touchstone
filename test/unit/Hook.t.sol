@@ -519,6 +519,27 @@ contract HookTest is HookBase {
         assertTrue(d.deploy(ok, s0) != address(0));
     }
 
+    /// The constructor rejects a tier with no reference window (the "TWAP" would be spot), a zero grid, or an epoch
+    /// that is not a whole number of grids (the drip is kept equal to the epoch, so only the guard under test can
+    /// fire). Control: the test tier deploys. (F-057, MU-327)
+    function test_U_clock__constructorRejectsAZeroWindowAZeroGridOrAnEpochOffTheGrid() public {
+        Create2Deployer d = new Create2Deployer();
+        Tier memory t;
+        for (uint256 i; i < 3; ++i) {
+            t = tier;
+            if (i == 0) t.REF_WINDOW = 0;
+            if (i == 1) t.GRID = 0;
+            if (i == 2) (t.EPOCH, t.FORFEIT_DRIP_BLOCKS) = (tier.EPOCH + 1, tier.EPOCH + 1);
+            bytes memory init = abi.encodePacked(type(TouchstoneHook).creationCode, abi.encode(_args(t, VAULT)));
+            (bytes32 salt,) = d.mine(init);
+            vm.expectRevert(ITouchstoneHook.BadTier.selector);
+            d.deploy(init, salt);
+        }
+        bytes memory ok = abi.encodePacked(type(TouchstoneHook).creationCode, abi.encode(_args(tier, VAULT)));
+        (bytes32 s0,) = d.mine(ok);
+        assertTrue(d.deploy(ok, s0) != address(0), "control: the test tier deploys");
+    }
+
     /// @notice M-10 (F-047, s20 panel decision D1): the hook's constructor rejects any tier whose forfeiture drip is not
     ///         exactly one epoch (a drip of 1 block lets a sniper who deposits at the breach take its whole share one
     ///         block later; a drip far longer than the epoch withholds forfeited pay from leaving depositors), and an

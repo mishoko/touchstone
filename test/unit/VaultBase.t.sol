@@ -94,6 +94,40 @@ contract VaultBaseAccrualTest is ScriptedVaultBase {
         assertEq(h.scalars().baseOwed, 0);
     }
 
+    /// @notice P5-E-01 (spec §5.1 T16, disclosed): a base deferred during a reference outage is minted at the next
+    ///         priced checkpoint on the supply then outstanding, so a holder who leaves in between skips its pro-rata
+    ///         part of the dilution and the holders who stay bear it. Two vaults hold the same owed base: in one, half the
+    ///         holders left during the outage (half the buckets, half the supply); in the control they leave after the
+    ///         mint. The curator receives the owed value either way; the stayers' extra cost is the leaver's share ×
+    ///         `baseOwed` (here half of it), the bound the disclosure states.
+    function test_U_base__deferredBaseSkipsALeaverDuringTheOutage() public {
+        uint256 owed = 1e15;
+        uint256[2] memory stayers;
+        for (uint256 left; left < 2; ++left) {
+            VaultHarness h = _newHarness();
+            vm.roll(1200);
+            h.setHoldings(left == 1 ? Holdings(5e17, 5e17, 0, -600, 600) : Holdings(1e18, 1e18, 0, -600, 600));
+            Bank memory b;
+            b.bondShares = 1e21;
+            (b.dripBlocks, b.releaseDelay, b.placedByCurator) = (120, 480, true);
+            h.setBank(b);
+            h.setSupply(left == 1 ? 5e23 : 1e24);
+            // the owed base accrued before the leaver left (NAV₀ 2e18); no new segment at this checkpoint (τ unchanged)
+            h.setScalars(2e18, uint64(WAD / 2), 60, 1150, uint128(owed), 10, 0, 0);
+            uint256 S = h.totalSupply();
+            uint256 nav = _navAt(h, 0);
+            h.checkpoint(_obsIn(), true, 0);
+            assertEq(h.scalars().baseOwed, 0, "minted at the next priced checkpoint");
+            uint256 minted = h.totalSupply() - S;
+            assertEq(minted, FullMath.mulDiv(owed, S, nav - owed), "on the supply then outstanding");
+            // the stayers' value: 5e23 shares of the post-mint vault
+            stayers[left] = FullMath.mulDiv(nav, 5e23, h.totalSupply());
+        }
+        // control (no leaver before the mint): the stayers bear half the owed base; with the leaver gone first, all of it
+        assertApproxEqAbs(1e18 - stayers[0], owed / 2, 2, "control: shared with the leaver");
+        assertApproxEqAbs(1e18 - stayers[1], owed, 2, "the stayers bear the leaver's part (share x baseOwed)");
+    }
+
     function _navAt(VaultHarness h, int24 t) internal view returns (uint256 v) {
         (v,) = ExecLedger.value(h.holdings(), TickMath.getSqrtPriceAtTick(t));
     }

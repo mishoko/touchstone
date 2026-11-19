@@ -62,6 +62,7 @@ contract TouchstoneVaultExtension is VaultCommon {
         if (msg.sender != FACTORY) revert OnlyFactory();
         // [MU-321] seed once
         if (_seeded) revert OnlyFactory();
+        // [MU-330] a seed carries value
         if (a0 + a1 == 0) revert ZeroShares();
         curator = curator_;
         MANAGER.unlock(abi.encode(Entry.Seed, address(0), abi.encode(a0, a1, wit0, wit1)));
@@ -73,6 +74,7 @@ contract TouchstoneVaultExtension is VaultCommon {
         delegated
         returns (uint256 a0, uint256 a1)
     {
+        // [MU-331] no zero-share deposit
         if (shares == 0) revert ZeroShares();
         return abi.decode(
             MANAGER.unlock(abi.encode(Entry.Deposit, msg.sender, abi.encode(shares, max0, max1, to))), (uint256, uint256)
@@ -85,6 +87,7 @@ contract TouchstoneVaultExtension is VaultCommon {
         delegated
         returns (uint256 a0, uint256 a1)
     {
+        // [MU-332] no zero-share withdrawal
         if (shares == 0) revert ZeroShares();
         return abi.decode(
             MANAGER.unlock(abi.encode(Entry.Withdraw, msg.sender, abi.encode(shares, min0, min1, to))), (uint256, uint256)

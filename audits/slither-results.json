@@ -1,8 +1,8 @@
 {
  "tool": "Slither 0.11.5",
  "command": "slither . --filter-paths 'lib/|test/|script/' --exclude-dependencies --json <out>",
- "input_sha256": "65d156dd99e504fd7e0f41242bcf49e16ef6658b411ba292721971b05e727548",
- "raw_sha256": "169a64c24f73d57f4e75be69b070192135316d4ff887359677662af5b6fafaab",
+ "input_sha256": "4d88fd3d3efd297840d447c08a6723afc0737ba8a3ba545d3fc71a4fbf7ea47f",
+ "raw_sha256": "326bb3df0fb2cc29d542173cd1610a4282e286137ee32f2e5ef61629c84b0473",
  "results": [
   {
    "check": "arbitrary-send-erc20",
@@ -90,7 +90,7 @@
      "file": "src/TouchstoneFactory.sol",
      "lines": [
       51,
-      106
+      107
      ]
     },
     {
@@ -259,8 +259,8 @@
      "name": "_deposit",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      288,
-      327
+      291,
+      330
      ]
     }
    ]
@@ -300,8 +300,8 @@
      "name": "_create2",
      "file": "src/TouchstoneFactory.sol",
      "lines": [
-      117,
-      126
+      118,
+      127
      ]
     },
     {
@@ -309,8 +309,8 @@
      "name": "",
      "file": "src/TouchstoneFactory.sol",
      "lines": [
-      118,
-      125
+      119,
+      126
      ]
     }
    ]
@@ -375,8 +375,8 @@
      "name": "_window",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      560,
-      586
+      563,
+      589
      ]
     },
     {
@@ -384,8 +384,8 @@
      "name": "",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      565,
-      577
+      568,
+      580
      ]
     }
    ]
@@ -432,8 +432,8 @@
      "name": "_snapshot",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      388,
-      465
+      391,
+      468
      ]
     }
    ]
@@ -474,7 +474,7 @@
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
       29,
-      361
+      364
      ]
     },
     {
@@ -1685,7 +1685,7 @@
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
       29,
-      361
+      364
      ]
     }
    ]
@@ -1710,7 +1710,7 @@
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
       29,
-      361
+      364
      ]
     }
    ]
@@ -1735,7 +1735,7 @@
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
       29,
-      361
+      364
      ]
     }
    ]
@@ -1760,7 +1760,7 @@
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
       29,
-      361
+      364
      ]
     }
    ]
@@ -1785,7 +1785,7 @@
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
       29,
-      361
+      364
      ]
     }
    ]
@@ -1810,7 +1810,7 @@
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
       29,
-      361
+      364
      ]
     }
    ]
@@ -1825,8 +1825,8 @@
      "name": "ackBreaches",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      301,
-      305
+      303,
+      307
      ]
     },
     {
@@ -1834,8 +1834,8 @@
      "name": "_pendingBreaches = 0",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      304,
-      304
+      306,
+      306
      ]
     },
     {
@@ -1843,8 +1843,8 @@
      "name": "_pendingBreaches = p - n",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      304,
-      304
+      306,
+      306
      ]
     }
    ]
@@ -1859,8 +1859,8 @@
      "name": "fundWitness",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      308,
-      312
+      310,
+      315
      ]
     },
     {
@@ -1868,8 +1868,8 @@
      "name": "_witnessReserve0 += uint128(a0)",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      310,
-      310
+      313,
+      313
      ]
     },
     {
@@ -1877,8 +1877,8 @@
      "name": "_witnessReserve1 += uint128(a1)",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      311,
-      311
+      314,
+      314
      ]
     }
    ]
@@ -1902,8 +1902,8 @@
      "name": "curator = curator_",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      66,
-      66
+      67,
+      67
      ]
     }
    ]
@@ -2338,8 +2338,8 @@
      "name": "_seed",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      250,
-      286
+      253,
+      289
      ]
     },
     {
@@ -2347,8 +2347,8 @@
      "name": "HOOK.snapshotIfNewBlock()",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      252,
-      252
+      255,
+      255
      ]
     },
     {
@@ -2356,8 +2356,8 @@
      "name": "_payIn(C0,address(this),a0 + wit0)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      253,
-      253
+      256,
+      256
      ]
     },
     {
@@ -2383,8 +2383,8 @@
      "name": "_payIn(C1,address(this),a1 + wit1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      254,
-      254
+      257,
+      257
      ]
     },
     {
@@ -2410,8 +2410,8 @@
      "name": "_mintClaims(C0,a0)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      255,
-      255
+      258,
+      258
      ]
     },
     {
@@ -2428,8 +2428,8 @@
      "name": "_mintClaims(C1,a1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      256,
-      256
+      259,
+      259
      ]
     },
     {
@@ -2446,8 +2446,8 @@
      "name": "MANAGER.mint(address(HOOK),C0.toId(),wit0)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      258,
-      258
+      261,
+      261
      ]
     },
     {
@@ -2455,8 +2455,8 @@
      "name": "MANAGER.mint(address(HOOK),C1.toId(),wit1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      259,
-      259
+      262,
+      262
      ]
     },
     {
@@ -2464,8 +2464,8 @@
      "name": "HOOK.fundWitness(wit0,wit1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      260,
-      260
+      263,
+      263
      ]
     },
     {
@@ -2473,8 +2473,8 @@
      "name": "HOOK.armAtSeed()",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      267,
-      267
+      270,
+      270
      ]
     },
     {
@@ -2482,8 +2482,8 @@
      "name": "HOOK.snapshotIfNewBlock()",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      252,
-      252
+      255,
+      255
      ]
     },
     {
@@ -2491,8 +2491,8 @@
      "name": "_payIn(C0,address(this),a0 + wit0)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      253,
-      253
+      256,
+      256
      ]
     },
     {
@@ -2518,8 +2518,8 @@
      "name": "_payIn(C1,address(this),a1 + wit1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      254,
-      254
+      257,
+      257
      ]
     },
     {
@@ -2545,8 +2545,8 @@
      "name": "_mintClaims(C0,a0)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      255,
-      255
+      258,
+      258
      ]
     },
     {
@@ -2563,8 +2563,8 @@
      "name": "_mintClaims(C1,a1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      256,
-      256
+      259,
+      259
      ]
     },
     {
@@ -2581,8 +2581,8 @@
      "name": "MANAGER.mint(address(HOOK),C0.toId(),wit0)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      258,
-      258
+      261,
+      261
      ]
     },
     {
@@ -2590,8 +2590,8 @@
      "name": "MANAGER.mint(address(HOOK),C1.toId(),wit1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      259,
-      259
+      262,
+      262
      ]
     },
     {
@@ -2599,8 +2599,8 @@
      "name": "HOOK.fundWitness(wit0,wit1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      260,
-      260
+      263,
+      263
      ]
     },
     {
@@ -2608,8 +2608,8 @@
      "name": "HOOK.armAtSeed()",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      267,
-      267
+      270,
+      270
      ]
     },
     {
@@ -2617,8 +2617,8 @@
      "name": "_delta0 = 0",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      275,
-      275
+      278,
+      278
      ]
     },
     {
@@ -2626,8 +2626,8 @@
      "name": "_epoch = o.epoch",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      276,
-      276
+      279,
+      279
      ]
     },
     {
@@ -2635,8 +2635,8 @@
      "name": "_nav0 = _u128(navAtRef)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      274,
-      274
+      277,
+      277
      ]
     },
     {
@@ -2644,8 +2644,8 @@
      "name": "_openRecord(o.epoch,o.med9,o.tauV,o.tauB)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      278,
-      278
+      281,
+      281
      ]
     },
     {
@@ -2671,8 +2671,8 @@
      "name": "_seeded = true",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      284,
-      284
+      287,
+      287
      ]
     },
     {
@@ -2680,8 +2680,8 @@
      "name": "_segStart = uint40(block.number)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      279,
-      279
+      282,
+      282
      ]
     },
     {
@@ -2689,8 +2689,8 @@
      "name": "_tauV0 = o.tauV",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      280,
-      280
+      283,
+      283
      ]
     }
    ]
@@ -2705,8 +2705,8 @@
      "name": "_withdraw",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      329,
-      360
+      332,
+      363
      ]
     },
     {
@@ -2714,8 +2714,8 @@
      "name": "d = _modify(- int256(dL))",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      342,
-      342
+      345,
+      345
      ]
     },
     {
@@ -2732,22 +2732,13 @@
      "name": "MANAGER.burn(address(this),C0.toId(),o0)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      348,
-      348
+      351,
+      351
      ]
     },
     {
      "type": "node",
      "name": "MANAGER.burn(address(this),C1.toId(),o1)",
-     "file": "src/TouchstoneVaultExtension.sol",
-     "lines": [
-      349,
-      349
-     ]
-    },
-    {
-     "type": "node",
-     "name": "MANAGER.take(C0,to,a0)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
       352,
@@ -2756,11 +2747,20 @@
     },
     {
      "type": "node",
+     "name": "MANAGER.take(C0,to,a0)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      355,
+      355
+     ]
+    },
+    {
+     "type": "node",
      "name": "MANAGER.take(C1,to,a1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      353,
-      353
+      356,
+      356
      ]
     },
     {
@@ -2768,8 +2768,8 @@
      "name": "d = _modify(- int256(dL))",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      342,
-      342
+      345,
+      345
      ]
     },
     {
@@ -2786,22 +2786,13 @@
      "name": "MANAGER.burn(address(this),C0.toId(),o0)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      348,
-      348
+      351,
+      351
      ]
     },
     {
      "type": "node",
      "name": "MANAGER.burn(address(this),C1.toId(),o1)",
-     "file": "src/TouchstoneVaultExtension.sol",
-     "lines": [
-      349,
-      349
-     ]
-    },
-    {
-     "type": "node",
-     "name": "MANAGER.take(C0,to,a0)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
       352,
@@ -2810,11 +2801,20 @@
     },
     {
      "type": "node",
+     "name": "MANAGER.take(C0,to,a0)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      355,
+      355
+     ]
+    },
+    {
+     "type": "node",
      "name": "MANAGER.take(C1,to,a1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      353,
-      353
+      356,
+      356
      ]
     },
     {
@@ -2822,8 +2822,8 @@
      "name": "_rebase(S,S - s)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      357,
-      357
+      360,
+      360
      ]
     },
     {
@@ -2899,8 +2899,8 @@
      "name": "dispatch",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      138,
-      203
+      141,
+      206
      ]
     },
     {
@@ -2908,8 +2908,8 @@
      "name": "(None,None,lw,fb,st) = HOOK.rollWitness(e)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      183,
-      183
+      186,
+      186
      ]
     },
     {
@@ -2917,8 +2917,8 @@
      "name": "(None,None,lw,fb,st) = HOOK.rollWitness(e)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      183,
-      183
+      186,
+      186
      ]
     },
     {
@@ -2926,8 +2926,8 @@
      "name": "r_scope_0.flags = f",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      194,
-      194
+      197,
+      197
      ]
     }
    ]
@@ -2942,8 +2942,8 @@
      "name": "rollWitness",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      323,
-      340
+      326,
+      343
      ]
     },
     {
@@ -2951,8 +2951,8 @@
      "name": "(a,b,l) = this.witnessStep(epoch)",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      332,
-      338
+      335,
+      341
      ]
     },
     {
@@ -2960,8 +2960,8 @@
      "name": "(a,b,l) = this.witnessStep(epoch)",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      332,
-      338
+      335,
+      341
      ]
     },
     {
@@ -2969,8 +2969,8 @@
      "name": "_witnessFallback = fallbackUsed",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      335,
-      335
+      338,
+      338
      ]
     }
    ]
@@ -3413,8 +3413,8 @@
      "name": "_withdraw",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      329,
-      360
+      332,
+      363
      ]
     },
     {
@@ -3422,8 +3422,8 @@
      "name": "d = _modify(- int256(dL))",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      342,
-      342
+      345,
+      345
      ]
     },
     {
@@ -3440,22 +3440,13 @@
      "name": "MANAGER.burn(address(this),C0.toId(),o0)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      348,
-      348
+      351,
+      351
      ]
     },
     {
      "type": "node",
      "name": "MANAGER.burn(address(this),C1.toId(),o1)",
-     "file": "src/TouchstoneVaultExtension.sol",
-     "lines": [
-      349,
-      349
-     ]
-    },
-    {
-     "type": "node",
-     "name": "MANAGER.take(C0,to,a0)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
       352,
@@ -3464,11 +3455,20 @@
     },
     {
      "type": "node",
+     "name": "MANAGER.take(C0,to,a0)",
+     "file": "src/TouchstoneVaultExtension.sol",
+     "lines": [
+      355,
+      355
+     ]
+    },
+    {
+     "type": "node",
      "name": "MANAGER.take(C1,to,a1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      353,
-      353
+      356,
+      356
      ]
     },
     {
@@ -3476,8 +3476,8 @@
      "name": "Withdraw(owner,s,a0,a1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      358,
-      358
+      361,
+      361
      ]
     }
    ]
@@ -3493,7 +3493,7 @@
      "file": "src/TouchstoneFactory.sol",
      "lines": [
       51,
-      106
+      107
      ]
     },
     {
@@ -3501,8 +3501,8 @@
      "name": "ITouchstoneVaultSeed(vault).seed(seedParams.a0,seedParams.a1,seedParams.curator,seedParams.wit0,seedParams.wit1)",
      "file": "src/TouchstoneFactory.sol",
      "lines": [
-      102,
-      103
+      103,
+      104
      ]
     },
     {
@@ -3510,8 +3510,8 @@
      "name": "Deployed(msg.sender,vault,extension,hook,hookArgs.tier)",
      "file": "src/TouchstoneFactory.sol",
      "lines": [
-      105,
-      105
+      106,
+      106
      ]
     }
    ]
@@ -3526,8 +3526,8 @@
      "name": "rollWitness",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      323,
-      340
+      326,
+      343
      ]
     },
     {
@@ -3535,8 +3535,8 @@
      "name": "(a,b,l) = this.witnessStep(epoch)",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      332,
-      338
+      335,
+      341
      ]
     },
     {
@@ -3544,8 +3544,8 @@
      "name": "WitnessRolled(epoch,fg0,fg1,lw)",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      339,
-      339
+      342,
+      342
      ]
     }
    ]
@@ -3637,8 +3637,8 @@
      "name": "_commit",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      480,
-      504
+      483,
+      507
      ]
     },
     {
@@ -3646,8 +3646,8 @@
      "name": "_vaultLo <= t && t < _vaultHi",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      487,
-      487
+      490,
+      490
      ]
     },
     {
@@ -3655,8 +3655,8 @@
      "name": "_refGrid + 1 == k",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      489,
-      489
+      492,
+      492
      ]
     }
    ]
@@ -3696,8 +3696,8 @@
      "name": "_refresh",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      468,
-      477
+      471,
+      480
      ]
     },
     {
@@ -3705,8 +3705,8 @@
      "name": "k > _refGrid",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      473,
-      473
+      476,
+      476
      ]
     }
    ]
@@ -3755,8 +3755,8 @@
      "name": "_snapshot",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      388,
-      465
+      391,
+      468
      ]
     },
     {
@@ -3764,8 +3764,8 @@
      "name": "read = k > _refGrid",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      400,
-      400
+      403,
+      403
      ]
     }
    ]
@@ -3780,8 +3780,8 @@
      "name": "_window",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      560,
-      586
+      563,
+      589
      ]
     },
     {
@@ -3789,8 +3789,8 @@
      "name": "a <= b",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      561,
-      561
+      564,
+      564
      ]
     },
     {
@@ -3798,8 +3798,8 @@
      "name": "d < 0 && d % w != 0",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      582,
-      582
+      585,
+      585
      ]
     },
     {
@@ -3807,8 +3807,8 @@
      "name": "q < TickMath.MIN_TICK",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      583,
-      583
+      586,
+      586
      ]
     },
     {
@@ -3816,8 +3816,8 @@
      "name": "q > TickMath.MAX_TICK",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      584,
-      584
+      587,
+      587
      ]
     }
    ]
@@ -3832,8 +3832,8 @@
      "name": "_snapshot",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      388,
-      465
+      391,
+      468
      ]
     },
     {
@@ -3841,8 +3841,8 @@
      "name": "bMax = now_ / GRID * GRID",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      439,
-      439
+      442,
+      442
      ]
     }
    ]
@@ -3857,8 +3857,8 @@
      "name": "_snapshot",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      388,
-      465
+      391,
+      468
      ]
     },
     {
@@ -3866,8 +3866,8 @@
      "name": "bMin = last / GRID * GRID + GRID",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      440,
-      440
+      443,
+      443
      ]
     }
    ]
@@ -3882,8 +3882,8 @@
      "name": "witnessStep",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      343,
-      383
+      346,
+      386
      ]
     },
     {
@@ -3891,8 +3891,8 @@
      "name": "base = c / TICK_SPACING * TICK_SPACING",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      362,
-      362
+      365,
+      365
      ]
     }
    ]
@@ -3932,8 +3932,8 @@
      "name": "_commit",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      480,
-      504
+      483,
+      507
      ]
     },
     {
@@ -3941,8 +3941,8 @@
      "name": "_refGrid + 1 == k",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      489,
-      489
+      492,
+      492
      ]
     }
    ]
@@ -4007,8 +4007,8 @@
      "name": "_snapshot",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      388,
-      465
+      391,
+      468
      ]
     },
     {
@@ -4016,8 +4016,8 @@
      "name": "last == now_ && _count != 0",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      391,
-      391
+      394,
+      394
      ]
     }
    ]
@@ -4032,8 +4032,8 @@
      "name": "_writeCache",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      506,
-      511
+      509,
+      514
      ]
     },
     {
@@ -4041,8 +4041,8 @@
      "name": "_epochStartRefEpoch != e || _refCachedAt == 0",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      509,
-      509
+      512,
+      512
      ]
     }
    ]
@@ -4057,8 +4057,8 @@
      "name": "frozen",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      264,
-      268
+      265,
+      269
      ]
     },
     {
@@ -4066,8 +4066,8 @@
      "name": "exists = gridIndex != 0 && f.gridIndex == gridIndex",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      266,
-      266
+      267,
+      267
      ]
     }
    ]
@@ -4918,8 +4918,8 @@
      "name": "_deposit",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      288,
-      327
+      291,
+      330
      ]
     },
     {
@@ -4927,8 +4927,8 @@
      "name": "d = _modify(int256(dL))",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      302,
-      302
+      305,
+      305
      ]
     },
     {
@@ -4945,8 +4945,8 @@
      "name": "_L = SafeCast.toUint128(_L + dL)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      304,
-      304
+      307,
+      307
      ]
     }
    ]
@@ -5022,8 +5022,8 @@
      "name": "_seed",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      250,
-      286
+      253,
+      289
      ]
     },
     {
@@ -5031,8 +5031,8 @@
      "name": "HOOK.snapshotIfNewBlock()",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      252,
-      252
+      255,
+      255
      ]
     },
     {
@@ -5040,8 +5040,8 @@
      "name": "_payIn(C0,address(this),a0 + wit0)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      253,
-      253
+      256,
+      256
      ]
     },
     {
@@ -5067,8 +5067,8 @@
      "name": "_payIn(C1,address(this),a1 + wit1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      254,
-      254
+      257,
+      257
      ]
     },
     {
@@ -5094,8 +5094,8 @@
      "name": "_mintClaims(C0,a0)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      255,
-      255
+      258,
+      258
      ]
     },
     {
@@ -5112,8 +5112,8 @@
      "name": "_mintClaims(C1,a1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      256,
-      256
+      259,
+      259
      ]
     },
     {
@@ -5130,8 +5130,8 @@
      "name": "MANAGER.mint(address(HOOK),C0.toId(),wit0)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      258,
-      258
+      261,
+      261
      ]
     },
     {
@@ -5139,8 +5139,8 @@
      "name": "MANAGER.mint(address(HOOK),C1.toId(),wit1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      259,
-      259
+      262,
+      262
      ]
     },
     {
@@ -5148,8 +5148,8 @@
      "name": "HOOK.fundWitness(wit0,wit1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      260,
-      260
+      263,
+      263
      ]
     },
     {
@@ -5157,8 +5157,8 @@
      "name": "HOOK.armAtSeed()",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      267,
-      267
+      270,
+      270
      ]
     },
     {
@@ -5166,8 +5166,8 @@
      "name": "_bank.dripBlocks = DRIP_BLOCKS",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      282,
-      282
+      285,
+      285
      ]
     },
     {
@@ -5175,8 +5175,8 @@
      "name": "_bank.releaseDelay = RELEASE_DELAY",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      283,
-      283
+      286,
+      286
      ]
     }
    ]
@@ -5191,8 +5191,8 @@
      "name": "_withdraw",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      329,
-      360
+      332,
+      363
      ]
     },
     {
@@ -5200,8 +5200,8 @@
      "name": "d = _modify(- int256(dL))",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      342,
-      342
+      345,
+      345
      ]
     },
     {
@@ -5218,8 +5218,8 @@
      "name": "_L -= uint128(dL)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      344,
-      344
+      347,
+      347
      ]
     },
     {
@@ -5227,8 +5227,8 @@
      "name": "_idle0 -= uint128(o0)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      346,
-      346
+      349,
+      349
      ]
     },
     {
@@ -5236,8 +5236,8 @@
      "name": "_idle1 -= uint128(o1)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      347,
-      347
+      350,
+      350
      ]
     }
    ]
@@ -5286,8 +5286,8 @@
      "name": "witnessStep",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      343,
-      383
+      346,
+      386
      ]
     },
     {
@@ -5295,8 +5295,8 @@
      "name": "_modify(key,ModifyLiquidityParams(lo,hi,- int256(uint256(oldL)),salt))",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      354,
-      354
+      357,
+      357
      ]
     },
     {
@@ -5304,8 +5304,8 @@
      "name": "(d,None) = poolManager.modifyLiquidity(key,p,)",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      597,
-      597
+      600,
+      600
      ]
     },
     {
@@ -5313,8 +5313,8 @@
      "name": "poolManager.mint(address(this),c.toId(),uint128(a))",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      605,
-      605
+      608,
+      608
      ]
     },
     {
@@ -5322,8 +5322,8 @@
      "name": "poolManager.burn(address(this),c.toId(),uint128(- a))",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      609,
-      609
+      612,
+      612
      ]
     },
     {
@@ -5331,8 +5331,8 @@
      "name": "_modify(key,ModifyLiquidityParams(nlo,nhi,int256(uint256(lw)),_witSalt(epoch)))",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      380,
-      380
+      383,
+      383
      ]
     },
     {
@@ -5340,8 +5340,8 @@
      "name": "(d,None) = poolManager.modifyLiquidity(key,p,)",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      597,
-      597
+      600,
+      600
      ]
     },
     {
@@ -5349,8 +5349,8 @@
      "name": "poolManager.mint(address(this),c.toId(),uint128(a))",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      605,
-      605
+      608,
+      608
      ]
     },
     {
@@ -5358,8 +5358,8 @@
      "name": "poolManager.burn(address(this),c.toId(),uint128(- a))",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      609,
-      609
+      612,
+      612
      ]
     },
     {
@@ -5367,8 +5367,8 @@
      "name": "(_witLo,_witHi,_witEpoch,_witL) = (nlo,nhi,epoch,lw)",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      382,
-      382
+      385,
+      385
      ]
     },
     {
@@ -5376,8 +5376,8 @@
      "name": "(_witLo,_witHi,_witEpoch,_witL) = (nlo,nhi,epoch,lw)",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      382,
-      382
+      385,
+      385
      ]
     },
     {
@@ -5385,8 +5385,8 @@
      "name": "(_witLo,_witHi,_witEpoch,_witL) = (nlo,nhi,epoch,lw)",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      382,
-      382
+      385,
+      385
      ]
     },
     {
@@ -5394,8 +5394,8 @@
      "name": "(_witLo,_witHi,_witEpoch,_witL) = (nlo,nhi,epoch,lw)",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      382,
-      382
+      385,
+      385
      ]
     },
     {
@@ -5403,8 +5403,8 @@
      "name": "_modify(key,ModifyLiquidityParams(nlo,nhi,int256(uint256(lw)),_witSalt(epoch)))",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      380,
-      380
+      383,
+      383
      ]
     },
     {
@@ -5412,8 +5412,8 @@
      "name": "_witnessReserve0 = _settleOne(CURRENCY0,d.amount0(),_witnessReserve0)",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      598,
-      598
+      601,
+      601
      ]
     },
     {
@@ -5421,8 +5421,8 @@
      "name": "_modify(key,ModifyLiquidityParams(nlo,nhi,int256(uint256(lw)),_witSalt(epoch)))",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      380,
-      380
+      383,
+      383
      ]
     },
     {
@@ -5430,8 +5430,8 @@
      "name": "_witnessReserve1 = _settleOne(CURRENCY1,d.amount1(),_witnessReserve1)",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      599,
-      599
+      602,
+      602
      ]
     }
    ]
@@ -5606,8 +5606,8 @@
      "name": "n",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      516,
-      516
+      519,
+      519
      ]
     }
    ]
@@ -5638,8 +5638,8 @@
      "name": "ok",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      401,
-      401
+      404,
+      404
      ]
     }
    ]
@@ -5654,8 +5654,8 @@
      "name": "p0",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      299,
-      299
+      302,
+      302
      ]
     }
    ]
@@ -5670,8 +5670,8 @@
      "name": "p1",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      300,
-      300
+      303,
+      303
      ]
     }
    ]
@@ -5718,8 +5718,8 @@
      "name": "r0",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      339,
-      339
+      342,
+      342
      ]
     }
    ]
@@ -5734,8 +5734,8 @@
      "name": "r1",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      340,
-      340
+      343,
+      343
      ]
     }
    ]
@@ -5750,8 +5750,8 @@
      "name": "streak",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      485,
-      485
+      488,
+      488
      ]
     }
    ]
@@ -5766,8 +5766,8 @@
      "name": "t",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      402,
-      402
+      405,
+      405
      ]
     }
    ]
@@ -6098,8 +6098,8 @@
      "name": "_enter",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      132,
-      134
+      135,
+      137
      ]
     },
     {
@@ -6107,8 +6107,8 @@
      "name": "MANAGER.unlock(abi.encode(entry,msg.sender,args))",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      133,
-      133
+      136,
+      136
      ]
     }
    ]
@@ -6123,8 +6123,8 @@
      "name": "_modify",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      596,
-      600
+      599,
+      603
      ]
     },
     {
@@ -6132,8 +6132,8 @@
      "name": "(d,None) = poolManager.modifyLiquidity(key,p,)",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      597,
-      597
+      600,
+      600
      ]
     }
    ]
@@ -6198,8 +6198,8 @@
      "name": "_pay",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      206,
-      213
+      209,
+      216
      ]
     },
     {
@@ -6207,8 +6207,8 @@
      "name": "(None,pay,None,None) = FeeBank.bankApply(_bank,op,a)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      207,
-      207
+      210,
+      210
      ]
     }
    ]
@@ -6248,8 +6248,8 @@
      "name": "_seed",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      250,
-      286
+      253,
+      289
      ]
     },
     {
@@ -6257,8 +6257,8 @@
      "name": "(navAtRef,None) = ExecLedger.value(_holdings(),TickMath.getSqrtPriceAtTick(o.refTick))",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      273,
-      273
+      276,
+      276
      ]
     }
    ]
@@ -6273,8 +6273,8 @@
      "name": "_seed",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      250,
-      286
+      253,
+      289
      ]
     },
     {
@@ -6282,8 +6282,8 @@
      "name": "HOOK.snapshotIfNewBlock()",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      252,
-      252
+      255,
+      255
      ]
     }
    ]
@@ -6373,8 +6373,8 @@
      "name": "_slot0",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      591,
-      593
+      594,
+      596
      ]
     },
     {
@@ -6382,8 +6382,8 @@
      "name": "(sqrtP,tick,None,None) = poolManager.getSlot0(POOL_ID)",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      592,
-      592
+      595,
+      595
      ]
     }
    ]
@@ -6449,7 +6449,7 @@
      "file": "src/TouchstoneHook.sol",
      "lines": [
       121,
-      172
+      173
      ]
     },
     {
@@ -6457,8 +6457,8 @@
      "name": "(None,None,None,card,None,None,None) = r.slot0()",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      144,
-      144
+      145,
+      145
      ]
     }
    ]
@@ -6474,7 +6474,7 @@
      "file": "src/TouchstoneHook.sol",
      "lines": [
       121,
-      172
+      173
      ]
     },
     {
@@ -6482,8 +6482,8 @@
      "name": "IPoolManager(a.poolManager).initialize(key,a.seedSqrtPriceX96)",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      171,
-      171
+      172,
+      172
      ]
     }
    ]
@@ -6499,7 +6499,7 @@
      "file": "src/TouchstoneHook.sol",
      "lines": [
       121,
-      172
+      173
      ]
     },
     {
@@ -6507,8 +6507,8 @@
      "name": "r.observe(ago)",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      150,
-      150
+      151,
+      151
      ]
     }
    ]
@@ -6523,8 +6523,8 @@
      "name": "dispatch",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      138,
-      203
+      141,
+      206
      ]
     },
     {
@@ -6532,8 +6532,8 @@
      "name": "(None,None,lw,fb,st) = HOOK.rollWitness(e)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      183,
-      183
+      186,
+      186
      ]
     }
    ]
@@ -6548,8 +6548,8 @@
      "name": "dispatch",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      138,
-      203
+      141,
+      206
      ]
     },
     {
@@ -6557,8 +6557,8 @@
      "name": "FeeBank.bankApply(_bank,Op.TopUp,args)",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      159,
-      159
+      162,
+      162
      ]
     }
    ]
@@ -6624,7 +6624,7 @@
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
       60,
-      68
+      69
      ]
     },
     {
@@ -6632,8 +6632,8 @@
      "name": "MANAGER.unlock(abi.encode(Entry.Seed,address(0),abi.encode(a0,a1,wit0,wit1)))",
      "file": "src/TouchstoneVaultExtension.sol",
      "lines": [
-      67,
-      67
+      68,
+      68
      ]
     }
    ]
@@ -6698,8 +6698,8 @@
      "name": "witnessStep",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      343,
-      383
+      346,
+      386
      ]
     },
     {
@@ -6707,8 +6707,8 @@
      "name": "(None,last0,last1) = poolManager.getPositionInfo(POOL_ID,address(this),lo,hi,salt)",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      352,
-      352
+      355,
+      355
      ]
     }
    ]
@@ -6723,8 +6723,8 @@
      "name": "witnessStep",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      343,
-      383
+      346,
+      386
      ]
     },
     {
@@ -6732,8 +6732,8 @@
      "name": "(None,now0,now1) = poolManager.getPositionInfo(POOL_ID,address(this),lo,hi,salt)",
      "file": "src/TouchstoneHook.sol",
      "lines": [
-      355,
-      355
+      358,
+      358
      ]
     }
    ]

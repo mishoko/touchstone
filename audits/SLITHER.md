@@ -1,9 +1,9 @@
 # Slither triage (test S-1)
 
-- Run: `slither . --filter-paths 'lib/|test/|script/' --exclude-dependencies --json <out>`, re-run on 2026-11-18 at the
+- Run: `slither . --filter-paths 'lib/|test/|script/' --exclude-dependencies --json <out>`, re-run on 2026-11-19 (s27, after comment-only mutant tags) at the
   current `src/` (the first triage's run predated a parameter check added to the hook constructor, which requires the
   forfeiture drip to equal one epoch; both runs give the same 215 results by detector and flagged element).
-- The record `audits/slither-results.json` (written by `script/slither_record.py`; Record: sha256 `95880e66721a4cea`) holds
+- The record `audits/slither-results.json` (written by `script/slither_record.py`; Record: sha256 `e760a9a370261810`) holds
   every result's detector, impact and elements, and `input_sha256`, the hash of `src/**/*.sol`, `foundry.toml`,
   `remappings.txt` and the submodule pins. Test S-1 (`test/static/test_static.py`) fails if `src/` or those inputs
   changed since the recorded run, if the record differs from the one named here, if the stated total or tool differ,

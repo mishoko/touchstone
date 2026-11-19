@@ -556,6 +556,147 @@ def test_mutate_equivalent_status_is_outside_the_denominator_and_never_written()
     assert rc == 1 and not calls and out.getvalue().count('EQUIVALENT (not run') == 2, out.getvalue()
 
 
+def test_F_056__mutate_deletes_the_counterexamples_a_mutant_run_writes_and_names_the_failing_test():
+    import importlib.util, types
+    spec = importlib.util.spec_from_file_location('mutate_f056', os.path.join(ROOT, 'script', 'mutate.py'))
+    mu = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mu)
+    with tempfile.TemporaryDirectory() as d:
+        os.makedirs(os.path.join(d, 'src'))
+        open(os.path.join(d, 'src', 'X.sol'), 'w').write('a = 1;\n')
+        fd = os.path.join(d, 'cache', 'invariant', 'failures', 'S')
+        os.makedirs(fd)
+        old = os.path.join(fd, 'invariant_old')
+        open(old, 'w').write('pre-existing')
+        res = {'t.sol:S': {'test_results': {
+            'invariant_new()': {'status': 'Failure', 'reason': 'I-8 broken'},
+            'test_other()': {'status': 'Success'}}}}
+
+        def fake(args, cwd):
+            open(os.path.join(fd, 'invariant_new'), 'w').write('counterexample')
+            return types.SimpleNamespace(stdout=json.dumps(res), stderr='', returncode=1)
+        real = mu.forge
+        mu.forge = fake
+        try:
+            m = {'id': 'MU-X', 'desc': 'x', 'kill': 'invariant_new', 'file': 'src/X.sol', 'find': 'a = 1;',
+                 'replace': 'a = 2;'}
+            mid, v, detail = mu.run_one(m, d, False, lambda k, r: True)
+        finally:
+            mu.forge = real
+        assert v == 'KILLED' and 'invariant_new(): I-8 broken' in detail, (v, detail)
+        # the run's own counterexample is deleted; the pre-existing one stays; the source is restored
+        assert sorted(os.listdir(fd)) == ['invariant_old'], os.listdir(fd)
+        assert open(os.path.join(d, 'src', 'X.sol')).read() == 'a = 1;\n'
+        # control: a file changed during the run is deleted too
+        before = mu._failure_files(d)
+        time.sleep(0.01)
+        open(old, 'w').write('rewritten by a mutant')
+        assert mu.drop_new_failures(d, before) == 1 and os.listdir(fd) == []
+
+
+GUARD = re.compile(r'\brevert\s+[A-Za-z_][\w.]*\s*\(')
+
+# Guards that carry no mutant, each with its reason (P5 code panel D2, F-057). Key: (file, the guard's code, a context
+# string that must appear in the guard's line or the three lines above it). Each entry must match exactly one guard.
+GUARD_ALLOW = {
+    ('src/TouchstoneVaultBase.sol', 'if (msg.sender != curator) revert OnlyCurator();', '_onlyCurator()'):
+        'the shared helper; each call site carries its own mutant (MU-280, MU-284, MU-285, MU-286, MU-318)',
+    ('src/TouchstoneVaultExtension.sol', 'if (msg.sender != address(MANAGER)) revert OnlyPoolManager();',
+     'carries no mutant'):
+        "defence in depth: `dispatch` is reachable only through the vault's unlockCallback (selector allow-list, "
+        'SELF check)',
+    ('src/TouchstoneVaultExtension.sol', 'if (_seeded) revert OnlyFactory();', 'so this carries no mutant'):
+        'defence in depth in `dispatch`: the external `seed` checks it (MU-321) and no other path encodes Entry.Seed',
+    ('src/TouchstoneVaultExtension.sol', 'revert Ladder.BadMode();', 'carries no mutant'):
+        'defence in depth: reachable only by entries the vault never delegates (SetPositions, RebalanceSwap, Settle)',
+    ('src/libraries/FeeBank.sol', 'if (b.reserveShares > 0) revert MarkoutPending();', 'if (burnR > 0)'):
+        'defence in depth: an action with a pending markout reverts MarkoutPending in the vault first (the tagged '
+        '`_tAction != 0` guard), and a due one settles in step 0',
+    ('src/libraries/Ladder.sol', 'if (mode == EXITED) revert BadMode();', 'return (BREACHED, nb, false);'):
+        "defence in depth: placements and retire are not in OPEN_EXITED, so the vault's mode gate refuses them first",
+    ('src/libraries/Ladder.sol', 'revert BadMode();', 'if (ev == EV_RETIRE)'):
+        'unreachable: the three event codes are library constants and each returns above',
+    ('src/TouchstoneFactory.sol', 'if (token.balanceOf(to) - before != amount) revert SeedTransfer();', 'safeTransferFrom'):
+        "defence in depth: the vault's seed settles exactly a0 + wit0 and a1 + wit1 into the PoolManager and reverts "
+        'when it holds less (a fee-on-transfer seed fails there)',
+}
+
+
+def guard_scan(root, allow):
+    """Returns (untagged, hits): every `revert Name(` guard in src/ whose group carries fewer `[MU-` tags than it has
+    guards not on the allow-list, and the number of guards each allow-list entry matched. A group is a run of
+    adjacent guard lines (a multi-line condition, or an `if (...) {` opener of a bare revert, counts as one) with the
+    comment block directly above it."""
+    bad, hits = [], {k: 0 for k in allow}
+    for p in sorted(glob.glob(os.path.join(root, 'src', '**', '*.sol'), recursive=True)):
+        rel = os.path.relpath(p, root)
+        lines = open(p).read().split('\n')
+        code = [l.split('//')[0] for l in lines]
+        i = 0
+        while i < len(lines):
+            if not GUARD.search(code[i]):
+                i += 1
+                continue
+            s = i
+            if code[i].strip().startswith('revert') and s > 0 and code[s - 1].rstrip().endswith('{') \
+                    and code[s - 1].strip().startswith('if'):
+                s -= 1
+            while s > 0 and code[s - 1].strip() and not re.search(r'[;{}]\s*$', code[s - 1].rstrip()) \
+                    and not lines[s - 1].strip().startswith('//'):
+                s -= 1
+            guards = [i]
+            j = i + 1
+            while j < len(lines) and GUARD.search(code[j]) and code[j].strip().startswith('if'):
+                guards.append(j)
+                j += 1
+            tags = set()
+            for x in range(s, j):
+                tags |= set(re.findall(r'\[MU-\d+\]', lines[x]))
+            k = s - 1
+            while k >= 0 and lines[k].strip().startswith('//'):
+                tags |= set(re.findall(r'\[MU-\d+\]', lines[k]))
+                k -= 1
+            untagged = []
+            for n in guards:
+                g, ctx = lines[n].strip(), '\n'.join(lines[max(0, n - 3):n + 1])
+                keys = [key for key in allow if key[0] == rel and key[1] == g and key[2] in ctx]
+                for key in keys:
+                    hits[key] += 1
+                if not keys:
+                    untagged.append((n, g))
+            if len(tags) < len(untagged):
+                bad += [f'{rel}:{n + 1}: {g}' for n, g in untagged]
+            i = j
+    return bad, hits
+
+
+def test_F_057__every_src_guard_has_a_mutant_or_an_allow_list_reason():
+    bad, hits = guard_scan(ROOT, GUARD_ALLOW)
+    assert not bad, 'guards without an [MU- tag or an allow-list reason:\n' + '\n'.join(bad)
+    assert all(len(r) > 30 for r in GUARD_ALLOW.values())
+    stale = [k for k, n in hits.items() if n != 1]
+    assert not stale, f'allow-list entries matching other than exactly one guard: {stale}'
+    # controls: an untagged guard, a second guard under a one-tag comment, a multi-line condition and a bare revert
+    # under an `if {` are found; the allow-list clears exactly its entries
+    with tempfile.TemporaryDirectory() as d:
+        os.makedirs(os.path.join(d, 'src'))
+        open(os.path.join(d, 'src', 'X.sol'), 'w').write(
+            'contract X {\n  function f(uint a) external {\n    // [MU-900] tagged\n    if (a == 1) revert A();\n'
+            '    if (a == 2) revert B();\n    a += 1;\n    if (a == 9) revert C();\n'
+            '    if (\n      a == 7\n    ) revert D();\n    if (a == 5) {\n      revert E();\n    }\n'
+            '    // [MU-901] tagged\n    if (a == 6) {\n      revert F();\n    }\n  }\n}\n')
+        found, _ = guard_scan(d, {})
+        for e in ('C', 'D', 'E'):
+            assert any(f'revert {e}()' in b for b in found), (e, found)
+        assert any('revert A()' in b or 'revert B()' in b for b in found), found
+        assert not any('revert F()' in b for b in found), found
+        allow = {('src/X.sol', 'if (a == 9) revert C();', 'a += 1;'): 'x', ('src/X.sol', 'if (a == 2) revert B();', ''): 'x',
+                 ('src/X.sol', 'revert E();', 'a == 5'): 'x'}
+        found, hits = guard_scan(d, allow)
+        assert len(found) == 1 and 'revert D()' in found[0], found
+        assert all(n == 1 for n in hits.values()), hits
+
+
 if __name__ == '__main__':
     tests = [v for k, v in sorted(globals().items()) if k.startswith('test_') and callable(v)]
     for t in tests:

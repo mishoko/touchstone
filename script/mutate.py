@@ -52,7 +52,11 @@ into compressor exhaustion and a watchdog kernel panic (2026-11-17, twice). So `
 the runner checks swap use: more than TS_MUTATE_MAX_SWAP_GROWTH_GB (default 4) above the swap in use at the start,
 or above TS_MUTATE_MAX_SWAP_GB (default 14) in total, it waits up to 2 minutes for it to drop, then
 stops handing out mutants. The unstarted ones are reported ABORTED (never counted as killed, never written by
---write) and the run exits 1. TS_MUTATE_NO_MEM_GUARD=1 disables both checks."""
+--write) and the run exits 1. TS_MUTATE_NO_MEM_GUARD=1 disables both checks.
+
+After each mutant the runner deletes the invariant counterexamples its run wrote under cache/invariant/failures/
+(files new or changed during that run; F-056: a killed mutant's counterexamples otherwise stop the next clean
+`forge test`), and a KILLED verdict's detail names the failing tests with forge's reason (P5-Ad-02)."""
 import hashlib, json, os, re, shutil, subprocess, sys, time
 from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
@@ -277,6 +281,45 @@ def verdict(r, kill, full):
     return 'KILLED' if failed else 'SURVIVED'
 
 
+def failing(r, kill, full, limit=3):
+    """The failing matched tests with forge's reason (P5-Ad-02), e.g. `test_x: assertion failed`; at most `limit`."""
+    raw = r.stdout
+    try:
+        res = json.loads(raw[raw.index('{'):])
+    except ValueError:
+        return []
+    out = []
+    for _, suite in res.items():
+        for n, t in suite.get('test_results', {}).items():
+            if t.get('status') == 'Failure' and (full or re.search(kill, n) or n.startswith('setUp')):
+                out.append(f"{n}: {str(t.get('reason') or 'no reason').strip()[:120]}")
+    return sorted(out)[:limit]
+
+
+FAILURES = os.path.join('cache', 'invariant', 'failures')
+
+
+def _failure_files(root):
+    d = os.path.join(root, FAILURES)
+    out = {}
+    for dd, _, fs in os.walk(d):
+        for f in fs:
+            p = os.path.join(dd, f)
+            out[p] = os.stat(p).st_mtime_ns
+    return out
+
+
+def drop_new_failures(root, before):
+    """Deletes the invariant counterexamples a mutant's run wrote (F-056): files that are new or changed since
+    `before`, a snapshot from `_failure_files`. Files that existed unchanged are left alone. Returns the count."""
+    n = 0
+    for p, t in _failure_files(root).items():
+        if before.get(p) != t:
+            os.remove(p)
+            n += 1
+    return n
+
+
 def restore_leftovers(root=ROOT):
     """Restores any file left mutated by an interrupted run (its `.mutorig` backup is the original)."""
     for d, _, fs in os.walk(os.path.join(root, 'src')):
@@ -298,14 +341,20 @@ def run_one(m, root, full, clean_ok):
         return (m['id'], f'BAD-PATTERN({n})', m['desc'])
     open(f + '.mutorig', 'w').write(src)
     open(f, 'w').write(src.replace(m['find'], m['replace']))
+    before = _failure_files(root)
     try:
         t = time.time()
         r = forge(['--nmp', 'test/fork/*'] if full else ['--mt', k], cwd=root)
-        return (m['id'], verdict(r, k, full), f"{m['desc']} [{'full' if full else k}] {time.time() - t:.0f}s")
+        v = verdict(r, k, full)
+        why = '; '.join(failing(r, k, full)) if v == 'KILLED' else ''
+        return (m['id'], v, f"{m['desc']} [{'full' if full else k}] {time.time() - t:.0f}s" + (f' <{why}>' if why else ''))
     finally:
         open(f, 'w').write(src)
         if os.path.exists(f + '.mutorig'):
             os.remove(f + '.mutorig')
+        dropped = drop_new_failures(root, before)
+        if dropped:
+            print(f"{m['id']}: deleted {dropped} invariant counterexample(s) written by the mutant's run (F-056)")
 
 
 # ------------------------------------------------------------------ parallel workers

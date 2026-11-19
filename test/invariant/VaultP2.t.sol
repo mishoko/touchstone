@@ -96,7 +96,8 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         );
     }
 
-    /// @dev I-15's counters (spec §9.1), columns 18..32 of the non-vacuity row.
+    /// @dev I-15's counters (spec §9.1), columns 18..32 of the non-vacuity row, then column 33: vests of really minted
+    ///      base (P5-Ad-05).
     function _p5Row() internal view returns (string memory) {
         string memory a = string.concat(
             vm.toString(handler.i8Checks()), ",", vm.toString(handler.chargedRecords()), ",",
@@ -107,7 +108,7 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
             a, vm.toString(handler.refreshFails()), ",", vm.toString(handler.truncatedSpans()), ",",
             vm.toString(handler.gapSets()), ",", vm.toString(handler.gapClears()), ",",
             vm.toString(handler.gateClosedLive()), ",", vm.toString(handler.resetsByRefresh()), ",",
-            vm.toString(handler.ringWraps()), ",", vm.toString(handler.i13Checks())
+            vm.toString(handler.ringWraps()), ",", vm.toString(handler.i13Checks()), ",", vm.toString(handler.realMintVests())
         );
     }
 
@@ -247,14 +248,14 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         if (b.mode == Ladder.EXITED) assertEq(hv.scalars().baseOwed, 0, "EXITED => baseOwed == 0");
     }
 
-    /// @notice I-12: a flow's NAV0 re-base uses the supply after the prologue (the settlement burn, the drip, the
-    ///         base mint): the next NAV0 is post-settlement.
     /// @notice U-record's closure (spec §3.9): the records' share fields account for every unvested share the bank
     ///         gains, loses or vests (see `VaultHandler.closureGap`).
     function invariant_U_record__recordsCloseTheBank() public view {
         assertEq(handler.closureGap(), 0, "records closure");
     }
 
+    /// @notice I-12: a flow's NAV0 re-base uses the supply after the prologue (the settlement burn, the drip, the
+    ///         base mint): the next NAV0 is post-settlement.
     function invariant_I_12__nextNav0IsPostSettlement() public view {
         assertEq(handler.i12Failures(), 0, "I-12");
     }

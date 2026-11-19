@@ -64,7 +64,7 @@ contract TouchstoneFactory is ITouchstoneFactory {
         ) revert CodeHash();
         Currency c0 = hookArgs.currency0;
         Currency c1 = hookArgs.currency1;
-        // ERC-20 only: the zero currency (native ETH) is rejected.
+        // [MU-325] ERC-20 only: the zero currency (native ETH) is rejected.
         if (c0.isAddressZero() || c1.isAddressZero()) revert BadToken();
 
         // [MU-135] salts are bound to the caller
@@ -88,6 +88,7 @@ contract TouchstoneFactory is ITouchstoneFactory {
         // Both constructors read `pending()`; the extension first, since the vault's constructor checks it.
         address extension = _create2(extensionCreationCode, se);
         vault = _create2(vaultCreationCode, sv);
+        // [MU-326] the vault commits to the hook's tier
         if (ITouchstoneVaultSeed(vault).TIER_HASH() != keccak256(abi.encode(hookArgs.tier))) {
             revert TierMismatch();
         }

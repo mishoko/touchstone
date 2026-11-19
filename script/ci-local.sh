@@ -41,8 +41,11 @@ python3 script/anvil_check.py --rpc-url "http://127.0.0.1:$ANVIL_PORT"
 kill $ANVIL_PID 2>/dev/null || true
 trap - EXIT
 
-step "forge test"
-forge test
+step "forge test (at P5 and later, no test may skip: P5-Ad-03)"
+mkdir -p output
+forge test 2>&1 | tee output/ci-forge-test.log
+python3 script/skip_gate.py --selftest
+python3 script/skip_gate.py output/ci-forge-test.log "$CLAIMS_PHASE"
 
 step "no stale invariant counterexample in the cache (a mutant run's counterexample must not linger; s19 S19C-04)"
 if [ -d cache/invariant/failures ] && [ -n "$(find cache/invariant/failures -type f 2>/dev/null)" ]; then

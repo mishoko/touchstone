@@ -16,6 +16,7 @@ import {Bank, Cohort, RING} from "../../src/types/Bank.sol";
 import {SettleExtraOracle} from "../utils/SettleExtraOracle.sol";
 import {IVaultEntries} from "../../src/interfaces/ITouchstoneVaultExtension.sol";
 import {VaultCommon} from "../../src/TouchstoneVaultBase.sol";
+import {Ladder} from "../../src/libraries/Ladder.sol";
 
 /// @notice The markout settlement in the vault (prologue step 0 and `settle()`), on the real hook over the scripted
 ///         reference pool. A pending action is written through the harness seam (the actions that record one are built
@@ -219,6 +220,99 @@ contract VaultSettleTest is LiquidPoolBase, SettleExtraOracle {
         hv.settle(); // a checkpoint drips
         assertEq(hv.bankFull().forfeitPool, 0, "dripped out");
         assertEq(hv.totalSupply(), S - owed, "burned to every holder");
+    }
+
+    /// @notice F-039 (MK-4): `retire` with a reserve pending leaves the reserve in place, marked to follow; at
+    ///         settlement the bond part returns to the bond and the non-bond remainder joins the forfeiture drip.
+    function test_U_settle__retireLeavesTheReserveToFollowAtSettlement() public {
+        _pend();
+        vm.prank(curator);
+        IVaultEntries(address(hv)).retire();
+        Bank memory b = hv.bankFull();
+        assertEq(b.mode, Ladder.EXITED, "retired");
+        assertEq(b.reserveShares, RES_SHARES, "reserve kept");
+        assertTrue(b.reserveForfeit, "marked to follow");
+        assertEq(_tAction(), tA, "the record stays pending");
+        uint128 pool = b.forfeitPool;
+        uint128 bond = b.bondShares;
+        _scriptWindowAndRollToDue(T_MK);
+        (, uint256 burnS) = _expected(T_MK);
+        assertLt(burnS, RES_SHARES - RES_BOND, "precondition: a non-bond remainder");
+        hv.settle();
+        b = hv.bankFull();
+        assertEq(b.reserveShares, 0, "cleared");
+        assertEq(b.bondShares, bond + RES_BOND, "the bond part returns");
+        assertGe(b.forfeitPool, pool, "the drip does not shrink at the settlement");
+        assertEq(b.forfeitPool - pool, RES_SHARES - RES_BOND - burnS, "the non-bond remainder to the drip");
+    }
+
+    /// @notice F-039: `releaseBond` with a reserve pending settles it first (step 0), so the release pays the bond
+    ///         including the reserve's returned bond part. (A release before the window closes cannot occur: the release
+    ///         delay, V epochs, is far longer than the markout window.)
+    function test_U_settle__releaseBondSettlesAPendingReserveFirst() public {
+        _pend();
+        vm.prank(curator);
+        IVaultEntries(address(hv)).retire();
+        Bank memory b = hv.bankFull();
+        uint256 due = uint256(b.exitBlock) + b.releaseDelay;
+        _scriptWindowAndRollToDue(T_MK);
+        (, uint256 burnS) = _expected(T_MK);
+        if (vm.getBlockNumber() < due) advance(due - vm.getBlockNumber());
+        assertEq(_tAction(), tA, "precondition: still pending at the release");
+        uint128 bond = hv.bankFull().bondShares;
+        uint256 c0 = hv.balanceOf(curator);
+        vm.prank(curator);
+        IVaultEntries(address(hv)).releaseBond();
+        b = hv.bankFull();
+        assertEq(_tAction(), 0, "settled first");
+        assertEq(b.reserveShares, 0, "reserve cleared");
+        assertEq(hv.balanceOf(curator) - c0, uint256(bond) + RES_BOND, "the release includes the returned bond part");
+        assertEq(b.bondShares, 0, "bond released");
+        assertGt(burnS, 0, "the settlement burned the non-bond part first");
+    }
+
+    /// @notice P5-Ar-01 (spec §5.1 MK-4, disclosed): the settlement burns `burnS` computed on the action's recorded
+    ///         supply, so a drip burn inside the markout window makes the burn larger than the value-exact one on the
+    ///         supply at settlement. The extra falls on the curator's reserve; the holders gain it. Control: the same
+    ///         window with no forfeit pool burns the same `burnS`, and there the recorded and the settlement supply agree.
+    function test_U_settle__inWindowDripBurnOverBurnsTheCuratorsReserve() public {
+        uint256[2] memory sSettle;
+        uint256[2] memory burnS;
+        uint256 sRec;
+        uint256 snap = vm.snapshotState();
+        for (uint256 drip; drip < 2; ++drip) {
+            vm.revertToState(snap);
+            _pend();
+            sRec = hv.totalSupply();
+            if (drip == 1) {
+                Bank memory bk = hv.bankFull();
+                bk.bondShares -= 1e21;
+                (bk.forfeitPool, bk.forfeitTotal, bk.forfeitStart) = (1e21, 1e21, uint40(vm.getBlockNumber()));
+                hv.setBank(bk);
+            }
+            advance(1);
+            refPool.setTick(T_MK);
+            advance(tier.H_MARKOUT / blocktime / 2);
+            hv.settle(); // not due: a checkpoint inside the window drips (when a forfeit pool exists)
+            advance(tier.H_MARKOUT / blocktime - tier.H_MARKOUT / blocktime / 2);
+            refPool.setTick(T_AFTER);
+            advance(1);
+            (, burnS[drip]) = _expected(T_MK);
+            sSettle[drip] = hv.totalSupply();
+            hv.settle();
+            Bank memory b = hv.bankFull();
+            uint32 e = uint32(vm.getBlockNumber() / tier.EPOCH);
+            assertEq(b.reserveShares, 0, "settled");
+            // the reserve burned exactly burnS, computed on the recorded supply: the remainder enters the cohort
+            assertEq(b.cohorts[e % RING].shares, RES_SHARES - RES_BOND - burnS[drip], "the reserve burned burnS");
+        }
+        assertEq(burnS[1], burnS[0], "the burn ignores the in-window drip");
+        assertEq(sSettle[0], sRec, "control: no in-window burn, the settlement supply is the recorded one");
+        assertLt(sSettle[1], sRec, "the drip burned inside the window");
+        // the value-exact burn on the settlement supply is burnS·S_settle/S_record: the difference is the over-burn,
+        // taken from the curator's reserve
+        uint256 exact = FullMath.mulDiv(burnS[1], sSettle[1], sRec);
+        assertGt(burnS[1], exact, "over-burn on the curator's reserve");
     }
 
     /// @notice The record of a settlement (spec §3.9, S19D-03): its extra charge, its burn split from the op's returns

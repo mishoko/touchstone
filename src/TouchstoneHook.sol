@@ -120,6 +120,7 @@ contract TouchstoneHook is BaseHook, Extsload, ITouchstoneHook {
     /// @param a PoolManager, vault (precomputed CREATE2 address), pool key fields, seed price and tier.
     constructor(HookArgs memory a) BaseHook(IPoolManager(a.poolManager)) {
         Tier memory t = a.tier;
+        // [MU-327] a non-empty reference window, a non-zero grid and an epoch on the grid
         if (t.REF_WINDOW == 0 || t.GRID == 0 || t.EPOCH % t.GRID != 0) revert BadTier();
         // [MU-306] [MU-307] [MU-308] the forfeit drips over exactly one epoch (F-047): a shorter drip lets a sniper who
         // deposits at the breach take its share at its exit, a longer one withholds forfeited pay from leaving depositors
@@ -289,6 +290,7 @@ contract TouchstoneHook is BaseHook, Extsload, ITouchstoneHook {
 
     /// @notice Arms the clock with the EMPTY range and refreshes the cache, which must succeed in this block.
     function armAtSeed() external onlyVault {
+        // [MU-328] armed once
         if (_armed) revert Armed();
         // [MU-120] the clock is armed at seed
         _armed = true;
@@ -306,6 +308,7 @@ contract TouchstoneHook is BaseHook, Extsload, ITouchstoneHook {
 
     /// @notice Records witness funding: the vault has transferred `a0`/`a1` of ERC-6909 claims to the hook.
     function fundWitness(uint256 a0, uint256 a1) external onlyVault {
+        // [MU-329] the funding fits the 128-bit reserve (no silent truncation)
         if (a0 > type(uint128).max || a1 > type(uint128).max) revert Overflow();
         _witnessReserve0 += uint128(a0);
         _witnessReserve1 += uint128(a1);

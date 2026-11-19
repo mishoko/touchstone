@@ -3920,6 +3920,114 @@
    "replace": "\n",
    "status": "KILLED",
    "basis": "b2c036c12381e77c"
+  },
+  {
+   "id": "MU-325",
+   "area": "guards",
+   "desc": "factory accepts the native currency (F-057 guard lint)",
+   "killer_id": "factory",
+   "kill": "test_factory_revertsOnNativeCurrency",
+   "file": "src/TouchstoneFactory.sol",
+   "find": "        if (c0.isAddressZero() || c1.isAddressZero()) revert BadToken();\n",
+   "replace": "\n",
+   "status": "KILLED",
+   "basis": "a4b7614280889e91"
+  },
+  {
+   "id": "MU-326",
+   "area": "guards",
+   "desc": "factory accepts a vault whose tier commitment differs from the hook's (F-057)",
+   "killer_id": "factory",
+   "kill": "test_factory_revertsWhenVaultTierDiffers",
+   "file": "src/TouchstoneFactory.sol",
+   "find": "            revert TierMismatch();\n",
+   "replace": "\n",
+   "status": "KILLED",
+   "basis": "a4b7614280889e91"
+  },
+  {
+   "id": "MU-327",
+   "area": "guards",
+   "desc": "hook constructor accepts a zero reference window, a zero grid or an epoch off the grid (F-057)",
+   "killer_id": "U-clock",
+   "kill": "test_U_clock__constructorRejectsAZeroWindowAZeroGridOrAnEpochOffTheGrid",
+   "file": "src/TouchstoneHook.sol",
+   "find": "        if (t.REF_WINDOW == 0 || t.GRID == 0 || t.EPOCH % t.GRID != 0) revert BadTier();\n",
+   "replace": "\n",
+   "status": "KILLED",
+   "basis": "ee0225bc7aef9dc2"
+  },
+  {
+   "id": "MU-328",
+   "area": "guards",
+   "desc": "the clock can be armed twice (F-057)",
+   "killer_id": "U-ref-fail",
+   "kill": "test_U_ref_fail__armAtSeedRequiresASuccessfulRefresh",
+   "file": "src/TouchstoneHook.sol",
+   "find": "        if (_armed) revert Armed();\n",
+   "replace": "\n",
+   "status": "KILLED",
+   "basis": "f9cf4dec8caa0f0e"
+  },
+  {
+   "id": "MU-329",
+   "area": "guards",
+   "desc": "witness funding above 128 bits truncates silently (F-057)",
+   "killer_id": "D-3b",
+   "kill": "test_D_3b__onlyTheVaultRegistersArmsAcknowledgesAndRollsTheWitness",
+   "file": "src/TouchstoneHook.sol",
+   "find": "        if (a0 > type(uint128).max || a1 > type(uint128).max) revert Overflow();\n",
+   "replace": "\n",
+   "status": "KILLED",
+   "basis": "bd831b2717880b00"
+  },
+  {
+   "id": "MU-330",
+   "area": "guards",
+   "desc": "a valueless seed is accepted (F-057)",
+   "killer_id": "U-navcap",
+   "kill": "test_U_navcap__valuelessSeedReverts",
+   "file": "src/TouchstoneVaultExtension.sol",
+   "find": "        if (a0 + a1 == 0) revert ZeroShares();\n",
+   "replace": "\n",
+   "status": "KILLED",
+   "basis": "23bc65c770fed7e8"
+  },
+  {
+   "id": "MU-331",
+   "area": "guards",
+   "desc": "a zero-share deposit is accepted (F-057)",
+   "killer_id": "U-5",
+   "kill": "test_U_5__zeroSharesRevert",
+   "file": "src/TouchstoneVaultExtension.sol",
+   "find": "        // [MU-331] no zero-share deposit\n        if (shares == 0) revert ZeroShares();\n",
+   "replace": "        // [MU-331] no zero-share deposit\n",
+   "status": "KILLED",
+   "basis": "7cde223b063e5695"
+  },
+  {
+   "id": "MU-332",
+   "area": "guards",
+   "desc": "a zero-share withdrawal is accepted (F-057)",
+   "killer_id": "U-5",
+   "kill": "test_U_5__zeroSharesRevert",
+   "file": "src/TouchstoneVaultExtension.sol",
+   "find": "        // [MU-332] no zero-share withdrawal\n        if (shares == 0) revert ZeroShares();\n",
+   "replace": "        // [MU-332] no zero-share withdrawal\n",
+   "status": "KILLED",
+   "basis": "cea2c1477c11307c"
+  },
+  {
+   "id": "MU-333",
+   "area": "guards",
+   "desc": "a placement that does not contain spot and the reference is accepted (F-057; the containment rule had tests but no mutant)",
+   "killer_id": "U-guard",
+   "kill": "test_U_guard__placementRows",
+   "file": "src/TouchstoneVault.sol",
+   "find": "            if (code != 0) revert NotContained();\n",
+   "replace": "\n",
+   "status": "KILLED",
+   "basis": "1755492d123b1aa6"
   }
  ]
 }

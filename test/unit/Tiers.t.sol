@@ -105,4 +105,15 @@ contract TiersTest is Test {
         assertEq(m.REFRESH_GAS_MIN, uint32(uint256(m.REF_GAS_CAP) * 64 / 63 + 30_000));
         assertEq(t.m_perBlock, 3_805_175_038); // 1e16 * 12 / 31,536,000 (the reference model's TEST tier)
     }
+
+    /// @notice F-061 (s29 freeze): the base rate per block on every tier equals spec §6's per-chain `m_perBlock` row:
+    ///         2.2%/yr on MAINNET (12 s) and DEMO (1 s), 1%/yr on TEST (a test-tier value). Any edit to m fails here.
+    function test_tiers_baseRateIsTheFrozenSpecValue() public pure {
+        (Tier memory m,) = Tiers.mainnet();
+        (Tier memory d,) = Tiers.demo();
+        (Tier memory t,) = Tiers.testing();
+        assertEq(m.m_perBlock, 8_371_385_083, "MAINNET: 2.2e16 * 12 / 31,536,000");
+        assertEq(d.m_perBlock, 697_615_423, "DEMO: 2.2e16 / 31,536,000");
+        assertEq(t.m_perBlock, 3_805_175_038, "TEST: 1e16 * 12 / 31,536,000");
+    }
 }

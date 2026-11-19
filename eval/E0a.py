@@ -555,7 +555,8 @@ def main(argv):
                                   power=res['power'][c],
                                   note='the control moves the residual by less than the bound, or towards zero, on '
                                        'every row: a lack of power on this data, not a defect of its implementation'))
-    shipped_m = 10 ** 16 * 12 // (365 * 24 * 3600)
+    shipped_m = 10 ** 16 * 12 // (365 * 24 * 3600)  # the TEST tier's m_perBlock (M_YEAR_WAD_TEST, 1%/yr; spec §6)
+    shipped_rate = f"{shipped_m * 365 * 24 * 3600 / 12 / 10 ** 16:.1f}%/yr"  # computed from the value, never typed
     summary = dict(eval='E0a', bound_bp=BOUND_BP, verdict='PASS' if verdict else 'FAIL', closes=closes,
                    share_rows_close=share_ok, controls_exceed_bound=controls,
                    controls_worst_bp=res['controls'], controls_power=res['power'], nonvacuity=nonvac,
@@ -564,7 +565,7 @@ def main(argv):
                    scope='the events reproduce the state, the fee-leg approximation and the share terms; not the '
                          "benchmark's economic meaning",
                    disclosed=f"m_perBlock raised in the harness to {tier['m_perBlock']} (the shipped TEST value is "
-                             f"{shipped_m}, 2.2%/yr at 12 s blocks; about {tier['m_perBlock'] // shipped_m}x); TEST tier "
+                             f"{shipped_m}, {shipped_rate} at 12 s blocks; about {tier['m_perBlock'] // shipped_m}x); TEST tier "
                              "otherwise. The identity's share terms equal the truth's per-call sum once the share rows "
                              "close (record minted = the vault's Transfer mints); only the share rows test them, the "
                              "identity adds no independent timing test.",

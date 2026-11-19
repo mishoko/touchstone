@@ -1743,9 +1743,9 @@ def rules_r5():
     ok2 = R.measure(h0, h1, sqrt_at(T0), sqrt_at(T0), 10 ** 24, burn - 10, 10)[4]
     ok3 = R.measure(h0, h1, sqrt_at(T0), sqrt_at(T0), 10 ** 24, burn - 11, 10)[4]
     check(burn > 20 and ok2 and not ok3, "gate: burn <= unvested + bond, both legs count")
-    # tier constants: m_perBlock = 1%/yr per block (WAD), pinned exactly
+    # tier constants: m_perBlock per tier, pinned to the spec §6 per-chain row (TEST 1%/yr; DEMO and MAINNET 2.2%/yr)
     check((R.TEST.m_perBlock, R.DEMO.m_perBlock, R.MAINNET.m_perBlock) ==
-          (10 ** 16 * 12 // 31536000, 10 ** 16 // 31536000, 10 ** 16 * 12 // 31536000), "m_perBlock per tier")
+          (3_805_175_038, 697_615_423, 8_371_385_083), "m_perBlock per tier (spec §6)")
     # Obs index fields
     w = World()
     o = w.v.hook.obs(w.block + 7, 0)

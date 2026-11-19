@@ -79,7 +79,12 @@ class Tier:
             raise TierInvalid(self.__dict__.get("NAME"))
 
 
-def _m_per_block(blocktime, m_year_wad=10 ** 16):
+# spec §6: m = 2.2%/yr on tier A (MAINNET) and DEMO; the TEST tier runs 1%/yr (a test-tier value)
+M_YEAR_A = 22 * 10 ** 15
+M_YEAR_TEST = 10 ** 16
+
+
+def _m_per_block(blocktime, m_year_wad):
     return m_year_wad * blocktime // (365 * 24 * 3600)
 
 
@@ -87,11 +92,11 @@ _COMMON = dict(FEE=500, SPACING=10, FEE_TICKS=5, W_TICKS=2000, BAND_SWAP=5, REF_
                DELTA_MIN=WAD // 2, MAX_SWAP_ACTION=2 * 10 ** 16, MAX_SWAP_EPOCH=5 * 10 ** 16, MAX_SWAPS=20,
                RESET_RUN=2, BOND_RATIO=174 * 10 ** 13, RESERVE_RATIO=6 * 10 ** 14, L_W_TARGET=1000)
 TEST = Tier(NAME="TEST", BOND_MIN=0, BLOCKTIME=12, GRID=20, GRID_SEC=240, EPOCH=120, CURE_BLOCKS=200, COOLDOWN=14,
-            REF_WINDOW=600, EDGE_DELAY=20, H_MARKOUT=120, NAV_MAX=U128, m_perBlock=_m_per_block(12), **_COMMON)
+            REF_WINDOW=600, EDGE_DELAY=20, H_MARKOUT=120, NAV_MAX=U128, m_perBlock=_m_per_block(12, M_YEAR_TEST), **_COMMON)
 DEMO = Tier(NAME="DEMO", BOND_MIN=174 * 10 ** 16, BLOCKTIME=1, GRID=300, GRID_SEC=300, EPOCH=3600, CURE_BLOCKS=1800, COOLDOWN=30,
-            REF_WINDOW=300, EDGE_DELAY=300, H_MARKOUT=20, NAV_MAX=1850 * 10 ** 18, m_perBlock=_m_per_block(1), **_COMMON)
+            REF_WINDOW=300, EDGE_DELAY=300, H_MARKOUT=20, NAV_MAX=1850 * 10 ** 18, m_perBlock=_m_per_block(1, M_YEAR_A), **_COMMON)
 MAINNET = Tier(NAME="MAINNET", BOND_MIN=174 * 10 ** 16, BLOCKTIME=12, GRID=300, GRID_SEC=3600, EPOCH=50400, CURE_BLOCKS=7200, COOLDOWN=30,
-               REF_WINDOW=600, EDGE_DELAY=3600, H_MARKOUT=120, NAV_MAX=1850 * 10 ** 18, m_perBlock=_m_per_block(12), **_COMMON)
+               REF_WINDOW=600, EDGE_DELAY=3600, H_MARKOUT=120, NAV_MAX=1850 * 10 ** 18, m_perBlock=_m_per_block(12, M_YEAR_A), **_COMMON)
 for _t in (TEST, DEMO, MAINNET):
     _t.FORFEIT_DRIP_BLOCKS = _t.EPOCH
 

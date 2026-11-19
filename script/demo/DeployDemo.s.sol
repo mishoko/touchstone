@@ -28,7 +28,8 @@ import {DemoToken} from "./DemoKit.sol";
 ///         Env: REF_POOL (the v3 reference pool from step 0b). The deployer holds the mock tokens (step 0b minted them).
 ///         Run: `REF_POOL=<pool> forge script script/demo/DeployDemo.s.sol --rpc-url <unichain sepolia> --private-key $DEPLOYER_PK --broadcast --slow --gas-estimate-multiplier 115`
 ///         (`deployAndPlace` uses ~12.6M gas; the default 1.3x multiplier exceeds the chain's 2^24 per-transaction cap).
-///         The addresses of the 2026-11-18 deploy are recorded by hand in `script/demo/deployments-1301.json`.
+///         The addresses of each deploy are recorded by hand in `script/demo/deployments-1301.json`; after it,
+///         `script/demo/demoflow.sh` drives the demo (spec §5.3).
 contract DeployDemo is Script {
     uint24 internal constant FEE = 500;
     int24 internal constant SPACING = 10;
@@ -38,6 +39,10 @@ contract DeployDemo is Script {
     error WrongChain(uint256 chainId);
     error History();
     error NotDemoToken();
+    error BaseRate(uint64 mPerBlock);
+
+    /// @dev Spec §6 per-chain row: the DEMO tier's base rate, 2.2%/yr at 1 s blocks (F-061, the s29 freeze).
+    uint64 internal constant DEMO_M_PER_BLOCK = 697_615_423;
 
     function run() external {
         if (block.chainid != 1301) revert WrongChain(block.chainid);
@@ -54,6 +59,7 @@ contract DeployDemo is Script {
         uint160 seedSqrt = TickMath.getSqrtPriceAtTick(refTick);
         t.REF_SQRT_PRICE = seedSqrt;
         Tiers.check(t, 1);
+        if (t.m_perBlock != DEMO_M_PER_BLOCK) revert BaseRate(t.m_perBlock);
 
         IUniswapV3PoolOracle r = IUniswapV3PoolOracle(refPool);
         IERC20 t0 = IERC20(r.token0());
@@ -106,6 +112,7 @@ contract DeployDemo is Script {
         console2.log("bundler (curator)", address(bundler));
         console2.log("vault", v);
         console2.log("hook", h);
+        console2.log("m_perBlock", uint256(t.m_perBlock));
         console2.log("reference tick", int256(refTick));
         console2.log("range lo", int256(lo));
         console2.log("range hi", int256(hi));

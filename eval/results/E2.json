@@ -57,5 +57,7 @@
  },
  "limits": "not path-level (one sampled exit state per seed and sigma), not the edge-12h policy, the charge in expectation over the window error (no per-draw shortfall), GBM, not replay",
  "commit_public": "4cfd5d6866e633b2baca38e540cd5e4bd6da6521",
- "commit_internal": "448efc0dd9cce15307f4fae8ad23e37eeaf4333b"
+ "commit_internal": "448efc0dd9cce15307f4fae8ad23e37eeaf4333b",
+ "assembler_commit": "987f48c",
+ "commit_note": "commit_public is the tree the run started from (its script uncommitted then); the script is committed unchanged at assembler_commit"
 }

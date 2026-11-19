@@ -20,6 +20,6 @@
   "sha256": "4ce521c2fd142aca0d9387e467e08c24a6e5cbc0b4b1141c523e9d8cf2a63839"
  },
  "limits": "synthetic swap sequences, not replay swaps; the fixed seed makes the run a regression check (fresh seeds go through script/explore.sh)",
- "commit_public": "3e6f4e3cebcd1d6ec520a834760290ef75d69ea2",
- "commit_internal": "6bbbad2808bd29e7ae27e4a3bb95f5a23c28a113"
+ "commit_public": "987f48c36c679a51dbe41d4f11892e6bc96a7449",
+ "commit_internal": "b9bd502ee1ab3c38ca04792e8a0bbc90864e3918"
 }

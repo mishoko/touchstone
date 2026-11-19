@@ -17,7 +17,7 @@
   "reserve_shares": 0,
   "records_with_a_charge": [],
   "minted_base_shares": 347262425504370350782,
-  "seconds": 223.1
+  "seconds": 213.8
  },
  "rule_applied": "exactly 0: charge, bank burn, bond burn over every no-action segment; no pending markout; positive control: one curator swap in the same harness prices a charge > 0",
  "seed": 1108,
@@ -30,6 +30,6 @@
   ]
  },
  "limits": "independent model, not the contracts (F-5 covers the contracts at <= 8 swaps x 64 runs); the reference follows the pool, so the fence never binds; not on replay swaps",
- "commit_public": "4cfd5d6866e633b2baca38e540cd5e4bd6da6521",
- "commit_internal": "448efc0dd9cce15307f4fae8ad23e37eeaf4333b"
+ "commit_public": "987f48c36c679a51dbe41d4f11892e6bc96a7449",
+ "commit_internal": "b9bd502ee1ab3c38ca04792e8a0bbc90864e3918"
 }

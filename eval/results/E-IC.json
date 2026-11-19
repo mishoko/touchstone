@@ -12,6 +12,6 @@
   "scope": "the same rule on synthetic 180-day paths (driftless GBM at sigma 40/60/120% and a hover path), held-out seeds 700-1099; not a replay and not relabelled as one"
  },
  "future_work": "a replay supplement: one 180-day USDC/WETH 0.05% path, point estimates per bot (net, in-range share, charges, actions), no verdict; the depositor ceiling as spec section 3.5 defines it (f_actual(mimic) - f_actual(never-re-placing lazy), no observer)",
- "commit_public": "3e6f4e3cebcd1d6ec520a834760290ef75d69ea2",
- "commit_internal": "6bbbad2808bd29e7ae27e4a3bb95f5a23c28a113"
+ "commit_public": "987f48c36c679a51dbe41d4f11892e6bc96a7449",
+ "commit_internal": "b9bd502ee1ab3c38ca04792e8a0bbc90864e3918"
 }

@@ -515,6 +515,6 @@
   "sha256": "426857fde5129416c13c164ec6c376f9539618250137f38e352c1b48ebac9c99"
  },
  "limits": "the cells are scripted attacks (with searched parameters) on a local pool, not an exhaustive search; the Python cells come from earlier configurations and are reported, not gated; MK-1 (a single builder holding the reference over the markout window) is outside the model",
- "commit_public": "3e6f4e3cebcd1d6ec520a834760290ef75d69ea2",
- "commit_internal": "6bbbad2808bd29e7ae27e4a3bb95f5a23c28a113"
+ "commit_public": "987f48c36c679a51dbe41d4f11892e6bc96a7449",
+ "commit_internal": "b9bd502ee1ab3c38ca04792e8a0bbc90864e3918"
 }

@@ -59,6 +59,6 @@
   "alloc_out.txt": "89762e381a093ea500b2d2ea8ad696b376b68be029b644247e190f87ad162466"
  },
  "limits": "design-phase simulator (24-segment trailing window, three stylised regimes); the simulator scripts are not published, only their outputs; not re-run (the table is reported, not re-measured)",
- "commit_public": "3e6f4e3cebcd1d6ec520a834760290ef75d69ea2",
- "commit_internal": "6bbbad2808bd29e7ae27e4a3bb95f5a23c28a113"
+ "commit_public": "987f48c36c679a51dbe41d4f11892e6bc96a7449",
+ "commit_internal": "b9bd502ee1ab3c38ca04792e8a0bbc90864e3918"
 }

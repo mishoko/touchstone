@@ -78,5 +78,7 @@
  },
  "limits": "synthetic 180-day paths (driftless GBM and the hover path), third-party depth 0, NAV 1000 ETH, gas 5 gwei; the churner acts at hourly marks (the simulation grid), not every COOLDOWN; not replay",
  "commit_public": "3e6f4e3cebcd1d6ec520a834760290ef75d69ea2",
- "commit_internal": "6bbbad2808bd29e7ae27e4a3bb95f5a23c28a113"
+ "commit_internal": "6bbbad2808bd29e7ae27e4a3bb95f5a23c28a113",
+ "assembler_commit": "987f48c",
+ "commit_note": "commit_public is the tree the run started from (its script uncommitted then); the script is committed unchanged at assembler_commit"
 }

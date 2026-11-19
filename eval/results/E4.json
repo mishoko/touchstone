@@ -180,6 +180,6 @@
   "eval/e4.py": "cf7eaef6d84b3778400d0fca2b3225802e8695c7b0ba3546933630139bf0ab02"
  },
  "limits": "the U-IC2 per-path parts (two files, 670 MB) are not in the repository; their sha256 is recorded and eval/supplements/U-IC2-agg.json holds the aggregates used here; synthetic 180-day paths (U-IC2: driftless GBM and the hover path, third-party depth 0, NAV 1000 ETH, gas 5 gwei); not replay",
- "commit_public": "5744424105607c8911f8ab4cac96a1515f904b69",
+ "commit_public": "987f48c36c679a51dbe41d4f11892e6bc96a7449",
  "commit_internal": "b9bd502ee1ab3c38ca04792e8a0bbc90864e3918"
 }

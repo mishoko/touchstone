@@ -1,4 +1,5 @@
 {
+ "ch2_unpowered_recorded": false,
  "changes": [
   {
    "amended": "S25C-03: the diff now includes the E0b.py assertion hunk and the validity manifest guard (the guard is entry M2)",
@@ -2406,7 +2407,44 @@
   }
  ],
  "changes_after_prefit2": [],
+ "control_powers": {
+  "anchor_closing_price": true,
+  "drip_sign_flipped": true,
+  "epoch_indexed_witness": true,
+  "fallback_latest_write": true,
+  "fee_by_n": true,
+  "lvr_price_leg": true,
+  "no_alloc": true,
+  "no_passive_fee": true,
+  "no_share_terms": true,
+  "prev_fw_whole_window": true,
+  "single_forfeit_drip": true,
+  "vault_fee_by_tau": true,
+  "vault_fee_opening_L": true,
+  "witness_shift_one_spacing": true
+ },
+ "control_worst_bp": {
+  "anchor_closing_price": 9.381636137580953,
+  "drip_sign_flipped": 11.249515410196226,
+  "epoch_indexed_witness": 0.45956943881186846,
+  "fallback_latest_write": 8.76109585015254,
+  "fee_by_n": 0.3828033317359879,
+  "lvr_price_leg": 147.7875156768967,
+  "no_alloc": 96.7594362939798,
+  "no_passive_fee": 3.9101354723869304,
+  "no_share_terms": 14.168991247334379,
+  "prev_fw_whole_window": 0.8481584837812266,
+  "single_forfeit_drip": 3.043344603352164,
+  "vault_fee_by_tau": 0.5560296329178135,
+  "vault_fee_opening_L": 3.7306039561889053,
+  "witness_shift_one_spacing": 1.6923633684717816
+ },
  "eval": "E0b",
+ "fit_worst_bp": {
+  "fit-exit": 0.10122220013352572,
+  "fit-offset": 0.18596750932167205,
+  "fit-same": 0.09726618369260809
+ },
  "generation_failure_bound": "conf-r4 S25C4-03: a seed whose epochs 2-12 are all non-poke-first and stale-window-infeasible cannot be generated; about 1.4e-6 per seed (about 1e-5 over the 8 held-out seeds); such a seed is a failed script (form 3.2)",
  "note": "prefit: the harness closure H and the form are frozen before any smoke seed runs and before any E0b-leg residual is computed",
  "records": [

@@ -38,7 +38,7 @@ library Tiers {
         t.BOND_MIN = 1.74e18; // 1.74 WETH
         t.NAV_MAX = 1850e18; // 1,850 WETH
         t.H_MARKOUT = 120;
-        t.EDGE_DELAY = 1800; // 6 grids: the reference policy waits six hours
+        t.EDGE_DELAY = 3600; // 12 grids: the reference policy waits twelve hours
     }
 
     function demo() internal pure returns (Tier memory t, uint256 blocktime) {

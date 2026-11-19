@@ -130,7 +130,7 @@ def analyse(rows, l8):
     out["honest_cost"] = hc
     lines += hl
     # L8
-    lines.append("L8 liveness (edge-6h, m = 1%, eroding BOND_RATIO·S bond, gate enforced, no top-up):")
+    lines.append(f"L8 liveness ({MIMIC}, m = 1%, eroding BOND_RATIO·S bond, gate enforced, no top-up):")
     for (kind, sigma) in I.KINDS:
         xs = [x for x in l8 if x["kind"] == kind and x["sigma"] == sigma]
         acts = sum(x["actions"] for x in xs)
@@ -154,7 +154,7 @@ def honest_cost(rows):
     """The honest-cost row: the mimic (edge-6h, no observer) at m = 2.2%/yr; every settlement evaluated under the
     fee-aware rule, the holdings-only rule and the holdings-only rule with the upper leg rounded up, on the same pending
     records, classed by the settled action (`sim.Sim.SETTLE_CLASSES`)."""
-    lines = [f"Honest settlement cost (edge-6h, m = 2.2%/yr, no observer; applied rule {RULE}; markout closes "
+    lines = [f"Honest settlement cost ({MIMIC}, m = 2.2%/yr, no observer; applied rule {RULE}; markout closes "
              f"{'integer per block' if INT_CLOSES else 'continuous'}; the other rules computed on the same pending records). "
              "burnS as a fraction of S_act, extra as a fraction of NAV; per class: settlements, burnS mean / max, share "
              "with burnS > 0, extra mean / max, %NAV/yr [90% CI] (fee-aware) | holdings-only %NAV/yr:"]

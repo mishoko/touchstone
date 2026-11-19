@@ -157,7 +157,10 @@ def gate_min_m(ix, b, seeds, bot, lo=0.0, hi=0.10, env=False, grid=(0.0, 0.01)):
         return mean_ci([at(pts, m) for pts in P])[1]
 
     if lo_ci(hi) <= 0:
-        return math.inf
+        # F-054: only the extrapolated segment may fail; then the smallest simulated m that passes is the answer.
+        # math.inf means no simulated m and no m up to `hi` passes (writers map it to null, never a bare Infinity).
+        sim_ok = [m for m in grid if m <= hi and lo_ci(m) > 0]
+        return min(sim_ok) if sim_ok else math.inf
     if lo_ci(lo) > 0:
         return lo
     for _ in range(40):

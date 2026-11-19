@@ -85,7 +85,7 @@ contract TiersTest is Test {
         assertEq(m.H_MARKOUT, 120);
         assertEq(d.H_MARKOUT, 20);
         assertEq(t.H_MARKOUT, 120);
-        assertEq(m.EDGE_DELAY, 1800);
+        assertEq(m.EDGE_DELAY, 3600);
         assertEq(t.COOLDOWN, 14);
     }
 

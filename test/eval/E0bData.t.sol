@@ -346,10 +346,12 @@ contract E0bDataTest is LiquidPoolBase {
             vm.prank(curator);
             try hv.setPositions(lo, hi, PreSwap(false, false, 0), 0, type(uint256).max) {}
             catch {
+                vm.getRecordedLogs(); // a reverted attempt's recorded logs are discarded (E0b measurement fix)
                 uint128 a = uint128(p.nav * 15 / 1000);
                 vm.prank(curator);
                 try hv.setPositions(lo, hi, PreSwap(true, true, a), 0, type(uint256).max) {}
                 catch {
+                    vm.getRecordedLogs(); // as above
                     vm.prank(curator);
                     hv.setPositions(lo, hi, PreSwap(true, false, a), 0, type(uint256).max);
                 }

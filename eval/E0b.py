@@ -68,6 +68,12 @@ def vault_fee(s, fr, L=None):
 def ledger(raw_logs, tier, feereads, ctl=None, base='E0b'):
     """E0a's ledger on a fresh decode of the logs, then the E0b vault fee leg (unless base='E0a')."""
     logs = [A.decode(copy.deepcopy(x)) for x in raw_logs]
+    per_call = {}
+    for x in logs:
+        if x['ev'] == 'Checkpoint':
+            per_call[x['c']] = per_call.get(x['c'], 0) + 1
+    bad = [c for c, n in per_call.items() if n > 1]
+    assert not bad, f'more than one Checkpoint in vault call(s) {bad[:5]} (a reverted attempt\'s logs were recorded)'
     out, meta = A.ledger(logs, tier, ctl if ctl in E0A_CONTROLS else None)
     if base == 'E0a' or ctl == 'vault_fee_by_tau':
         return out, meta
@@ -315,6 +321,13 @@ def validity_one(d, tag, tier):
 def validity(d):
     tier = {k: int(v) for k, v in json.load(open(os.path.join(d, 'E0b-tier.json'))).items()}
     tags = sorted(f[len('manifest-'):-len('.json')] for f in os.listdir(d) if f.startswith('manifest-e0b-'))
+    # the data must come from the harness of the last record (prefit, or the last logged change that touched H)
+    fz = frozen()
+    ref = ([c['harness'] for c in fz.get('changes', []) if c.get('harness')] or
+           [r['harness'] for r in fz.get('records', []) if r['name'] == 'prefit'] or [None])[-1]
+    ok, why = manifests_ok(d, tags, ref)
+    if not ok:
+        raise SystemExit(f'E0b validity: refused ({why})')
     res = {t: validity_one(d, t, tier) for t in tags}
     n = len(res)
     rate = lambda k: sum(1 for v in res.values() if v[k]) / n if n else 0.0

@@ -1604,7 +1604,8 @@
    "file": "src/TouchstoneVaultExtension.sol",
    "find": "uint256 d1 = FullMath.mulDivRoundingUp(_idle1, s, S);",
    "replace": "uint256 d1 = FullMath.mulDiv(_idle1, s, S);",
-   "status": "PENDING"
+   "status": "KILLED",
+   "basis": "c2e6ea36ad5aa0f7"
   },
   {
    "id": "MU-135",

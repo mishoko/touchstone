@@ -32,6 +32,8 @@ USDC=$(get "['step0b']['mUSDC_token0']")
 WETH=$(get "['step0b']['mWETH_token1']")
 BUNDLER=$(get "['deploy']['curator_bundler']")
 HOOK=$(get "['deploy']['hook']")
+M_DEPLOYED=$(get ".get('deploy', {}).get('m_perBlock')")
+[ "$M_DEPLOYED" = "697615423" ] || { echo "deployments file is not the 2.2%/yr DEMO deploy (m_perBlock=$M_DEPLOYED)"; exit 1; }
 PATH_OFFSETS=(0 40 39 43 -1 1 -21 -39 -57)
 W=2000
 SPACING=10
@@ -52,6 +54,8 @@ open(out, "a").write(json.dumps(row) + "\n")
 print(json.dumps(row))
 EOF
 }
+# the last logged row must have landed (status 1, a transaction hash), else stop
+expect_ok() { python3 -c "import json,sys;r=json.loads(open('$OUT').read().splitlines()[-1]);sys.exit(0 if r['status']==1 and r['tx'] else 1)" || { echo "step $1 did not land; see $OUT"; exit 1; }; }
 align() { python3 -c "t=int('$1');print(t//$SPACING*$SPACING)"; }
 # drive the reference pool to `tick` (an exact-input swap stopped at the target price) and move the hook pool's spot
 drive_ref() {
@@ -60,16 +64,17 @@ drive_ref() {
   [ "$cur" = "$target" ] && return 0
   if [ "$target" -lt "$cur" ]; then dir=true; amt=200000000000; else dir=false; amt=50000000000000000000; fi
   log "ref->$target" "$(send "$DRIVER" 'swap(bool,uint256,uint160)' "$dir" "$amt" "$sq")" >/dev/null
+  expect_ok "ref->$target"
 }
-move_spot() { log "${2:-spot}->$1" "$(send "$BUNDLER" 'moveSpot(uint160)' "$(sqrt_at "$1")")"; }
+move_spot() { log "${2:-spot}->$1" "$(send "$BUNDLER" 'moveSpot(uint160)' "$(sqrt_at "$1")")"; expect_ok "${2:-spot}->$1"; }
 
 echo "# DemoFlow $(date -u +%FT%TZ)" >&2
 T0=$(ref_spot)
 echo "reference tick at start: $T0" >&2
 
 # 0. fund the bundler for moveSpot (its own balance pays the hook-pool swaps)
-log fund0 "$(send "$USDC" 'transfer(address,uint256)' "$BUNDLER" 200000000000)"
-log fund1 "$(send "$WETH" 'transfer(address,uint256)' "$BUNDLER" 50000000000000000000)"
+log fund0 "$(send "$USDC" 'transfer(address,uint256)' "$BUNDLER" 200000000000)"; expect_ok fund0
+log fund1 "$(send "$WETH" 'transfer(address,uint256)' "$BUNDLER" 50000000000000000000)"; expect_ok fund1
 
 # 1. the price path through both pools
 for o in "${PATH_OFFSETS[@]}"; do
@@ -80,23 +85,26 @@ for o in "${PATH_OFFSETS[@]}"; do
 done
 END=$((T0 + ${PATH_OFFSETS[${#PATH_OFFSETS[@]}-1]}))
 
-# 2. wait until the cached reference is within 30 ticks of spot (the TWAP catches up), at most 8 minutes
+# 2. wait until the reference (the live TWAP) is within 30 ticks of spot, at most 8 minutes
+caught=0
 for _ in $(seq 1 48); do
   lr=$(live_ref); d=$((lr - END)); d=${d#-}
   echo "spot $END liveRef $lr" >&2
-  [ "$d" -le 30 ] && break
+  if [ "$d" -le 30 ]; then caught=1; break; fi
   sleep 10
 done
-log refresh "$(send "$BUNDLER" 'refreshRef()')"
+[ "$caught" = 1 ] || { echo "the reference did not catch up with spot in 8 minutes"; exit 1; }
+log refresh "$(send "$BUNDLER" 'refreshRef()')"; expect_ok refresh
 
 # 3. A1: re-place a W-wide range around spot (contains spot and the reference): lands, charged
 c=$(align "$END"); lo=$((c - W / 2)); hi=$((c + W / 2))
-log A1_setPositions "$(send "$BUNDLER" 'setPositions(int24,int24,(bool,bool,uint128),uint160,uint256)' "$lo" "$hi" '(false,false,0)' 0 "$(cast max-uint)")"
+log A1_setPositions "$(send "$BUNDLER" 'setPositions(int24,int24,(bool,bool,uint128),uint160,uint256)' "$lo" "$hi" '(false,false,0)' 0 "$(cast max-uint)")"; expect_ok A1
 sleep "$WAIT_SEC"
-log A1_settle "$(send "$BUNDLER" 'settle()')"
+log A1_settle "$(send "$BUNDLER" 'settle()')"; expect_ok A1_settle
 
 # 4. A2: push spot 90 ticks above the reference, then try to re-place: the fence (60 ticks) refuses it
 lr=$(live_ref)
+trap 'move_spot "$lr" "back-on-exit" >/dev/null || true' EXIT
 move_spot $((lr + 90)) "push" >/dev/null
 c2=$(align $((lr + 90))); lo2=$((c2 - W / 2)); hi2=$((c2 + W / 2))
 reason=$(cast call "$BUNDLER" 'setPositions(int24,int24,(bool,bool,uint128),uint160,uint256)' "$lo2" "$hi2" '(false,false,0)' 0 "$(cast max-uint)" --from "$(cast wallet address --private-key "$DEPLOYER_PK")" --rpc-url "$RPC" 2>&1 || true)
@@ -105,11 +113,23 @@ case "$reason" in *"$FENCE_SEL"*|*Fence*) echo "A2 eth_call reverts Fence ($FENC
 a2=$(cast send --json --gas-limit 3000000 --rpc-url "$RPC" --private-key "$DEPLOYER_PK" "$BUNDLER" 'setPositions(int24,int24,(bool,bool,uint128),uint160,uint256)' "$lo2" "$hi2" '(false,false,0)' 0 "$(cast max-uint)" 2>/dev/null) || true
 [ -n "$a2" ] || a2='{}'
 log A2_setPositions_Fence "$a2"
+python3 -c "import json,sys;r=json.loads(open('$OUT').read().splitlines()[-1]);sys.exit(0 if r['status']==0 and r['tx'] else 1)" || { echo "A2: no failed transaction on chain"; exit 1; }
+a2tx=$(python3 -c "import json;print(json.loads(open('$OUT').read().splitlines()[-1])['tx'])")
+a2run=$(cast run "$a2tx" --rpc-url "$RPC" 2>&1 | tail -20 || true)
+case "$a2run" in *Fence*|*"$FENCE_SEL"*) echo "A2 on chain reverted Fence: $a2tx" >&2 ;; *) echo "A2 on chain: Fence not confirmed by cast run (eth_call pre-check said Fence); tx $a2tx" >&2 ;; esac
 move_spot "$lr" "back" >/dev/null
+trap - EXIT
 sleep "$WAIT_SEC"
 
-# 5. A3: a small rebalanceSwap (100 mUSDC for mWETH): lands, charged
-log A3_rebalanceSwap "$(send "$BUNDLER" 'rebalanceSwap(bool,uint128,uint256)' true 100000000 "$(cast max-uint)")"
+# 5. A3: a small rebalanceSwap (100 mUSDC for mWETH, or 0.03 mWETH the other way if the vault holds too little
+#    idle token0; eth_call first): lands, charged
+ME=$(cast wallet address --private-key "$DEPLOYER_PK")
+A3_DIR=true
+cast call "$BUNDLER" 'rebalanceSwap(bool,uint128,uint256)' true 100000000 "$(cast max-uint)" --from "$ME" --rpc-url "$RPC" >/dev/null 2>&1 || {
+  A3_DIR=false; A3_AMT=30000000000000000
+  cast call "$BUNDLER" 'rebalanceSwap(bool,uint128,uint256)' false "$A3_AMT" "$(cast max-uint)" --from "$ME" --rpc-url "$RPC" >/dev/null || { echo "A3: rebalanceSwap reverts in both directions"; exit 1; }; }
+if [ "$A3_DIR" = true ]; then A3_AMT=100000000; fi
+log A3_rebalanceSwap "$(send "$BUNDLER" 'rebalanceSwap(bool,uint128,uint256)' "$A3_DIR" "$A3_AMT" "$(cast max-uint)")"; expect_ok A3
 sleep "$WAIT_SEC"
-log A3_settle "$(send "$BUNDLER" 'settle()')"
+log A3_settle "$(send "$BUNDLER" 'settle()')"; expect_ok A3_settle
 echo "DemoFlow done; rows in $OUT" >&2

@@ -315,7 +315,7 @@ Mainnet tier (USDC/WETH 0.05% reference pool `0x88e6A0c2dDD26FEEb64F039a2c41296F
 
 | Term | Value |
 |---|---|
-| Base fee m | 2.2% a year × δ (the deployed share), in range only; the evaluated rate, written into `script/Tiers.sol` at the parameter freeze (the file and the testnet demo carry a provisional 1% until then) |
+| Base fee m | 2.2% a year × δ (the deployed share), in range only; the evaluated rate, frozen in `script/Tiers.sol` for the mainnet and demo tiers (the forge test tier runs 1% a year) |
 | Range width W | 2,000 ticks (about ±10%) |
 | Fence around the reference | 60 ticks |
 | Swap caps | 2% of NAV per action, 5% per epoch, 20 swaps per epoch |

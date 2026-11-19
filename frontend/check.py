@@ -58,6 +58,12 @@ for rid in ("U-IC", "E0", "E0a"):
     check(rows.get(rid, {}).get("section") == "history", f"{rid}: not in the history section")
 check(rows.get("U-IC2", {}).get("section") == "main", "U-IC2: not in the main table")
 check((DIST / "data" / man["deployments"]).exists(), "deployments file not copied")
+# s29 fix review S29MF-01: every copied data file is byte-identical to its source, and no stale rate label survives
+for path in sorted((ROOT / "eval" / "results").glob("*.json")):
+    dst = DIST / "data" / path.name
+    check(dst.exists() and dst.read_bytes() == path.read_bytes(), f"{path.stem}: dist copy differs from eval/results (rebuild)")
+for dst in sorted((DIST / "data").glob("*.json")):
+    check("2.2%/yr at 12 s" not in dst.read_text(encoding="utf-8"), f"{dst.name}: the TEST tier is labelled 2.2%/yr")
 check("reported_unasserted_tails_wei" in app and "parkingWhileTheCacheLagsIsBoundedByItsInRangeTime" in app, "app.js does not render the E5 tails (all four, incl. M-N1 lane B)")
 check(not re.search(r"<script[^>]+src=\"https?:", (DIST / "index.html").read_text()), "external script")
 

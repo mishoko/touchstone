@@ -587,6 +587,15 @@ def test_F_056__mutate_deletes_the_counterexamples_a_mutant_run_writes_and_names
         # the run's own counterexample is deleted; the pre-existing one stays; the source is restored
         assert sorted(os.listdir(fd)) == ['invariant_old'], os.listdir(fd)
         assert open(os.path.join(d, 'src', 'X.sol')).read() == 'a = 1;\n'
+        # a kill by setUp alone is flagged (S27F-07)
+        res2 = {'t.sol:S': {'test_results': {'setUp()': {'status': 'Failure', 'reason': 'deploy failed'}}}}
+        mu.forge = lambda args, cwd: types.SimpleNamespace(stdout=json.dumps(res2), stderr='', returncode=1)
+        try:
+            _, v2, d2 = mu.run_one(dict(m, kill='invariant_new'), d, False, lambda k, r: True)
+        finally:
+            mu.forge = real
+        assert v2 == 'KILLED' and '(setUp)' in d2 and 'setUp(): deploy failed' in d2, (v2, d2)
+        assert '(setUp)' not in detail, detail
         # control: a file changed during the run is deleted too
         before = mu._failure_files(d)
         time.sleep(0.01)
@@ -594,13 +603,16 @@ def test_F_056__mutate_deletes_the_counterexamples_a_mutant_run_writes_and_names
         assert mu.drop_new_failures(d, before) == 1 and os.listdir(fd) == []
 
 
-GUARD = re.compile(r'\brevert\s+[A-Za-z_][\w.]*\s*\(')
+# A guard: a custom-error or string revert, a `require`, a revert split from its error onto the next line, or a call
+# of the curator-check helper (each call site is its own guard; S27F-03).
+GUARD = re.compile(r'\brevert\s+[A-Za-z_][\w.]*\s*\(|\brevert\s*\(\s*"|\brequire\s*\(|\brevert\s*$|\b_onlyCurator\s*\(\s*\)\s*;')
 
 # Guards that carry no mutant, each with its reason (P5 code panel D2, F-057). Key: (file, the guard's code, a context
 # string that must appear in the guard's line or the three lines above it). Each entry must match exactly one guard.
 GUARD_ALLOW = {
     ('src/TouchstoneVaultBase.sol', 'if (msg.sender != curator) revert OnlyCurator();', '_onlyCurator()'):
-        'the shared helper; each call site carries its own mutant (MU-280, MU-284, MU-285, MU-286, MU-318)',
+        'the shared helper; each call site is a guard of its own with its mutant (MU-280, MU-284, MU-285, MU-286, '
+        'MU-318), which this lint checks',
     ('src/TouchstoneVaultExtension.sol', 'if (msg.sender != address(MANAGER)) revert OnlyPoolManager();',
      'carries no mutant'):
         "defence in depth: `dispatch` is reachable only through the vault's unlockCallback (selector allow-list, "
@@ -622,78 +634,81 @@ GUARD_ALLOW = {
 }
 
 
-def guard_scan(root, allow):
-    """Returns (untagged, hits): every `revert Name(` guard in src/ whose group carries fewer `[MU-` tags than it has
-    guards not on the allow-list, and the number of guards each allow-list entry matched. A group is a run of
-    adjacent guard lines (a multi-line condition, or an `if (...) {` opener of a bare revert, counts as one) with the
-    comment block directly above it."""
+def guard_scan(root, allow, muts):
+    """Returns (unbound, hits). Every guard in src/ (GUARD) must be bound to a mutant: some entry of `muts` for the same
+    file whose `find` holds one line (>= 8 characters) of the guard's statement as a whole line, or is (whitespace-normalised, >= 8 characters) a part
+    of the statement (a sub-expression mutant; an EQUIVALENT entry binds through its `anchors`), or
+    be on the allow-list. Tags are not counted (S27F-01: a tag proves nothing about which guard it mutates). `hits`
+    counts the guards each allow-list entry matched."""
+    finds = {}
+    for m in muts:
+        for f, txt in ([(m.get('file'), m.get('find'))] + [(x.get('file'), x.get('find')) for x in m.get('anchors') or []]):
+            if f and txt:
+                finds.setdefault(f, []).append(txt)
     bad, hits = [], {k: 0 for k in allow}
     for p in sorted(glob.glob(os.path.join(root, 'src', '**', '*.sol'), recursive=True)):
         rel = os.path.relpath(p, root)
         lines = open(p).read().split('\n')
         code = [l.split('//')[0] for l in lines]
-        i = 0
-        while i < len(lines):
-            if not GUARD.search(code[i]):
-                i += 1
+        for i in range(len(lines)):
+            c = code[i]
+            if not GUARD.search(c) or re.search(r'\bfunction\b', c):
                 continue
-            s = i
-            if code[i].strip().startswith('revert') and s > 0 and code[s - 1].rstrip().endswith('{') \
+            s, e = i, i
+            if re.search(r'\brevert\s*$', c):
+                e = i + 1                                   # `revert` with its error on the next line
+            elif c.strip().startswith('revert') and s > 0 and code[s - 1].rstrip().endswith('{') \
                     and code[s - 1].strip().startswith('if'):
-                s -= 1
+                s -= 1                                      # a bare revert under its `if (...) {`
             while s > 0 and code[s - 1].strip() and not re.search(r'[;{}]\s*$', code[s - 1].rstrip()) \
                     and not lines[s - 1].strip().startswith('//'):
-                s -= 1
-            guards = [i]
-            j = i + 1
-            while j < len(lines) and GUARD.search(code[j]) and code[j].strip().startswith('if'):
-                guards.append(j)
-                j += 1
-            tags = set()
-            for x in range(s, j):
-                tags |= set(re.findall(r'\[MU-\d+\]', lines[x]))
-            k = s - 1
-            while k >= 0 and lines[k].strip().startswith('//'):
-                tags |= set(re.findall(r'\[MU-\d+\]', lines[k]))
-                k -= 1
-            untagged = []
-            for n in guards:
-                g, ctx = lines[n].strip(), '\n'.join(lines[max(0, n - 3):n + 1])
-                keys = [key for key in allow if key[0] == rel and key[1] == g and key[2] in ctx]
-                for key in keys:
-                    hits[key] += 1
-                if not keys:
-                    untagged.append((n, g))
-            if len(tags) < len(untagged):
-                bad += [f'{rel}:{n + 1}: {g}' for n, g in untagged]
-            i = j
+                s -= 1                                      # a multi-line condition
+            span = [lines[x].strip() for x in range(s, e + 1) if lines[x].strip()]
+            g, ctx = lines[i].strip(), '\n'.join(lines[max(0, i - 3):i + 1])
+            keys = [k for k in allow if k[0] == rel and k[1] == g and k[2] in ctx]
+            for k in keys:
+                hits[k] += 1
+            if keys:
+                continue
+            joined = ' '.join(span)
+            flines = {x.strip() for f in finds.get(rel, []) for x in f.split('\n') if len(x.strip()) >= 8}
+            if not any(ln in flines for ln in span) and \
+                    not any(len(f.strip()) >= 8 and ' '.join(f.split()) in joined for f in finds.get(rel, [])):
+                bad.append(f'{rel}:{i + 1}: {g}')
     return bad, hits
 
 
 def test_F_057__every_src_guard_has_a_mutant_or_an_allow_list_reason():
-    bad, hits = guard_scan(ROOT, GUARD_ALLOW)
-    assert not bad, 'guards without an [MU- tag or an allow-list reason:\n' + '\n'.join(bad)
+    muts = json.load(open(os.path.join(ROOT, 'audits', 'mutants.json')))['mutants']
+    bad, hits = guard_scan(ROOT, GUARD_ALLOW, muts)
+    assert not bad, 'guards without a mutant (by find string) or an allow-list reason:\n' + '\n'.join(bad)
     assert all(len(r) > 30 for r in GUARD_ALLOW.values())
     stale = [k for k, n in hits.items() if n != 1]
     assert not stale, f'allow-list entries matching other than exactly one guard: {stale}'
-    # controls: an untagged guard, a second guard under a one-tag comment, a multi-line condition and a bare revert
-    # under an `if {` are found; the allow-list clears exactly its entries
+    # controls (S27F-01, S27F-03): a guard next to a three-tag guard, a `require`, a string revert, a revert split over
+    # two lines, a multi-line condition, a bare revert under `if {` and a new helper call site are each found unless a
+    # mutant's find covers them; the allow-list clears exactly its entries
     with tempfile.TemporaryDirectory() as d:
         os.makedirs(os.path.join(d, 'src'))
         open(os.path.join(d, 'src', 'X.sol'), 'w').write(
-            'contract X {\n  function f(uint a) external {\n    // [MU-900] tagged\n    if (a == 1) revert A();\n'
-            '    if (a == 2) revert B();\n    a += 1;\n    if (a == 9) revert C();\n'
-            '    if (\n      a == 7\n    ) revert D();\n    if (a == 5) {\n      revert E();\n    }\n'
-            '    // [MU-901] tagged\n    if (a == 6) {\n      revert F();\n    }\n  }\n}\n')
-        found, _ = guard_scan(d, {})
-        for e in ('C', 'D', 'E'):
-            assert any(f'revert {e}()' in b for b in found), (e, found)
-        assert any('revert A()' in b or 'revert B()' in b for b in found), found
-        assert not any('revert F()' in b for b in found), found
-        allow = {('src/X.sol', 'if (a == 9) revert C();', 'a += 1;'): 'x', ('src/X.sol', 'if (a == 2) revert B();', ''): 'x',
-                 ('src/X.sol', 'revert E();', 'a == 5'): 'x'}
-        found, hits = guard_scan(d, allow)
-        assert len(found) == 1 and 'revert D()' in found[0], found
+            'contract X {\n  function f(uint a) external {\n    // [MU-900] [MU-901] [MU-902] tagged\n'
+            '    if (a == 1) revert A();\n    if (a == 2) revert B();\n    require(a != 3, C());\n'
+            '    if (a == 4) revert("four");\n    if (a == 5) revert\n      E();\n    if (\n      a == 777777\n    ) revert D();\n'
+            '    if (a == 6) {\n      revert F();\n    }\n    _onlyCurator();\n  }\n}\n')
+        mu = [{'file': 'src/X.sol', 'find': '    if (a == 1) revert A();\n'}]
+        found, _ = guard_scan(d, {}, mu)
+        for e in ('revert B()', 'require(a != 3', 'revert("four")', 'if (a == 5) revert', ') revert D()', 'revert F()',
+                  '_onlyCurator()'):
+            assert any(e in b for b in found), (e, found)
+        assert not any('revert A()' in b for b in found), found
+        found2, _ = guard_scan(d, {}, mu + [{'file': 'src/X.sol', 'find': '      a == 777777\n'}])
+        assert not any(') revert D()' in b for b in found2), found2   # a sub-expression mutant of D's condition binds
+        mu += [{'file': 'src/X.sol', 'find': '    ) revert D();\n'}, {'file': 'src/X.sol', 'find': 'if (a == 6) {'},
+               {'file': 'src/X.sol', 'find': '    if (a == 5) revert\n      E();\n'}]
+        allow = {('src/X.sol', 'if (a == 2) revert B();', 'tagged'): 'x', ('src/X.sol', 'require(a != 3, C());', ''): 'x',
+                 ('src/X.sol', 'if (a == 4) revert("four");', ''): 'x', ('src/X.sol', '_onlyCurator();', ''): 'x'}
+        found, hits = guard_scan(d, allow, mu)
+        assert found == [], found
         assert all(n == 1 for n in hits.values()), hits
 
 

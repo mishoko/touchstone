@@ -180,6 +180,29 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
 
     /// @notice I-15: a fixed sequence reaches every counter of the row (the random campaign's totals are checked by
     ///         `script/nonvacuity.py`), with no I-5, I-8 or I-13 failure on the way.
+    /// @notice P5-Ad-05 (S27F-02): `realMintVests` counts a vest of really minted base (a curator placement accruing
+    ///         base over epochs, no seam), and does not count a vest once pay was planted through a seam.
+    function test_P5_Ad_05__realMintVestsCountsOnlyUnplantedPay() public {
+        for (uint256 i; i < 3; ++i) handler.deposit(i, 5e22);
+        handler.refresh();
+        handler.place(3, 0, 1, 1);
+        assertGt(handler.curatorPlacements(), 0, "precondition: a curator placement");
+        for (uint256 i; i < 400 && handler.realMintVests() == 0; ++i) {
+            handler.advance(512);
+            handler.refresh();
+            handler.withdraw(i, 1e18 + i);
+        }
+        assertGt(handler.realMintVests(), 0, "a vest of really minted base is counted");
+        assertEq(handler.bankSeeds() + handler.planted(), 0, "no seam was used");
+        uint256 rv = handler.realMintVests();
+        uint256 v = handler.vests();
+        handler.seedBank(1, 1e20); // maturedPending: planted pay, vestable now
+        handler.refresh();
+        handler.withdraw(2, 1e21 + 5);
+        assertGt(handler.vests(), v, "control: the planted pay vests");
+        assertEq(handler.realMintVests(), rv, "a vest after a seam is not counted");
+    }
+
     function test_I_15__everyNonVacuityCounterIsReachable() public {
         for (uint256 i; i < 3; ++i) handler.deposit(i, 5e22);
         for (uint256 k; k < 3; ++k) handler.seedBank(k, 1e20);

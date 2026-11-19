@@ -223,8 +223,15 @@ contract VaultSettleTest is LiquidPoolBase, SettleExtraOracle {
     }
 
     /// @notice F-039 (MK-4): `retire` with a reserve pending leaves the reserve in place, marked to follow; at
-    ///         settlement the bond part returns to the bond and the non-bond remainder joins the forfeiture drip.
+    ///         settlement the forfeit pool first drips what it owes, then the non-bond remainder joins it and the drip
+    ///         restarts at the settlement's block over the whole pool; the bond part returns to the bond. The curator
+    ///         holds unvested pay at the retire, so the pool is not empty (S27F-05).
     function test_U_settle__retireLeavesTheReserveToFollowAtSettlement() public {
+        Bank memory bk = hv.bankFull();
+        uint32 e = uint32(vm.getBlockNumber() / tier.EPOCH);
+        bk.bondShares -= 5e21;
+        bk.cohorts[e % RING] = Cohort(e, 5e21); // unvested pay, forfeited by the retire
+        hv.setBank(bk);
         _pend();
         vm.prank(curator);
         IVaultEntries(address(hv)).retire();
@@ -234,16 +241,21 @@ contract VaultSettleTest is LiquidPoolBase, SettleExtraOracle {
         assertTrue(b.reserveForfeit, "marked to follow");
         assertEq(_tAction(), tA, "the record stays pending");
         uint128 pool = b.forfeitPool;
+        assertGt(pool, 0, "precondition: the retire forfeited unvested pay");
         uint128 bond = b.bondShares;
         _scriptWindowAndRollToDue(T_MK);
         (, uint256 burnS) = _expected(T_MK);
         assertLt(burnS, RES_SHARES - RES_BOND, "precondition: a non-bond remainder");
+        uint256 S = hv.totalSupply();
         hv.settle();
         b = hv.bankFull();
+        uint256 dripped = S - hv.totalSupply() - burnS; // the settlement burns burnS; the rest is the pool's drip
+        assertGt(dripped, 0, "the pool dripped before the remainder joined");
         assertEq(b.reserveShares, 0, "cleared");
         assertEq(b.bondShares, bond + RES_BOND, "the bond part returns");
-        assertGe(b.forfeitPool, pool, "the drip does not shrink at the settlement");
-        assertEq(b.forfeitPool - pool, RES_SHARES - RES_BOND - burnS, "the non-bond remainder to the drip");
+        assertEq(b.forfeitPool, pool - dripped + (RES_SHARES - RES_BOND - burnS), "drip owed, then the remainder joins");
+        assertEq(b.forfeitStart, vm.getBlockNumber(), "the drip restarts at the settlement");
+        assertEq(b.forfeitTotal, b.forfeitPool, "over the whole pool");
     }
 
     /// @notice F-039: `releaseBond` with a reserve pending settles it first (step 0), so the release pays the bond
@@ -278,12 +290,10 @@ contract VaultSettleTest is LiquidPoolBase, SettleExtraOracle {
     function test_U_settle__inWindowDripBurnOverBurnsTheCuratorsReserve() public {
         uint256[2] memory sSettle;
         uint256[2] memory burnS;
-        uint256 sRec;
         uint256 snap = vm.snapshotState();
         for (uint256 drip; drip < 2; ++drip) {
             vm.revertToState(snap);
             _pend();
-            sRec = hv.totalSupply();
             if (drip == 1) {
                 Bank memory bk = hv.bankFull();
                 bk.bondShares -= 1e21;
@@ -306,12 +316,11 @@ contract VaultSettleTest is LiquidPoolBase, SettleExtraOracle {
             // the reserve burned exactly burnS, computed on the recorded supply: the remainder enters the cohort
             assertEq(b.cohorts[e % RING].shares, RES_SHARES - RES_BOND - burnS[drip], "the reserve burned burnS");
         }
-        assertEq(burnS[1], burnS[0], "the burn ignores the in-window drip");
-        assertEq(sSettle[0], sRec, "control: no in-window burn, the settlement supply is the recorded one");
-        assertLt(sSettle[1], sRec, "the drip burned inside the window");
-        // the value-exact burn on the settlement supply is burnS·S_settle/S_record: the difference is the over-burn,
-        // taken from the curator's reserve
-        uint256 exact = FullMath.mulDiv(burnS[1], sSettle[1], sRec);
+        assertEq(burnS[1], burnS[0], "the burn ignores the in-window drip (the ratchet)");
+        assertLt(sSettle[1], sSettle[0], "the drip burned inside the window");
+        // the value-exact burn scales with the supply at settlement: burnS·S_settle/S_settle(control); the difference
+        // is the over-burn, taken from the curator's reserve
+        uint256 exact = FullMath.mulDiv(burnS[1], sSettle[1], sSettle[0]);
         assertGt(burnS[1], exact, "over-burn on the curator's reserve");
     }
 

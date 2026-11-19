@@ -121,11 +121,17 @@ contract FactoryTest is DeployBaseUnplaced {
         factory.deploy(_vaultCode(), _extCode(), _hookCode(), a, SALT_V, bytes32(0), seedParams);
     }
 
+    /// @notice Native ETH is refused (`BadToken`) with every other argument valid (the vault address and a mined hook
+    ///         salt), so that guard is the only one that can fire (S27F-04: the mutant's kill must be its absence).
     function test_factory_revertsOnNativeCurrency() public {
-        HookArgs memory a = _hookArgsFor(address(0));
+        address v = HookMining.vaultAddress(address(factory), deployer, SALT_V, _vaultCode());
+        HookArgs memory a = _hookArgsFor(v);
         a.currency0 = Currency.wrap(address(0));
+        (bytes32 sH,) = HookMining.mine(address(factory), deployer, _hookCode(), a, 0);
+        _fund(deployer);
+        vm.prank(deployer);
         vm.expectRevert(ITouchstoneFactory.BadToken.selector);
-        factory.deploy(_vaultCode(), _extCode(), _hookCode(), a, SALT_V, bytes32(0), seedParams);
+        factory.deploy(_vaultCode(), _extCode(), _hookCode(), a, SALT_V, sH, seedParams);
     }
 
     function test_factory_revertsWhenVaultTierDiffers() public {

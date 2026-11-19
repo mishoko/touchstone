@@ -293,7 +293,7 @@ def failing(r, kill, full, limit=3):
         for n, t in suite.get('test_results', {}).items():
             if t.get('status') == 'Failure' and (full or re.search(kill, n) or n.startswith('setUp')):
                 out.append(f"{n}: {str(t.get('reason') or 'no reason').strip()[:120]}")
-    return sorted(out)[:limit]
+    return sorted(out, key=lambda x: (not x.startswith('setUp'), x))[:limit]   # a setUp failure first (S27F-07)
 
 
 FAILURES = os.path.join('cache', 'invariant', 'failures')
@@ -346,8 +346,11 @@ def run_one(m, root, full, clean_ok):
         t = time.time()
         r = forge(['--nmp', 'test/fork/*'] if full else ['--mt', k], cwd=root)
         v = verdict(r, k, full)
-        why = '; '.join(failing(r, k, full)) if v == 'KILLED' else ''
-        return (m['id'], v, f"{m['desc']} [{'full' if full else k}] {time.time() - t:.0f}s" + (f' <{why}>' if why else ''))
+        fl = failing(r, k, full, limit=50) if v == 'KILLED' else []
+        why = '; '.join(fl[:3])
+        # a kill by setUp alone may be a broken deployment, not the rule: flagged for triage (P5-Ad-02, S27F-07)
+        tag = ' (setUp)' if fl and all(x.startswith('setUp') for x in fl) else ''
+        return (m['id'], v, f"{m['desc']} [{'full' if full else k}] {time.time() - t:.0f}s{tag}" + (f' <{why}>' if why else ''))
     finally:
         open(f, 'w').write(src)
         if os.path.exists(f + '.mutorig'):

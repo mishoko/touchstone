@@ -513,7 +513,7 @@ def test_mutate_equivalent_status_is_outside_the_denominator_and_never_written()
     spec.loader.exec_module(mu)
     muts = json.load(open(os.path.join(ROOT, 'audits', 'mutants.json')))['mutants']
     eq = [m for m in muts if mu.equivalent(m)]
-    assert sorted(m['id'] for m in eq) == ['MU-033', 'MU-036', 'MU-185'], [m['id'] for m in eq]
+    assert sorted(m['id'] for m in eq) == ['MU-033', 'MU-036', 'MU-185', 'MU-321'], [m['id'] for m in eq]
     assert all(str(m.get('reason') or '').strip() and not mu.wired(m) for m in eq)
 
     def audit(ms):
@@ -522,7 +522,7 @@ def test_mutate_equivalent_status_is_outside_the_denominator_and_never_written()
             ok = mu.audit(ms)
         return ok, out.getvalue()
     ok, txt = audit(muts)
-    assert ok and '3 equivalent' in txt and ' 0 pending' in txt, txt
+    assert ok and '4 equivalent' in txt and ' 0 pending' in txt, txt
     # controls: an EQUIVALENT entry without a reason, or wired, fails the audit
     for bad in (dict(eq[0], reason=''), dict(eq[0], kill='test_x', file=None)):
         ok, txt = audit([bad if m['id'] == eq[0]['id'] else m for m in muts])

@@ -58,7 +58,9 @@ contract TouchstoneVaultExtension is VaultCommon {
 
     /// @notice Called once by the factory, which has transferred `a0 + wit0` and `a1 + wit1` to the vault.
     function seed(uint256 a0, uint256 a1, address curator_, uint256 wit0, uint256 wit1) external delegated {
+        // [MU-320] seed by the factory only
         if (msg.sender != FACTORY) revert OnlyFactory();
+        // [MU-321] seed once
         if (_seeded) revert OnlyFactory();
         if (a0 + a1 == 0) revert ZeroShares();
         curator = curator_;
@@ -303,6 +305,7 @@ contract TouchstoneVaultExtension is VaultCommon {
         }
         uint256 a0 = p0 + d0;
         uint256 a1 = p1 + d1;
+        // [MU-322] deposit slippage bound
         if (a0 > max0 || a1 > max1) revert Slippage();
         _payIn(C0, payer, a0);
         _payIn(C1, payer, a1);
@@ -348,6 +351,7 @@ contract TouchstoneVaultExtension is VaultCommon {
         uint256 a1 = o1 + r1;
         if (a0 > 0) MANAGER.take(C0, to, a0);
         if (a1 > 0) MANAGER.take(C1, to, a1);
+        // [MU-323] withdraw slippage bound
         if (a0 < min0 || a1 < min1) revert Slippage();
         // [MU-067] withdraw never rolls the witness (spec §3.10)
         _rebase(S, S - s);

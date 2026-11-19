@@ -361,4 +361,23 @@ contract VaultExtensionBindingTest is Test {
         assertTrue(vlt.code.length > 0);
         assertEq(ITouchstoneVaultExtension(TouchstoneVault(vlt).EXTENSION()).VAULT(), vlt);
     }
+
+    /// @notice [MU-320] An unseeded vault (the window inside the factory's deploy, between the vault's creation and
+    ///         its `seed`, e.g. a seed-token transfer callback) refuses `seed` from any caller but its factory with
+    ///         `OnlyFactory`. Control: the factory's own call passes both seed checks and stops later (at the mock's
+    ///         PoolManager, which has no code), so the stranger's revert comes from the caller check alone.
+    function test_U_ext__unseededVaultRefusesASeedFromAnyoneButTheFactory() public {
+        MockVaultFactory f = _factory();
+        address vlt = f.deployWith(type(VaultHarness).creationCode, type(TouchstoneVaultExtension).creationCode, 0);
+        address stranger = makeAddr("stranger");
+        bytes memory call_ = abi.encodeCall(IVaultEntries.seed, (1e18, 1e18, stranger, 0, 0));
+        vm.prank(stranger);
+        vm.expectRevert(VaultCommon.OnlyFactory.selector);
+        IVaultEntries(vlt).seed(1e18, 1e18, stranger, 0, 0);
+        // control
+        vm.prank(address(f));
+        (bool ok, bytes memory ret) = vlt.call(call_);
+        assertFalse(ok, "the mock PoolManager has no code");
+        assertEq(ret.length, 0, "the factory passes both checks and reaches unlock on a codeless PoolManager");
+    }
 }

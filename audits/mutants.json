@@ -3822,6 +3822,104 @@
    "replace": "rebased = FullMath.mulDivRoundingUp(_nav0, S2, S);",
    "status": "KILLED",
    "basis": "990e0207dad1291e"
+  },
+  {
+   "id": "MU-318",
+   "area": "guards",
+   "desc": "setPositions/rebalanceSwap without the curator check (P5 panel P5-Ad-01)",
+   "killer_id": "U-guard",
+   "kill": "test_U_guard__onlyCurator",
+   "file": "src/TouchstoneVault.sol",
+   "find": "        // [MU-318] curator only (setPositions, rebalanceSwap)\n        _onlyCurator();\n",
+   "replace": "        // [MU-318] curator only (setPositions, rebalanceSwap)\n",
+   "status": "KILLED",
+   "basis": "baa2aeb8a5deaab9"
+  },
+  {
+   "id": "MU-319",
+   "area": "guards",
+   "desc": "witnessStep callable by anyone (P5 panel P5-Ad-01)",
+   "killer_id": "D-3",
+   "kill": "test_D_3__noPrivilegedEntryPointAfterSeed",
+   "file": "src/TouchstoneHook.sol",
+   "find": "        if (msg.sender != address(this)) revert OnlySelf();\n",
+   "replace": "\n",
+   "status": "KILLED",
+   "basis": "8bfb8cfdf89d714b"
+  },
+  {
+   "id": "MU-320",
+   "area": "guards",
+   "desc": "seed callable by anyone (P5 panel P5-Ad-01)",
+   "killer_id": "U-ext",
+   "kill": "test_U_ext__unseededVaultRefusesASeedFromAnyoneButTheFactory",
+   "file": "src/TouchstoneVaultExtension.sol",
+   "find": "        if (msg.sender != FACTORY) revert OnlyFactory();\n",
+   "replace": "\n",
+   "status": "KILLED",
+   "basis": "974b68f969314507"
+  },
+  {
+   "id": "MU-321",
+   "area": "guards",
+   "desc": "seed callable a second time (P5 panel P5-Ar critic)",
+   "killer_id": null,
+   "kill": "pending",
+   "file": null,
+   "find": null,
+   "replace": null,
+   "status": "EQUIVALENT",
+   "reason": "EQUIVALENT (s26 P5 panel D1; fix review m-1): the mutated line is `if (_seeded) revert OnlyFactory();` in the external `seed` (TouchstoneVaultExtension.sol, tag [MU-321]). The caller check above it admits only FACTORY (the vault's deployer, `FACTORY = msg.sender` in the vault constructor), and the factory calls `seed` exactly once per deploy, on the vault it has just created at a fresh CREATE2 address, so `_seeded` is false on every call that passes the caller check. No reachable call sees a seeded vault at this line. (A second call would in any case meet the `dispatch` re-check, anchored below, with a revert reason that depends on the arguments.)",
+   "anchors": [
+    {
+     "file": "src/TouchstoneFactory.sol",
+     "find": "            .seed(seedParams.a0, seedParams.a1, seedParams.curator, seedParams.wit0, seedParams.wit1);"
+    },
+    {
+     "file": "src/TouchstoneVaultBase.sol",
+     "find": "        FACTORY = msg.sender;"
+    },
+    {
+     "file": "src/TouchstoneVaultExtension.sol",
+     "find": "            if (_seeded) revert OnlyFactory();\n            return _seed(args);"
+    }
+   ]
+  },
+  {
+   "id": "MU-322",
+   "area": "guards",
+   "desc": "deposit without its slippage bound (P5 panel P5-E critic)",
+   "killer_id": "U-5",
+   "kill": "test_U_5__slippageBoundsBothWays",
+   "file": "src/TouchstoneVaultExtension.sol",
+   "find": "        if (a0 > max0 || a1 > max1) revert Slippage();\n",
+   "replace": "\n",
+   "status": "KILLED",
+   "basis": "734d66901b443fad"
+  },
+  {
+   "id": "MU-323",
+   "area": "guards",
+   "desc": "withdraw without its slippage bound (P5 panel P5-Ad-01)",
+   "killer_id": "U-5",
+   "kill": "test_U_5__slippageBoundsBothWays",
+   "file": "src/TouchstoneVaultExtension.sol",
+   "find": "        if (a0 < min0 || a1 < min1) revert Slippage();\n",
+   "replace": "\n",
+   "status": "KILLED",
+   "basis": "b2978f5ec0f6572f"
+  },
+  {
+   "id": "MU-324",
+   "area": "guards",
+   "desc": "factory accepts foreign hook args (P5 panel P5-E critic)",
+   "killer_id": "factory",
+   "kill": "test_factory_revertsOnForeignPoolManagerOrVault",
+   "file": "src/TouchstoneFactory.sol",
+   "find": "        if (hookArgs.poolManager != POOL_MANAGER || hookArgs.vault != vaultAddr) revert WrongArgs();\n",
+   "replace": "\n",
+   "status": "KILLED",
+   "basis": "b2c036c12381e77c"
   }
  ]
 }

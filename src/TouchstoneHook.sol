@@ -341,6 +341,7 @@ contract TouchstoneHook is BaseHook, Extsload, ITouchstoneHook {
 
     /// @notice The witness roll body; callable by the hook itself only (so that `rollWitness` can catch a failure).
     function witnessStep(uint32 epoch) external returns (uint256 fg0, uint256 fg1, uint128 lw) {
+        // [MU-319] the witness roll body is callable by the hook itself only
         if (msg.sender != address(this)) revert OnlySelf();
         PoolKey memory key = PoolKey(CURRENCY0, CURRENCY1, FEE, TICK_SPACING, IHooks(address(this)));
         uint128 oldL = _witL;

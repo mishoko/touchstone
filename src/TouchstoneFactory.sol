@@ -76,6 +76,7 @@ contract TouchstoneFactory is ITouchstoneFactory {
         address extAddr = _create2Address(se, EXTENSION_CODE_HASH);
         address hookAddr = _create2Address(sh, keccak256(hookInit));
         // The hook's immutables must point at this deployment's PoolManager and vault.
+        // [MU-324] the hook's immutables bind this deployment's PoolManager and vault
         if (hookArgs.poolManager != POOL_MANAGER || hookArgs.vault != vaultAddr) revert WrongArgs();
 
         _pending.hook = hookAddr;

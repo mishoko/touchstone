@@ -77,6 +77,7 @@ contract TouchstoneVault is VaultCommon, Extsload, IUnlockCallback, ReentrancyGu
     }
 
     function _act(Entry entry, bytes memory args) internal {
+        // [MU-318] curator only (setPositions, rebalanceSwap)
         _onlyCurator();
         MANAGER.unlock(abi.encode(entry, msg.sender, args));
     }

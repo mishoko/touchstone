@@ -312,6 +312,8 @@ def selftest(rows):
             errs.append('fixture: a final historical failure is reported as historical, not missing')
         if covered('E0a', '', d, 'eval'):
             errs.append('fixture: a historical failure is never covered')
+        if table_status('E0a', 'eval', '', [], d) != 'failed, earlier configuration, final':
+            errs.append('fixture: --table names a historical row as such (S25F2-01)')
         json.dump({'verdict': 'FAIL', 'negative_result': True, 'decision': 'x'}, open(os.path.join(d, 'eval', 'results', 'X-1.json'), 'w'))
         if missing([('X-1', 'P4', 'eval')], '', 'P4', d) != ['X-1']:
             errs.append('fixture: a non-historical final failure must stay missing')
@@ -345,6 +347,9 @@ def selftest(rows):
             json.dump(bad, open(hp, 'w'))
             if missing([('E0b', 'P5', 'eval')], '', 'P5', d) != ['E0b']:
                 errs.append(f'fixture: a withdrawal record {bad} must not withdraw the row')
+        json.dump({'withdrawn': True, 'decision': 'x'}, open(hp, 'w'))
+        if table_status('E0b', 'eval', '', [], d) != 'failed, claim withdrawn (H, panel D8)':
+            errs.append('fixture: --table names a withdrawn row as such (S25F2-01)')
         if '+ 0 withdrawn (none' not in count_line(1, 1, [], 'P1'):
             errs.append('fixture: the count line always names the withdrawn count')
         if '+ 1 withdrawn (E0b' not in count_line(5, 5, [], 'P5', ['E0b']):

@@ -2,10 +2,14 @@
  "id": "E5",
  "question": "every attack cell",
  "pass_rule": "<= 0, with a positive control > 0",
- "verdict": "PASS",
- "rule_applied": "every asserted attack row of every cell nets <= 0 (its test passes) and every cell has a passing positive control (a control test; for N1-N3 an assertion inside the attack test)",
+ "verdict": "FAIL",
+ "fail_reason": "control form: M_N1, M_N2 have inline sensitivity checks, not a separate test that profits with the defence removed (the registered plan exempted N3 only); every asserted attack row of every cell nets <= 0",
+ "amended_rule_verdict": "PASS",
+ "amended_after_data": true,
+ "verdict_rule": "the registered rule (s28 owner-delegated panel D1); amended_rule_verdict applies the rule as amended after the data (inline controls accepted for N1-N3, S27P6F-02)",
+ "rule_applied": "registered: every asserted attack row of every cell nets <= 0 (its test passes) and every cell has a passing control test that profits with the defence removed (N3, a forgery cell, may use its inline discrimination check); amended after the data: N1 and N2 inline checks accepted too",
  "rule_deviation": "the registered plan exempted N3 only; N1 and N2 inline controls were accepted after the data (fix review S27P6F-02); under the registered rule E5 is FAIL on N1 and N2",
- "disclosed_unasserted_tails": "M-ADV3-move reports rows it does not assert (spec \u00a79.1): with the settlement capped (a markout past the cap break-even) a coalition nets up to +0.93 ETH; with a protocol fee on, +0.004 ETH; off-leg stops and both-worlds overshoot up to +0.0006 ETH (see cells.M_ADV3_move.reported_unasserted_tails_wei)",
+ "disclosed_unasserted_tails": "M-ADV3-move reports rows it does not assert (spec \u00a79.1): with the settlement capped (a markout past the cap break-even) a coalition nets up to +0.93 ETH; with a protocol fee on, +0.004 ETH; off-leg stops and both-worlds overshoot up to +0.0006 ETH; M-N1 lane B (parking at the edge while the cached reference lags in range) nets up to +2.3e14 token1 wei per exit, bounded by GRID*(1+ceil(REF_WINDOW/GRID_SEC)) blocks of tau_v credit (2*GRID on the mainnet and DEMO tiers), asserted as a credit bound only (see cells.*.reported_unasserted_tails_wei)",
  "data": "foundry (the shipped contracts on a local pool)",
  "cells": {
   "M_10": {
@@ -76,7 +80,8 @@
     ]
    },
    "positive_control": "control test",
-   "ok": true
+   "ok": true,
+   "ok_registered": true
   },
   "M_1": {
    "tests": 2,
@@ -94,7 +99,8 @@
     ]
    },
    "positive_control": "control test",
-   "ok": true
+   "ok": true,
+   "ok_registered": true
   },
   "M_2": {
    "tests": 2,
@@ -107,7 +113,8 @@
    ],
    "logs": {},
    "positive_control": "control test",
-   "ok": true
+   "ok": true,
+   "ok_registered": true
   },
   "M_2b": {
    "tests": 3,
@@ -120,7 +127,8 @@
    ],
    "logs": {},
    "positive_control": "control test",
-   "ok": true
+   "ok": true,
+   "ok_registered": true
   },
   "M_2d": {
    "tests": 12,
@@ -175,7 +183,8 @@
     ]
    },
    "positive_control": "control test",
-   "ok": true
+   "ok": true,
+   "ok_registered": true
   },
   "M_3": {
    "tests": 3,
@@ -192,7 +201,8 @@
     ]
    },
    "positive_control": "control test",
-   "ok": true
+   "ok": true,
+   "ok_registered": true
   },
   "M_5b": {
    "tests": 3,
@@ -212,7 +222,8 @@
     ]
    },
    "positive_control": "control test",
-   "ok": true
+   "ok": true,
+   "ok_registered": true
   },
   "M_7": {
    "tests": 2,
@@ -225,7 +236,8 @@
    ],
    "logs": {},
    "positive_control": "control test",
-   "ok": true
+   "ok": true,
+   "ok_registered": true
   },
   "M_ADV1": {
    "tests": 4,
@@ -245,7 +257,8 @@
     ]
    },
    "positive_control": "control test",
-   "ok": true
+   "ok": true,
+   "ok_registered": true
   },
   "M_ADV3": {
    "tests": 7,
@@ -274,7 +287,8 @@
     ]
    },
    "positive_control": "control test",
-   "ok": true
+   "ok": true,
+   "ok_registered": true
   },
   "M_ADV3_move": {
    "tests": 10,
@@ -335,7 +349,8 @@
     "protocolFeeStopsReported": 4097169626153024
    },
    "positive_control": "control test",
-   "ok": true
+   "ok": true,
+   "ok_registered": true
   },
   "M_N1": {
    "tests": 2,
@@ -387,8 +402,12 @@
      "-777493402184204878"
     ]
    },
+   "reported_unasserted_tails_wei": {
+    "parkingWhileTheCacheLagsIsBoundedByItsInRangeTime": 231405920633779
+   },
    "positive_control": "inline: test/manipulation/MN1.t.sol:135 (parking earns tau_v and base at the tier m: credit > 0)",
-   "ok": true
+   "ok": true,
+   "ok_registered": false
   },
   "M_N2": {
    "tests": 4,
@@ -407,7 +426,8 @@
     ]
    },
    "positive_control": "inline: test/manipulation/MN2.t.sol:122 and :184 (one more in-range step moves the base amount; the timing gain is visible to the measure)",
-   "ok": true
+   "ok": true,
+   "ok_registered": false
   },
   "M_N3": {
    "tests": 1,
@@ -422,7 +442,8 @@
     ]
    },
    "positive_control": "inline: test/manipulation/MN3.t.sol:99 (a forgery cell: the frozen-median comparison discriminates)",
-   "ok": true
+   "ok": true,
+   "ok_registered": true
   },
   "M_N4": {
    "tests": 6,
@@ -456,7 +477,8 @@
     ]
    },
    "positive_control": "control test",
-   "ok": true
+   "ok": true,
+   "ok_registered": true
   },
   "M_N4edge": {
    "tests": 5,
@@ -482,7 +504,8 @@
     ]
    },
    "positive_control": "control test",
-   "ok": true
+   "ok": true,
+   "ok_registered": true
   },
   "M_snipe_forfeit": {
    "tests": 3,
@@ -602,7 +625,8 @@
     ]
    },
    "positive_control": "control test",
-   "ok": true
+   "ok": true,
+   "ok_registered": true
   }
  },
  "python_cells_reported": {
@@ -614,7 +638,7 @@
   "path": "eval/supplements/E5/forge-manipulation-s27.log",
   "sha256": "426857fde5129416c13c164ec6c376f9539618250137f38e352c1b48ebac9c99"
  },
- "limits": "M-ADV3-move has disclosed, unasserted positive tails (see disclosed_unasserted_tails); the cells are scripted attacks (with searched parameters) on a local pool, not an exhaustive search; the Python cells come from earlier configurations and are reported, not gated; MK-1 (a single builder holding the reference over the markout window) is outside the model",
- "commit_public": "c6ba81942db8fc25199da0e9fd89f9f11a99ede5",
- "commit_internal": "93b0ed0ba01449c110fc6729e3c00b8eede9a194"
+ "limits": "M-ADV3-move and M-N1 lane B have disclosed, unasserted positive tails (see disclosed_unasserted_tails); the cells are scripted attacks (with searched parameters) on a local pool, not an exhaustive search; the Python cells come from earlier configurations and are reported, not gated; MK-1 (a single builder holding the reference over the markout window) is outside the model",
+ "commit_public": "0f7db2f0c787397a6bfce3d08539ba19fc38c362",
+ "commit_internal": "3098237f5220a764f02dd2f7f9de3f66382d87f6"
 }

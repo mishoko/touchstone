@@ -127,6 +127,8 @@ contract VaultHandler is Test, SettleExtraOracle {
     /// @dev P5-Ad-05: vests in a run that never planted pay through a harness seam (`seedBank` of any kind, `pend`'s
     ///      reserve), so the vested pay came from the real base mint (checkpoint → cohort → vest).
     uint256 public realMintVests;
+    /// @dev `mintAndVest` calls that ran their sequence (the vault NORMAL, deployed, the price strictly inside).
+    uint256 public mintAndVestCalls;
     uint256 public epochCloses;
     uint256 public refreshes;
     uint256 public refreshFails;
@@ -945,6 +947,34 @@ contract VaultHandler is Test, SettleExtraOracle {
             bytes4 e = bytes4(err);
             if (e != Ladder.BadMode.selector && e != FeeBank.BondLocked.selector) _entryFailed(err);
         }
+    }
+
+    /// @notice The real base-mint → vest path without any seam (P5-Ad-05; s28: the first 256 × 128 campaign measured
+    ///         `realMintVests` 0, since `advance` alone covers ≈ 80 blocks a run, short of a cohort's maturity at
+    ///         (e + 1 + V)·EPOCH, and the set-up range is a seam's, not W wide, so it earns no base). With the vault
+    ///         NORMAL: a real curator placement (`place`, the reference flat at the pool tick, no pre-swap, no move)
+    ///         unless the range is already W wide with the price strictly inside; then, for eight epochs plus up to
+    ///         three grids, a roll of one grid, a `refresh` and the open `poke`. Each step is its own `checked` handler
+    ///         call (no nesting, so the I-15 counters stay exact). Plants nothing.
+    function mintAndVest(uint256 seed) external {
+        if (hv.bankFull().mode != Ladder.NORMAL) return;
+        if (!_wideAndInside()) {
+            this.place(seed, 0, 1, 1);
+            if (!_wideAndInside()) return;
+        }
+        uint256 steps = 8 * uint256(hv.tier().EPOCH) / gridBlocks + seed % 4;
+        for (uint256 i; i < steps; ++i) {
+            _roll(gridBlocks);
+            this.refresh();
+            this.poke(false);
+        }
+        ++mintAndVestCalls;
+    }
+
+    function _wideAndInside() internal view returns (bool) {
+        Holdings memory h = hv.holdings();
+        (, int24 t,,) = manager.getSlot0(poolId);
+        return h.L != 0 && h.hi - h.lo == hv.tier().W_TICKS && t > h.lo && t < h.hi - 1;
     }
 
     /// @notice The open `poke` and `processBreach`: never revert with full gas.

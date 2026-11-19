@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
+import {console} from "forge-std/console.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {LiquidPoolBase} from "../utils/LiquidPoolBase.sol";
@@ -201,6 +202,33 @@ abstract contract VaultP2Invariants is LiquidPoolBase {
         handler.withdraw(2, 1e21 + 5);
         assertGt(handler.vests(), v, "control: the planted pay vests");
         assertEq(handler.realMintVests(), rv, "a vest after a seam is not counted");
+    }
+
+    /// @notice s28 (the first 256 × 128 campaign measured `realMintVests` 0 < 1): one `mintAndVest` call from the
+    ///         set-up state reaches the real base-mint → vest path with no seam. Control: the set-up state has vested
+    ///         nothing, and the sequence is a no-op (it does not run, nothing vests) once the vault has left NORMAL.
+    function test_P5_Ad_05__mintAndVestReachesTheRealVestPath() public {
+        assertEq(handler.vests(), 0, "control: nothing vested before the sequence");
+        uint256 snap = vm.snapshotState();
+        handler.mintAndVest(0);
+        {
+            Bank memory b = hv.bankFull();
+            uint256 coh;
+            for (uint256 k; k < RING; ++k) coh += b.cohorts[k].shares;
+            console.log("mintAndVest: mode, vests, cohort shares", b.mode, handler.vests(), coh);
+            console.log("  maturedPending, vestedUnclaimed, placedByCurator", b.maturedPending, b.vestedUnclaimed, b.placedByCurator ? 1 : 0);
+        }
+        assertEq(handler.mintAndVestCalls(), 1, "the sequence ran");
+        assertGt(handler.realMintVests(), 0, "a vest of really minted base");
+        assertEq(handler.bankSeeds() + handler.planted(), 0, "no seam was used");
+        vm.revertToState(snap);
+        handler.driveBreach();
+        handler.poke(false); // the checkpoint processes the latched breach
+        assertTrue(hv.bankFull().mode != Ladder.NORMAL, "precondition: the vault left NORMAL");
+        uint256 v = handler.vests();
+        handler.mintAndVest(0);
+        assertEq(handler.mintAndVestCalls(), 0, "control: no sequence outside NORMAL");
+        assertEq(handler.vests(), v, "control: nothing vests");
     }
 
     /// @notice S27F2-02: pay planted through `pend` alone (its non-bond reserve settles into a cohort that later vests)

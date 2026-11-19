@@ -27,6 +27,11 @@ INLINE = {
             'visible to the measure)',
     'M_N3': 'test/manipulation/MN3.t.sol:99 (a forgery cell: the frozen-median comparison discriminates)',
 }
+# The registered plan (internal/reviews/2026-11-19-s27-p6/plan.md) exempts N3 only from a separate control test; the
+# N1/N2 inline checks were accepted after the data (S27P6F-02). The verdict follows the registered rule (s28 panel D1).
+REGISTERED_INLINE = ('M_N3',)
+# Tests whose standalone integer log lines are the coalition's net and are not asserted <= 0 (s28 panel D2).
+NET_LOG_TESTS = {'M_N1': ('parkingWhileTheCacheLagsIsBoundedByItsInRangeTime',)}
 PY_CELLS = {   # earlier configurations; their source records are not public (reported, not gated)
     'lag_leak_L1_L2': '0.000% / 0.000% NAV/yr at sigma 60 / 120% (bounds 0.1 / 0.6), model/cells/m2d_rate.py on '
                       'held-out seeds 300-499, 600 cycles per sigma, earlier configuration (before EDGE_DELAY 12 GRID); '
@@ -85,27 +90,45 @@ def main(argv):
             pos = [v for v in vals if v > 0]
             if pos:
                 c.setdefault('reported_unasserted_tails_wei', {})[rest] = max(pos)
+        if rest in NET_LOG_TESTS.get(cell, ()):
+            pos = [int(x) for x in lines if re.fullmatch(r'-?\d+', x) and int(x) > 0]
+            if pos:
+                c.setdefault('reported_unasserted_tails_wei', {})[rest] = max(pos)
     for cell, c in cells.items():
         has_ctl = any(x['passed'] for x in c['controls'])
         c['positive_control'] = 'control test' if has_ctl else (('inline: ' + INLINE[cell]) if cell in INLINE
                                                                  else 'no positive control')
         c['ok'] = c['passed'] == c['tests'] and c['positive_control'] != 'no positive control'
+        c['ok_registered'] = c['passed'] == c['tests'] and (has_ctl or cell in REGISTERED_INLINE)
         ok &= c['ok']
+    ok_reg = bool(tests) and all(c['ok_registered'] for c in cells.values())
+    failing_reg = sorted(k for k, c in cells.items() if not c['ok_registered'])
     res = {
         'id': 'E5', 'question': 'every attack cell', 'pass_rule': '<= 0, with a positive control > 0',
-        'verdict': 'PASS' if ok else 'FAIL',
-        'rule_applied': 'every asserted attack row of every cell nets <= 0 (its test passes) and every cell has a passing '
-                        'positive control (a control test; for N1-N3 an assertion inside the attack test)',
+        'verdict': 'PASS' if ok_reg else 'FAIL',
+        'fail_reason': ('control form: ' + ', '.join(failing_reg) + ' have inline sensitivity checks, not a separate '
+                        'test that profits with the defence removed (the registered plan exempted N3 only); every '
+                        'asserted attack row of every cell nets <= 0') if not ok_reg else None,
+        'amended_rule_verdict': 'PASS' if ok else 'FAIL',
+        'amended_after_data': True,
+        'verdict_rule': 'the registered rule (s28 owner-delegated panel D1); amended_rule_verdict applies the rule as '
+                        'amended after the data (inline controls accepted for N1-N3, S27P6F-02)',
+        'rule_applied': 'registered: every asserted attack row of every cell nets <= 0 (its test passes) and every cell '
+                        'has a passing control test that profits with the defence removed (N3, a forgery cell, may use '
+                        'its inline discrimination check); amended after the data: N1 and N2 inline checks accepted too',
         'rule_deviation': 'the registered plan exempted N3 only; N1 and N2 inline controls were accepted after the data '
                           '(fix review S27P6F-02); under the registered rule E5 is FAIL on N1 and N2',
         'disclosed_unasserted_tails': 'M-ADV3-move reports rows it does not assert (spec §9.1): with the settlement capped '
                                       '(a markout past the cap break-even) a coalition nets up to +0.93 ETH; with a '
                                       'protocol fee on, +0.004 ETH; off-leg stops and both-worlds overshoot up to +0.0006 '
-                                      'ETH (see cells.M_ADV3_move.reported_unasserted_tails_wei)',
+                                      'ETH; M-N1 lane B (parking at the edge while the cached reference lags in range) nets up to +2.3e14 '
+                                      'token1 wei per exit, bounded by GRID*(1+ceil(REF_WINDOW/GRID_SEC)) blocks of '
+                                      'tau_v credit (2*GRID on the mainnet and DEMO tiers), asserted as a credit bound '
+                                      'only (see cells.*.reported_unasserted_tails_wei)',
         'data': 'foundry (the shipped contracts on a local pool)',
         'cells': cells, 'python_cells_reported': PY_CELLS,
         'forge_log': {'path': log, 'sha256': sha(log)},
-        'limits': 'M-ADV3-move has disclosed, unasserted positive tails (see disclosed_unasserted_tails); the cells are scripted attacks (with searched parameters) on a local pool, not an exhaustive search; '
+        'limits': 'M-ADV3-move and M-N1 lane B have disclosed, unasserted positive tails (see disclosed_unasserted_tails); the cells are scripted attacks (with searched parameters) on a local pool, not an exhaustive search; '
                   'the Python cells come from earlier configurations and are reported, not gated; MK-1 (a single '
                   'builder holding the reference over the markout window) is outside the model',
         'commit_public': git('rev-parse', 'HEAD'),
@@ -115,7 +138,7 @@ def main(argv):
     if out:
         open(os.path.join(ROOT, out), 'w').write(t)
     print(t)
-    return 0 if ok else 1
+    return 0 if ok_reg else 1
 
 
 if __name__ == '__main__':

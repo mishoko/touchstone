@@ -171,11 +171,11 @@ def intensity(d, ev, b):
     """The walk intensity at epoch block b: the drawn sub-window value, with the overrides (the tail 3, a stale window
     at least 1; a crossing hold and an unobserved span are not walked)."""
     i = d['ints'][min((b - 1) // SUB if b > 0 else 0, len(d['ints']) - 1)]
-    for (s, e, c, _) in ev:
-        if c == 'TAIL' and s <= b < e:
+    for (s, e, c, _) in ev:                       # a step landing at b covers (b - 2, b]: overrides on (s, e]
+        if c == 'TAIL' and s < b <= e:
             i = 3
     for (s, e, c, _) in ev:
-        if c == 'STALE' and s <= b < e:
+        if c == 'STALE' and s < b <= e:
             i = max(i, 1)
     return i
 
@@ -209,6 +209,7 @@ def generate(seed):
         ev = plan_epoch(d, [], k)
         return d['npf'] if key == 'npf' else any(c == kind for (_, _, c, _) in ev)
 
+    forced = set()
     for key, name, kind in kinds:
         if any(survives(d, i + 1, key, kind) for i, d in enumerate(draws)):
             continue
@@ -216,10 +217,11 @@ def generate(seed):
         for strip in (False, True):
             for i in range(1, EPOCHS):
                 d = dict(draws[i], **{key: True})
-                if strip:
-                    d.update({o: False for o in OPTIONAL if o != key})
+                if strip:                          # never strip a kind already forced into this epoch (S25C2-05)
+                    d.update({o: False for o in OPTIONAL if o != key and (o, i) not in forced})
                 if survives(d, i + 1, key, kind):
                     draws[i] = d
+                    forced.add((key, i))
                     log.append(f'forced {name} into epoch {i + 1}' + (' (other optional ops dropped)' if strip else ''))
                     done = True
                     break

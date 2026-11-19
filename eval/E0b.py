@@ -148,7 +148,9 @@ def manifests_ok(d, tags, harness_ref, failed=None):
             return False, f'{t}: the harness closure differs from the freeze'
         if m.get('status_after'):
             return False, f'{t}: the tree changed during the run'
-        if 'E0b-tier.json' not in m.get('data', {}):
+        if m.get('outcome') == 'interrupted':
+            return False, f'{t}: the run was interrupted (re-run once with the owner\'s approval, form 6)'
+        if 'E0b-tier.json' not in m.get('data', {}) and m.get('passed'):
             return False, f'{t}: the tier file is not hashed'
         for f, h in m.get('data', {}).items():
             if R.sha(os.path.join(d, f)) != h:
@@ -268,7 +270,7 @@ def validity_one(d, tag, tier):
     T = {t['c']: t for t in truth}
     led, meta = ledger(raw, tier, fr)
     # presence
-    npf = sum(1 for e, w in led.items() if w['cin'] in T and T[w['cin']]['k'] != A.K_POKE)
+    npf = npf_count(led, T)
     regs = [x for x in meta['by_call'].values() for x in x if x['ev'] == 'RangeRegistered']
     rolls = meta['rolls']
     replace_in_life = 0
@@ -429,6 +431,14 @@ def verdict(d):
             raise SystemExit(f'E0b verdict: manifest {n} differs from the committed one')
         if committed.get('commit') != head or committed.get('seed') != n:
             raise SystemExit(f'E0b verdict: manifest {n} is not from the registration commit')
+        if committed.get('outcome') == 'generation_failed':
+            try:
+                G.generate(n)
+                raise SystemExit(f'E0b verdict: seed {n} is recorded as not generated but generates')
+            except SystemExit as ex:
+                if 'not generated but generates' in str(ex):
+                    raise
+            continue
         script = json.dumps(G.generate(n))
         if hashlib.sha256(script.encode()).hexdigest() != committed.get('script_sha256'):
             raise SystemExit(f'E0b verdict: seed {n} script does not regenerate')
@@ -446,6 +456,17 @@ def verdict(d):
     return judge(d, tags, rec, failed, fz, head)
 
 
+def closes_rows(rows):
+    """Rule 4.1(1): every resolved row within the bound; rows that 3.8 leaves unresolved are excluded here and counted
+    by 4.1(3) (M6 c)."""
+    return all(abs(x['residual_bp']) <= BOUND_BP for x in rows if not x['unresolved'])
+
+
+def npf_count(led, T):
+    """Non-poke-first windows: the window's first vault call is not a poke, from the truth (M7)."""
+    return sum(1 for e, w in led.items() if w['cin'] in T and T[w['cin']]['k'] != A.K_POKE)
+
+
 def judge(d, tags, rec, failed, fz, head):
     """The section 4 rule on manifest-checked data; a FAILED script makes the verdict FAIL (S25C-01)."""
     tier = {k: int(v) for k, v in json.load(open(os.path.join(d, 'E0b-tier.json'))).items()}
@@ -453,8 +474,7 @@ def judge(d, tags, rec, failed, fz, head):
     failed_scripts = sorted(set(failed) | {t for t, v in vres.items() if not v['completed'] or v['reverted_share'] > 0.25})
     ok_tags = [t for t in tags if t not in failed_scripts]
     res = evaluate_runs(d, ok_tags, tier, controls=False)
-    # rows that 3.8 leaves unresolved are excluded from closure and counted by condition 3 (S25C-06 c)
-    closes = all(abs(x['residual_bp']) <= BOUND_BP for v in res.values() for x in v['rows'] if not x['unresolved'])
+    closes = all(closes_rows(v['rows']) for v in res.values())
     share_ok = True  # the share rows (E0a's check) per script
     for t in ok_tags:
         rows, led, meta, truth = rows_for(d, t, tier)
@@ -601,6 +621,7 @@ def selftest():
             raise AssertionError('a duplicated Checkpoint was accepted')
         except AssertionError as ex:
             assert 'more than one Checkpoint' in str(ex), ex
+    import tempfile
     # S25C-01 and M2: an unmanifested directory is refused; a not-passed manifest is a FAILED script and the verdict is
     # FAIL (judge), never a refusal
     import tempfile, shutil
@@ -623,6 +644,57 @@ def selftest():
             json.dump(m, open(os.path.join(tmp, 'manifest-e0b-0.json'), 'w'))
             out = judge(tmp, ['e0b-0'], dict(harness=m['harness']), [], {}, 'x')
             assert out['verdict'] == 'FAIL' and out['failed_scripts'] == ['e0b-0'], out['failed_scripts']
+    # M5 / S25C2-01: manifest outcomes, synthetic (data files hashed against a scratch directory)
+    with tempfile.TemporaryDirectory() as tmp:
+        open(os.path.join(tmp, 'E0b-e0b-5-logs.jsonl'), 'w').write('')
+        open(os.path.join(tmp, 'E0b-tier.json'), 'w').write('{}')
+        base = dict(harness={'h': '1'}, status_after='', data={'E0b-e0b-5-logs.jsonl': R.sha(os.path.join(tmp, 'E0b-e0b-5-logs.jsonl'))})
+
+        def mk(**kw):
+            json.dump(dict(base, **kw), open(os.path.join(tmp, 'manifest-e0b-5.json'), 'w'))
+        mk(passed=True, outcome='pass')                                     # passed without the tier file: refused
+        assert manifests_ok(tmp, ['e0b-5'], {'h': '1'}, [])[0] is False
+        f = []
+        mk(passed=False, outcome='timeout')                                 # timeout: a FAILED script
+        assert manifests_ok(tmp, ['e0b-5'], {'h': '1'}, f)[0] and f == ['e0b-5']
+        mk(passed=False, outcome='interrupted')                             # interrupted: refused (re-run route)
+        assert manifests_ok(tmp, ['e0b-5'], {'h': '1'}, [])[0] is False
+        mk(passed=False, outcome='script_failed')                           # no tier file, not passed: a FAILED script
+        f = []
+        assert manifests_ok(tmp, ['e0b-5'], {'h': '1'}, f)[0] and f == ['e0b-5']
+        mk(passed=True, outcome='pass', harness={'h': '2'})                 # another H (prefit2's vs the data's): refused
+        assert manifests_ok(tmp, ['e0b-5'], {'h': '1'}, [])[0] is False
+    # M6 c: unresolved rows are excluded from closure, resolved ones are not
+    assert closes_rows([dict(residual_bp=5.0, unresolved=True), dict(residual_bp=0.1, unresolved=False)])
+    assert not closes_rows([dict(residual_bp=0.31, unresolved=False)])
+    # M7: non-poke-first from the truth's kind of the window's first call
+    assert npf_count({1: dict(cin=3), 2: dict(cin=7)}, {3: dict(k=A.K_SETTLE), 7: dict(k=A.K_POKE)}) == 1
+    # M7: a stale window closes at the first touch strictly after its reads resume (the off block's step is excluded)
+    w = [row(10, 'step', 0, 0), row(20, 'step', 0, 0), row(22, 'step', 0, 2)]
+    assert op_counts([dict(op=4, b0=10), dict(op=5, b0=20)], w)['stale'] == 1      # closes at 22: dtau 2 < 12 - 4
+    w2 = [row(10, 'step', 0, 0), row(20, 'step', 0, 8), row(22, 'step', 0, 10)]
+    assert op_counts([dict(op=4, b0=10), dict(op=5, b0=20)], w2)['stale'] == 0     # dtau 10 >= 12 - 4: does not count
+    # M6 a: the fit guard reads the record from HEAD and needs a clean tree (a working-tree prefit2 record is refused)
+    fzp = os.path.join(HERE, 'E0b-frozen.json')
+    keep = open(fzp).read()
+    try:
+        fake = json.loads(keep)
+        fake.setdefault('records', []).append(dict(name='prefit2', harness=R.harness_hashes(), eval=R.eval_hashes()))
+        open(fzp, 'w').write(json.dumps(fake))
+        assert guard_fit()[0] is False
+    finally:
+        open(fzp, 'w').write(keep)
+    # S25C2-02: on seeds 0–19 the overrides hold on (s, e]: a stale window's landed blocks >= 1, a tail's = 3
+    for seed in range(20):
+        g = G.generate(seed)
+        for k, d in enumerate(g['draws'], start=1):
+            ev = G.plan_epoch(d, [], k)
+            for (s0, e0, c, _) in ev:
+                for b in range(s0 + 1, e0 + 1):
+                    if c == 'STALE':
+                        assert G.intensity(d, ev, b) >= 1, (seed, k, b)
+                    if c == 'TAIL':
+                        assert G.intensity(d, ev, b) == 3, (seed, k, b)
     print('E0b selftest OK')
     return 0
 

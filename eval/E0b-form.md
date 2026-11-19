@@ -69,14 +69,17 @@ creation code carries a metadata hash over source comments changed since E0a's r
   survives the clamps, one is forced into the first epoch from epoch 2 where it survives, else with that epoch's other
   optional ops dropped. Every clamp is logged in the script.
 - Legality in the harness: a placement or rebalance first moves spot within the fence of the live reference by a
-  third-party swap (as E0a's placements do); a rebalance is capped at 90% of the input token's idle. A vault call that
-  reverts is recorded with its reason and its discarded logs, writes no truth, fee-read or log row, and the script
-  continues.
+  third-party swap (as E0a's placements do); a rebalance is capped at 90% of the input token's idle. There is no
+  clamp keeping a placement around the walk's target; a placement the vault rejects (e.g. `NotContained`, `DeltaMin`)
+  is a reverted call. A vault call that reverts is recorded with its reason and its discarded logs, writes no truth,
+  fee-read or log row, and the script continues. Outcomes of a run: a script that reverts or runs past 1 h is a failed
+  script; a run killed by a signal is void and re-run once with the owner's approval.
 
 ## 4. Pre-registered rule
 ### 4.1 Verdict
 E0b PASS iff, on the eight held-out scripts:
-1. every epoch row closes: |residual| ≤ 0.3 bp of V (the fixed depositor's value at the window's start);
+1. every epoch row closes: |residual| ≤ 0.3 bp of V (the fixed depositor's value at the window's start); rows that
+   §3.8 leaves unresolved are excluded here and counted by condition 3;
 2. every share row closes exactly (the record's minted equals the vault's `Transfer` mints; the recomputed burns equal
    its burns);
 3. no script has more than two epochs that §3.8 leaves unresolved;

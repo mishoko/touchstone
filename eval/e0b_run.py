@@ -149,7 +149,14 @@ def main(argv):
                 print(f'e0b_run: seed {n} is held out; refused ({why})')
                 return 1
         tag = f'e0b-{n}'
-        script = json.dumps(e0b_gen.generate(n))
+        try:
+            script = json.dumps(e0b_gen.generate(n))
+        except SystemExit as ex:                    # a script the generator cannot produce: a FAILED script
+            man.update(seed=n, run_name=tag, passed=False, outcome='generation_failed', reason=str(ex),
+                       status_after=status(), harness=harness_hashes(), data={})
+            json.dump(man, open(os.path.join(outdir, f'manifest-{tag}.json'), 'w'), indent=1)
+            print(f'e0b_run: {what} FAIL (generation failed); manifest-{tag}.json written')
+            return 1
         spath = os.path.join(outdir, f'script-{n}.json')
         open(spath, 'w').write(script)
         env.update(TS_E0B_SCRIPT=os.path.relpath(spath, ROOT), TS_E0B_RUN=tag)
@@ -161,14 +168,24 @@ def main(argv):
         mt = f'test_E0bData__fit_{name}'
         man.update(fit=name, run_name=name)
     man['ts_env'] = {k: v for k, v in env.items() if k.startswith('TS_')}
-    r = subprocess.run(['forge', 'test', '--mc', 'E0bDataTest', '--mt', mt], cwd=ROOT, env=env, capture_output=True,
-                       text=True)
-    passed = r.returncode == 0 and '[PASS]' in r.stdout
+    # outcomes (S25C2-01): pass; script_failed (forge ran and the script reverted) and timeout (over 1 h) are FAILED
+    # scripts; interrupted (forge killed by a signal) is refused by the evaluator (the re-run route of form 6)
+    try:
+        r = subprocess.run(['forge', 'test', '--mc', 'E0bDataTest', '--mt', mt], cwd=ROOT, env=env,
+                           capture_output=True, text=True, timeout=3600)
+        rc, out = r.returncode, r.stdout
+        outcome = 'pass' if rc == 0 and '[PASS]' in out else ('interrupted' if rc < 0 else 'script_failed')
+    except subprocess.TimeoutExpired as ex:
+        rc, out, outcome = None, (ex.stdout or b'').decode(errors='replace') if isinstance(ex.stdout, bytes) else (ex.stdout or ''), 'timeout'
+    passed = outcome == 'pass'
+    man.update(returncode=rc, outcome=outcome)
     st1, sub1 = status(), submodules()
     if st1 or sub1 != sub0:
         print('e0b_run: the tree or the submodules changed during the run; the data are void')
         return 1
-    files = sorted(f for f in os.listdir(outdir) if f.startswith(f'E0b-{tag}-')) + ['E0b-tier.json']
+    files = sorted(f for f in os.listdir(outdir) if f.startswith(f'E0b-{tag}-'))
+    if os.path.exists(os.path.join(outdir, 'E0b-tier.json')):
+        files.append('E0b-tier.json')
     man.update(status_after=st1, passed=passed, harness=harness_hashes(),
                data={f: sha(os.path.join(outdir, f)) for f in files})
     if what.startswith('fit:'):
@@ -180,7 +197,7 @@ def main(argv):
     json.dump(man, open(os.path.join(outdir, f'manifest-{tag}.json'), 'w'), indent=1)
     print(f'e0b_run: {what} {"PASS" if passed else "FAIL"}; manifest-{tag}.json written')
     if not passed:
-        print(r.stdout[-3000:])
+        print(out[-3000:])
     return 0 if passed else 1
 
 

@@ -3788,7 +3788,7 @@
    "find": "rebased = FullMath.mulDiv(_nav0, S2, S);",
    "replace": "rebased = FullMath.mulDivRoundingUp(_nav0, S2, S);",
    "status": "KILLED",
-   "basis": "c668bddc60697968"
+   "basis": "2b01bbe79aedaec5"
   }
  ]
 }

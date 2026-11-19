@@ -193,10 +193,11 @@ def emit_walk(ops, k, frm, to, d, ev):
         x = y + 1
 
 
-def generate(seed):
+def generate(seed, draws=None):
     r = random.Random(seed)
     O = r.choice(OFFSETS)                                                             # epoch 0: O first
-    draws = [draw_epoch(r) for _ in range(EPOCHS)]
+    drawn = [draw_epoch(r) for _ in range(EPOCHS)]
+    draws = drawn if draws is None else [dict(d) for d in draws]   # `draws` given only by the selftest
     log = []
     # presence by construction (on survival after the clamps): a non-poke-first epoch, a re-placement, a stale window
     # and a crossing; forced into the first epoch from epoch 2 where it survives, else with that epoch's other optional
@@ -209,24 +210,65 @@ def generate(seed):
         ev = plan_epoch(d, [], k)
         return d['npf'] if key == 'npf' else any(c == kind for (_, _, c, _) in ev)
 
-    forced = set()
-    for key, name, kind in kinds:
-        if any(survives(d, i + 1, key, kind) for i, d in enumerate(draws)):
-            continue
-        done = False
-        for strip in (False, True):
-            for i in range(1, EPOCHS):
-                d = dict(draws[i], **{key: True})
-                if strip:                          # never strip a kind already forced into this epoch (S25C2-05)
-                    d.update({o: False for o in OPTIONAL if o != key and (o, i) not in forced})
-                if survives(d, i + 1, key, kind):
-                    draws[i] = d
-                    forced.add((key, i))
-                    log.append(f'forced {name} into epoch {i + 1}' + (' (other optional ops dropped)' if strip else ''))
-                    done = True
+    REQUIRED = {key: kind for key, _, kind in kinds}
+
+    def present(key):
+        return [i for i, d in enumerate(draws) if survives(d, i + 1, key, REQUIRED[key])]
+
+    # S25C3-01: to a fixed point; the strip pass first drops only the non-required optional ops, then required kinds
+    # that survive in another epoch; never a required kind whose only survivor is this epoch
+    for _round in range(4):
+        missing = [(key, name, kind) for key, name, kind in kinds if not present(key)]
+        if not missing:
+            break
+        for key, name, kind in missing:
+            done = False
+            for strip in (0, 1, 2):
+                for i in range(1, EPOCHS):
+                    d = dict(draws[i], **{key: True})
+                    if strip >= 1:
+                        d.update({o: False for o in ('reb', 'unobs', 'flow', 'claim')})
+                    if strip == 2:
+                        d.update({o: False for o in ('rep', 'stale', 'cross')
+                                  if o != key and [j for j in present(o) if j != i]})
+                    if survives(d, i + 1, key, kind):
+                        draws[i] = d
+                        log.append(f'forced {name} into epoch {i + 1}' + (' (optional ops dropped)' if strip else ''))
+                        done = True
+                        break
+                if done:
                     break
             if done:
-                break
+                continue
+            # relocation: a required kind whose only survivor blocks epoch i is first forced into another epoch j
+            # (dropping only non-required ops there), then dropped from i
+            for i in range(1, EPOCHS):
+                d = dict(draws[i], **{key: True}, reb=False, unobs=False, flow=False, claim=False)
+                blockers = [o for o in ('rep', 'stale', 'cross') if o != key and d[o]]
+                trial = dict(d, **{o: False for o in blockers})
+                if not survives(trial, i + 1, key, kind):
+                    continue
+                moved = {}
+                for o in blockers:
+                    if [j for j in present(o) if j != i]:
+                        continue
+                    for j in range(1, EPOCHS):
+                        if j == i:
+                            continue
+                        dj = dict(moved.get(j, draws[j]), **{o: True}, reb=False, unobs=False, flow=False, claim=False)
+                        if survives(dj, j + 1, o, REQUIRED[o]) and all(
+                                survives(dj, j + 1, q, REQUIRED[q]) for q in ('rep', 'stale', 'cross') if dj[q] and q != o):
+                            moved[j] = dj
+                            break
+                    else:
+                        break
+                else:
+                    for j, dj in moved.items():
+                        draws[j] = dj
+                        log.append(f'relocated a required op into epoch {j + 1}')
+                    draws[i] = trial
+                    log.append(f'forced {name} into epoch {i + 1} (blocking ops relocated or dropped)')
+                    break
     # surviving optional ops: re-check after forcing (a forced op may still be dropped by its epoch's clamps)
     # epoch 0: poke, placement, then the walk to the epoch's end at intensity 1 around its own target (S25C-02)
     ops = [[W, 0, 22, 1, 0, 0], [POKE, 0, 22, 0, 0, 0], [W, 0, 25, 1, 0, 0], [PLACE, 0, 25, O, 0, 0],

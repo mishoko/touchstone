@@ -148,8 +148,8 @@ def manifests_ok(d, tags, harness_ref, failed=None):
             return False, f'{t}: the harness closure differs from the freeze'
         if m.get('status_after'):
             return False, f'{t}: the tree changed during the run'
-        if m.get('outcome') == 'interrupted':
-            return False, f'{t}: the run was interrupted (re-run once with the owner\'s approval, form 6)'
+        if m.get('outcome') in ('interrupted', 'void'):
+            return False, f'{t}: the run is {m.get("outcome")} (re-run once with the owner\'s approval, form 6)'
         if 'E0b-tier.json' not in m.get('data', {}) and m.get('passed'):
             return False, f'{t}: the tier file is not hashed'
         for f, h in m.get('data', {}).items():
@@ -162,8 +162,8 @@ def manifests_ok(d, tags, harness_ref, failed=None):
     return True, 'ok'
 
 
-def frozen_at_head():
-    r = subprocess.run(['git', 'show', 'HEAD:eval/E0b-frozen.json'], cwd=ROOT, capture_output=True, text=True)
+def frozen_at_head(root=None):
+    r = subprocess.run(['git', 'show', 'HEAD:eval/E0b-frozen.json'], cwd=root or ROOT, capture_output=True, text=True)
     return json.loads(r.stdout) if r.returncode == 0 else {}
 
 
@@ -411,6 +411,21 @@ def fit(d):
     return out
 
 
+def check_regenerates(n, committed):
+    """The committed manifest's script is what the frozen generator produces for seed n; a seed recorded as
+    `generation_failed` must fail to generate (then it is a failed script)."""
+    try:
+        script = json.dumps(G.generate(n))
+    except (SystemExit, Exception):
+        if committed.get('outcome') == 'generation_failed':
+            return
+        raise SystemExit(f'E0b verdict: seed {n} does not generate but its manifest says it ran')
+    if committed.get('outcome') == 'generation_failed':
+        raise SystemExit(f'E0b verdict: seed {n} is recorded as not generated but generates')
+    if hashlib.sha256(script.encode()).hexdigest() != committed.get('script_sha256'):
+        raise SystemExit(f'E0b verdict: seed {n} script does not regenerate')
+
+
 def verdict(d):
     head = R.head()
     ok, why = G.registration_ok(head)
@@ -431,17 +446,7 @@ def verdict(d):
             raise SystemExit(f'E0b verdict: manifest {n} differs from the committed one')
         if committed.get('commit') != head or committed.get('seed') != n:
             raise SystemExit(f'E0b verdict: manifest {n} is not from the registration commit')
-        if committed.get('outcome') == 'generation_failed':
-            try:
-                G.generate(n)
-                raise SystemExit(f'E0b verdict: seed {n} is recorded as not generated but generates')
-            except SystemExit as ex:
-                if 'not generated but generates' in str(ex):
-                    raise
-            continue
-        script = json.dumps(G.generate(n))
-        if hashlib.sha256(script.encode()).hexdigest() != committed.get('script_sha256'):
-            raise SystemExit(f'E0b verdict: seed {n} script does not regenerate')
+        check_regenerates(n, committed)
     extra = [f for f in os.listdir(d) if f.startswith('manifest-e0b-') and f not in {f'manifest-{t}.json' for t in tags}]
     if extra:
         raise SystemExit(f'E0b verdict: manifests outside 1100–1107: {extra}')
@@ -674,16 +679,41 @@ def selftest():
     assert op_counts([dict(op=4, b0=10), dict(op=5, b0=20)], w)['stale'] == 1      # closes at 22: dtau 2 < 12 - 4
     w2 = [row(10, 'step', 0, 0), row(20, 'step', 0, 8), row(22, 'step', 0, 10)]
     assert op_counts([dict(op=4, b0=10), dict(op=5, b0=20)], w2)['stale'] == 0     # dtau 10 >= 12 - 4: does not count
-    # M6 a: the fit guard reads the record from HEAD and needs a clean tree (a working-tree prefit2 record is refused)
-    fzp = os.path.join(HERE, 'E0b-frozen.json')
-    keep = open(fzp).read()
-    try:
-        fake = json.loads(keep)
-        fake.setdefault('records', []).append(dict(name='prefit2', harness=R.harness_hashes(), eval=R.eval_hashes()))
-        open(fzp, 'w').write(json.dumps(fake))
-        assert guard_fit()[0] is False
-    finally:
-        open(fzp, 'w').write(keep)
+    # M6 a / S25C3-05: the record is read from HEAD, not the working tree (scratch repository; the real tree untouched)
+    with tempfile.TemporaryDirectory() as tmp:
+        g = lambda *a: subprocess.run(['git', '-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false']
+                                      + list(a), cwd=tmp, check=True, capture_output=True)
+        g('init', '-q')
+        os.makedirs(os.path.join(tmp, 'eval'))
+        json.dump({'records': []}, open(os.path.join(tmp, 'eval', 'E0b-frozen.json'), 'w'))
+        g('add', '-A')
+        g('commit', '-q', '-m', 'c')
+        json.dump({'records': [{'name': 'prefit2'}]}, open(os.path.join(tmp, 'eval', 'E0b-frozen.json'), 'w'))
+        assert frozen_at_head(tmp) == {'records': []}
+    # S25C3-02: run outcomes
+    assert R.classify(0, 'Ran 1 test\n[PASS] test_x', False) == 'pass'
+    assert R.classify(1, '[FAIL: revert] test_x', False) == 'script_failed'
+    assert R.classify(1, 'Error: compiler run failed', False) == 'void'
+    assert R.classify(-9, '', False) == 'interrupted'
+    rc, out, to = R.run_timed(['sleep', '3'], dict(os.environ), 1)
+    assert to and R.classify(rc, out, to) == 'timeout'
+    # S25C3-01: a draw set where a stale window can only be forced into the epoch holding the only re-placement:
+    # it must generate (forcing keeps the re-placement), and a generation_failed manifest is a failed script
+    base = G.generate(0)['draws']
+    ds = []
+    for i, d in enumerate(base):
+        d = dict(d, stale=False, cross=(i == 0), rep=(i == 1), npf=(i != 1), tail=40, pk=70, sstart=10, slen=80,
+                 cblk=80, repblk=50, reb=False, unobs=False, flow=False, claim=False)
+        ds.append(d)
+    gen = G.generate(0, draws=ds)
+    codes = [gen['ops'][i] for i in range(0, len(gen['ops']), 6)]
+    assert G.STALE_ON in codes and codes.count(G.PLACE) >= 2 and G.CROSS in codes and G.SETTLE in codes
+    check_regenerates(0, dict(script_sha256=hashlib.sha256(json.dumps(G.generate(0)).encode()).hexdigest()))
+    with tempfile.TemporaryDirectory() as tmp:
+        json.dump(dict(harness={'h': '1'}, status_after='', data={}, passed=False, outcome='generation_failed'),
+                  open(os.path.join(tmp, 'manifest-e0b-7.json'), 'w'))
+        f = []
+        assert manifests_ok(tmp, ['e0b-7'], {'h': '1'}, f)[0] and f == ['e0b-7']
     # S25C2-02: on seeds 0–19 the overrides hold on (s, e]: a stale window's landed blocks >= 1, a tail's = 3
     for seed in range(20):
         g = G.generate(seed)

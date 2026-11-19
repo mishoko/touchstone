@@ -102,6 +102,31 @@ def head():
     return sh(['git', 'rev-parse', 'HEAD']).stdout.strip()
 
 
+def run_timed(cmd, env, timeout):
+    """(returncode, stdout, timed_out); on a timeout the process is killed."""
+    try:
+        r = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True, timeout=timeout)
+        return r.returncode, r.stdout, False
+    except subprocess.TimeoutExpired as ex:
+        out = ex.stdout.decode(errors='replace') if isinstance(ex.stdout, bytes) else (ex.stdout or '')
+        return None, out, True
+
+
+def classify(rc, out, timed_out):
+    """Run outcomes (form 3.2, S25C2-01, S25C3-02): `pass`; `script_failed` (the test's own [FAIL line: the script
+    reverted) and `timeout` (over 1 h) are failed scripts; `interrupted` (killed by a signal) and `void` (any other
+    failure: a tool or compiler error) are refused by the evaluator (the re-run route)."""
+    if timed_out:
+        return 'timeout'
+    if rc == 0 and '[PASS]' in out:
+        return 'pass'
+    if rc is not None and rc < 0:
+        return 'interrupted'
+    if '[FAIL' in out:
+        return 'script_failed'
+    return 'void'
+
+
 def fit_matches_e0a(outdir, run):
     """(ok, why): the fit run's truth byte-identical to E0a's pinned file; its logs identical up to VAULT_RELABEL."""
     pins = dict(l.split()[::-1] for l in open(E0A_PIN_FILE) if l.strip())
@@ -151,7 +176,7 @@ def main(argv):
         tag = f'e0b-{n}'
         try:
             script = json.dumps(e0b_gen.generate(n))
-        except SystemExit as ex:                    # a script the generator cannot produce: a FAILED script
+        except (SystemExit, Exception) as ex:       # a script the generator cannot produce: a FAILED script
             man.update(seed=n, run_name=tag, passed=False, outcome='generation_failed', reason=str(ex),
                        status_after=status(), harness=harness_hashes(), data={})
             json.dump(man, open(os.path.join(outdir, f'manifest-{tag}.json'), 'w'), indent=1)
@@ -168,15 +193,16 @@ def main(argv):
         mt = f'test_E0bData__fit_{name}'
         man.update(fit=name, run_name=name)
     man['ts_env'] = {k: v for k, v in env.items() if k.startswith('TS_')}
-    # outcomes (S25C2-01): pass; script_failed (forge ran and the script reverted) and timeout (over 1 h) are FAILED
-    # scripts; interrupted (forge killed by a signal) is refused by the evaluator (the re-run route of form 6)
-    try:
-        r = subprocess.run(['forge', 'test', '--mc', 'E0bDataTest', '--mt', mt], cwd=ROOT, env=env,
-                           capture_output=True, text=True, timeout=3600)
-        rc, out = r.returncode, r.stdout
-        outcome = 'pass' if rc == 0 and '[PASS]' in out else ('interrupted' if rc < 0 else 'script_failed')
-    except subprocess.TimeoutExpired as ex:
-        rc, out, outcome = None, (ex.stdout or b'').decode(errors='replace') if isinstance(ex.stdout, bytes) else (ex.stdout or ''), 'timeout'
+    # the build first, untimed (a cold worktree compiles via-IR); a build failure is a void run (S25C3-02)
+    b = subprocess.run(['forge', 'build'], cwd=ROOT, env=env, capture_output=True, text=True)
+    if b.returncode != 0:
+        man.update(passed=False, outcome='void', reason='forge build failed', returncode=b.returncode,
+                   status_after=status(), harness=harness_hashes(), data={})
+        json.dump(man, open(os.path.join(outdir, f'manifest-{tag}.json'), 'w'), indent=1)
+        print(f'e0b_run: {what} VOID (build failed)')
+        return 1
+    rc, out, timed_out = run_timed(['forge', 'test', '--mc', 'E0bDataTest', '--mt', mt], env, 3600)
+    outcome = classify(rc, out, timed_out)
     passed = outcome == 'pass'
     man.update(returncode=rc, outcome=outcome)
     st1, sub1 = status(), submodules()

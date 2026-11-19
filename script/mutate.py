@@ -28,6 +28,15 @@ produced no result: never counted as killed) | BAD-PATTERN (the find string is n
 (the named killer fails on the clean tree) | PENDING (no code or no killing test yet). Exit 0 only if the list is
 non-empty and every selected mutant is KILLED.
 
+EQUIVALENT (a stored status, not a verdict): `"status": "EQUIVALENT"` with a non-empty `"reason"` naming the mutated
+line and why no input distinguishes it other than gas, or why no line exists to mutate (spec §9.2,
+`internal/reviews/mutation-survivors.md`), and `"anchors": [{"file": "src/...", "find": "<code>"}]`, the code its
+premise rests on. Such an entry must stay unwired; it is never selected or run, it is outside the kill-rate denominator
+(reported on its own line), `--write` never changes it and `--audit` counts it apart from the pending ones. `--audit`
+fails on one without a reason, without anchors, wired, or with an anchor whose code does not match its file exactly
+once (so an edit to the premise forces the reason to be re-checked); `--since` names an EQUIVALENT entry whose anchor
+file changed as "re-check reason".
+
 A mutant's basis is a hash of what its verdict depends on: the function containing its find string; the files that
 define its killer and every test/ or script/ file they import, transitively; `foundry.toml`; the golden vectors when
 any of those files reads a file; every file under src/libraries/ and src/types/ (the coarse-linked entries and the
@@ -71,8 +80,12 @@ def load():
     return doc, muts
 
 
+def equivalent(m):
+    return m.get('status') == 'EQUIVALENT'
+
+
 def wired(m):
-    return bool(m.get('file') and m.get('find') is not None and m.get('replace') is not None
+    return not equivalent(m) and bool(m.get('file') and m.get('find') is not None and m.get('replace') is not None
                 and m.get('kill') and m['kill'] != 'pending')
 
 
@@ -100,10 +113,28 @@ def audit(muts):
     for m in muts:
         if wired(m) and not any(re.search(m['kill'], n) for n in names):
             errs.append(f"killer pattern matches no test: {m['id']} {m['kill']}")
-    pending = sum(1 for m in muts if not wired(m))
+    # an EQUIVALENT entry carries its reason and stays unwired (it is never run, so a mutation on it would be untested)
+    for m in muts:
+        if equivalent(m):
+            if not str(m.get('reason') or '').strip():
+                errs.append(f"EQUIVALENT without a reason: {m['id']}")
+            if m.get('file') or m.get('find') is not None or m.get('replace') is not None or \
+                    (m.get('kill') not in (None, 'pending')):
+                errs.append(f"EQUIVALENT entry is wired (file/find/replace/kill set): {m['id']}")
+            anchors = m.get('anchors') or []
+            if not anchors:
+                errs.append(f"EQUIVALENT without anchors: {m['id']}")
+            for a in anchors:
+                fp = os.path.join(ROOT, a.get('file') or '')
+                n = open(fp).read().count(a.get('find') or '\0') if a.get('file') and os.path.isfile(fp) else 0
+                if n != 1:
+                    errs.append(f"EQUIVALENT anchor matches {n} times in {a.get('file')}: {m['id']} (re-check the reason)")
+    eq = sum(1 for m in muts if equivalent(m))
+    pending = sum(1 for m in muts if not wired(m) and not equivalent(m))
     for e in errs:
         print(e)
-    print(f'audit: {len(muts)} mutants, {len(muts) - pending} wired, {pending} pending;', 'OK' if not errs else 'FAIL')
+    print(f'audit: {len(muts)} mutants, {len(muts) - pending - eq} wired, {eq} equivalent (outside the denominator), '
+          f'{pending} pending;', 'OK' if not errs else 'FAIL')
     return not errs
 
 
@@ -324,7 +355,26 @@ def select_since(muts, rev):
     for m in muts:
         if wired(m) and (set(basis_parts(m)[0]) & changed or m.get('basis') != basis_parts(m)[1]):
             sel.append(m)
+        if equivalent(m) and {a.get('file') for a in m.get('anchors') or []} & changed:
+            print(f"{m['id']} | EQUIVALENT | re-check reason: an anchor file changed since {rev}")
     return sel
+
+
+def split_equivalent(sel):
+    """(the mutants to run or report, the EQUIVALENT ones): an EQUIVALENT entry is never run or counted."""
+    return [m for m in sel if not equivalent(m)], [m for m in sel if equivalent(m)]
+
+
+def apply_write(muts, res):
+    """Stores each run verdict. ABORTED keeps the previous status and basis; an EQUIVALENT entry is never changed."""
+    st = {r[0]: r[1] for r in res if r[1] != 'ABORTED'}  # not run: keep its previous status and basis
+    for m in muts:
+        if m['id'] in st and not equivalent(m):
+            m['status'] = st[m['id']]
+            if st[m['id']] == 'KILLED':
+                m['basis'] = basis_parts(m)[1]
+            else:
+                m.pop('basis', None)
 
 
 FLAGS = ('--audit', '--full', '--write', '--changed')
@@ -449,6 +499,9 @@ def main(argv):
         sel = [m for m in muts if not args or m['id'] in args]
     if args and (since or '--changed' in argv):
         sel = [m for m in sel if m['id'] in args]
+    sel, eqs = split_equivalent(sel)
+    for m in eqs:
+        print(f"{m['id']} | EQUIVALENT (not run; outside the denominator) | {m.get('reason', '')}")
     if not sel:
         print('mutate: no mutant selected' + (' (no basis changed)' if since or '--changed' in argv else ''))
         return 0 if (since or '--changed' in argv) else 1
@@ -522,15 +575,10 @@ def main(argv):
         print(' | '.join(r))
     killed = sum(1 for r in res if r[1] == 'KILLED')
     print(f'killed {killed}/{len(res)}')
+    if eqs:
+        print(f'equivalent (outside the denominator): {len(eqs)}')
     if '--write' in argv:
-        st = {r[0]: r[1] for r in res if r[1] != 'ABORTED'}  # not run: keep its previous status and basis
-        for m in muts:
-            if m['id'] in st:
-                m['status'] = st[m['id']]
-                if st[m['id']] == 'KILLED':
-                    m['basis'] = basis_parts(m)[1]
-                else:
-                    m.pop('basis', None)
+        apply_write(muts, res)
         open(LIST, 'w').write(json.dumps(doc, indent=1, ensure_ascii=False) + '\n')
     return 0 if res and killed == len(res) else 1
 

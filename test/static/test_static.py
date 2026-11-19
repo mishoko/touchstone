@@ -506,6 +506,56 @@ def test_every_vault_rounding_has_a_mutant():
     assert any('M_PER_BLOCK' in b for b in uncovered_roundings(srcs, dup))
 
 
+def test_mutate_equivalent_status_is_outside_the_denominator_and_never_written():
+    import contextlib, copy, io, importlib.util
+    spec = importlib.util.spec_from_file_location('mutate_s', os.path.join(ROOT, 'script', 'mutate.py'))
+    mu = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mu)
+    muts = json.load(open(os.path.join(ROOT, 'audits', 'mutants.json')))['mutants']
+    eq = [m for m in muts if mu.equivalent(m)]
+    assert sorted(m['id'] for m in eq) == ['MU-033', 'MU-036', 'MU-185'], [m['id'] for m in eq]
+    assert all(str(m.get('reason') or '').strip() and not mu.wired(m) for m in eq)
+
+    def audit(ms):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            ok = mu.audit(ms)
+        return ok, out.getvalue()
+    ok, txt = audit(muts)
+    assert ok and '3 equivalent' in txt and ' 0 pending' in txt, txt
+    # controls: an EQUIVALENT entry without a reason, or wired, fails the audit
+    for bad in (dict(eq[0], reason=''), dict(eq[0], kill='test_x', file=None)):
+        ok, txt = audit([bad if m['id'] == eq[0]['id'] else m for m in muts])
+        assert not ok and eq[0]['id'] in txt, txt
+    # never selected or run
+    run, skipped = mu.split_equivalent(muts)
+    assert {m['id'] for m in skipped} == {m['id'] for m in eq} and not any(mu.equivalent(m) for m in run)
+    # --write leaves an EQUIVALENT entry unchanged even if a result names it; ABORTED keeps the previous status
+    ms = copy.deepcopy(muts)
+    w = next(m for m in ms if mu.wired(m))
+    before_eq, before_w = copy.deepcopy([m for m in ms if mu.equivalent(m)]), copy.deepcopy(w)
+    mu.apply_write(ms, [(eq[0]['id'], 'KILLED', ''), (w['id'], 'ABORTED', '')])
+    assert [m for m in ms if mu.equivalent(m)] == before_eq and w == before_w
+    # control: a wired mutant's verdict is written
+    mu.apply_write(ms, [(w['id'], 'SURVIVED', '')])
+    assert w['status'] == 'SURVIVED' and 'basis' not in w
+    # controls: an EQUIVALENT entry without anchors, or with an anchor that no longer matches, fails the audit
+    for bad in (dict(eq[0], anchors=[]), dict(eq[0], anchors=[dict(eq[0]['anchors'][0], find='no such code')])):
+        ok, txt = audit([bad if m['id'] == eq[0]['id'] else m for m in muts])
+        assert not ok and eq[0]['id'] in txt, txt
+    # main never hands an EQUIVALENT entry to forge (S25M-04): forge is stubbed to fail loudly
+    calls = []
+    real = mu.forge
+    mu.forge = lambda *a, **k: calls.append(a) or (_ for _ in ()).throw(AssertionError('forge called'))
+    try:
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            rc = mu.main(['MU-033', 'MU-185'])
+    finally:
+        mu.forge = real
+    assert rc == 1 and not calls and out.getvalue().count('EQUIVALENT (not run') == 2, out.getvalue()
+
+
 if __name__ == '__main__':
     tests = [v for k, v in sorted(globals().items()) if k.startswith('test_') and callable(v)]
     for t in tests:

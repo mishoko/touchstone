@@ -388,13 +388,28 @@
   {
    "id": "MU-033",
    "area": "bank",
-   "desc": "δ cap removed. EQUIVALENT (s09 F9-05, s1 model r3; s24): posValue ≤ NAV at every price (q is monotone in the amount and NAV adds idle to the position's amounts), so min(WAD, ·) never binds in ExecLedger.actionCharge or Placement.size; kept unwired with this reason (an EQUIVALENT status in mutate.py is s25 work).",
+   "desc": "δ cap removed",
    "killer_id": null,
    "kill": "pending",
    "file": null,
    "find": null,
    "replace": null,
-   "status": "PENDING"
+   "status": "EQUIVALENT",
+   "reason": "EQUIVALENT (s09 F9-05, s1 model r3; s24): the mutated lines are the min(WAD, ·) caps on δ in ExecLedger.actionCharge and Placement.size. posValue ≤ NAV at every price (q is monotone in the amount and NAV adds the idle balances to the position's amounts), so δ = posValue/NAV ≤ WAD and the cap never binds; removing it changes no output on any legal input.",
+   "anchors": [
+    {
+     "file": "src/libraries/ExecLedger.sol",
+     "find": "delta = uint64(d < WAD ? d : WAD);"
+    },
+    {
+     "file": "src/libraries/Placement.sol",
+     "find": "deltaAfter = uint64(d < WAD ? d : WAD);"
+    },
+    {
+     "file": "src/libraries/Placement.sol",
+     "find": "uint256 nav = LiquidityValue.val(uint256(after_.idle0) + x0, uint256(after_.idle1) + y0, sqrtRef);"
+    }
+   ]
   },
   {
    "id": "MU-034",
@@ -423,13 +438,20 @@
   {
    "id": "MU-036",
    "area": "bank",
-   "desc": "NAV₀ read before settlement. EQUIVALENT since s15 (s18 fix review S18T-03): the settlement reads only its pending record and changes no NAV₀ input; NAV₀ changes only in an action's epilogue (at the live reference, after the settlement in the prologue) and in a flow's re-base, whose supply is read after the prologue (MU-096, I-12). No textual mutation reaches a pre-settlement NAV₀; kept unwired with this reason.",
+   "desc": "NAV₀ read before settlement",
    "killer_id": null,
    "kill": "pending",
    "file": null,
    "find": null,
    "replace": null,
-   "status": "PENDING"
+   "status": "EQUIVALENT",
+   "reason": "EQUIVALENT since s15 (s18 fix review S18T-03; s25 fix review S25M-01): no line exists to mutate. `_settle()` (TouchstoneVault.sol, step 0 of `_act`, tagged [MU-185]) burns reserve shares, so it writes the supply S, but it never writes `_nav0`; every read of `_nav0` or of S that feeds NAV₀ (the checkpoint's base accrual, the flow re-base NAV₀·S′/S, the action epilogue) runs after that call. There is no NAV₀ read before the settlement whose order a mutation could change.",
+   "anchors": [
+    {
+     "file": "src/TouchstoneVault.sol",
+     "find": "        _settle();\n        Obs memory o = _prologue();"
+    }
+   ]
   },
   {
    "id": "MU-037",
@@ -2210,13 +2232,24 @@
   {
    "id": "MU-185",
    "area": "ledger",
-   "desc": "the settlement runs after the snapshot and collect-first (s09 D9-04). EQUIVALENT since s15 (s24 re-check): the fee-aware settlement reads only its record, the bank reserve and the reference window, and the prologue (snapshot, collect) reads nothing the settlement writes; base accrual mints only in the checkpoint, after both steps in either order (MU-270 covers the sAct rule); only the gas left at the settlement's guard differs; kept unwired",
+   "desc": "the settlement runs after the snapshot and collect-first (s09 D9-04)",
    "killer_id": null,
    "kill": "pending",
    "file": null,
    "find": null,
    "replace": null,
-   "status": "PENDING"
+   "status": "EQUIVALENT",
+   "reason": "EQUIVALENT modulo gas since s15 (s24 re-check; s25 S25M-02): the mutated line is `_settle();` before `Obs memory o = _prologue();` in `_act` (TouchstoneVault.sol, tag [MU-185]); the mutation moves it after the prologue's snapshot and collect-first. The settlement reads only its record, the bank reserve and the reference window (`tryWindow`, a staticcall to the v3 reference); the prologue writes the hook's span state, idle and claims, and reads nothing `_settle` writes (bank, records, supply); base accrual mints only in the checkpoint after both (MU-270 covers the sAct rule). The only difference is the gas left at the settlement's `RefGas` guard: a call with gas just above `_settleGasMin()` there could revert after the swap; the guard still protects the read.",
+   "anchors": [
+    {
+     "file": "src/TouchstoneVault.sol",
+     "find": "        _settle();\n        Obs memory o = _prologue();"
+    },
+    {
+     "file": "src/TouchstoneVault.sol",
+     "find": "if (gasleft() < _settleGasMin()) revert RefGas();"
+    }
+   ]
   },
   {
    "id": "MU-186",

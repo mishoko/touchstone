@@ -608,7 +608,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "_baseOwed = 0;\n            uint8 m0 = b.mode;",
    "replace": "_baseOwed = _u128(cut);\n            uint8 m0 = b.mode;",
-   "status": "PENDING"
+   "status": "KILLED",
+   "basis": "977121027bbbf223"
   },
   {
    "id": "MU-052",
@@ -643,7 +644,8 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "            payShares = b.vestedUnclaimed;\n            b.vestedUnclaimed = 0;",
    "replace": "            payShares = uint256(b.vestedUnclaimed) + b.maturedPending;\n            b.vestedUnclaimed = 0;\n            b.maturedPending = 0;",
-   "status": "PENDING"
+   "status": "KILLED",
+   "basis": "7dbfad6a3b8697cf"
   },
   {
    "id": "MU-055",
@@ -666,7 +668,8 @@
    "file": "src/libraries/FeeBank.sol",
    "find": "        Cohort storage s = b.cohorts[e % RING];\n        if (s.shares > 0 && s.epoch != e) {",
    "replace": "        Cohort storage s = b.cohorts[e % RING];\n        if (false) {",
-   "status": "PENDING"
+   "status": "KILLED",
+   "basis": "b85172505d17ef05"
   },
   {
    "id": "MU-057",
@@ -749,7 +752,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        if (!Ladder.allowed(_bank.mode, uint8(entry))) revert Ladder.BadMode();\n",
    "replace": "",
-   "status": "PENDING"
+   "status": "KILLED",
+   "basis": "d19bd300a6257afa"
   },
   {
    "id": "MU-064",
@@ -796,7 +800,8 @@
    "file": "src/TouchstoneVaultExtension.sol",
    "find": "        _rebase(S, S - s);\n        emit Withdraw(owner, s, a0, a1);",
    "replace": "        _rebase(S, S - s);\n        HOOK.rollWitness(_epoch);\n        emit Withdraw(owner, s, a0, a1);",
-   "status": "PENDING"
+   "status": "KILLED",
+   "basis": "64574f591412a8f3"
   },
   {
    "id": "MU-068",
@@ -1443,7 +1448,8 @@
    "file": "src/TouchstoneHook.sol",
    "find": "            _tauVAtLastPending = _tauV;\n",
    "replace": "",
-   "status": "PENDING"
+   "status": "KILLED",
+   "basis": "1acdb53ba3a7453d"
   },
   {
    "id": "MU-122",
@@ -1454,7 +1460,8 @@
    "file": "src/TouchstoneVault.sol",
    "find": "        // (3) pending breaches, before any accrual or vesting\n",
    "replace": "        FeeBank.bankApply(b, Op.Accrue, abi.encode(ne, uint256(1), gateOpen));\n        // (3) pending breaches, before any accrual or vesting\n",
-   "status": "PENDING"
+   "status": "KILLED",
+   "basis": "0e519491aa92961a"
   },
   {
    "id": "MU-123",

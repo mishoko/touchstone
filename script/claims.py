@@ -135,6 +135,16 @@ def historical(rows, phase, root):
     return [i for i, due, _ in rows if PHASES.index(due) <= lim and historical_failed(i, root)]
 
 
+def table_status(i, k, tests, miss, root):
+    """The `--table` status of one row, by its kind (s24 S24F-07/S24F2-01: an eval row is covered only by a PASS
+    result, never by a same-named test)."""
+    if covered(i, tests, root, k):
+        return 'covered'
+    if historical_failed(i, root):
+        return 'failed, earlier configuration, final'
+    return 'MISSING' if i in miss else 'not due'
+
+
 def count_line(n_ok, n_req, hist, phase):
     """The one count line: the current configuration's rows, and on the same line every historical failed row (D7:
     the current count never stands alone)."""
@@ -290,6 +300,10 @@ def selftest(rows):
         os.makedirs(os.path.join(d, 'eval', 'results'))
         if covered('E9', 'function test_E9__x()', d, 'eval') or not unmet([('E9', 'P4', 'eval')], 'function test_E9__x()', 'P4', d):
             errs.append('fixture: an eval row without a PASS result is uncovered even with a same-named test')
+        if table_status('E9', 'eval', 'function test_E9__x()', ['E9'], d) != 'MISSING':
+            errs.append('fixture: the table shows an eval row without a PASS result as MISSING, by its kind')
+        if table_status('E9', 'test', 'function test_E9__x()', ['E9'], d) != 'covered':
+            errs.append('control: read as a test row, the same-named test would cover it')
     if _eval_ids('| E0 | q | p |\n| E0a | q | p |\n') != ['E0', 'E0a']:
         errs.append('fixture: a suffixed eval ID (E0a) must be listed')
     if not ROW.search('| E0a | P4 | eval |'):
@@ -316,8 +330,7 @@ def main(argv):
     miss = missing(rows, tests, phase, ROOT)
     if '--table' in argv:
         for i, due, k in rows:
-            st = ('covered' if covered(i, tests, ROOT, k) else 'failed, earlier configuration, final'
-                  if historical_failed(i, ROOT) else ('MISSING' if i in miss else 'not due'))
+            st = table_status(i, k, tests, miss, ROOT)
             print(f'| {i} | {due} | {st} |')
     hist = historical(rows, phase, ROOT)
     req = [i for i, due, _ in rows if PHASES.index(due) <= PHASES.index(phase) and i not in hist]

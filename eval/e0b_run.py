@@ -168,7 +168,7 @@ def main(argv):
     if st1 or sub1 != sub0:
         print('e0b_run: the tree or the submodules changed during the run; the data are void')
         return 1
-    files = sorted(f for f in os.listdir(outdir) if f.startswith(f'E0b-{tag}-'))
+    files = sorted(f for f in os.listdir(outdir) if f.startswith(f'E0b-{tag}-')) + ['E0b-tier.json']
     man.update(status_after=st1, passed=passed, harness=harness_hashes(),
                data={f: sha(os.path.join(outdir, f)) for f in files})
     if what.startswith('fit:'):

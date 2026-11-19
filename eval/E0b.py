@@ -135,25 +135,40 @@ def last_record(fz, names):
     return recs[-1] if recs else None
 
 
-def manifests_ok(d, tags, harness_ref):
-    """Every tag has a passing manifest whose H hashes equal `harness_ref` and whose data files match."""
+def manifests_ok(d, tags, harness_ref, failed=None):
+    """Every tag has a manifest whose H hashes equal `harness_ref`, whose tree stayed clean and whose data files match
+    (the tier file included). A `passed: false` manifest (the script did not complete) is listed in `failed` when given
+    (a FAILED script, form 4.1; S25C-01), else refused; a missing or mismatched manifest is always refused."""
     for t in tags:
         mp = os.path.join(d, f'manifest-{t}.json')
         if not os.path.exists(mp):
             return False, f'no manifest for {t}'
         m = json.load(open(mp))
-        if not m.get('passed'):
-            return False, f'{t}: the run did not pass'
         if m.get('harness') != harness_ref:
             return False, f'{t}: the harness closure differs from the freeze'
+        if m.get('status_after'):
+            return False, f'{t}: the tree changed during the run'
+        if 'E0b-tier.json' not in m.get('data', {}):
+            return False, f'{t}: the tier file is not hashed'
         for f, h in m.get('data', {}).items():
             if R.sha(os.path.join(d, f)) != h:
                 return False, f'{t}: {f} changed after the run'
+        if not m.get('passed'):
+            if failed is None:
+                return False, f'{t}: the run did not pass'
+            failed.append(t)
     return True, 'ok'
 
 
+def frozen_at_head():
+    r = subprocess.run(['git', 'show', 'HEAD:eval/E0b-frozen.json'], cwd=ROOT, capture_output=True, text=True)
+    return json.loads(r.stdout) if r.returncode == 0 else {}
+
+
 def guard_fit():
-    fz = frozen()
+    if R.status():
+        return False, 'the tree is not clean', None
+    fz = frozen_at_head()
     rec = last_record(fz, ('prefit2',))
     if rec is None:
         return False, 'no prefit2 record', None
@@ -163,8 +178,9 @@ def guard_fit():
     ev = R.eval_hashes()
     if ev['eval/E0a.py'] != rec['eval']['eval/E0a.py']:
         return False, 'eval/E0a.py differs from prefit2', None
-    if ev['eval/E0b.py'] != rec['eval']['eval/E0b.py'] and not fz.get('changes_after_prefit2'):
-        return False, 'eval/E0b.py changed after prefit2 without a listed change', None
+    allowed = [rec['eval']['eval/E0b.py']] + [c['eval_after'] for c in fz.get('changes_after_prefit2', [])]
+    if ev['eval/E0b.py'] != allowed[-1]:
+        return False, 'eval/E0b.py differs from prefit2 and from the last listed change', None
     return True, 'ok', rec
 
 
@@ -227,7 +243,7 @@ def op_counts(ops, wit):
         if o.get('op') == 4:
             on = o['b0']
         elif o.get('op') == 5 and on is not None:
-            a, z = touch_at_or_after(on), touch_at_or_after(o['b0'])
+            a, z = touch_at_or_after(on), touch_at_or_after(o['b0'] + 1)
             if a is not None and z is not None and ft[z]['tauB'] - ft[a]['tauB'] < (z - a) - 4:
                 res['stale'] += 1
             on = None
@@ -249,13 +265,10 @@ def validity_one(d, tag, tier):
     completed = bool(ops) and ops[-1].get('op') == 99
     reverts = sum(1 for o in ops if o.get('op') == 'revert')
     calls = len(truth)
-    led, meta = ledger(raw, tier, fr)
     T = {t['c']: t for t in truth}
+    led, meta = ledger(raw, tier, fr)
     # presence
-    npf = 0
-    for e, w in led.items():
-        if not any(x['ev'] == 'WitnessRolled' and x['lw'] > 0 for x in meta['by_call'].get(w['cin'], [])):
-            npf += 1
+    npf = sum(1 for e, w in led.items() if w['cin'] in T and T[w['cin']]['k'] != A.K_POKE)
     regs = [x for x in meta['by_call'].values() for x in x if x['ev'] == 'RangeRegistered']
     rolls = meta['rolls']
     replace_in_life = 0
@@ -318,17 +331,31 @@ def validity_one(d, tag, tier):
                 presence=bool(npf and replace_in_life and oc['stale'] and oc['cross']))
 
 
-def validity(d):
+def validity(d, harness_ref=None, failed=None):
     tier = {k: int(v) for k, v in json.load(open(os.path.join(d, 'E0b-tier.json'))).items()}
-    tags = sorted(f[len('manifest-'):-len('.json')] for f in os.listdir(d) if f.startswith('manifest-e0b-'))
+    # every script whose data are present needs its manifest (derived from the data files, never from the manifests)
+    tags = sorted({f[len('E0b-'):f.index('-', len('E0b-e0b-'))] for f in os.listdir(d)
+                   if f.startswith('E0b-e0b-') and f.endswith('-logs.jsonl')} |
+                  {f[len('manifest-'):-len('.json')] for f in os.listdir(d) if f.startswith('manifest-e0b-')})
+    if not tags:
+        raise SystemExit('E0b validity: refused (no script data)')
     # the data must come from the harness of the last record (prefit, or the last logged change that touched H)
     fz = frozen()
-    ref = ([c['harness'] for c in fz.get('changes', []) if c.get('harness')] or
-           [r['harness'] for r in fz.get('records', []) if r['name'] == 'prefit'] or [None])[-1]
-    ok, why = manifests_ok(d, tags, ref)
+    ref = harness_ref or ([c['harness'] for c in fz.get('changes', []) if c.get('harness')] or
+                          [r['harness'] for r in fz.get('records', []) if r['name'] == 'prefit'] or [None])[-1]
+    failed = [] if failed is None else failed
+    ok, why = manifests_ok(d, tags, ref, failed)
     if not ok:
         raise SystemExit(f'E0b validity: refused ({why})')
-    res = {t: validity_one(d, t, tier) for t in tags}
+    res = {}
+    for t in tags:
+        try:
+            res[t] = validity_one(d, t, tier)
+        except Exception as ex:                      # an incomplete script's files: a FAILED script, never a refusal
+            res[t] = dict(completed=False, reverted_share=1.0, presence=False, a=False, b=False, c=False, alloc=False,
+                          error=str(ex)[:200])
+        if t in failed:
+            res[t]['completed'] = False
     n = len(res)
     rate = lambda k: sum(1 for v in res.values() if v[k]) / n if n else 0.0
 
@@ -412,16 +439,24 @@ def verdict(d):
     bad = [p for p in rc if not (p.startswith('eval/results/E0b-manifests/') or p == 'eval/results/E0b.json')]
     if bad:
         raise SystemExit(f'E0b verdict: commits after registration touch {bad}')
-    ok, why = manifests_ok(d, tags, rec['harness'])
+    failed = []
+    ok, why = manifests_ok(d, tags, rec['harness'], failed)
     if not ok:
         raise SystemExit(f'E0b verdict: refused ({why})')
+    return judge(d, tags, rec, failed, fz, head)
+
+
+def judge(d, tags, rec, failed, fz, head):
+    """The section 4 rule on manifest-checked data; a FAILED script makes the verdict FAIL (S25C-01)."""
     tier = {k: int(v) for k, v in json.load(open(os.path.join(d, 'E0b-tier.json'))).items()}
-    vres, vsum = validity(d)
-    res = evaluate_runs(d, tags, tier, controls=False)
-    failed_scripts = [t for t, v in vres.items() if not v['completed'] or v['reverted_share'] > 0.25]
-    closes = all(v['worst_bp'] <= BOUND_BP for v in res.values())
+    vres, vsum = validity(d, rec['harness'], list(failed))
+    failed_scripts = sorted(set(failed) | {t for t, v in vres.items() if not v['completed'] or v['reverted_share'] > 0.25})
+    ok_tags = [t for t in tags if t not in failed_scripts]
+    res = evaluate_runs(d, ok_tags, tier, controls=False)
+    # rows that 3.8 leaves unresolved are excluded from closure and counted by condition 3 (S25C-06 c)
+    closes = all(abs(x['residual_bp']) <= BOUND_BP for v in res.values() for x in v['rows'] if not x['unresolved'])
     share_ok = True  # the share rows (E0a's check) per script
-    for t in tags:
+    for t in ok_tags:
         rows, led, meta, truth = rows_for(d, t, tier)
         T = {x['c']: x for x in truth}
         for e, w in led.items():
@@ -543,6 +578,51 @@ def selftest():
             assert not G.registration_ok(wrong)[0]
         finally:
             G.ROOT = root0
+    # S25C-02: every walk op starts inside its own epoch (so the target has that epoch's parity), on seeds 0–19
+    for seed in range(20):
+        ops = G.generate(seed)['ops']
+        pos = 0
+        for i in range(0, len(ops), 6):
+            code, k, off = ops[i], ops[i + 1], ops[i + 2]
+            blk = k * G.EPOCH + off
+            if code == G.W:
+                assert pos >= k * G.EPOCH, (seed, i, pos, k)
+            if code == G.UNOBS:
+                blk += ops[i + 3]
+            if code == G.CROSS:
+                blk += ops[i + 5]
+            pos = max(pos, blk)
+    # S25C-04: a call with two Checkpoints (a reverted attempt's logs) makes the ledger raise; the unmodified data pass
+    if os.path.exists(os.path.join(d, 'E0b-fit-exit-logs.jsonl')):
+        raw = load(os.path.join(d, 'E0b-fit-exit-logs.jsonl'))
+        cp = next(x for x in raw if x['ev'] == 'Checkpoint')
+        try:
+            ledger(raw + [dict(cp, i=cp['i'] + 1000)], tier, fr)
+            raise AssertionError('a duplicated Checkpoint was accepted')
+        except AssertionError as ex:
+            assert 'more than one Checkpoint' in str(ex), ex
+    # S25C-01 and M2: an unmanifested directory is refused; a not-passed manifest is a FAILED script and the verdict is
+    # FAIL (judge), never a refusal
+    import tempfile, shutil
+    src = os.path.join(ROOT, 'output', 'e0b', 'smoke')
+    if os.path.exists(os.path.join(src, 'manifest-e0b-0.json')):
+        with tempfile.TemporaryDirectory() as tmp:
+            for f in os.listdir(src):
+                if f.startswith('E0b-e0b-0-') or f == 'E0b-tier.json':
+                    shutil.copy(os.path.join(src, f), tmp)
+            try:
+                validity(tmp, harness_ref={'x': 'y'})
+                raise AssertionError('an unmanifested directory was accepted')
+            except SystemExit as ex:
+                assert 'no manifest' in str(ex), ex
+            m = json.load(open(os.path.join(src, 'manifest-e0b-0.json')))
+            ops = os.path.join(tmp, 'E0b-e0b-0-ops.jsonl')
+            open(ops, 'w').write(''.join(open(ops).readlines()[:5]))       # an incomplete script: no op 99
+            m['passed'] = False
+            m['data'] = {f: R.sha(os.path.join(tmp, f)) for f in os.listdir(tmp)}
+            json.dump(m, open(os.path.join(tmp, 'manifest-e0b-0.json'), 'w'))
+            out = judge(tmp, ['e0b-0'], dict(harness=m['harness']), [], {}, 'x')
+            assert out['verdict'] == 'FAIL' and out['failed_scripts'] == ['e0b-0'], out['failed_scripts']
     print('E0b selftest OK')
     return 0
 

@@ -170,7 +170,7 @@ def plan_epoch(d, log, k):
 def intensity(d, ev, b):
     """The walk intensity at epoch block b: the drawn sub-window value, with the overrides (the tail 3, a stale window
     at least 1; a crossing hold and an unobserved span are not walked)."""
-    i = d['ints'][min(b // SUB, len(d['ints']) - 1)]
+    i = d['ints'][min((b - 1) // SUB if b > 0 else 0, len(d['ints']) - 1)]
     for (s, e, c, _) in ev:
         if c == 'TAIL' and s <= b < e:
             i = 3
@@ -181,15 +181,16 @@ def intensity(d, ev, b):
 
 
 def emit_walk(ops, k, frm, to, d, ev):
-    """WALK ops from epoch block frm to to, split at the sub-window and override boundaries."""
-    b = frm
-    while b < to:
-        i = intensity(d, ev, b)
-        nxt = b + 1
-        while nxt < to and intensity(d, ev, nxt) == i:
-            nxt += 1
-        ops.append([W, k, nxt, i, 0, 0])
-        b = nxt
+    """WALK ops from epoch block frm to to; a step landing at block x takes the intensity of block x (its sub-window and
+    the overrides), so runs split where the landing intensity changes (S25C-02)."""
+    x = frm + 1
+    while x <= to:
+        i = intensity(d, ev, x)
+        y = x
+        while y + 1 <= to and intensity(d, ev, y + 1) == i:
+            y += 1
+        ops.append([W, k, y, i, 0, 0])
+        x = y + 1
 
 
 def generate(seed):
@@ -225,7 +226,9 @@ def generate(seed):
             if done:
                 break
     # surviving optional ops: re-check after forcing (a forced op may still be dropped by its epoch's clamps)
-    ops = [[W, 0, 22, 1, 0, 0], [POKE, 0, 22, 0, 0, 0], [W, 0, 25, 1, 0, 0], [PLACE, 0, 25, O, 0, 0]]
+    # epoch 0: poke, placement, then the walk to the epoch's end at intensity 1 around its own target (S25C-02)
+    ops = [[W, 0, 22, 1, 0, 0], [POKE, 0, 22, 0, 0, 0], [W, 0, 25, 1, 0, 0], [PLACE, 0, 25, O, 0, 0],
+           [W, 0, EPOCH, 1, 0, 0]]
     budget_log = []
     for idx, d in enumerate(draws):
         k = idx + 1
@@ -259,6 +262,12 @@ def generate(seed):
         emit_walk(ops, k, pos, EPOCH, d, ev)
     for k in (EPOCHS + 1, EPOCHS + 2):                                                  # the closing pokes
         ops += [[W, k, 22, 1, 0, 0], [POKE, k, 22, 0, 0, 0]]
+        if k == EPOCHS + 1:
+            ops.append([W, k, EPOCH, 1, 0, 0])                                         # epoch 13 walks to its end
+    codes = [o[0] for o in ops]
+    # S25C-07: the four required kinds survive the clamps and the forcing
+    if not (SETTLE in codes and codes.count(PLACE) >= 2 and STALE_ON in codes and CROSS in codes):
+        raise SystemExit(f'e0b_gen: seed {seed}: a required op kind did not survive the clamps')
     return dict(seed=seed, ops=[v for op in ops for v in op], n_ops=len(ops), clamps=log + budget_log,
                 draws=[{k: v for k, v in d.items()} for d in draws], O=O)
 

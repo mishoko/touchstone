@@ -44,7 +44,25 @@ def test_text(root):
     return '\n'.join(open(p).read() for p in files)
 
 
-NO_SUCCESSOR = ('U-IC',)   # run-once rows: a FAIL is final (s23 design review S23D2-01)
+NO_SUCCESSOR = ('U-IC', 'E0', 'E0a')   # run-once rows: a FAIL is final (s23 S23D2-01; s24 panel D7)
+# Rows of the earlier configuration (edge-6h reference policy; the τ-based ledger) that failed and are final (spec
+# §14 #193 D7). They are never met; while each carries its published final negative result, it is reported on the same
+# line as the current count ("+ k historical failed") instead of blocking the current configuration's phase exit.
+HISTORICAL = ('U-IC', 'E0', 'E0a')
+
+
+def historical_failed(i, root):
+    """True iff `i` is a historical row whose published result is a final negative result (FAIL, negative_result,
+    a decision). Without that record the row is an ordinary missing row."""
+    if i not in HISTORICAL:
+        return False
+    rp = os.path.join(root, 'eval', 'results', i + '.json')
+    try:
+        r = json.load(open(rp))
+    except (OSError, ValueError):
+        return False
+    return (isinstance(r, dict) and r.get('verdict') == 'FAIL' and r.get('negative_result') is True
+            and isinstance(r.get('decision'), str) and bool(r.get('decision')))
 
 
 def eval_passed(path):
@@ -108,7 +126,20 @@ def decision_refs_ok(root):
 
 def missing(rows, tests, phase, root):
     lim = PHASES.index(phase)
-    return [i for i, due, k in rows if PHASES.index(due) <= lim and not covered(i, tests, root, k)]
+    return [i for i, due, k in rows if PHASES.index(due) <= lim and not covered(i, tests, root, k)
+            and not historical_failed(i, root)]
+
+
+def historical(rows, phase, root):
+    lim = PHASES.index(phase)
+    return [i for i, due, _ in rows if PHASES.index(due) <= lim and historical_failed(i, root)]
+
+
+def count_line(n_ok, n_req, hist, phase):
+    """The one count line: the current configuration's rows, and on the same line every historical failed row (D7:
+    the current count never stands alone)."""
+    return (f'{n_ok}/{n_req} current claim IDs due by {phase} covered + {len(hist)} historical failed'
+            f' ({", ".join(hist) if hist else "none"}; earlier configuration, final, never met)')
 
 
 # ------------------------------------------------------------------ generation from the specification
@@ -179,49 +210,78 @@ def selftest(rows):
     if missing([('S-3', 'P0', 'test')], 'def test_S_3__ok():', 'P0', '/nonexistent'):
         errs.append('fixture: a Python test must cover its ID')
     import tempfile
+    def unmet(rows, tests, phase, root):   # coverage alone (historical rows are reported, never covered)
+        return [i for i, due, k in rows if not covered(i, tests, root, k)]
+
     with tempfile.TemporaryDirectory() as d:  # an eval result covers its ID only with verdict PASS
         os.makedirs(os.path.join(d, 'eval', 'results'))
         rp = os.path.join(d, 'eval', 'results', 'E0.json')
         json.dump({'verdict': 'FAIL'}, open(rp, 'w'))
-        if missing([('E0', 'P4', 'eval')], '', 'P4', d) != ['E0']:
+        if unmet([('E0', 'P4', 'eval')], '', 'P4', d) != ['E0']:
             errs.append('fixture: a FAIL eval result must leave its ID missing')
-        if missing([('E0', 'P4', 'eval')], 'function test_E0__x()', 'P4', d) != ['E0']:
+        if unmet([('E0', 'P4', 'eval')], 'function test_E0__x()', 'P4', d) != ['E0']:
             errs.append('fixture: a test named after an eval must not cover it')
         # a published negative result meets its row only through a PASS successor
         json.dump({'verdict': 'FAIL', 'negative_result': True, 'superseded_by': 'E0a', 'decision': 'x'}, open(rp, 'w'))
         sp = os.path.join(d, 'eval', 'results', 'E0a.json')
-        if missing([('E0', 'P4', 'eval')], '', 'P4', d) != ['E0']:
+        if unmet([('E0', 'P4', 'eval')], '', 'P4', d) != ['E0']:
             errs.append('fixture: a negative result without its successor must leave its ID missing')
         json.dump({'verdict': 'FAIL'}, open(sp, 'w'))
-        if missing([('E0', 'P4', 'eval')], '', 'P4', d) != ['E0']:
+        if unmet([('E0', 'P4', 'eval')], '', 'P4', d) != ['E0']:
             errs.append('fixture: a negative result with a FAIL successor must leave its ID missing')
         json.dump({'verdict': 'PASS'}, open(sp, 'w'))
-        if missing([('E0', 'P4', 'eval')], '', 'P4', d):
-            errs.append('fixture: a negative result with a PASS successor must meet its ID')
+        if unmet([('E0', 'P4', 'eval')], '', 'P4', d) != ['E0']:
+            errs.append('fixture: E0 is run-once (NO_SUCCESSOR, s24 D7): a PASS successor never meets it')
+        g, gs = os.path.join(d, 'eval', 'results', 'E7.json'), os.path.join(d, 'eval', 'results', 'E7a.json')
+        json.dump({'verdict': 'FAIL', 'negative_result': True, 'superseded_by': 'E7a', 'decision': 'x'}, open(g, 'w'))
+        json.dump({'verdict': 'PASS'}, open(gs, 'w'))
+        if unmet([('E7', 'P4', 'eval')], '', 'P4', d):
+            errs.append('fixture: a negative result (not run-once) with a PASS successor must meet its ID')
         json.dump({'verdict': 'FAIL', 'negative_result': True, 'superseded_by': 'E0a'}, open(rp, 'w'))
-        if missing([('E0', 'P4', 'eval')], '', 'P4', d) != ['E0']:
+        if unmet([('E0', 'P4', 'eval')], '', 'P4', d) != ['E0']:
             errs.append('fixture: a negative result without its decision must leave its ID missing')
         # a final negative result (decision set, no successor) stays unmet (s22 panel D1.2; E0a's form)
         json.dump({'verdict': 'FAIL', 'negative_result': True, 'decision': 'x'}, open(rp, 'w'))
-        if missing([('E0', 'P4', 'eval')], '', 'P4', d) != ['E0']:
+        if unmet([('E0', 'P4', 'eval')], '', 'P4', d) != ['E0']:
             errs.append('fixture: a final negative result without a successor must leave its ID missing')
         json.dump({'verdict': 'FAIL', 'superseded_by': 'E0a'}, open(rp, 'w'))
-        if missing([('E0', 'P4', 'eval')], '', 'P4', d) != ['E0']:
+        if unmet([('E0', 'P4', 'eval')], '', 'P4', d) != ['E0']:
             errs.append('fixture: a FAIL not marked as a negative result must leave its ID missing')
         json.dump({'verdict': 'PASS'}, open(rp, 'w'))
-        if missing([('E0', 'P4', 'eval')], '', 'P4', d):
+        if unmet([('E0', 'P4', 'eval')], '', 'P4', d):
             errs.append('fixture: a PASS eval result must cover its ID')
         up = os.path.join(d, 'eval', 'results', 'U-IC.json')   # a test row with a FAIL result (S23D-04)
         json.dump({'verdict': 'FAIL', 'negative_result': True, 'decision': 'x'}, open(up, 'w'))
-        if missing([('U-IC', 'P5', 'test')], 'def test_U_IC__x():', 'P5', d) != ['U-IC']:
+        if unmet([('U-IC', 'P5', 'test')], 'def test_U_IC__x():', 'P5', d) != ['U-IC']:
             errs.append('fixture: a FAIL result must leave a test row missing even when a test is named after it')
         json.dump({'verdict': 'FAIL', 'negative_result': True, 'decision': 'x', 'superseded_by': 'U-IC2'}, open(up, 'w'))
         json.dump({'verdict': 'PASS'}, open(os.path.join(d, 'eval', 'results', 'U-IC2.json'), 'w'))
-        if missing([('U-IC', 'P5', 'test')], '', 'P5', d) != ['U-IC']:
+        if unmet([('U-IC', 'P5', 'test')], '', 'P5', d) != ['U-IC']:
             errs.append('fixture: a failed U-IC must not be met by a PASS successor')
         json.dump({'verdict': 'PASS'}, open(up, 'w'))
-        if missing([('U-IC', 'P5', 'test')], '', 'P5', d):
+        if unmet([('U-IC', 'P5', 'test')], '', 'P5', d):
             errs.append('fixture: a PASS result must cover a test row')
+    with tempfile.TemporaryDirectory() as d:  # D7 (s24): historical rows
+        os.makedirs(os.path.join(d, 'eval', 'results'))
+        hp = os.path.join(d, 'eval', 'results', 'E0a.json')
+        if missing([('E0a', 'P4', 'eval')], '', 'P4', d) != ['E0a']:
+            errs.append('fixture: a historical row without its result must stay missing')
+        json.dump({'verdict': 'FAIL'}, open(hp, 'w'))
+        if missing([('E0a', 'P4', 'eval')], '', 'P4', d) != ['E0a']:
+            errs.append('fixture: a historical row without a final negative record must stay missing')
+        json.dump({'verdict': 'FAIL', 'negative_result': True, 'decision': 'x'}, open(hp, 'w'))
+        if missing([('E0a', 'P4', 'eval')], '', 'P4', d) or historical([('E0a', 'P4', 'eval')], 'P4', d) != ['E0a']:
+            errs.append('fixture: a final historical failure is reported as historical, not missing')
+        if covered('E0a', '', d, 'eval'):
+            errs.append('fixture: a historical failure is never covered')
+        json.dump({'verdict': 'FAIL', 'negative_result': True, 'decision': 'x'}, open(os.path.join(d, 'eval', 'results', 'X-1.json'), 'w'))
+        if missing([('X-1', 'P4', 'eval')], '', 'P4', d) != ['X-1']:
+            errs.append('fixture: a non-historical final failure must stay missing')
+        line = count_line(5, 5, ['E0a'], 'P4')
+        if '+ 1 historical failed' not in line or not line.startswith('5/5 current'):
+            errs.append('fixture: the count line must carry the historical rows on the same line')
+        if '+ 0 historical failed' not in count_line(1, 1, [], 'P1'):
+            errs.append('fixture: the count line always names the historical count')
     if _eval_ids('| E0 | q | p |\n| E0a | q | p |\n') != ['E0', 'E0a']:
         errs.append('fixture: a suffixed eval ID (E0a) must be listed')
     if not ROW.search('| E0a | P4 | eval |'):
@@ -248,10 +308,12 @@ def main(argv):
     miss = missing(rows, tests, phase, ROOT)
     if '--table' in argv:
         for i, due, _ in rows:
-            st = 'covered' if covered(i, tests, ROOT) else ('MISSING' if i in miss else 'not due')
+            st = ('covered' if covered(i, tests, ROOT) else 'failed, earlier configuration, final'
+                  if historical_failed(i, ROOT) else ('MISSING' if i in miss else 'not due'))
             print(f'| {i} | {due} | {st} |')
-    req = [i for i, due, _ in rows if PHASES.index(due) <= PHASES.index(phase)]
-    print(f'{len(req) - len(miss)}/{len(req)} claim IDs due by {phase} covered')
+    hist = historical(rows, phase, ROOT)
+    req = [i for i, due, _ in rows if PHASES.index(due) <= PHASES.index(phase) and i not in hist]
+    print(count_line(len(req) - len(miss), len(req), hist, phase))
     bad = decision_refs_ok(ROOT)
     for e in bad:
         print('decision reference:', e)

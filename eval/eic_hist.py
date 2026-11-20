@@ -44,12 +44,16 @@ LABEL = ("one historical price series through the synthetic simulator, no third-
 POOL = "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640"
 SWAP_TOPIC = "0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67"
 LOG_ENDPOINTS = ["https://rpc.mevblocker.io", "https://rpc.flashbots.net"]
+CHECK_ENDPOINT = "https://eth.drpc.org"   # cross-check of every 50th chunk (s31 restart fix; see the form)
 FEE_ENDPOINTS = ["https://rpc.mevblocker.io", "https://ethereum-rpc.publicnode.com", "https://rpc.flashbots.net"]
 RAW = os.path.join(ROOT, "output", "eic-hist")
 SUPP = os.path.join(ROOT, "eval", "supplements", "E-IC-hist")
 OUT_JSON = os.path.join(ROOT, "eval", "supplements", "E-IC-historical.json")
 LN_TICK = math.log(1.0001)
 STARTED = os.path.join(RAW, "STARTED")
+ATTEMPT_1 = dict(attempt=1, commit="74161d2ec97341d34435398168fc2a131c0771a5", started_unix=1795164119, minutes=9.5,
+                 outcome="crashed: the every-50th-chunk cross-check's endpoint answered 'pruned history unavailable' "
+                         "six times; no data file was written")
 PERIODS_PER_YEAR = 365 * 86400 / (STEP_BLOCKS * 12)
 
 
@@ -125,7 +129,7 @@ def fetch():
     t0 = time.time()
     checks = []
     lo, hi = START_BLOCK - LOOKBACK, END_BLOCK
-    logs_c, fee_c = Client(LOG_ENDPOINTS), Client(FEE_ENDPOINTS)
+    logs_c, fee_c, check_c = Client(LOG_ENDPOINTS), Client(FEE_ENDPOINTS), Client([CHECK_ENDPOINT])
     rows, b, chunk = [], lo, 2000
     while b <= hi:
         e = min(b + chunk - 1, hi)
@@ -145,14 +149,18 @@ def fetch():
             rows.append((int(lg["blockNumber"], 16), int(lg["logIndex"], 16), int(d[128:192], 16),
                          _int256(d[256:320])))
         if chunk == 2000 and (b - lo) // 2000 % 50 == 0:   # S31ED-09: every 50th chunk again from the other endpoint
-            other = Client([u for u in LOG_ENDPOINTS if u != logs_c.endpoints[logs_c.i % len(LOG_ENDPOINTS)]])
-            n2 = len(other.call("eth_getLogs", [{"address": POOL, "topics": [SWAP_TOPIC], "fromBlock": hex(b),
-                                                  "toBlock": hex(e)}], tries=6))
-            checks.append(dict(blocks=[b, e], n=len(logs), n_other=n2, endpoint_other=other.endpoints[0]))
+            # s31 restart fix: the second log endpoint prunes old history intermittently; the cross-check uses a third
+            # endpoint (drpc, free tier: at most 100 blocks per call) in 100-block pieces
+            n2 = sum(len(check_c.call("eth_getLogs", [{"address": POOL, "topics": [SWAP_TOPIC], "fromBlock": hex(x),
+                                                       "toBlock": hex(min(x + 99, e))}], tries=8))
+                     for x in range(b, e + 1, 100))
+            checks.append(dict(blocks=[b, e], n=len(logs), n_other=n2, endpoint_other=CHECK_ENDPOINT))
             assert n2 == len(logs), checks[-1]
             print(f"  logs {b}-{e}: {len(rows)} swaps so far, {time.time() - t0:.0f}s", flush=True)
         b = e + 1
     rows.sort()
+    # restart decision R3: every 50th of the 652 chunks is cross-checked; a halved chunk that silenced a check fails here
+    assert len(checks) == 14, ("cross-checks run", len(checks), "of 14", checks)
     with open(os.path.join(RAW, "swaps.csv"), "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(("block", "log_index", "sqrtPriceX96", "tick"))
@@ -172,8 +180,9 @@ def fetch():
     ts = {k: int(fee_c.call("eth_getBlockByNumber", [hex(k), False])["timestamp"], 16) for k in (START_BLOCK, END_BLOCK)}
     man = dict(frozen=meta, chunk_cross_checks=checks, pool=POOL, swap_topic0=SWAP_TOPIC, log_blocks=[lo, hi], fee_blocks=[START_BLOCK, END_BLOCK],
                timestamps={str(k): v for k, v in ts.items()}, fetched_at_unix=int(t0),
-               fetch_s=round(time.time() - t0, 1), endpoints_used=sorted(logs_c.used | fee_c.used),
-               rpc_calls=logs_c.calls + fee_c.calls, rpc_retries=logs_c.retries + fee_c.retries,
+               fetch_s=round(time.time() - t0, 1), endpoints_used=sorted(logs_c.used | fee_c.used | check_c.used),
+               rpc_calls=logs_c.calls + fee_c.calls + check_c.calls,
+               rpc_retries=logs_c.retries + fee_c.retries + check_c.retries,
                files={n: dict(sha256=sha256(os.path.join(RAW, n)), bytes=os.path.getsize(os.path.join(RAW, n)),
                               rows=c) for n, c in (("swaps.csv", len(rows)), ("basefees.csv", len(fees)))})
     with open(os.path.join(RAW, "MANIFEST.json"), "w") as f:
@@ -344,6 +353,10 @@ def run(procs=4, guard=True):
                     timestamps=doc["source_manifest"]["timestamps"], step_blocks=STEP_BLOCKS, n_points=N_POINTS),
         data=dict(path="eval/supplements/E-IC-hist/path.json", path_sha256=sha256(os.path.join(SUPP, "path.json")),
                   raw=doc["source_manifest"]["files"], fetched_at_unix=doc["source_manifest"]["fetched_at_unix"]),
+        fetch_attempts=[ATTEMPT_1, dict(attempt=2, commit=doc["source_manifest"]["frozen"]["commit"],
+                                         fetch_s=doc["source_manifest"]["fetch_s"], outcome="complete")],
+        cross_checks_run=f'{len(doc["source_manifest"]["chunk_cross_checks"])} of 14',
+        fetch_note="eval/supplements/E-IC-hist/FETCH-NOTE.md",
         sigma_realised=sigma, sec_per_step=doc["sec_per_step"], twap_t0_minus_T0=doc["twap_t0_minus_T0"],
         basefee_p50_gwei=gwei, shift_ticks=doc["shift_ticks"],
         hist_ticks=dict(start=doc["hist_tick_start"], end=doc["hist_tick_end"]),

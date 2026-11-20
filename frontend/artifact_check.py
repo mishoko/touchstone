@@ -179,6 +179,11 @@ def main(argv):
             check(row[5] == f"{e8[b]['charges_bps_of_nav_per_year']:.1f} bps", f"deal {b}: charge {row[5]} is not E8")
             check(row[6] == f"{agg[b]['bond_burn_mean']:.3f} ETH", f"deal {b}: bond burn {row[6]} is not U-IC2-agg")
         check("hover-60" not in deal, "deal: the hover path is reported only, not gated (S32PD-03)")
+    # s32 fix review (S32PF-02): the testnet vault has no outside depositors; the cards say so and claim no depositor gain
+    if 'id="onchain"' in html:
+        check("This test vault has no outside depositors" in html, "on-chain: the no-outside-depositors scope line is missing")
+        check("Depositors' balances did not pay" not in html and "depositors' shares were not touched" not in html,
+              "on-chain: a card claims a depositor protection the testnet run cannot show")
 
     if errors:
         print("artifact_check: FAIL\n  " + "\n  ".join(errors), file=sys.stderr)

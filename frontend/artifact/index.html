@@ -182,7 +182,7 @@ a.term { text-decoration-style: dotted; text-decoration-color: var(--gold); }
 .stage-h { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--rule); font: 400 .75rem/1.3 var(--f-mono); color: var(--ink-2); }
 .stage-h b { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
 .stage-h b[id$="-spot"], .stage-h b[id$="-ref"] { display: inline-block; min-width: 6ch; }
-.stage-h b[id$="-gap"] { display: inline-block; min-width: 23ch; }
+.stage-h b[id$="-gap"] { display: inline-block; min-width: 25ch; }
 .stage-h #h-blk { display: inline-block; min-width: 10ch; }
 .stage-h #h-time, .stage-h #scn-time { display: inline-block; min-width: 16ch; }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 8px 14px 10px; border-top: 1px solid var(--rule); font: 400 .72rem/1.4 var(--f-mono); color: var(--ink-2); }
@@ -208,7 +208,7 @@ a.term { text-decoration-style: dotted; text-decoration-color: var(--gold); }
 .lrows { margin: 0; display: grid; gap: 5px; font: 400 .78rem/1.3 var(--f-mono); }
 .lrows div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; }
 .lrows dt { color: var(--ink-2); min-width: 0; }
-.lrows dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; transition: color .3s; }
+.lrows dd { margin: 0; white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; transition: color .3s; }
 .lrows dd.hot { color: var(--gold); } .lrows dd.bad { color: var(--red); } .lrows dd.ok { color: var(--green); } .lrows dd.dim { color: var(--ink-2); }
 .lrows .bar { grid-column: 1 / -1; height: 3px; background: var(--rule); border-radius: 2px; overflow: hidden; }
 .lrows .bar i { display: block; height: 100%; background: var(--gold); transition: width .35s; }
@@ -232,7 +232,7 @@ a.term { text-decoration-style: dotted; text-decoration-color: var(--gold); }
 .mech { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
 @media (max-width: 900px) { .mech { grid-template-columns: minmax(0, 1fr); } }
 .mech p { margin: 0 0 12px; max-width: 60ch; }
-pre.ascii { margin: 0; padding: 16px; overflow-x: auto; font: 400 clamp(.6rem, 2.35vw, .78rem)/1.45 var(--f-mono); border: 1px solid var(--rule); background: var(--stone-2); border-radius: 4px; }
+pre.ascii { margin: 0; padding: 16px; overflow-x: auto; font: 400 clamp(.56rem, 2.3vw, .78rem)/1.45 var(--f-mono); border: 1px solid var(--rule); background: var(--stone-2); border-radius: 4px; }
 .gloss { margin: 28px 0 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; counter-reset: g; }
 @media (max-width: 760px) { .gloss { grid-template-columns: minmax(0, 1fr); } }
 .gloss div { padding: 10px 0; border-top: 1px solid var(--rule); counter-increment: g; scroll-margin-top: 16px; }
@@ -391,7 +391,7 @@ details.lim .items li.fixed { border-left-color: var(--gold); }
   <div class="wrap">
     <p class="eyebrow">Shown on a live test network</p>
     <h2 class="sec" id="oc-h">Three promises. Three real transactions.</h2>
-    <p class="sec-lede">We deployed the vault on a public test network and ran a manager against it. Each card is one promise the rules make to depositors, shown once on chain. The amounts are tiny because the price gaps in this run were tiny and the test market is our own small pool. Realistic costs are under Evidence (E8).</p>
+    <p class="sec-lede">We deployed the vault on a public test network and ran a manager against it. Each card is one promise the rules make to depositors, shown once on chain. The amounts are tiny because the price gaps in this run were tiny and the test market is our own small pool. Realistic costs are under Evidence (E8). This test vault has no outside depositors: its seed is the manager's bond. Each transaction shows who is billed (held-back pay and bond shares burned), not a depositor's gain.</p>
     <div class="onchain">
       <div class="onchain-h"><span><b>Live</b> · Unichain Sepolia (test network) · 2026-11-20</span><span>demo settings · test tokens</span></div>
       <div class="cards">
@@ -399,8 +399,8 @@ details.lim .items li.fixed { border-left-color: var(--gold); }
           <span class="k">Promise 1 · a routine move</span>
           <span class="v">Billed to the manager</span>
           <p><b>What happened.</b> The manager moved the vault's money to a new price range. The vault measured what the move cost against the deep market's price.</p>
-          <p><b>Who paid.</b> The manager (held-back pay first, then bond). Two minutes later a second check billed it a little more.</p>
-          <p><b>Why it matters.</b> Everyday moves are not free for the manager. Depositors' balances did not pay for them.</p>
+          <p><b>Who paid.</b> The manager (held-back pay first, then bond). Two minutes later a second check billed it more (about 2e-7 of the vault).</p>
+          <p><b>Why it matters.</b> Everyday moves are not free for the manager. The bill was not taken from the vault's other shares.</p>
           <span class="amt">Size: under one ten-billionth of the vault (≈ 8e-11), plus 2e-7 at the second check.</span>
           <details class="tech"><summary>Technical detail</summary><span class="amt">setPositions · charged 335,126,463 wei = 3.35e-10 mock WETH of a ≈ 4 mock WETH vault · settlement burned 867,995,129,170 wei more (8.7e-7 mock WETH)</span></details>
           <a class="tx" href="https://sepolia.uniscan.xyz/tx/0xbad37998d600c9186d9f74e4cd06045ae28ea81a46fe00d68a9546fdb8ee819a">the move 0xbad3…819a</a>
@@ -420,7 +420,7 @@ details.lim .items li.fixed { border-left-color: var(--gold); }
           <span class="k">Promise 3 · the manager's own trade</span>
           <span class="v">Billed, from the bond</span>
           <p><b>What happened.</b> The manager swapped some of the vault's tokens to rebalance it. The vault measured the cost.</p>
-          <p><b>Who paid.</b> The manager. Its held-back pay went first, then its bond (the deposit it posted up front): most of it from the bond, as its on-chain event shows. The depositors' shares were not touched.</p>
+          <p><b>Who paid.</b> The manager. Its held-back pay went first, then its bond (the deposit it posted up front): most of it from the bond, as its on-chain event shows. Only the manager's held-back pay and bond shares were burned.</p>
           <p><b>Why it matters.</b> The bond is real money at risk. When held-back pay runs short, the bond pays.</p>
           <span class="amt">Size: about three millionths of the vault (≈ 3e-6).</span>
           <details class="tech"><summary>Technical detail</summary><span class="amt">rebalanceSwap · charged 11,534,237,164,438 wei = 1.15e-5 mock WETH of a ≈ 4 mock WETH vault · who paid: decoded from the vault's Action event (burnedBank, burnedBond)</span></details>
@@ -579,7 +579,7 @@ details.lim .items li.fixed { border-left-color: var(--gold); }
     │      charged from held-back pay, then bond
     │
     ├──▶ the deep market's price leaves the range
-    │      vesting stops; fee and clock follow hourly
+    │      vesting stops; fee, clock follow hourly
     │      24 h out = a breach (strike):
     │      held-back pay burned for every share
     │      3 breaches = removed
@@ -610,10 +610,10 @@ details.lim .items li.fixed { border-left-color: var(--gold); }
         <div class="dk"><span>Bond lost on average, 180 days</span><b id="deal-bb">—</b><small>doing the job (<a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/supplements/U-IC2-agg.json">U-IC2-agg</a>)</small></div>
         <div class="dk"><span>Its own bad trades, billed to it</span><b id="deal-chg">—</b><small>of the vault a year, simulated (E8)</small></div>
         <h3>For the manager</h3>
-        <p>A good deal when it does the job: re-places the range when the market moves, and keeps the money working. Lazy or idle strategies take home less. The margin is thinnest in wild markets. The 2.2% rate is fixed in the code and was not tuned after seeing the data.</p>
+        <p>A good deal when it does the job: re-places the range when the market moves, and keeps the money working. Lazy or idle strategies take home less. The margin is thinnest in wild markets. The 2.2% rate is fixed in the code and was not tuned after seeing the data; the 12-hour wait behind these bars was chosen after an earlier test failed (Limits).</p>
         <h3>For depositors</h3>
         <p>You pay 2.2% a year only on money that is placed and working, and only while both prices are in the range. Idle money costs nothing. Execution costs the vault measures are billed to the manager. Whether the trading fees your money earns beat 2.2% depends on trading volume, which these simulations do not include; we publish no break-even.</p>
-        <p><b>The vault's value is a separate question.</b> In the same simulations, the vault ended with more value under the lax strategies than under the manager that does the job (at 120%: about 558 and 569 against 314, from 1,000). Market moves stay with depositors (<a href="#limits">Limits</a>).</p>
+        <p><b>The vault's value is a separate question.</b> In the same simulations, the vault ended with more value under the lax strategies than under the manager that does the job (at 120%: about 558 and 569 against 314, from 1,000), because with no other traders in the model, time in range is mostly loss to arbitrage. Market moves stay with depositors (<a href="#limits">Limits</a>).</p>
         <p class="tier-note">With an outside party refreshing the reference price, two lax strategies came out ahead at 120% volatility (Limits).</p>
       </div>
     </div>
@@ -1076,12 +1076,15 @@ python3 model/reference.py --selfcheck       # the independent model</pre>
       var n = Math.min(1500, Math.max(60, Math.round((o.x1 - o.x0) / (o.dt || 0.1)))), ts = [];
       for (var q = 0; q <= n; q++) ts.push(o.x0 + q * (o.x1 - o.x0) / n);
       staticLayers(mk("g", { "clip-path": "url(#" + cid + ")" }, svg), ts, X, function (k) { return cy(Y(k)); }, o);
-      var mg = mk("g", {}, svg), lastLX = -1e9, lvl = 0;
+      var mg = mk("g", {}, svg), lvR = [-1e9, -1e9, -1e9];
       marks = (o.marks || []).map(function (m) {
         var x = X(m.t), y = cy(Y(o.spot(m.t))), e = mk("g", {}, mg), col = markEl(e, x, y, m.kind);
         if (m.label) {
-          lvl = x - lastLX < 74 ? (lvl + 1) % 3 : 0; lastLX = x;
           var anc = x < g.PL + 60 ? "start" : x > g.PR - 60 ? "end" : "middle", tx = anc === "start" ? x - 4 : anc === "end" ? x + 4 : x;
+          var wl = m.label.length * 6.8 + 6, left = anc === "start" ? tx : anc === "end" ? tx - wl : tx - wl / 2, lvl = -1;
+          for (var q = 0; q < 3; q++) if (lvR[q] < left) { lvl = q; break; }
+          if (lvl < 0) return { t: m.t, e: e, on: true };
+          lvR[lvl] = left + wl;
           mk("line", { x1: f1(x), x2: f1(x), y1: g.PB - 14 - lvl * 12, y2: g.PB, stroke: col, "stroke-width": 1.5 }, e);
           mk("text", { x: f1(tx), y: g.PB - 18 - lvl * 12, "text-anchor": anc, fill: col, class: "lbl" }, e).textContent = m.label;
         }
@@ -1189,7 +1192,7 @@ python3 model/reference.py --selfcheck       # the independent model</pre>
     return [
       ["Held-back pay", eth(s.pay), s.vesting === false ? "dim" : "", s.pay / 2.6],
       ["Bond (first loss)", eth(s.bond), s.bond < BOND0 - 1e-9 ? "bad" : "", s.bond / BOND0],
-      ["Set aside for the 2-min check", s.res > 0 ? eth(s.res) : "0 · none pending", s.res > 0 ? "hot" : "dim"],
+      ["Set aside for the 2-min check", s.res > 0 ? eth(s.res) : "none pending", s.res > 0 ? "hot" : "dim"],
       ["Billed to the manager", eth(s.charged, 4), s.charged > 0 ? "hot" : "dim"],
       ["Hours out of range", s.clock < 24 ? s.clock.toFixed(0) + " h of 24 h" : s.clock.toFixed(0) + " h · a strike per 24 h", s.clock > 0 ? "bad" : "dim", Math.min(1, s.clock / 24)],
       ["Strikes (breaches)", s.breaches + " of 3", s.breaches ? "bad" : "dim"],
@@ -1247,6 +1250,8 @@ python3 model/reference.py --selfcheck       # the independent model</pre>
     function lockLog() {
       var le = $("h-log"), long = { when: "Nov 17 23:55", tag: "CHARGED", msg: "Re-placed the range, gap 60 ticks: 0.0520 ETH from pay and bond." };
       le.style.minHeight = ""; le.innerHTML = logHTML([long, long, long, long], 0); le.style.minHeight = le.offsetHeight + "px"; prevLog = null;
+      var re = $("h-rows"), m = 0, a = freshState(), b = freshState(); b.res = RES; b.clock = 30; b.breaches = 1; b.charged = 0.1234; b.vesting = false;
+      re.style.minHeight = ""; [a, b].forEach(function (x) { re.innerHTML = rowsHTML(ledgerRows(x)); m = Math.max(m, re.offsetHeight); }); re.style.minHeight = m + "px"; rows = rowsView(re);
     }
     lockLog();
     function render(force) {
@@ -1271,7 +1276,7 @@ python3 model/reference.py --selfcheck       # the independent model</pre>
     }
     function nextAction() {
       var target = null;
-      for (var i = last + 1; i < N; i++) if (i % 24 === 12 || Math.abs(ST[i] - RT[i]) > FENCE) { target = i; break; }
+      for (var i = last + 1, la = lastAct; i < N; i++) { if (i % 24 === 12 || (Math.abs(ST[i] - RT[i]) > FENCE && i - la > 3)) { target = i; break; } }
       if (target === null) { reset(START - W); advanceTo(START); target = START + 1; }
       advanceTo(target + 0.25); render(true);
     }

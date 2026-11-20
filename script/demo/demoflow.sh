@@ -22,6 +22,7 @@ OUT=${OUT:-output/demo/demoflow.jsonl}
 STEP_SEC=${STEP_SEC:-30}
 WAIT_SEC=${WAIT_SEC:-40}
 DEPLOY=script/demo/deployments-1301.json
+ME=$(cast wallet address --private-key "$DEPLOYER_PK")
 [ "$(cast chain-id --rpc-url "$RPC")" = "1301" ] || { echo "not Unichain Sepolia"; exit 1; }
 mkdir -p "$(dirname "$OUT")"
 
@@ -45,10 +46,14 @@ live_ref() { cast call "$HOOK" 'liveRef()(int24)' --rpc-url "$RPC" | awk '{print
 # one transaction; retried up to 4 times when the RPC refuses it before broadcast (e.g. "nonce too low" while a
 # load-balanced endpoint lags one block behind the last receipt); a send that never broadcast cannot land twice
 send() {
-  local out
+  local out n0 n1
+  n0=$(cast nonce "$ME" --block pending --rpc-url "$RPC")
   for _ in 1 2 3 4; do
     if out=$(cast send --json --rpc-url "$RPC" --private-key "$DEPLOYER_PK" "$@" 2>/dev/null); then echo "$out"; return 0; fi
     sleep 3
+    # the send may have broadcast before failing (e.g. a receipt timeout): never retry once the nonce has moved
+    n1=$(cast nonce "$ME" --block pending --rpc-url "$RPC")
+    [ "$n1" = "$n0" ] || break
   done
   echo '{}'
 }
@@ -132,7 +137,6 @@ sleep "$WAIT_SEC"
 
 # 5. A3: a small rebalanceSwap (100 mUSDC for mWETH, or 0.03 mWETH the other way if the vault holds too little
 #    idle token0; eth_call first): lands, charged
-ME=$(cast wallet address --private-key "$DEPLOYER_PK")
 A3_DIR=true
 cast call "$BUNDLER" 'rebalanceSwap(bool,uint128,uint256)' true 100000000 "$(cast max-uint)" --from "$ME" --rpc-url "$RPC" >/dev/null 2>&1 || {
   A3_DIR=false; A3_AMT=30000000000000000

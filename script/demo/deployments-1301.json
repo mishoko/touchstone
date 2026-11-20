@@ -2,7 +2,7 @@
   "chain": "Unichain Sepolia (1301)",
   "tier": "DEMO",
   "date": "2026-11-20",
-  "code": "public commit a829357 (src identical to 6061d68)",
+  "code": "public commit a829357",
   "step0b": {
     "mUSDC_token0": "0x2295cd39Ad6FC4355B7fBf400567D32E9d070EF2",
     "mWETH_token1": "0xC39161F7D7b8890c14b070758D23a1c849C2D36c",
@@ -57,6 +57,7 @@
       "tx": "0x8e84f336112a64b657ffbc0e16db219c7b1fb7c8ddbd779c52de623715724e7e",
       "charge_wei_token1": 11534237164438,
       "settle_tx": "0x5d40cb170b9564cd7cb4d16e674d47693a07975390d6165dcd15cd5220eba889"
-    }
+    },
+    "note": "Attempt 1 stopped after 13 transactions (the RPC refused a send with 'nonce too low'; demoflow.sh stopped as designed); attempt 2, recorded here, started from the pool tick that attempt 1 left (196,367) instead of the seed tick (196,389)."
   }
 }

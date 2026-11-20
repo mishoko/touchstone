@@ -1,0 +1,188 @@
+{
+ "label": "one historical price series through the synthetic simulator, no third-party depth, point estimates, not a replay and not E-IC's rule",
+ "start_block": 25147070,
+ "end_block": 26443420,
+ "step_blocks": 25,
+ "n_points": 51855,
+ "rule": "point j = the post-swap sqrtPriceX96 of the last Swap log at or before block start + 25 j; tick = ln(sqrtP^2 / 2^192) / ln 1.0001; path = tick + shift so that point 2 (t = 0) is T0",
+ "t0": 196250,
+ "shift_ticks": -3424.9600897703494,
+ "hist_tick_start": 199674.96008977035,
+ "hist_tick_end": 201651.0134356704,
+ "sigma_realised": 0.6238653513106553,
+ "sec_per_step": 301.12677903344,
+ "twap_t0_minus_T0": 1,
+ "basefee_p50_wei": 105025456,
+ "basefee_p50_gwei": 0.105025456,
+ "source_manifest": {
+  "frozen": {
+   "commit": "42ea9fbceae31f94c76c30644b086013409e0e05",
+   "form_sha256": "4b3078dc78d85b7874bff9f1ee0bd2183fd95b353ee5f5dc56e7fbb5030d8056",
+   "model_hash": "3e4bad737a60fc0f"
+  },
+  "chunk_cross_checks": [
+   {
+    "blocks": [
+     25139870,
+     25141869
+    ],
+    "n": 1054,
+    "n_other": 1054,
+    "endpoint_other": "https://eth.drpc.org"
+   },
+   {
+    "blocks": [
+     25239870,
+     25241869
+    ],
+    "n": 3780,
+    "n_other": 3780,
+    "endpoint_other": "https://eth.drpc.org"
+   },
+   {
+    "blocks": [
+     25339870,
+     25341869
+    ],
+    "n": 1425,
+    "n_other": 1425,
+    "endpoint_other": "https://eth.drpc.org"
+   },
+   {
+    "blocks": [
+     25439870,
+     25441869
+    ],
+    "n": 1617,
+    "n_other": 1617,
+    "endpoint_other": "https://eth.drpc.org"
+   },
+   {
+    "blocks": [
+     25539870,
+     25541869
+    ],
+    "n": 1263,
+    "n_other": 1263,
+    "endpoint_other": "https://eth.drpc.org"
+   },
+   {
+    "blocks": [
+     25639870,
+     25641869
+    ],
+    "n": 1915,
+    "n_other": 1915,
+    "endpoint_other": "https://eth.drpc.org"
+   },
+   {
+    "blocks": [
+     25739870,
+     25741869
+    ],
+    "n": 1085,
+    "n_other": 1085,
+    "endpoint_other": "https://eth.drpc.org"
+   },
+   {
+    "blocks": [
+     25839870,
+     25841869
+    ],
+    "n": 2429,
+    "n_other": 2429,
+    "endpoint_other": "https://eth.drpc.org"
+   },
+   {
+    "blocks": [
+     25939870,
+     25941869
+    ],
+    "n": 1833,
+    "n_other": 1833,
+    "endpoint_other": "https://eth.drpc.org"
+   },
+   {
+    "blocks": [
+     26039870,
+     26041869
+    ],
+    "n": 1759,
+    "n_other": 1759,
+    "endpoint_other": "https://eth.drpc.org"
+   },
+   {
+    "blocks": [
+     26139870,
+     26141869
+    ],
+    "n": 2329,
+    "n_other": 2329,
+    "endpoint_other": "https://eth.drpc.org"
+   },
+   {
+    "blocks": [
+     26239870,
+     26241869
+    ],
+    "n": 1351,
+    "n_other": 1351,
+    "endpoint_other": "https://eth.drpc.org"
+   },
+   {
+    "blocks": [
+     26339870,
+     26341869
+    ],
+    "n": 1567,
+    "n_other": 1567,
+    "endpoint_other": "https://eth.drpc.org"
+   },
+   {
+    "blocks": [
+     26439870,
+     26441869
+    ],
+    "n": 1355,
+    "n_other": 1355,
+    "endpoint_other": "https://eth.drpc.org"
+   }
+  ],
+  "pool": "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640",
+  "swap_topic0": "0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67",
+  "log_blocks": [
+   25139870,
+   26443420
+  ],
+  "fee_blocks": [
+   25147070,
+   26443420
+  ],
+  "timestamps": {
+   "25147070": 1779407987,
+   "26443420": 1795022615
+  },
+  "fetched_at_unix": 1795164917,
+  "fetch_s": 2374.4,
+  "endpoints_used": [
+   "https://eth.drpc.org",
+   "https://rpc.flashbots.net",
+   "https://rpc.mevblocker.io"
+  ],
+  "rpc_calls": 2202,
+  "rpc_retries": 2,
+  "files": {
+   "swaps.csv": {
+    "sha256": "ace291d98b2439dad043ed38943b2a3d9701a164a306ca6369c1ffe5cae483c4",
+    "bytes": 59908565,
+    "rows": 1078368
+   },
+   "basefees.csv": {
+    "sha256": "9004ed2561a4aabd213a932e26a6368864e275bf56dcb3d34bfc2836d7ffd80d",
+    "bytes": 25357909,
+    "rows": 1296351
+   }
+  }
+ },
+ "path_sha256": "9bfaeb7e5a126f346358060904b1c6f3c2ca516ed4f8a2e393b25e8db1d3e0d7"
+}

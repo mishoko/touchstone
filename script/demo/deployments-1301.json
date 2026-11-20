@@ -36,5 +36,27 @@
     "vault": "0x299c05ED130F340593499772b1F14Fb790bD985D",
     "hook": "0x9131d3ceb82af6D29075F6D3a2bb6A4f252b60A0",
     "deploy_and_place_tx": "0xd1d7554c3c57263787307703f77f20fdc3a47c60434cdcd607ae376bff9b59dc"
+  },
+  "demoflow": {
+    "script": "script/demo/demoflow.sh",
+    "date": "2026-11-20",
+    "price_path": "tick moves of mainnet USDC/WETH 0.05% (0x88e6...5640) at nine hourly samples, blocks 26,387,320 to 26,389,720, applied to the demo pools and compressed to 30 s per hour",
+    "steps_sent": 26,
+    "A1_setPositions_charged": {
+      "tx": "0xbad37998d600c9186d9f74e4cd06045ae28ea81a46fe00d68a9546fdb8ee819a",
+      "charge_wei_token1": 335126463,
+      "settle_tx": "0x8f37d44973a0fde772ecb9f0ead79f50443e768e0c02bb4242e70b3ddbbc6582",
+      "settled_extra_wei": 867995129170
+    },
+    "A2_setPositions_reverts_Fence": {
+      "tx": "0x00577c5cdbb55813a72409a021055dc46cf7ff06a439e949674dcc6079b6956c",
+      "status": 0,
+      "revert": "Fence() 0xe78b0e36 (spot pushed 90 ticks off the reference; the fence is 60)"
+    },
+    "A3_rebalanceSwap_charged": {
+      "tx": "0x8e84f336112a64b657ffbc0e16db219c7b1fb7c8ddbd779c52de623715724e7e",
+      "charge_wei_token1": 11534237164438,
+      "settle_tx": "0x5d40cb170b9564cd7cb4d16e674d47693a07975390d6165dcd15cd5220eba889"
+    }
   }
 }

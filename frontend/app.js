@@ -286,6 +286,11 @@
     [dep.deploy, dep.step0b].forEach(function (grp) {
       Object.keys(grp).forEach(function (k) { add(k, String(grp[k])); });
     });
+    // the demo run: one charged placement, one placement refused by the fence, one charged swap
+    var flow = dep.demoflow || {};
+    Object.keys(flow).forEach(function (k) {
+      if (flow[k] && typeof flow[k] === "object" && flow[k].tx) add(k, String(flow[k].tx));
+    });
     var src = document.getElementById("deploy-src");
     src.appendChild(document.createTextNode("Deployed " + dep.date + " from " + dep.code + ". Source: "));
     src.appendChild(el("a", { href: REPO + "script/demo/" + file, text: "script/demo/" + file }));

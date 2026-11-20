@@ -42,7 +42,16 @@ FENCE_SEL=$(cast sig 'Fence()')
 sqrt_at() { python3 -c "from decimal import Decimal as D,getcontext;getcontext().prec=80;print(int((D('1.0001')**int('$1')).sqrt()*(D(2)**96)))"; }
 ref_spot() { cast call "$POOL" 'slot0()(uint160,int24,uint16,uint16,uint16,uint8,bool)' --rpc-url "$RPC" | sed -n 2p | awk '{print $1}'; }
 live_ref() { cast call "$HOOK" 'liveRef()(int24)' --rpc-url "$RPC" | awk '{print $1}'; }
-send() { cast send --json --rpc-url "$RPC" --private-key "$DEPLOYER_PK" "$@"; }
+# one transaction; retried up to 4 times when the RPC refuses it before broadcast (e.g. "nonce too low" while a
+# load-balanced endpoint lags one block behind the last receipt); a send that never broadcast cannot land twice
+send() {
+  local out
+  for _ in 1 2 3 4; do
+    if out=$(cast send --json --rpc-url "$RPC" --private-key "$DEPLOYER_PK" "$@" 2>/dev/null); then echo "$out"; return 0; fi
+    sleep 3
+  done
+  echo '{}'
+}
 log() { # label, tx json
   python3 - "$1" "$2" "$OUT" <<'EOF'
 import json, sys, time

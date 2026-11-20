@@ -39,6 +39,11 @@ for word in ("§", "M_N1", "tau_v", "GRID_SEC", "cells.*"):
 check("cells have a control test that profits with the defence removed" in app, "E5: the D1 control sentence is missing")
 check("frozen base rate: 2.2% a year" in html and "provisional" not in html, "testnet: the frozen base rate note is missing")
 dep = json.loads((ROOT / "script" / "demo" / "deployments-1301.json").read_text(encoding="utf-8"))
+flow = dep.get("demoflow", {})
+check(flow.get("A2_setPositions_reverts_Fence", {}).get("status") == 0 and all(
+    str(flow.get(k, {}).get("tx", "")).startswith("0x") for k in
+    ("A1_setPositions_charged", "A2_setPositions_reverts_Fence", "A3_rebalanceSwap_charged")), "testnet: the demo run's three transactions are not recorded")
+check("dep.demoflow" in app, "app.js does not render the demo run")
 check(dep.get("deploy", {}).get("m_perBlock") == 697615423, "testnet: deployments file does not record the 2.2%/yr DEMO m_perBlock")
 
 for path in sorted((ROOT / "eval" / "results").glob("*.json")):

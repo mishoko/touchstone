@@ -1,15 +1,19 @@
 # Touchstone
 
-A Uniswap v4 hook vault in which the pool keeps the curator's books.
+**Your manager pays for their own bad trades.**
 
-When a curator re-positions a liquidity vault, the cost of that move (swap fees, price impact, value lost to a
-friendly counterparty) normally comes out of depositors' money. Touchstone has the pool measure what each curator
-action cost the vault, at the worse of spot and the 10-minute TWAP of a deep Uniswap v3 pool fixed at deployment, and
-charges that measured cost in full to the curator's deferred pay and bond; an action they cannot cover reverts. When
-the reference lags the market the measure misses part of the cost (a lag leak), which a delayed settlement closes in
-expectation; a curator who walks away forfeits its unvested pay.
+A Uniswap v4 hook vault that checks every manager action against a deep market's price, and charges any shortfall to
+the manager's held-back pay.
 
-**Your curator pays for its own trades, as the pool measures them.**
+You hand your money to a vault manager (the curator) you cannot watch, and you pay them anyway. Every move the curator
+makes can carry a cost: swap fees, a bad price, or a friendly counterparty who profits. Normally that cost comes out of
+depositors' money, and the curator's pay does not change. Touchstone flips it. After each curator action the pool
+measures what the action cost the vault, at the worse of spot and the reference price (the 10-minute time-weighted
+average price, or TWAP, of a deep Uniswap v3 pool chosen at deployment). That measured cost is charged in full to the
+curator's deferred pay (pay held back at least four to five weeks, and vesting only while the reference is in range),
+then to its bond (first-loss money it posts up front); an action it cannot cover reverts. When the reference lags the
+market the measure misses part of the cost (a lag leak), which a delayed settlement closes in expectation; a curator
+who walks away forfeits its unvested pay. Market moves stay with depositors.
 
 **Why a curator signs up:** it gets a verifiable on-chain record of its execution conduct, a published term sheet
 (Terms), and it keeps every bp it executes below cost.

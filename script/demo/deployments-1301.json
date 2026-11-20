@@ -56,6 +56,9 @@
     "A3_rebalanceSwap_charged": {
       "tx": "0x8e84f336112a64b657ffbc0e16db219c7b1fb7c8ddbd779c52de623715724e7e",
       "charge_wei_token1": 11534237164438,
+      "burned_bank_shares": "329778801211684809",
+      "burned_bond_shares": "2561072793133152675",
+      "burn_source": "the vault's Action event of the action tx (kind, charge, pStar, burnedBank, burnedBond), decoded s31",
       "settle_tx": "0x5d40cb170b9564cd7cb4d16e674d47693a07975390d6165dcd15cd5220eba889"
     },
     "note": "Attempt 1 stopped after 13 transactions (the RPC refused a send with 'nonce too low'; demoflow.sh stopped as designed); attempt 2, recorded here, started from the pool tick that attempt 1 left (196,367) instead of the seed tick (196,389)."

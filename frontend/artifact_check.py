@@ -103,6 +103,9 @@ def main(argv):
                 if row.get(f):
                     check(row[f] in html, f"demoflow: {k}.{f} missing")
     check(f"{dep['deploy']['m_perBlock']:,}" in html, "deploy: m_perBlock missing")
+    a3 = dep["demoflow"].get("A3_rebalanceSwap_charged", {})   # S31VF-01: who paid A3's burn, from its Action event
+    if a3.get("burned_bond_shares") and int(a3["burned_bond_shares"]) > int(a3.get("burned_bank_shares", 0)):
+        check("most of it from the bond" in html, "A3: the page does not say most of the burn came from the bond")
 
     app = (HERE / "app.js").read_text()
     for title in re.findall(r'item\("([^"]+)"', app):
@@ -155,6 +158,8 @@ def main(argv):
             round(sd["by_nav"]["1850"]["rows"]["no-observer"]["lazy"]["nav_end"])
         check(f"about {cited[0]:,} against {cited[1]:,} ETH from 1,850" in " ".join(readme.split()),
               f"README: the supplement's end-NAV clause is not {cited} (S31EF-03)")
+        check(f"{cited[0]:,} against {cited[1]:,} ETH from 1,850" in " ".join(html.split()),
+              f"page: the supplement's end-NAV clause is not {cited} (S31VD-02)")
 
     if errors:
         print("artifact_check: FAIL\n  " + "\n  ".join(errors), file=sys.stderr)

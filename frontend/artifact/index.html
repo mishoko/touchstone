@@ -1,11 +1,10 @@
 <title>Touchstone</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="Touchstone is a Uniswap v4 hook vault in which the pool keeps the curator's books.">
+<meta name="description" content="Touchstone is a Uniswap v4 vault in which the pool keeps the curator's books: every manager action is checked against a deep market's price, and any shortfall is charged to the manager's held-back pay.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: basalt ground, one gold streak (the touchstone's mark). Hero = three real testnet transactions; then mechanism, depositors (benefits beside limits), results, evidence, builders. Every number carries its source. */
 :root {
   --stone: #141618; --stone-2: #1b1e21; --rule: #2b3034;
   --ink: #ebe7dd; --ink-2: #9c9a93;
@@ -169,6 +168,123 @@ footer .wrap { padding-block: 36px 56px; display: grid; gap: 16px; }
 .flinks a:hover { color: var(--gold); border-color: var(--gold); }
 .fine { margin: 0; color: var(--ink-2); font-size: var(--step--1); max-width: 76ch; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+/* ---------- v3 additions: live stage, glossary, cast, scenes, trust cards, limits ---------- */
+:root { --green-dim: rgba(143,176,122,.10); --ink-3: rgba(235,231,221,.28); }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --green-dim: rgba(63,107,42,.09); --ink-3: rgba(26,29,31,.25); } }
+:root[data-theme="light"] { --green-dim: rgba(63,107,42,.09); --ink-3: rgba(26,29,31,.25); }
+.hero h1 { max-width: 17ch; }
+.story { display: grid; gap: 12px; max-width: 66ch; }
+.story p { margin: 0; }
+.story p:first-child { font-size: var(--step-1); line-height: 1.45; }
+.story .ana { color: var(--ink-2); font-style: italic; }
+a.term { text-decoration-style: dotted; text-decoration-color: var(--gold); }
+.stage { border: 1px solid var(--rule); background: var(--stone-2); border-radius: 4px; min-width: 0; }
+.stage-h { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--rule); font: 400 .75rem/1.3 var(--f-mono); color: var(--ink-2); }
+.stage-h b { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+.stage-h .in { color: var(--green); } .stage-h .out { color: var(--red); }
+.stage-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 330px); align-items: start; }
+@media (max-width: 900px) { .stage-body { grid-template-columns: minmax(0, 1fr); } }
+.chart { min-width: 0; border-right: 1px solid var(--rule); }
+@media (max-width: 900px) { .chart { border-right: 0; border-bottom: 1px solid var(--rule); } }
+.chart svg { display: block; width: 100%; height: 300px; }
+@media (max-width: 600px) { .chart svg { height: 250px; } }
+.chart svg text { font-family: var(--f-mono); font-size: 11px; }
+.chart svg .lbl { paint-order: stroke; stroke: var(--stone-2); stroke-width: 4px; stroke-linejoin: round; }
+.ledger { padding: 12px 14px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.ledger h3 { margin: 0; font: 500 .6875rem/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--gold); display: flex; justify-content: space-between; gap: 8px; }
+.ledger h3 span { color: var(--ink-2); letter-spacing: .04em; }
+.lrows { margin: 0; display: grid; gap: 5px; font: 400 .78rem/1.3 var(--f-mono); }
+.lrows div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; }
+.lrows dt { color: var(--ink-2); min-width: 0; }
+.lrows dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; transition: color .3s; }
+.lrows dd.hot { color: var(--gold); } .lrows dd.bad { color: var(--red); } .lrows dd.ok { color: var(--green); } .lrows dd.dim { color: var(--ink-2); }
+.lrows .bar { grid-column: 1 / -1; height: 3px; background: var(--rule); border-radius: 2px; overflow: hidden; }
+.lrows .bar i { display: block; height: 100%; background: var(--gold); transition: width .35s; }
+.log { list-style: none; margin: 0; padding: 8px 0 0; border-top: 1px dashed var(--rule); display: grid; gap: 4px; font: 400 .72rem/1.35 var(--f-mono); min-height: 9em; }
+.log li { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 6px; align-items: baseline; }
+.log li.new span { animation: type .7s steps(28, end) both; }
+.log time { color: var(--ink-2); white-space: nowrap; }
+.log b { font-weight: 500; font-size: .66rem; letter-spacing: .05em; padding: 1px 4px; border: 1px solid currentColor; border-radius: 2px; }
+.log span { min-width: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.t-charged b { color: var(--gold); } .t-profit b, .t-refused b, .t-breach b, .t-removed b { color: var(--red); } .t-settled b, .t-ok b { color: var(--green); } .t-info b { color: var(--ink-2); }
+@keyframes type { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+.stage-f { padding: 10px 14px; border-top: 1px solid var(--rule); display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: var(--step--1); color: var(--ink-2); }
+.btn { font: 500 .78rem/1 var(--f-mono); padding: 8px 11px; border-radius: 3px; cursor: pointer; border: 1px solid var(--rule); background: transparent; color: var(--ink); }
+.btn:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.pri { border-color: var(--gold); color: var(--gold); background: var(--gold-dim); }
+.cap { margin: 10px 0 0; font-size: var(--step--1); color: var(--ink-2); max-width: 80ch; }
+.cap b { color: var(--ink); font-weight: 500; }
+
+.mech { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 900px) { .mech { grid-template-columns: minmax(0, 1fr); } }
+.mech p { margin: 0 0 12px; max-width: 60ch; }
+pre.ascii { margin: 0; padding: 16px; overflow-x: auto; font: 400 .78rem/1.45 var(--f-mono); border: 1px solid var(--rule); background: var(--stone-2); border-radius: 4px; }
+.gloss { margin: 28px 0 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; counter-reset: g; }
+@media (max-width: 760px) { .gloss { grid-template-columns: minmax(0, 1fr); } }
+.gloss div { padding: 10px 0; border-top: 1px solid var(--rule); counter-increment: g; scroll-margin-top: 16px; }
+.gloss div:target { background: var(--gold-dim); }
+.gloss dt { font-weight: 600; }
+.gloss dt::before { content: counter(g) ". "; color: var(--gold); font-family: var(--f-mono); font-weight: 400; font-size: .8rem; }
+.gloss dd { margin: 2px 0 0; color: var(--ink-2); font-size: .9375rem; line-height: 1.45; }
+
+.cast { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 1000px) { .cast { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .cast { grid-template-columns: minmax(0, 1fr); } }
+.who { border: 1px solid var(--rule); background: var(--stone-2); border-radius: 4px; padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.who h3 { margin: 0; font: 900 1.6rem/.95 var(--f-cond); font-stretch: 62%; text-transform: uppercase; }
+.who h4 { margin: 4px 0 0; font: 500 .6875rem/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--gold); }
+.who p { margin: 0; font-size: .9rem; line-height: 1.45; }
+.lineup { margin: 20px 0 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
+@media (max-width: 760px) { .lineup { grid-template-columns: minmax(0, 1fr); } }
+.lineup p { margin: 0; font-size: .9375rem; }
+
+.scn { display: grid; grid-template-columns: minmax(0, .75fr) minmax(0, 1.45fr); gap: 24px; align-items: start; }
+@media (max-width: 1000px) { .scn { grid-template-columns: minmax(0, 1fr); } }
+.scn-stage { position: sticky; top: 12px; }
+@media (max-width: 1000px) { .scn-stage { position: static; order: -1; } }
+.pick { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.scn-text h3 { margin: 0 0 8px; font: 400 1.6rem/1.15 var(--f-display); }
+.scn-text .lead { margin: 0 0 14px; color: var(--ink-2); }
+.chap { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 2px; counter-reset: c; }
+.chap li { counter-increment: c; }
+.chap button { width: 100%; text-align: left; display: grid; grid-template-columns: 1.6em minmax(0, 1fr); gap: 6px; padding: 7px 8px; border: 0; border-left: 2px solid var(--rule); background: transparent; color: var(--ink-2); font: 400 .9rem/1.4 var(--f-body); cursor: pointer; opacity: .55; transition: opacity .25s; }
+.chap button::before { content: counter(c); font-family: var(--f-mono); color: var(--gold); }
+.chap button.past { opacity: .8; }
+.chap button.cur { opacity: 1; color: var(--ink); border-left-color: var(--gold); background: var(--gold-dim); }
+.ctl { display: grid; gap: 10px; margin-bottom: 14px; }
+.ctl label { display: grid; gap: 4px; font: 400 .8rem/1.3 var(--f-mono); color: var(--ink-2); }
+.ctl input[type=range] { width: 100%; accent-color: var(--gold); }
+.ctl .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ctl .rule { font-size: var(--step--1); color: var(--ink-2); margin: 0; }
+.note { margin: 0; padding: 10px 14px; border-top: 1px solid var(--rule); font-size: .9rem; line-height: 1.45; min-height: 3.4em; }
+.note b { color: var(--gold); font-weight: 500; font-family: var(--f-mono); font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; margin-right: 6px; }
+.scrub { padding: 10px 14px 12px; border-top: 1px solid var(--rule); display: grid; gap: 6px; }
+.scrub-row { display: flex; gap: 8px; align-items: center; }
+.scrub-row input { flex: 1; min-width: 0; accent-color: var(--gold); }
+.track { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.track input { width: 100%; margin: 0; accent-color: var(--gold); }
+.ticks { position: relative; height: 18px; margin: 0 8px; }
+@media (max-width: 600px) { .ticks { display: none; } }
+.ticks button { position: absolute; top: 0; transform: translateX(-50%); width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--rule); background: var(--stone-2); color: var(--ink-2); font: 500 .62rem/1 var(--f-mono); cursor: pointer; padding: 0; }
+.ticks button.past { border-color: var(--gold); color: var(--gold); }
+.scn-src { margin: 10px 0 0; font-size: var(--step--1); color: var(--ink-2); }
+.scn-src code { color: var(--ink); }
+
+.trust { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 28px; }
+@media (max-width: 1000px) { .trust { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .trust { grid-template-columns: minmax(0, 1fr); } }
+.tc { border-top: 2px solid var(--gold); padding: 12px 0 0; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.tc h3 { margin: 0; font: 600 1rem/1.3 var(--f-body); }
+.tc p { margin: 0; font-size: .9rem; line-height: 1.45; color: var(--ink-2); }
+.tc p b { color: var(--ink); font-weight: 500; }
+
+details.lim { border: 1px solid var(--rule); background: var(--stone-2); border-radius: 4px; }
+details.lim > summary { cursor: pointer; padding: 16px; font: 400 var(--step-1)/1.3 var(--f-display); list-style-position: inside; }
+details.lim > summary span { display: block; font: 400 var(--step--1)/1.4 var(--f-body); color: var(--ink-2); margin-top: 4px; }
+details.lim .items { padding: 0 16px 16px; }
+details.lim .items li { border-left: 2px solid var(--red); padding-left: 12px; }
+details.lim .items li.fixed { border-left-color: var(--gold); }
 </style>
 
 <div class="banner" role="note">
@@ -185,10 +301,12 @@ footer .wrap { padding-block: 36px 56px; display: grid; gap: 16px; }
       <span>Touchstone</span>
     </a>
     <nav aria-label="Sections">
+      <a href="#onchain">On chain</a>
       <a href="#how">How it works</a>
-      <a href="#depositors">Depositors</a>
-      <a href="#results">Results</a>
+      <a href="#scenes">Scenes</a>
       <a href="#evidence">Evidence</a>
+      <a href="#results">Results</a>
+      <a href="#limits">Limits</a>
       <a href="#builders">Builders &amp; agents</a>
     </nav>
   </div>
@@ -197,16 +315,50 @@ footer .wrap { padding-block: 36px 56px; display: grid; gap: 16px; }
 <main id="top">
 <section class="hero" aria-labelledby="hero-h">
   <div class="wrap">
-    <h1 id="hero-h">The pool keeps the curator's <em>books.</em></h1>
-    <p class="lede">A liquidity vault on Uniswap v4. <b>Every curator action is priced against a reference price.</b> The cost the pool measures is charged to the curator's deferred pay, then its bond. An action it cannot cover reverts.</p>
+    <h1 id="hero-h">Your manager pays for their own <em>bad trades.</em></h1>
+    <p class="lede">A Uniswap v4 vault that checks every manager action against a deep market's price, and charges any shortfall to the manager's held-back pay.</p>
+    <div class="story">
+      <p><b>You hand your money to a manager you cannot watch, and you pay them anyway.</b> When a liquidity <a class="term" href="#g-vault">vault</a>'s <a class="term" href="#g-manager">manager</a> moves your money, every trade has a cost: fees, a bad price, or a friend on the other side who profits. Today that cost comes out of your balance, and the manager's pay does not change.</p>
+      <p>Touchstone flips it. Every time the manager acts, the vault checks the result against the <a class="term" href="#g-reference">price on a much larger market</a>. Any <a class="term" href="#g-cost">shortfall</a> is taken from the manager's <a class="term" href="#g-deferred">held-back pay</a> and then from a <a class="term" href="#g-bond">bond</a> the manager posted up front. If the manager cannot cover it, the action does not happen. Market moves are still yours.</p>
+      <p class="ana">Think of a broker whose every order is compared with the exchange's price, with any gap deducted from the broker's held-back bonus.</p>
+    </div>
 
-    <div class="onchain" aria-labelledby="oc-h">
-      <div class="onchain-h"><span id="oc-h"><b>On chain</b> · Unichain Sepolia · 2026-11-20</span><span>DEMO tier · mock tokens</span></div>
+    <div class="stage" id="hero-stage" aria-labelledby="hero-stage-h">
+      <div class="stage-h">
+        <span id="hero-stage-h"><b>Live</b> · <span id="h-time">—</span> · block <b id="h-blk">—</b></span>
+        <span>spot <b id="h-spot">—</b> · reference <b id="h-ref">—</b> · gap <b id="h-gap">—</b></span>
+      </div>
+      <div class="stage-body">
+        <div class="chart"><svg id="h-svg" role="img" aria-label="Real USDC/ETH spot price, its 10-minute reference average trailing it, the 60-tick fence band around the reference and the vault's range. Manager actions are marked: charged in gold, refused in red."></svg></div>
+        <div class="ledger" aria-live="off">
+          <h3>The manager's books <span>example amounts</span></h3>
+          <dl class="lrows" id="h-rows"></dl>
+          <ol class="log" id="h-log" aria-label="Ledger log"></ol>
+        </div>
+      </div>
+      <div class="stage-f">
+        <button class="btn" type="button" id="h-play">Pause</button>
+        <button class="btn" type="button" id="h-next">Next action</button>
+        <span>One sample is 10 minutes of real prices; the manager's actions are scripted.</span>
+      </div>
+    </div>
+    <p class="cap"><b>A simplified model of the rules running in your browser on real USDC/ETH prices. Example amounts for a 1,000 ETH vault; measured results are below.</b></p>
+    <p class="cap" style="margin-top:4px">Prices: Uniswap v3 USDC/WETH 0.05% on Ethereum mainnet (<code>0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640</code>), blocks 26,357,020 to 26,443,420, one sample every 50 blocks. Spot is that pool's price at each sampled block (<code>slot0</code>). The reference is the same pool's own 10-minute TWAP at that block (<code>observe([600, 0])</code>), not an average of the samples. In the real design spot is the vault's own pool, kept close by arbitrage. Example amounts use the mainnet ratios of <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/script/Tiers.sol">script/Tiers.sol</a>: bond 0.174% (1.74 ETH per 1,000), reserve 0.06% (0.6 ETH), deferred pay about 1.7–2.1 ETH (4 to 5 weeks of a 2.2% yearly fee; our arithmetic). In the model a charge is a small fixed cost plus a cost for the gap between spot and the reference; on chain the contracts measure it.</p>
+  </div>
+</section>
+
+<section class="block" id="onchain" aria-labelledby="oc-h">
+  <div class="wrap">
+    <p class="eyebrow">On chain</p>
+    <h2 class="sec" id="oc-h">Three real transactions on testnet.</h2>
+    <p class="sec-lede">One action charged, one refused at the fence, one swap charged. Each links to its transaction.</p>
+    <div class="onchain">
+      <div class="onchain-h"><span><b>On chain</b> · Unichain Sepolia · 2026-11-20</span><span>DEMO tier · mock tokens</span></div>
       <div class="cards">
         <article class="card">
           <span class="k">A1 · setPositions</span>
           <span class="v">Charged</span>
-          <p>The curator re-placed the range while the reference lagged spot.</p>
+          <p>The manager moved the range while the reference was still catching up with spot. The pool measured a tiny cost. The manager paid it, and the two-minute check took a little more.</p>
           <span class="amt">335,126,463 wei = 3.35e-10 mWETH<br>≈ 8e-11 of a ≈ 4 mWETH vault</span>
           <span class="amt">settlement burned 867,995,129,170 wei more (8.7e-7 mWETH)</span>
           <a class="tx" href="https://sepolia.uniscan.xyz/tx/0xbad37998d600c9186d9f74e4cd06045ae28ea81a46fe00d68a9546fdb8ee819a">action 0xbad3…819a</a>
@@ -215,14 +367,14 @@ footer .wrap { padding-block: 36px 56px; display: grid; gap: 16px; }
         <article class="card rev">
           <span class="k">A2 · setPositions</span>
           <span class="v">Reverted · Fence</span>
-          <p>The demo script pushed spot 90 ticks off the reference. The fence is 60. The action failed. Nothing was charged.</p>
+          <p>The demo script pushed spot 90 ticks off the reference. The fence is 60. The action failed. Nothing was charged and nothing moved.</p>
           <span class="amt">status 0 · Fence() 0xe78b0e36</span>
           <a class="tx" href="https://sepolia.uniscan.xyz/tx/0x00577c5cdbb55813a72409a021055dc46cf7ff06a439e949674dcc6079b6956c">tx 0x0057…956c</a>
         </article>
         <article class="card">
           <span class="k">A3 · rebalanceSwap</span>
           <span class="v">Charged</span>
-          <p>A small swap by the curator. Its measured cost came out of the curator's balance.</p>
+          <p>A small swap by the manager. Its measured cost was burned from the manager's held-back pay and then its bond (most of it from the bond), not from the depositors' shares.</p>
           <span class="amt">11,534,237,164,438 wei = 1.15e-5 mWETH<br>≈ 3e-6 of a ≈ 4 mWETH vault</span>
           <a class="tx" href="https://sepolia.uniscan.xyz/tx/0x8e84f336112a64b657ffbc0e16db219c7b1fb7c8ddbd779c52de623715724e7e">action 0x8e84…4e7e</a>
           <a class="tx" href="https://sepolia.uniscan.xyz/tx/0x5d40cb170b9564cd7cb4d16e674d47693a07975390d6165dcd15cd5220eba889">settle 0x5d40…a889</a>
@@ -230,7 +382,7 @@ footer .wrap { padding-block: 36px 56px; display: grid; gap: 16px; }
       </div>
       <div class="onchain-f">
         <span>Mock tokens. The reference is our own mock v3 pool, not a deep one. The amounts are small because the demo vault is small.</span>
-        <span>Price path: the tick moves of mainnet USDC/WETH 0.05% at nine hourly samples (blocks 26,387,320 to 26,389,720), applied to the demo pools, 30 s per hour. A first attempt stopped after 13 transactions on an RPC nonce error; this run is the second.</span>
+        <span>Price path: the demo followed nine hourly mainnet price moves (USDC/WETH 0.05%, blocks 26,387,320 to 26,389,720), compressed to 30 s each, on mock-token pools. 26 scripted steps were sent. A first attempt stopped after 13 transactions on an RPC nonce error; this run is the second.</span>
         <span class="src">source: <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/script/demo/deployments-1301.json">script/demo/deployments-1301.json</a> · driver <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/script/demo/demoflow.sh">script/demo/demoflow.sh</a> · vault size: <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/script/demo/DeployDemo.s.sol">DeployDemo.s.sol</a> seed</span>
       </div>
     </div>
@@ -240,249 +392,180 @@ footer .wrap { padding-block: 36px 56px; display: grid; gap: 16px; }
 <section class="block" id="how" aria-labelledby="how-h">
   <div class="wrap">
     <p class="eyebrow">How it works</p>
-    <h2 class="sec" id="how-h">Five rules. One price to check against.</h2>
-    <p class="sec-lede">The numbers below are the mainnet tier's. The demo deployment runs the same rules faster (table below).</p>
-    <ol class="flow">
-      <li><h4>A reference price</h4><p>The 10-minute TWAP of a deep Uniswap v3 pool. Fixed at deployment.</p></li>
-      <li><h4>A fence</h4><p>An action more than 60 ticks from the reference reverts.</p><span class="src">test_U_guard__fenceOnBothSides</span></li>
-      <li><h4>A charge</h4><p>The vault is valued before and after, at three prices. The worst shortfall is charged, 100%. Pay first, then bond. Not enough? Revert.</p><span class="src">test_U_solv__worstSwapPlusReserveFitsTheBond</span></li>
-      <li><h4>A settlement</h4><p>A reserve is held. 120 s later the action is settled against the reference. The lag gap is burned, up to the reserve.</p></li>
-      <li><h4>A mandate</h4><p>A 2,000-tick range holding spot and the reference. Reference outside it: no base fee, no vesting. 24 h out: a breach. Three: the curator is removed.</p></li>
-    </ol>
-
-    <div class="bands">
-      <figure>
-        <svg viewBox="0 0 560 210" role="img" aria-label="Two bands on one price axis. The fence of 60 ticks around the reference. The 2,000-tick mandate range must hold spot and the reference.">
-          <rect x="70" y="18" width="250" height="174" fill="none" stroke="var(--ink-2)" stroke-width="2"/>
-          <text x="78" y="36" fill="var(--ink-2)">mandate range</text>
-          <text x="78" y="184" fill="var(--ink-2)">2,000 ticks</text>
-          <rect x="70" y="112" width="250" height="18" fill="var(--gold-dim)" stroke="var(--gold)" stroke-dasharray="3 3"/>
-          <line x1="70" y1="121" x2="320" y2="121" stroke="var(--ink)" stroke-width="2"/>
-          <circle cx="250" cy="117" r="4" fill="var(--ink-2)"/>
-          <text x="236" y="106" fill="var(--ink-2)" text-anchor="end">spot</text>
-          <text x="80" y="148" fill="var(--gold)">fence: 60 ticks</text>
-          <text x="80" y="164" fill="var(--ink)">reference TWAP</text>
-          <line x1="330" y1="121" x2="356" y2="121" stroke="var(--gold)" stroke-width="1.2"/>
-          <text x="362" y="117" fill="var(--gold)">spot past the fence:</text>
-          <text x="362" y="132" fill="var(--gold)">action reverts</text>
-          <line x1="343" y1="18" x2="343" y2="192" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="2 3"/>
-          <text x="362" y="40" fill="var(--ink-2)">reference out of range:</text>
-          <text x="362" y="55" fill="var(--ink-2)">no base fee, no vesting</text>
-          <text x="362" y="70" fill="var(--red)">24 h out = 1 breach</text>
-        </svg>
-        <figcaption>Not to scale. The fence is far narrower than the range.</figcaption>
-      </figure>
+    <h2 class="sec" id="how-h">The pool keeps the curator's books.</h2>
+    <div class="mech">
       <div>
-        <p class="tier-note" style="margin-bottom:10px">Parameters by tier.</p>
-        <div class="tscroll">
-          <table class="params">
-            <thead><tr><th scope="col">Parameter</th><th scope="col" class="n">Mainnet tier</th><th scope="col" class="n">This deployment (DEMO)</th></tr></thead>
-            <tbody>
-              <tr><td>Block time</td><td class="n">12 s</td><td class="n">1 s</td></tr>
-              <tr><td>Reference window</td><td class="n">600 s</td><td class="n">300 s</td></tr>
-              <tr><td>Reference pool</td><td>deep USDC/WETH 0.05%</td><td>our mock v3 pool</td></tr>
-              <tr><td>Fence</td><td class="n">60 ticks</td><td class="n">60 ticks</td></tr>
-              <tr><td>Range width</td><td class="n">2,000 ticks</td><td class="n">2,000 ticks</td></tr>
-              <tr><td>Markout window</td><td class="n">120 s</td><td class="n">20 s</td></tr>
-              <tr><td>Cooldown</td><td class="n">30 blocks</td><td class="n">30 blocks</td></tr>
-              <tr><td>Cure window (breach)</td><td class="n">7,200 blocks · 24 h</td><td class="n">1,800 blocks · 30 min</td></tr>
-              <tr><td>Epoch</td><td class="n">50,400 blocks · 7 d</td><td class="n">3,600 blocks · 1 h</td></tr>
-              <tr><td>Base rate</td><td class="n">2.2% a year</td><td class="n">2.2% a year</td></tr>
-              <tr><td>Bond ratio · minimum</td><td class="n">1.74e-3 · 1.74 WETH</td><td class="n">1.74e-3 · 1.74 mWETH</td></tr>
-              <tr><td>NAV cap</td><td class="n">1,850 WETH</td><td class="n">1,850 mWETH</td></tr>
-            </tbody>
-          </table>
+        <p>A <a class="term" href="#g-pool">pool</a> on Uniswap is a shared pot of two tokens. Its <a class="term" href="#g-spot">spot price</a> is cheap to push for a moment. So Touchstone never trusts it alone.</p>
+        <p>Each vault is tied, for life, to a <a class="term" href="#g-reference">reference price</a>: the 10-minute average of a much deeper pool. The manager may act only inside a narrow <a class="term" href="#g-fence">fence</a> around it.</p>
+        <p>When the manager acts, the vault values itself before and after, at both prices. The worse result is the <a class="term" href="#g-cost">execution cost</a>. It is <a class="term" href="#g-charge">charged</a> in full, from held-back pay first, then the bond. Two minutes later a <a class="term" href="#g-markout">markout</a> checks the action again.</p>
+        <p>The manager earns a <a class="term" href="#g-base">base fee</a> only for money placed in its <a class="term" href="#g-range">range</a> (measured in <a class="term" href="#g-tick">ticks</a>). That pay is held back for weeks and <a class="term" href="#g-deferred">vests</a> only while the deep market's price is in range. Stay away too long and it is a <a class="term" href="#g-breach">breach</a>.</p>
+        <p><b>Why two prices?</b> The vault's own pool can be pushed cheaply, so pay and penalties follow the deep market's price. If only the vault's pool leaves the range, the fee pauses. If the deep market's price leaves it, vesting stops at once, and the fee and the 24-hour clock follow at the next hourly check.</p>
+        <p class="src">The numbers are the mainnet tier's (<a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/script/Tiers.sol">script/Tiers.sol</a>). The testnet deployment runs the same rules faster (parameters under Builders).</p>
+      </div>
+<pre class="ascii" aria-label="Where the money goes when the manager acts"> manager wants to act
+        │
+        ▼
+ is spot within 60 ticks of the deep market's price? ── no ──▶ refused. nothing moves.
+        │ yes
+        ▼
+ value the vault before and after, at the worse price
+        │
+        ▼
+ shortfall? ── none ──▶ done, no charge
+        │ some
+        ▼
+ held-back pay + bond enough for the
+ charge plus a small reserve? ── no ──▶ refused. nothing moves.
+        │ yes
+        ▼
+ burn the manager's held-back pay (then bond)
+        │      ──▶ every other share is worth a bit more
+        ▼  120 s later, anyone can trigger
+ check again at the deep market's later price;
+ take up to the reserve more</pre>
+    </div>
+
+    <h3 class="sub">Fifteen words, each built on the ones before it</h3>
+    <dl class="gloss">
+      <div id="g-pool"><dt>Pool</dt><dd>A shared pot of two tokens (here USDC, a dollar token, and ETH) that anyone can trade against. The mix in the pot sets the price.</dd></div>
+      <div id="g-spot"><dt>Spot price</dt><dd>The pool's price right now, in the current block (about every 12 seconds on Ethereum).</dd></div>
+      <div id="g-vault"><dt>Vault and shares</dt><dd>A joint account that puts depositors' tokens into a pool. Each depositor owns shares. The vault's total value (its NAV) divided by the shares is the price of one share.</dd></div>
+      <div id="g-manager"><dt>Manager (curator)</dt><dd>The one party allowed to move the vault's money: where it sits and when it trades. The code calls it the curator.</dd></div>
+      <div id="g-range"><dt>Range</dt><dd>The price window in which the vault's money is placed in the pool and earns trading fees. Here it is about ±10% wide and must hold the price. Outside it, the money sits idle.</dd></div>
+      <div id="g-tick"><dt>Tick</dt><dd>The pool's unit of price: one tick is a 0.01% step. 60 ticks is about 0.6%; the 2,000-tick range is about ±10%.</dd></div>
+      <div id="g-reference"><dt>Reference price</dt><dd>The average price of the last 10 minutes on a separate, much larger pool, chosen once when the vault is created (a TWAP, time-weighted average price). It is expensive to push because that pool is deep.</dd></div>
+      <div id="g-fence"><dt>Fence</dt><dd>A 60-tick band around the reference price. The manager may act only while the spot price is inside it. Outside, the action is refused.</dd></div>
+      <div id="g-cost"><dt>Execution cost (implementation shortfall)</dt><dd>After each manager action, the vault prices its holdings before and after, at the spot price and at the reference price, and uses whichever makes the action look worst. The drop is the execution cost. A gain never earns the manager anything, and never offsets a loss.</dd></div>
+      <div id="g-base"><dt>Base fee</dt><dd>The manager's pay: 2.2% a year of the money actually placed in range, earned only while the spot price and the reference price are both inside the range.</dd></div>
+      <div id="g-deferred"><dt>Deferred pay and vesting</dt><dd>Pay is held back for four to five weeks (four to five epochs of 7 days) before it becomes the manager's to keep (it vests). It vests only while the reference price is in range.</dd></div>
+      <div id="g-bond"><dt>Bond</dt><dd>Money the manager posts up front as first loss: 0.174% of the vault's value (1.74 ETH per 1,000; at least 1.74 ETH on mainnet settings). It is taken only after the deferred pay is used up.</dd></div>
+      <div id="g-charge"><dt>Charge</dt><dd>The execution cost, taken in full from deferred pay, then from the bond. If the two cannot cover it plus a small reserve, the action is refused. A charge burns the manager's shares, so every other share is worth a little more.</dd></div>
+      <div id="g-markout"><dt>Markout (settlement)</dt><dd>Prices on a blockchain lag by a block, so a manager could trade on a stale price. Two minutes later the vault checks the trade again against the deep market's price over those two minutes, and takes up to a further 0.06% of the vault's value from the manager if the trade looks worse. The manager cannot know that price when acting.</dd></div>
+      <div id="g-breach"><dt>Breach</dt><dd>24 hours of observed time with the reference price outside the range. A breach forfeits all deferred pay, burned for the benefit of every share and released over 7 days. Three breaches remove the manager.</dd></div>
+    </dl>
+  </div>
+</section>
+
+<section class="block" id="cast" aria-labelledby="cast-h">
+  <div class="wrap">
+    <p class="eyebrow">Who is involved</p>
+    <h2 class="sec" id="cast-h">Four parties. What each wants, and what the rules do.</h2>
+    <div class="cast">
+      <article class="who">
+        <h3>Depositor</h3>
+        <h4>Wants</h4><p>Its share of the vault, no unmeasured execution costs taken from it, and a way out.</p>
+        <h4>The rules</h4><p>Withdraw in kind at any time, in every mode. A deposit followed by a withdrawal never profits. Deposits are refused for about two minutes until a pending check settles.</p>
+        <h4>Why</h4><p>So no rule, charge or removal can lock depositors in, and no one can time a deposit around a charge.</p>
+      </article>
+      <article class="who">
+        <h3>Manager</h3>
+        <h4>Wants</h4><p>Steady pay for keeping money working.</p>
+        <h4>The rules</h4><p>Paid only for money placed in range. Pays every measured shortfall. Loses held-back pay if absent.</p>
+        <h4>Why</h4><p>To make doing the job pay. In our simulations, with no outside party refreshing the reference price, it paid better than every gated lazy or lax strategy we tested (U-IC2). With one, two lax strategies came out ahead at 120% volatility.</p>
+      </article>
+      <article class="who">
+        <h3>Arbitrageur</h3>
+        <h4>Wants</h4><p>Profit from any price gap. (A trader who pulls an off-price pool back to the market.)</p>
+        <h4>The rules</h4><p>Trades freely and is never charged. A gap the manager creates becomes its profit, and the manager's charge.</p>
+        <h4>Why</h4><p>So a manager colluding with a trader pays the trader's gain itself.</p>
+      </article>
+      <article class="who">
+        <h3>Anyone who pokes</h3>
+        <h4>Wants</h4><p>A correct record, for example to trigger a breach or settle a charge.</p>
+        <h4>The rules</h4><p>Can call settle, poke, process a breach and refresh the reference. Cannot move funds.</p>
+        <h4>Why</h4><p>So the vault needs no keeper, operator, admin or off-chain feed.</p>
+      </article>
+    </div>
+    <div class="lineup">
+      <p><b>How the incentives line up.</b> Every bit of cost the manager avoids is pay it keeps; gains never earn extra. Sloppy or self-dealing trades come out of its own pay and bond. Idling earns nothing. Walking away costs everything held back. In our simulations, with no outside party refreshing the reference price, doing the job paid better than every gated lazy or lax strategy we tested (U-IC2). With one, two lax strategies came out ahead at 120% volatility.</p>
+      <p><b>Why a manager signs up.</b> A record of its execution, kept by the pool, that anyone can check. A published term sheet. A fee for capital it keeps working.</p>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="scenes" aria-labelledby="scn-h">
+  <div class="wrap">
+    <p class="eyebrow">Five scenes</p>
+    <h2 class="sec" id="scn-h">Move the price. Watch the books.</h2>
+    <p class="sec-lede">Each scene runs the same simplified model as the stage above, with example amounts for a 1,000 ETH vault. Drag the timeline, change the controls, and read the measured result under the stage.</p>
+    <div class="tabs pick" role="tablist" aria-label="Scenes" id="scn-pick"></div>
+    <div class="scn">
+      <div class="scn-text">
+        <h3 id="scn-title">—</h3>
+        <p class="lead" id="scn-cap"></p>
+        <ol class="chap" id="scn-chap" aria-label="Chapters"></ol>
+        <div class="ctl" id="scn-ctl"></div>
+      </div>
+      <div class="scn-stage">
+        <div class="stage" role="tabpanel" id="scn-panel" aria-labelledby="scn-title">
+          <div class="stage-h"><span id="scn-time">—</span><span>spot <b id="scn-spot">—</b> · reference <b id="scn-ref">—</b> · gap <b id="scn-gap">—</b></span></div>
+          <div class="stage-body">
+            <div class="chart"><svg id="scn-svg" role="img" aria-label="Scene chart"></svg></div>
+            <div class="ledger">
+              <h3><span style="color:var(--gold)" id="scn-lh">The books</span> <span>example amounts</span></h3>
+              <dl class="lrows" id="scn-rows"></dl>
+              <ol class="log" id="scn-log" aria-label="Scene log"></ol>
+            </div>
+          </div>
+          <p class="note" id="scn-note" aria-live="polite"></p>
+          <div class="scrub">
+            <div class="scrub-row">
+              <button class="btn" type="button" id="scn-play">Play</button>
+              <button class="btn" type="button" id="scn-prev" aria-label="Previous chapter">‹</button>
+              <button class="btn" type="button" id="scn-next" aria-label="Next chapter">›</button>
+              <div class="track">
+                <div class="ticks" id="scn-ticks"></div>
+                <input type="range" id="scn-scrub" min="0" max="100" value="0" aria-label="Scene timeline">
+              </div>
+            </div>
+          </div>
         </div>
-        <p class="src" style="margin-top:6px">source: <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/script/Tiers.sol">script/Tiers.sol</a> mainnet() and demo()</p>
-      </div>
-    </div>
-
-    <h3 class="sub">Four worked examples</h3>
-    <div class="tabs" role="tablist" aria-label="Worked examples" id="ex-tabs">
-      <button class="tab" role="tab" id="t-ex1" aria-controls="ex1" aria-selected="true">Charged or reverted</button>
-      <button class="tab" role="tab" id="t-ex2" aria-controls="ex2" aria-selected="false" tabindex="-1">A curator walks away</button>
-      <button class="tab" role="tab" id="t-ex3" aria-controls="ex3" aria-selected="false" tabindex="-1">A depositor's round trip</button>
-      <button class="tab" role="tab" id="t-ex4" aria-controls="ex4" aria-selected="false" tabindex="-1">The self-sandwich</button>
-    </div>
-    <div class="panel" role="tabpanel" id="ex1" aria-labelledby="t-ex1">
-<pre> curator ──setPositions / rebalanceSwap──▶ vault
-                                   │ value holdings before and after
-                                   │ at three prices: s0, spot, reference
-                                   ▼
-            charge = worst of the three shortfalls (never netted)
-                                   │
-     pay + bond cover charge + reserve? ── no ──▶ revert Insolvent
-                                   │ yes          (withdrawals stay open)
-                                   ▼
-     burn unvested pay, then bond  +  hold a reserve (6e-4 of NAV)
-                                   │
-                                   ▼  after the 120 s markout window
-     settle against the reference; burn up to the reserve more</pre>
-      <div class="side">
-        <h4>Charged or reverted</h4>
-        <ul>
-          <li>More than 60 ticks from the reference: revert <code>Fence</code>. <span class="src">test_U_guard__fenceOnBothSides</span></li>
-          <li>A gain at one price never offsets a loss at another. <span class="src">test_U_net__aGainNeverOffsetsAChargeOrALaterCharge</span></li>
-          <li>The worst legal swap is charged at least 1.37e-4 of NAV. Charge plus reserve fits the bond twice over. One share less of bond: revert <code>Insolvent</code>. <span class="src">test_U_solv__worstSwapPlusReserveFitsTheBond</span></li>
-        </ul>
-        <p class="tier-note">Test tier: 12 s blocks, mainnet fence, caps, reserve and markout. Vault NAV about 1,150 token units.</p>
-      </div>
-    </div>
-    <div class="panel" role="tabpanel" id="ex2" aria-labelledby="t-ex2" hidden>
-<pre> reference leaves the vault's range
-        │  no base fee; nothing vests
-        ▼
- observed time out of range reaches 24 h
-        │
-        ▼
- breach 1 ──▶ all unvested pay forfeited,
-        │      burned to depositors over one epoch (7 d)
-        │
-        │  a real placement (spot and reference inside,
-        │  half the vault deployed) starts a new run;
-        │  a dust placement or a 1-wei swap does not
-        ▼
- breach 2 ──▶ breach 3 ──▶ EXITED: curator removed
-                          deposits close; withdraw in kind</pre>
-      <div class="side">
-        <h4>A curator walks away</h4>
-        <ul>
-          <li>Pay stops the moment the reference leaves the range.</li>
-          <li>Unvested pay is forfeited to depositors at the first breach.</li>
-          <li>Three breaches remove the curator. There is no replacement curator.</li>
-          <li>Withdrawals stay open in every mode.</li>
-        </ul>
-        <p class="src">source: <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/README.md">README.md</a> worked example 2</p>
-      </div>
-    </div>
-    <div class="panel" role="tabpanel" id="ex3" aria-labelledby="t-ex3" hidden>
-<pre> deposit ──▶ shares priced against the depositor (rounded up)
-    │        refused while a settlement is pending
-    ▼
- curator acts ──▶ each charge burns curator-owned shares;
-    │             the depositors' shares are untouched
-    ▼
- base fee: 2.2% a year × the share of the vault deployed in
-           range, minted to the curator as shares, vesting
-           4 to 5 epochs later, forfeited on a breach
-    │
-    ▼
- withdraw in kind, in every mode</pre>
-      <div class="side">
-        <h4>A depositor's round trip</h4>
-        <ul>
-          <li>A deposit followed by a withdrawal never profits. <span class="src">test_U_5__roundTripNeverProfits</span></li>
-          <li>Deposits wait for a pending settlement. <span class="src">test_U_settle__depositsBlockedWhilePendingThenSettleFirst</span></li>
-          <li>No base fee without a placement, after removal, or at zero deployment. <span class="src">test_U_base__noBaseWithoutAPlacementInExitedOrAtZeroDelta</span></li>
-          <li>Withdrawals stay open after removal. <span class="src">test_U_breach__anEmptyVaultReachesExitedAndWithdrawalsStayOpen</span></li>
-        </ul>
-      </div>
-    </div>
-    <div class="panel" role="tabpanel" id="ex4" aria-labelledby="t-ex4" hidden>
-<pre> colluding trader pushes spot up to 60 ticks
-        │
-        ▼
- curator places at the pushed price
-        │  the reference TWAP did not move with the push,
-        │  so the placement is valued at the worse of the
-        │  pushed spot and the reference; the trader's gain
-        │  is charged to the curator in full
-        ▼
- trader unwinds ──▶ coalition net ≤ 0 on every row</pre>
-      <div class="side">
-        <h4>The self-sandwich</h4>
-        <ul>
-          <li>Pushes of 20, 30, 60 and 100 ticks, both sides, three depths: every row nets ≤ 0. Past 60 ticks the placement reverts. <span class="src">test_M_N4__gridLoses</span></li>
-          <li>Positive control: with a reference that follows the push, the same attack nets +0.0155 token units. <span class="src">test_M_N4__ctlReferenceFollowingThePushProfits</span></li>
-          <li>JIT liquidity on the curator's own swap also loses (control +0.0273). <span class="src">test_M_ADV3__jitOnTheCuratorsSwapLoses</span></li>
-        </ul>
-        <p class="tier-note">Test tier. E5's overall verdict is FAIL (control form); see Results.</p>
+        <p class="cap">Example amounts for a 1,000 ETH vault, in a simplified model running in your browser. The measured result is named below.</p>
+        <p class="scn-src" id="scn-src"></p>
       </div>
     </div>
   </div>
 </section>
 
-<section class="block" id="depositors" aria-labelledby="dep-h">
+<section class="block" id="earn" aria-labelledby="earn-h">
   <div class="wrap">
-    <p class="eyebrow">For depositors</p>
-    <h2 class="sec" id="dep-h">What you get. What you do not.</h2>
-    <div class="two">
-      <div class="col good">
-        <h3>Benefits</h3>
-        <ul class="items">
-          <li><strong>The curator pays for its own trades, as the pool measures them.</strong> The measured cost comes out of the curator's pay and bond. <span class="src">U-3 · E2</span></li>
-          <li><strong>Other traders' swaps are not charged as the curator's.</strong> The charge counts curator actions only: 0 wei over 10,000 segments and 20,034 third-party swaps, in the independent model. Arbitrage against the vault's liquidity is a market cost, not a charge. <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E3.json">E3</a></span></li>
-          <li><strong>A curator who walks away pays you.</strong> Its unvested pay is forfeited to depositors at the first breach.</li>
-          <li><strong>The base fee is paid for work in range.</strong> It accrues only while the mandate liquidity is in range.</li>
-          <li><strong>You can always leave.</strong> Withdrawals are in kind, in every mode.</li>
-        </ul>
-      </div>
-      <div class="col lim">
-        <h3>Limits</h3>
-        <ul class="items">
-          <li><strong>Market moves are yours.</strong> Positioning and token mix are not covered. Skill is not rewarded. The reference TWAP is assumed not to be moved; moving it costs money (E8).</li>
-          <li><strong>Lag leak.</strong> Prices lag the market by a block. The settlement closes the gap in expectation, not on every draw. The reserve caps one settlement. <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E8.json">E8</a></span></li>
-          <li><strong>Reported, not asserted.</strong> Some attack rows net a positive amount: +0.93 (a markout past the cap, about 8e-4 of NAV), +0.004 (protocol fee on), +0.0006 (off-leg stops), +0.00023 per exit (parking, test tier; about 5e-6 of NAV on mainnet). Token units of a 1,150-NAV test vault. <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E5.json">E5</a></span></li>
-          <li><strong>One block builder.</strong> A single builder that censors arbitrage is outside the model. Against it the safe NAV is about 150 WETH, not 1,850.</li>
-          <li><strong>The NAV cap is checked at the last action.</strong> A vault left unplaced through a large move can hold more than the cap.</li>
-          <li><strong>Incentives are simulated.</strong> U-IC2 passed on synthetic paths without an outside observer. With an outside observer, two lax strategies out-earn the reference curator at 120% volatility (by 0.151 and 0.102 ETH). Without one, the vault ends with more value under those lax strategies in every volatility bucket (at 120%: about 558 and 569 against 314, from 1,000). <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/U-IC2.json">U-IC2</a></span></li>
-          <li><strong>E-IC was not run.</strong> One historical price path was run as a supplement. It gives no verdict. <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E-IC.json">E-IC</a></span></li>
-          <li><strong>Allocation ledger claim withdrawn.</strong> E0b failed: 59 of 112 epoch rows exceeded 0.3 bp. The ledger is disclosure only. <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E0b.json">E0b</a></span></li>
-          <li><strong>Synthetic paths, plus one historical path.</strong> Every registered simulated result uses simulated 180-day paths. One supplement uses one historical price series. It has no third-party flow.</li>
-          <li><strong>Testnet only. No third-party review.</strong> The tests, evaluations and SECURITY.md are the evidence. The testnet reference is our own mock pool.</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="block" id="results" aria-labelledby="res-h">
-  <div class="wrap">
-    <p class="eyebrow">Results</p>
-    <h2 class="sec" id="res-h">Pre-registered. Published whichever way.</h2>
-    <p class="sec-lede">Each row has its result file. Badges come from each file's verdict field.</p>
-    <div class="tscroll">
-      <table class="results">
-        <thead><tr><th scope="col">ID</th><th scope="col">Question</th><th scope="col">Verdict</th><th scope="col">Result</th></tr></thead>
-        <tbody>
-          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E1.json">E1</a></td><td>Is the witness a real position?</td><td><span class="badge b-pass">PASS</span></td><td>0 wei difference, exact equality on 256 fuzz runs.</td></tr>
-          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E2.json">E2</a></td><td>Does the charge cover an honest placement's realised loss?</td><td><span class="badge b-pass">PASS</span></td><td>Covered on 2,016 and 2,100 sampled exit states (σ 60 and 120%). Mean overcharge 0.012 and 0.023 bp of NAV. Synthetic.</td></tr>
-          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E3.json">E3</a></td><td>Is the charge zero without a curator action?</td><td><span class="badge b-pass">PASS</span></td><td>0 wei over 10,000 segments and 20,034 third-party swaps. Control: one swap is charged.</td></tr>
-          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E4.json">E4</a></td><td>Does the reference curator out-earn idle, dust, stale and wide curators?</td><td><span class="badge b-pass">PASS</span></td><td>In every bucket. Idle nets exactly 0 before gas. Synthetic.</td></tr>
-          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E5.json">E5</a></td><td>Do the asserted attacks lose money?</td><td><span class="badge b-fail">FAIL (control form)</span></td><td>FAIL (control form) under the registered rule. Every asserted attack row in all 17 cells nets ≤ 0; 14 cells have a control test that profits with the defence removed; N1 and N2 have inline sensitivity checks; N3 is a forgery cell. Under the rule as amended after the data: PASS.</td></tr>
-          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E6.json">E6</a></td><td>Does churning pay?</td><td><span class="badge b-pass">PASS</span></td><td>Churner minus reference curator: t = −129 to −691 per bucket. Synthetic.</td></tr>
-          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E7.json">E7</a></td><td>Gas and size within budget?</td><td><span class="badge b-pass">PASS</span></td><td>Largest runtime 19,877 B (limit 22,000). First swap per block 26.7k gas. Worst action 871k (budget 1.2M).</td></tr>
-          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E8.json">E8</a></td><td>Operating numbers</td><td><span class="badge b-rep">REPORTED</span></td><td>11 items reported, 6 not run. Reference curator charged 1.6, 4.0 and 15.7 bps of NAV a year at 40, 60 and 120% volatility.</td></tr>
-          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E9.json">E9</a></td><td>Why is positioning not paid?</td><td><span class="badge b-rep">REPORTED</span></td><td>A carry benchmark pays a random curator +40%, +6% and −13% above base across three regimes.</td></tr>
-          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/U-IC2.json">U-IC2</a></td><td>Does the reference curator out-earn lazy and lax ones?</td><td><span class="badge b-pass">PASS</span></td><td>On 400 synthetic paths per bucket, no outside observer. Caveats under Limits.</td></tr>
-          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E-IC.json">E-IC</a></td><td>Incentives on a historical price path</td><td><span class="badge b-nr">NOT RUN</span></td><td>U-IC2 covers its comparison on synthetic paths only. Supplement, no verdict: E-IC historical supplement (one historical price series through the synthetic simulator, no third-party depth, point estimates, not a replay and not E-IC's rule): blocks 25,147,070 to 26,443,420; edge-12h net +11.282 / +1.123 ETH at NAV 1,850 / 185; gated bots edge-12h does not beat: none; E-IC stays NOT RUN. <span class="src"><a href="https://github.com/mishoko/touchstone/blob/fca453ffc35d42e102c88c8101c043543fe95e7b/eval/supplements/E-IC-historical.json">supplement</a></span></td></tr>
-          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E0b.json">E0b</a></td><td>Does the allocation ledger close within 0.3 bp per epoch?</td><td><span class="badge b-fail">FAIL · claim withdrawn</span></td><td>59 of 112 epoch rows above the bound, worst 4.09 bp. The closure claim is withdrawn.</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <details class="hist">
-      <summary>Earlier configurations (published as failed, final) and records</summary>
-      <div class="tscroll" style="margin-top:10px">
-        <table class="results">
-          <thead><tr><th scope="col">ID</th><th scope="col">What</th><th scope="col">Verdict</th><th scope="col">Result</th></tr></thead>
-          <tbody>
-            <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/U-IC.json">U-IC</a></td><td>Incentives, earlier six-hour form</td><td><span class="badge b-fail">FAIL</span></td><td>Two comparisons failed at 120% volatility. The same six-hour form failed again on U-IC2's paths (reported).</td></tr>
-            <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E0.json">E0</a></td><td>Ledger closure, registered form</td><td><span class="badge b-fail">FAIL</span></td><td>Worst residual 58.6 bp in an epoch.</td></tr>
-            <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E0a.json">E0a</a></td><td>Ledger closure, amended form</td><td><span class="badge b-fail">FAIL</span></td><td>0.556 bp in one epoch of one run.</td></tr>
-            <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E0b-fit.json">E0b-fit</a></td><td>Ledger fit data used to set up E0b</td><td><span class="badge b-none">no verdict</span></td><td>Fit data.</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </details>
-    <p class="countline">Claim coverage at P6 (<code>CLAIMS_PHASE=P6 python3 script/claims.py</code>): 104 of 106 current claim IDs covered, with E5 (FAIL, control form) and E-IC (not run) missing; + 3 historical failed (E0, E0a, U-IC); + 1 withdrawn (E0b: registered test failed, claim dropped).</p>
+    <p class="eyebrow">Pay</p>
+    <h2 class="sec" id="earn-h">How a manager earns, and how it loses.</h2>
+<pre class="ascii" aria-label="How a manager earns and loses">            money placed in range, spot and reference inside
+                               │
+                               ▼
+     base fee (2.2% a year × share placed) ──▶ held back 4-5 weeks ──▶ vests, if the
+                               │                                       deep market's price
+                               │                                       is in range
+         ┌─────────────────────┼─────────────────────────┐
+         ▼                     ▼                         ▼
+   bad execution         deep market's price         manager walks away
+   → charged from          leaves the range          → its held-back pay
+     held-back pay,      → vesting stops; fee and      is forfeited at the
+     then bond             clock follow hourly;        first breach
+                           24 h out = breach:
+                           held-back pay burned
+                           for every share;
+                           3 breaches = removed</pre>
   </div>
 </section>
 
 <section class="block" id="evidence" aria-labelledby="evi-h">
   <div class="wrap">
     <p class="eyebrow">Evidence</p>
-    <h2 class="sec" id="evi-h">How the code was tested.</h2>
-    <p class="sec-lede">Each card names the file or command that holds its numbers.</p>
+    <h2 class="sec" id="evi-h">Built to be trusted. We tried to break it, and wrote down how.</h2>
+    <div class="trust">
+      <div class="tc"><h3>467 tests, 0 failing</h3><p>Including 73 attack tests and 11 run on Ethereum mainnet state at block 26,443,420. <b>audits/test-summary.json</b></p></div>
+      <div class="tc"><h3>328 of 328 planted bugs caught</h3><p>332 planted bugs, each tied to a rule and the test that must catch it; 328 of 328 caught, 4 equivalent. <b>audits/mutants.json</b></p></div>
+      <div class="tc"><h3>Attacks lose money, with controls</h3><p>Every asserted attack row in 17 attack cells nets ≤ 0. In 14 cells a separate control removes the defence and the same attack profits, so the test can fail. Self-sandwich worst row −0.0030, control +0.0155 (token units, test vault). <b>README, E5</b></p></div>
+      <div class="tc"><h3>Invariant campaigns</h3><p>Random sequences of swaps, placements, settlements and vesting check the vault's core rules: 64 × 64 in every test run, 256 × 128 in the local CI campaign, then a check that the campaign really exercised each action.</p></div>
+      <div class="tc"><h3>A second implementation</h3><p>A Python model written from the specification, not from the contracts, produces test vectors the contracts match bit for bit. <b>model/reference.py</b></p></div>
+      <div class="tc"><h3>Claims tied to tests</h3><p>A script fails the build when a claim has no test or result: 104 of 106 current claims covered. The two open ones (E5, E-IC) are in Results and Limits.</p></div>
+      <div class="tc"><h3>Registered before the data</h3><p>Questions, pass rules and seeds were committed before each run; passes and failures are both published. The charge covers an honest placement's realised loss on all sampled exit states (E2). It is exactly 0 wei without a manager action over 10,000 segments and 20,034 third-party swaps, in the independent model (E3). The reference manager out-earns every gated strategy on 400 fresh simulated paths per bucket, binding case +0.235 ETH with a 95% lower bound of +0.166 ETH, with no outside party refreshing the reference price (synthetic paths, no third-party liquidity) (U-IC2).</p></div>
+      <div class="tc"><h3>Measured on a mainnet fork and locally</h3><p>Holding the deep USDC/WETH pool's price 60 ticks off for one block costs 1.04 WETH, on a mainnet fork (E8). Largest contract 19,877 bytes of a 22,000 budget; the first swap per block costs 26.7k gas (E7).</p></div>
+      <div class="tc"><h3>Live on testnet</h3><p>Deployed on Unichain Sepolia on 2026-11-20 and driven by 26 scripted steps, following nine hourly mainnet price moves, compressed to 30 s each, on mock-token pools: one charged placement, one fence refusal, one charged swap. <b>script/demo/deployments-1301.json</b></p></div>
+      <div class="tc"><h3>Reviewed adversarially</h3><p>Fund-touching designs were reviewed adversarially before implementation (internal process).</p></div>
+    </div>
     <div class="ev">
       <article class="evc">
         <h3>Mutation testing <span class="src">curated</span></h3>
@@ -581,11 +664,78 @@ python3 script/mutate.py -j 1 MU-001 …</pre>
   </div>
 </section>
 
+<section class="block" id="results" aria-labelledby="res-h">
+  <div class="wrap">
+    <p class="eyebrow">Results</p>
+    <h2 class="sec" id="res-h">Pre-registered. Published whichever way.</h2>
+    <p class="sec-lede">Each row has its result file. Badges come from each file's verdict field.</p>
+    <div class="tscroll">
+      <table class="results">
+        <thead><tr><th scope="col">ID</th><th scope="col">Question</th><th scope="col">Verdict</th><th scope="col">Result</th></tr></thead>
+        <tbody>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E1.json">E1</a></td><td>Is the witness a real position?</td><td><span class="badge b-pass">PASS</span></td><td>0 wei difference, exact equality on 256 fuzz runs.</td></tr>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E2.json">E2</a></td><td>Does the charge cover an honest placement's realised loss?</td><td><span class="badge b-pass">PASS</span></td><td>Covered on 2,016 and 2,100 sampled exit states (σ 60 and 120%). Mean overcharge 0.012 and 0.023 bp of NAV. Synthetic.</td></tr>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E3.json">E3</a></td><td>Is the charge zero without a curator action?</td><td><span class="badge b-pass">PASS</span></td><td>0 wei over 10,000 segments and 20,034 third-party swaps. Control: one swap is charged. Independent model.</td></tr>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E4.json">E4</a></td><td>Does the reference curator out-earn idle, dust, stale and wide curators?</td><td><span class="badge b-pass">PASS</span></td><td>In every bucket. Idle nets exactly 0 before gas. Synthetic.</td></tr>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E5.json">E5</a></td><td>Do the asserted attacks lose money?</td><td><span class="badge b-fail">FAIL (control form)</span></td><td>FAIL (control form) under the registered rule. Every asserted attack row in all 17 cells nets ≤ 0; 14 cells have a control test that profits with the defence removed; N1 and N2 have inline sensitivity checks; N3 is a forgery cell. Under the rule as amended after the data: PASS.</td></tr>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E6.json">E6</a></td><td>Does churning pay?</td><td><span class="badge b-pass">PASS</span></td><td>Churner minus reference curator: t = −129 to −691 per bucket. Synthetic.</td></tr>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E7.json">E7</a></td><td>Gas and size within budget?</td><td><span class="badge b-pass">PASS</span></td><td>Largest runtime 19,877 B (limit 22,000). First swap per block 26.7k gas. Worst action 871k (budget 1.2M).</td></tr>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E8.json">E8</a></td><td>Operating numbers</td><td><span class="badge b-rep">REPORTED</span></td><td>11 items reported, 6 not run. Reference curator charged 1.6, 4.0 and 15.7 bps of NAV a year at 40, 60 and 120% volatility.</td></tr>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E9.json">E9</a></td><td>Why is positioning not paid?</td><td><span class="badge b-rep">REPORTED</span></td><td>A carry benchmark pays a random curator +40%, +6% and −13% above base across three regimes.</td></tr>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/U-IC2.json">U-IC2</a></td><td>Does the reference curator out-earn lazy and lax ones?</td><td><span class="badge b-pass">PASS</span></td><td>On 400 synthetic paths per bucket, no outside observer. Caveats under Limits.</td></tr>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E-IC.json">E-IC</a></td><td>Incentives on a historical price path</td><td><span class="badge b-nr">NOT RUN</span></td><td>U-IC2 covers its comparison on synthetic paths only. Supplement, no verdict: E-IC historical supplement (one historical price series through the synthetic simulator, no third-party depth, point estimates, not a replay and not E-IC's rule): blocks 25,147,070 to 26,443,420; edge-12h net +11.282 / +1.123 ETH at NAV 1,850 / 185; gated bots edge-12h does not beat: none; E-IC stays NOT RUN. <span class="src"><a href="https://github.com/mishoko/touchstone/blob/fca453ffc35d42e102c88c8101c043543fe95e7b/eval/supplements/E-IC-historical.json">supplement</a></span></td></tr>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E0b.json">E0b</a></td><td>Does the allocation ledger close within 0.3 bp per epoch?</td><td><span class="badge b-fail">FAIL · claim withdrawn</span></td><td>59 of 112 epoch rows above the bound, worst 4.09 bp. The closure claim is withdrawn.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <details class="hist">
+      <summary>Earlier configurations (published as failed, final) and records</summary>
+      <div class="tscroll" style="margin-top:10px">
+        <table class="results">
+          <thead><tr><th scope="col">ID</th><th scope="col">What</th><th scope="col">Verdict</th><th scope="col">Result</th></tr></thead>
+          <tbody>
+            <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/U-IC.json">U-IC</a></td><td>Incentives, earlier six-hour form</td><td><span class="badge b-fail">FAIL</span></td><td>Two comparisons failed at 120% volatility. The same six-hour form failed again on U-IC2's paths (reported).</td></tr>
+            <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E0.json">E0</a></td><td>Ledger closure, registered form</td><td><span class="badge b-fail">FAIL</span></td><td>Worst residual 58.6 bp in an epoch.</td></tr>
+            <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E0a.json">E0a</a></td><td>Ledger closure, amended form</td><td><span class="badge b-fail">FAIL</span></td><td>0.556 bp in one epoch of one run.</td></tr>
+            <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E0b-fit.json">E0b-fit</a></td><td>Ledger fit data used to set up E0b</td><td><span class="badge b-none">no verdict</span></td><td>Fit data.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+    <p class="countline">Claim coverage at P6 (<code>CLAIMS_PHASE=P6 python3 script/claims.py</code>): 104 of 106 current claim IDs covered, with E5 (FAIL, control form) and E-IC (not run) missing; + 3 historical failed (E0, E0a, U-IC); + 1 withdrawn (E0b: registered test failed, claim dropped).</p>
+  </div>
+</section>
+
+<section class="block" id="limits" aria-labelledby="lim-h">
+  <div class="wrap">
+    <p class="eyebrow">Limits</p>
+    <h2 class="sec" id="lim-h">We publish what failed next to what passed.</h2>
+    <details class="lim">
+      <summary>What we found and fixed, and the honest limits<span>Thirteen items. Each names its result file or test.</span></summary>
+      <ul class="items">
+        <li><strong>Attack tests (E5): FAIL (control form) under the registered rule.</strong> Every asserted attack row in all 17 cells nets ≤ 0; 14 cells have a control test that profits with the defence removed; N1 and N2 have inline sensitivity checks; N3 is a forgery cell. Under the rule as amended after the data: PASS. <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E5.json">E5</a></span></li>
+        <li><strong>Reported, not asserted.</strong> Some attack rows net a positive amount: +0.93 (a markout past the cap, about 8e-4 of NAV), +0.004 (protocol fee on), +0.0006 (off-leg stops), +0.00023 per exit (parking, test tier; about 5e-6 of NAV on mainnet). Token units of a 1,150-NAV test vault. <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E5.json">E5</a></span></li>
+        <li><strong>Lag leak.</strong> Prices lag the market by a block. The settlement closes the gap in expectation, not on every draw. The reserve caps one settlement. <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E8.json">E8</a></span></li>
+        <li><strong>Incentives are simulated.</strong> U-IC2 passed on synthetic paths without an outside observer. With an outside observer, two lax strategies out-earn the reference curator at 120% volatility (by 0.151 and 0.102 ETH). Without one, the vault ends with more value under those lax strategies in every volatility bucket (at 120%: about 558 and 569 against 314, from 1,000). <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/U-IC2.json">U-IC2</a></span> On the supplement's one historical path, too, the vault ends with less value under the reference curator than under a lazy one: about 1,346 against 1,911 ETH from 1,850, with no third-party flow.</li>
+        <li><strong>E-IC was not run.</strong> One historical price path was run as a supplement. It gives no verdict; its labelled line is in the Results table. <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E-IC.json">E-IC</a></span></li>
+        <li><strong>Market moves are yours.</strong> Positioning and token mix are not covered. Skill is not rewarded. The reference TWAP is assumed not to be moved; moving it costs money (E8).</li>
+        <li><strong>One block builder.</strong> A single builder that wins every block of the 120 s window and censors arbitrage is outside the model. Against it the safe vault size is about 150 WETH, not the 1,850 WETH cap.</li>
+        <li><strong>The NAV cap is checked at the last action.</strong> A vault left unplaced through a large move can hold more than the cap (about +25% after a 50% move).</li>
+        <li><strong>Allocation ledger claim withdrawn.</strong> E0b failed: 59 of 112 epoch rows exceeded 0.3 bp (worst 4.09 bp). The ledger is disclosure only and never affects pay. <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E0b.json">E0b</a></span></li>
+        <li class="fixed"><strong>Found and fixed: earlier configurations.</strong> E0 and E0a (earlier ledger formulas) failed and stay published. U-IC (the 6-hour wait) failed twice and stays published; the 12-hour wait was then tested separately as U-IC2, and passed. See the history under Results.</li>
+        <li><strong>Synthetic paths, plus one historical path.</strong> Every registered simulated result uses simulated 180-day paths. One supplement uses one historical price series. It has no third-party flow.</li>
+        <li><strong>No third-party review yet.</strong> The tests, evaluations and SECURITY.md are the evidence.</li>
+        <li><strong>Testnet only.</strong> Mock tokens and our own small reference pool. The evidence for a deep reference is the mainnet-fork test.</li>
+      </ul>
+    </details>
+  </div>
+</section>
+
 <section class="block" id="builders" aria-labelledby="bld-h">
   <div class="wrap">
     <p class="eyebrow">For builders and AI agents</p>
     <h2 class="sec" id="bld-h">The live deployment. Real addresses.</h2>
-    <p class="sec-lede">Unichain Sepolia, chain 1301. DEMO tier. Deployed 2026-11-20 from commit a829357.</p>
+    <p class="sec-lede">Unichain Sepolia, chain 1301. DEMO tier. Deployed 2026-11-20 from commit a829357. The manager on this page is the <code>curator</code> in code.</p>
     <div class="tscroll">
       <table class="contracts">
         <thead><tr><th scope="col">Contract</th><th scope="col">Role</th><th scope="col">Address</th></tr></thead>
@@ -695,32 +845,662 @@ python3 model/reference.py --selfcheck       # the independent model</pre>
   </div>
 </footer>
 
+<script type="text/plain" id="series">199226,25,-23,-19,7,10,-2,57,-19,-8,-5,2,-9,-16,9,-7,1,10,3,-14,-8,-15,9,20,-14,-3,3,14,-2,-3,19,-6,-10,-75,26,2,-1,-6,7,15,0,2,-8,-15,2,11,-11,-4,6,-1,3,-8,0,2,-8,-7,-2,-10,-7,6,1,7,-2,-10,1,8,8,23,-12,-5,2,-5,3,7,-4,-6,-6,-7,-5,0,-1,0,4,7,1,-2,-1,0,1,9,-3,2,-11,2,0,-2,-2,-1,-5,-3,6,2,4,5,-1,-3,-4,7,8,-1,-3,-12,8,6,0,-4,-2,5,2,2,0,20,-8,-4,9,-9,-4,-13,1,2,-1,1,-2,0,-3,11,5,0,8,30,-6,-6,1,-2,10,5,0,-5,1,-1,-1,-9,3,0,-7,3,4,1,-2,7,3,0,1,4,-3,-2,0,11,0,11,14,-3,6,-1,-1,-11,-13,-1,-3,-3,-1,-5,1,3,0,-2,-5,-19,1,4,0,1,10,0,-2,-1,7,1,-1,-3,5,7,3,-6,7,7,-18,-16,0,5,0,-8,6,0,5,-5,1,10,1,-3,-5,0,6,5,1,0,-3,-1,0,9,-2,-5,-2,0,-6,-17,-1,5,7,0,1,-1,-2,3,7,0,-6,1,0,6,1,3,3,-5,-2,-2,-19,5,-1,0,-2,-6,4,2,7,2,-5,-8,-18,12,21,2,3,-6,-6,3,-5,-5,0,1,3,-5,0,-5,0,9,-3,7,10,23,6,17,-7,9,-12,-4,-5,-6,-16,4,-5,-1,2,11,5,-8,4,0,8,14,-1,-8,10,-1,4,7,-3,7,4,175,220,54,-14,4,18,-10,-43,-82,-47,54,55,65,37,-77,-32,-6,22,-30,0,35,18,10,-51,-4,-1,-13,-39,-23,21,29,2,28,4,-21,-5,12,19,-22,11,-3,18,8,4,-11,13,25,6,-6,0,-4,37,29,43,-29,32,100,-34,19,-9,-4,2,-11,-73,8,-27,-46,-9,35,45,-2,8,-14,26,15,-8,-8,-9,-14,11,2,-63,-23,20,27,0,-9,-22,-6,-8,-7,8,21,4,-3,11,-25,6,7,-2,-33,11,-18,9,0,-23,-21,-34,-16,30,20,19,-5,15,-16,14,-2,23,-5,26,-21,6,-1,34,-25,-7,-4,-3,15,4,-7,-50,23,4,-19,20,12,-16,-9,-4,15,-1,-12,25,-19,26,-15,5,-31,-8,-5,25,-8,-3,11,-6,-7,6,2,20,11,-3,11,-28,4,3,24,-12,-8,25,-1,2,13,-14,1,3,-13,32,13,11,-9,-10,-3,-30,17,3,-10,-12,-4,6,-11,-17,13,31,14,-13,11,0,-1,-5,4,-18,7,-14,31,11,1,4,1,-5,-16,62,-13,11,29,-21,-8,20,28,5,8,9,-8,-12,-4,-3,12,-12,7,9,-2,9,16,-31,-23,3,19,88,50,-41,34,-12,11,18,-89,41,-74,20,34,72,158,39,-54,20,-38,54,51,-23,5,-7,-30,-5,48,-40,-11,1,-13,-11,-69,28,-15,0,9,-2,14,-36,19,-3,-55,22,-7,-41,-5,-4,9,-4,13,2,6,-11,20,30,-10,5,18,2,-25,6,-18,16,-7,0,2,-6,-11,26,17,6,-13,-50,-38,34,20,18,16,-28,-31,7,-5,-37,6,18,-5,1,-9,3,25,-41,-9,13,7,9,-25,0,-1,-8,6,6,10,0,37,13,12,-12,-52,15,3,-15,-7,-11,30,23,-9,3,-8,30,-6,14,10,-22,1,3,-21,-21,12,-2,8,-18,13,19,-1,-14,33,-8,3,5,-10,-3,33,-30,-8,17,7,-29,-2,37,9,11,-39,-2,0,-25,29,-134,45,-15,20,-45,4,-3,26,-4,-13,-52,-33,32,-17,6,22,-5,-5,0,11,21,25,8,-28,3,11,9,-3,-25,-1,12,3,-19,21,-2,-1,6,15,18,6,-42,15,69,18,5,22,32,5,-38,7,-39,10,5,-26,8,-12,13,25,12,10,-2,-7,16,-26,-18,3,-4,6,-1,2,17,6,-5,-1,1,-9,5,5,20,-8,-2,18,25,-7,-14,1,-3,-6,-12,-7,16,15,12,-14,-7,-11,-4,9,-8,-7,11,9,0,-6,-6,25,12,-13,-4,5,-2,13,-13,-21,-4,19,7,6,7,14,51,23,17,7,-36,39,-11,-9,10,135,-73,-19,1,-1,0,22,73,-2,-89,61,-26,12,-5,-2,26,-4,-46,-82,46,-5,65,-3,-20,1,-6,-23,9,-23,-5,4,-6,-12,-9,60,-25,7,-16,35,11,-32,-12,-14,-5,14,5,-18,19,11,-18,-11,-5,4,26,-5,23,-14,6,6,-16,-10,11,-12,14,-14,-10,14,2,20,48,-38,2,6,-5,-32,28,-7,5,25,7,36,20,76,-68,27,171,-43,35,112,8,-26,-15,31,48,-23,21,-11,3,38,-21,13,40,-22,-73,-43,8,29,-62,-11,-1,27,-6,16,22,-11,36,-24,-11,0,-10,16,-9,-22,6,0,-27,-54,16,10,-10,2,-9,8,-30,13,-25,3,-17,-1,16,-6,1,7,-3,18,6,-110,-13,48,19,10,6,-10,7,62,35,24,67,23,30,-78,24,-12,19,-21,14,-6,20,-23,6,-23,-57,4,31,-9,-4,-14,15,-14,-12,-24,-1,-7,-2,8,-25,5,-4,39,-5,-13,69,-6,26,24,27,-35,29,19,-23,-19,-17,5,58,1,-3,-27,3,-19,-28,4,-8,30,-12,-3,10,5,-19,11,-5,8,10,23,49,79,-28,-39,7,22,7,66,27,-10,5,72,-105,17,-51,6,19,-31,-4,21,11,-36,-14,8,-22,17,9,-11,-1,17,28,-5,30,-40,7,-22,1,24,-9,21,-23,-14,7,-32,-9,-29,24,14,-3,3,-3,2,9,-9,-3,13,-15,-7,5,17,-2,-7,20,19,34,5,14,-2,-27,21,93,-7,94,36,-24,18,-7,79,11,3,-37,30,31,9,31,-11,63,-62,65,-30,-123,-58,35,36,-5,41,-45,-7,76,-13,-16,41,-19,1,-4,-21,9,55,-22,15,14,207,55,1,-38,-44,79,9,149,-84,-5,73,-21,55,1,-33,8,46,-158,-4,11,-17,91,-7,34,41,129,-114,88,35,-99,8,-165,-204,-22,-19,-28,-45,-36,-2,45,-5,0,-10,40,-22,-9,18,-22,35,29,-18,17,-2,14,44,51,-34,-9,26,-4,21,-21,-8,13,39,46,-22,-24,17,-83,-11,0,-92,-136,24,23,33,-6,22,-43,15,-3,-2,-2,2,17,-52,19,-16,9,73,-39,-22,1,7,-10,-34,4,-11,29,15,-26,38,32,-6,64,78,-72,26,-17,-1,-10,-1,24,-9,1,16,-72,40,11,-46,5,13,-2,41,-19,-17,-5,-5,19,-24,18,-19,-47,0,-6,7,-1,31,8,-18,-32,-4,5,13,16,32,-2,-5,-39,24,-22,-17,-10,4,18,-58,47,14,-16,-52,26,-11,31,17,13,70,-45,40,-5,28,-11,12,-16,-14,-25,-70,22,-15,41,-27,16,-9,41,-31,0,-11,37,-43,10,25,11,23,3,-60,29,22,11,-7,20,5,-11,-3,-23,-11,34,3,-54,2,2,20,23,19,4,1,10,40,22,-11,-9,2,18,-18,-6,-17,-7,-6,-3,-28,8,-6,12,1,-14,39,58,-2,4,-35,7,-28,30,-5,-36,5,10,-5,-87,1,-153,-29,17,127,84,5,17,-48,-30,19,7,-76,25,16,-6,-19,-17,-26,51,0,13,24,-7,10,24,-30,-21,29,15,-19,17,3,-43,-5,16,6,3,-3,-3,-4,5,-27,0,-17,-5,-23,-17,13,7,-6,19,25,-23,25,28,13,-18,23,-8,14,14,-7,4,-9,-14,5,-3,-29,14,-18,35,-6,27,-18,14,-2,-27,-38,-48,18,6,5,9,-7,-2,-15,-11,10,13,-48,-2,9,17,-1,23,3,66,-19,-25,-18,1,-12,14,8,-24,0,6,11,39,-6,13,20,38,5,-21,-9,19,63,-19,53,1,-4,37,-40,-66,1,-42,-29,-7,36,-16,-13,6,-12,-16,-10,23,-30,22,-9,-25,16,6,19,-36,67,6,79,-17,-34,56,194,-113,-39,27,26,32,-18,17,-46,-33,32,31,-44,2,-1,-33,-36,43,20,-2,-30,17,12,6,-14,-4,-5,-17,-20,1,9,-54,43,-46,-43,15,30,14,-12,5,-31,-22,5,-14,-72,27,8,-32,23,0,1,15,3,6,-3,22,6,8,17,19,2,36,-27,10,-20,12,30,-26,-25,35,-19,-3,-1,17,5,-26,-2,28,-3,11,-18,-53,-10,8,21,5,-12,-1,2,4,18,-26,-20,3,15,19,-39,11,37,-16,-3,5,-17,-2,12,8,-11,-4,12,-2,4,17,37,-16,-17,16,37,-14,5,0,-2,3,-7,-25,19,60,-36,10,-33,41,-22,22,6,-1,4,-4,12,139,-26,-29,6,14,4,40,-16,7,16,71,-21,106,-27,-80,27,-101|17,-24,10,0,1,-12,1,-28,7,6,3,0,7,1,-10,-3,3,-2,-1,7,5,12,-7,-8,13,-2,-2,-5,1,1,-13,4,2,45,-13,-2,1,3,-2,-10,0,-1,6,4,0,-2,7,0,-6,1,-1,7,-1,-1,2,4,1,6,5,-4,-1,0,-2,8,0,-2,-9,-10,6,1,-1,2,-2,-5,3,5,2,5,0,-1,1,0,-2,-1,0,1,0,2,0,-7,3,0,9,0,0,1,3,0,3,0,-2,-1,-2,0,0,3,1,-5,2,1,0,3,-5,-3,0,2,2,-3,-1,1,0,-11,3,1,-3,4,1,10,2,0,1,-1,2,0,1,-8,-1,0,-4,-25,4,2,0,1,0,-5,0,1,0,0,2,4,0,0,3,-3,-1,0,2,-6,0,0,-1,0,2,1,0,-6,0,-9,-3,-2,-4,2,2,2,10,0,5,1,1,3,-1,0,0,1,2,12,0,0,0,0,-5,0,1,1,-6,1,0,-2,-2,-2,0,1,-1,-2,15,3,-1,-3,0,5,-2,0,-3,2,-1,-6,-1,2,1,0,-5,-1,-1,0,1,0,0,-2,2,5,1,0,3,8,0,-3,-6,0,-1,0,1,-3,-4,1,4,0,0,-2,-1,-2,0,1,2,2,12,-6,1,0,1,3,-2,0,-5,0,4,4,7,-3,-14,0,-4,3,2,1,2,2,0,-1,-1,6,0,4,2,-7,2,-5,-7,-24,2,-17,5,-5,7,1,0,5,3,-1,0,0,-3,-5,-4,7,-1,0,-7,-6,0,5,-5,-1,0,1,3,-1,-7,-127,-29,11,-6,2,6,16,22,40,13,-28,-21,-31,-27,32,27,10,-5,14,1,-38,-3,5,34,-4,-1,0,25,19,-8,-13,0,-15,2,3,9,-7,-8,9,-8,-3,-15,-7,-3,14,-3,-14,1,-1,3,-3,-2,-17,-30,14,-20,-67,1,-5,-16,8,-1,8,36,-3,15,29,6,-20,-32,2,-11,12,-20,-11,5,-6,7,2,-6,-2,-12,26,-9,-16,4,4,3,-4,-1,-3,4,-8,-5,-2,-9,10,-10,6,-4,31,13,-10,-3,0,-4,13,18,2,-25,-7,-15,14,-1,7,-11,16,-2,7,0,5,-2,-11,-11,7,-3,-1,3,-4,-8,12,-2,-14,0,12,-9,-5,10,2,8,1,-2,-5,-8,8,-11,4,-2,14,0,3,-13,4,2,-9,3,3,-7,-9,-3,-6,2,-6,3,-7,1,-11,4,1,-11,-3,2,-4,14,-9,-3,13,-15,-10,1,3,2,10,11,-14,0,6,3,-1,-4,9,13,-11,-15,-6,7,-5,1,-1,-3,4,6,-11,4,-21,-5,-7,-1,5,4,8,-7,27,9,-14,8,8,-10,-17,2,-1,11,3,19,-13,9,0,13,-3,-3,2,-9,-7,24,15,4,-11,-93,5,19,-15,-3,-3,-7,39,-20,48,-13,5,-47,-92,6,47,-1,21,-10,-17,1,3,3,13,17,-28,22,-1,-4,13,16,18,-13,-3,2,1,8,-12,22,-9,9,29,-10,12,23,6,0,-3,7,-6,-1,-2,4,-15,-22,7,-1,-12,6,8,-3,13,-10,4,-2,-2,5,-1,-12,-18,-1,7,32,30,-13,-3,-8,-11,5,15,-12,4,16,-3,-8,1,2,8,-9,-7,17,1,-6,5,-4,13,3,1,5,-7,-1,-7,2,-27,0,-12,2,30,-4,-1,9,-4,3,-14,-7,8,0,9,-20,6,-10,1,8,-7,0,9,6,-8,7,-2,14,-6,-8,-1,9,-16,0,-11,0,-3,-5,-14,19,6,-7,3,21,-1,-13,-4,-17,-1,-5,0,9,-9,88,-24,6,-17,20,4,5,-11,-5,7,35,9,-9,4,-2,-16,3,-7,1,-8,-11,-19,3,27,2,-3,-6,-5,11,7,-2,1,14,-5,1,3,-9,-6,-12,-4,34,-9,-35,-10,4,-22,5,6,9,0,20,1,13,12,-7,5,-13,-18,-4,-5,-4,7,-4,22,4,-9,-5,-1,-5,-4,-6,-4,-4,2,-1,1,-1,-2,-8,4,-4,-5,-14,4,9,1,2,2,4,4,-2,-2,1,-4,3,4,2,1,5,3,-3,-5,2,0,1,-8,-4,12,0,-1,4,-10,9,4,4,-10,-5,-3,-2,-8,-7,-15,9,-4,5,-17,-2,10,-11,-111,29,5,-3,-3,9,-16,-53,17,38,-30,20,16,11,4,-3,-3,23,50,-14,2,-30,7,1,2,14,10,-3,25,1,-1,1,9,-4,-30,9,9,13,-22,-13,15,1,12,9,-7,3,6,-5,-4,4,8,5,0,-16,1,-8,3,4,-2,9,-3,-8,14,-7,3,1,-11,0,-11,-30,13,-9,5,1,10,-15,3,-3,-13,16,-21,-20,-67,9,-13,-119,10,-17,-84,-7,-6,10,9,-33,12,-13,22,-9,-24,21,-10,-8,15,43,23,2,6,28,7,7,-19,7,-15,-11,-2,-17,12,7,6,18,-4,-2,14,-7,4,18,32,-6,-3,1,1,8,-7,18,-12,11,-3,15,-1,-7,8,6,-9,6,-10,2,73,5,-23,-8,-4,-5,6,6,-24,-17,-13,-50,-16,-2,16,-21,-11,16,-1,-12,9,-10,-8,4,6,22,0,-8,3,0,4,-7,5,7,7,-1,4,1,2,8,-7,-2,-22,4,3,-48,-6,-4,-20,-14,12,-24,-17,11,9,13,1,-32,-7,6,7,-1,14,10,-7,3,-15,8,-4,-6,-6,16,-4,4,-4,0,-11,-14,6,6,4,-2,-25,-4,-28,-18,-7,16,-65,5,-9,12,-4,-12,22,-3,-15,1,21,1,-2,7,-9,-3,3,3,-5,6,-1,-11,22,-2,8,-4,-21,5,-9,14,-2,-2,11,4,3,-13,-6,-1,-6,-6,-3,-9,8,-2,-4,2,0,-4,-10,2,1,-12,-8,-17,-5,-4,4,24,-5,-25,12,-56,-30,10,8,1,-47,8,18,26,-1,-24,17,-30,17,-52,15,-33,14,59,44,-12,-10,0,-22,37,9,-41,12,8,-23,14,3,-16,9,-13,-30,8,12,-5,-89,-49,25,24,44,-54,5,-89,74,-11,-33,-20,-6,-3,23,-15,-16,78,-10,-1,-9,-44,18,-31,-10,-60,42,-30,-25,80,29,100,80,22,-6,5,33,-1,-1,-31,5,-15,14,-17,-1,7,-15,17,-25,-4,7,-6,12,-5,-35,-15,18,6,-12,-5,-17,19,2,-5,-14,-16,8,11,8,32,-6,-8,69,75,-12,-2,-14,-4,-7,15,-11,-2,5,-2,-4,-18,38,-9,-2,-4,-56,26,16,-4,-8,2,19,8,19,-16,-7,17,-31,-2,1,-35,-67,37,-24,22,7,11,2,-6,-5,-2,-7,47,-10,-18,26,8,0,-9,-5,15,11,-10,1,-14,11,-5,14,23,7,11,-1,-5,-27,-8,16,15,-12,-2,-7,-13,-15,-1,3,14,-9,8,4,6,1,-12,41,-28,5,-1,21,-20,1,-24,-5,-5,-37,22,-22,5,-24,-8,-12,4,25,7,38,-25,-3,-16,12,-7,9,-27,23,6,-7,-8,25,-10,-14,-4,-17,-4,35,-16,-12,-5,18,-9,1,7,1,15,5,-24,17,27,-3,1,-20,-3,0,7,2,-15,-25,-9,9,-6,1,-9,7,3,7,-6,-1,-1,11,-5,-2,-8,1,10,-20,-33,-3,7,24,-2,20,-21,-18,22,-1,-16,6,80,-8,111,-5,2,-92,-36,-8,-11,39,-4,-24,-5,35,-11,-8,-3,-5,21,14,-19,-18,-11,-6,5,-3,-10,16,3,-15,-10,14,-11,0,32,2,-17,-4,-11,14,-7,7,-3,21,-2,5,-4,11,5,0,-5,6,-7,-9,10,-11,-12,0,4,-17,-1,2,-9,1,-1,5,3,-6,10,9,-2,11,-25,-3,-5,3,-8,2,3,9,20,-4,-5,-9,-5,7,6,4,7,1,-3,8,-1,2,-6,1,-14,5,-31,6,11,5,-7,8,-6,-5,14,2,-2,-8,-16,6,-7,1,-23,4,8,-4,-9,-49,18,-15,-6,1,-24,20,42,7,20,13,9,-22,15,7,4,-3,3,2,-10,28,-2,9,12,-10,-5,-11,27,-27,14,-35,12,-11,-13,-84,109,11,5,-13,-10,10,11,27,15,-9,-13,22,-4,-3,40,4,-25,-2,-12,22,-12,-10,-7,2,-2,1,8,-8,-11,-7,60,-21,40,38,-10,-9,-1,19,-3,18,16,-7,4,46,-21,-7,24,-3,3,3,-2,11,-3,10,-15,-6,-5,-5,-9,-3,-24,22,5,3,-8,-11,15,15,-22,13,-1,2,-11,-2,5,6,-8,10,-10,12,28,10,-4,-7,-5,1,2,-2,-1,-18,17,11,0,-10,1,20,-14,-25,13,-1,0,0,15,-10,-8,1,0,-6,-2,-4,-8,-25,17,13,-11,-18,6,-2,-4,1,-11,3,12,-4,-42,21,-3,28,-18,12,-11,-3,6,-2,5,-10,-38,46,10,5,-15,5,-28,10,-15,-23,-32,6,-59,-3,52,-24,57</script>
 <script>
 (function () {
   "use strict";
-  var tabs = Array.prototype.slice.call(document.querySelectorAll("#ex-tabs .tab"));
-  function select(t) {
-    tabs.forEach(function (o) {
-      var on = o === t;
-      o.setAttribute("aria-selected", on ? "true" : "false");
-      o.tabIndex = on ? 0 : -1;
-      document.getElementById(o.getAttribute("aria-controls")).hidden = !on;
+  var REDUCE = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+
+  /* ---------- tabs and copy button (v2) ---------- */
+  var cbtn = $("copy-btn"), ctxt = $("agent-txt");
+  if (cbtn) cbtn.addEventListener("click", function () {
+    function sel() { var r = document.createRange(); r.selectNodeContents(ctxt); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); cbtn.textContent = "Selected"; }
+    try { navigator.clipboard.writeText(ctxt.textContent).then(function () { cbtn.textContent = "Copied"; }, sel); } catch (e) { sel(); }
+  });
+
+  /* ---------- one real price series (USDC/WETH 0.05%, mainnet) ---------- */
+  var raw = $("series").textContent.trim().split("|");
+  var dS = raw[0].split(",").map(Number), dR = raw[1].split(",").map(Number);
+  var ST = [], RT = [], acc = 0;
+  for (var q = 0; q < dS.length; q++) { acc += dS[q]; ST.push(acc); RT.push(acc + dR[q]); }
+  var N = ST.length, TS0 = 1793982671, TS1 = 1795022615, B0 = 26357020;
+  function tsAt(i) { return TS0 + i * (TS1 - TS0) / (N - 1); }
+  function px(t) { return 1e12 / Math.pow(1.0001, t); }
+  function lerp(a, t) { var k = Math.floor(t); if (k < 0) return a[0]; if (k >= a.length - 1) return a[a.length - 1]; var u = t - k; return a[k] * (1 - u) + a[k + 1] * u; }
+  function usd(v) { return "$" + v.toLocaleString("en-US", { maximumFractionDigits: 0 }); }
+  function eth(v, d) { return v.toFixed(d == null ? 3 : d) + " ETH"; }
+  var MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function fmtS(s) { var d = new Date(s * 1000); return MON[d.getUTCMonth()] + " " + d.getUTCDate() + " " + pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes()); }
+  function fmtT(s) { return fmtS(s) + " UTC"; }
+
+  /* ---------- the model's constants: mainnet ratios, a 1,000 ETH vault ---------- */
+  var NAV = 1000, BOND0 = 1.74, RES = 0.6, PAY0 = 1.9, FENCE = 60, HALF = 1000;
+  var BASE_H = 22 / 8760;          // 2.2% a year of 1,000 ETH, per hour, fully placed
+  var VEST_H = 1 / 756;            // held pay vests over about 4.5 epochs of 168 h
+  function tk(n) { n = Math.round(Math.abs(n)); return n + (n === 1 ? " tick" : " ticks"); }
+  function cost(gap, kind) { return (kind === "place" ? 0.004 : 0.002) + 0.0008 * Math.abs(gap); }
+
+  /* ---------- chart: price in ticks, higher price up ---------- */
+  function drawChart(svg, o) {
+    var W = svg.clientWidth || 600, H = svg.clientHeight || 300;
+    var GW = 40, PL = 52, PR = W - GW - 12, PT = 14, PB = H - 20;
+    var tLo = o.yLo, tHi = o.yHi;
+    function X(t) { return PL + (t - o.x0) / (o.x1 - o.x0) * (PR - PL); }
+    function Y(k) { return PT + (k - tLo) / (tHi - tLo) * (PB - PT); }
+    function cy(v) { return Math.max(PT, Math.min(PB, v)); }
+    var h = [], step = Math.max(o.dt || 0.05, (o.x1 - o.x0) / Math.max(60, (PR - PL) / 2));
+    h.push('<defs><clipPath id="' + svg.id + '-c"><rect x="' + PL + '" y="' + PT + '" width="' + (PR - PL) + '" height="' + (PB - PT) + '"/></clipPath></defs>');
+    for (var g = 0; g < 4; g++) {
+      var gk = tLo + (tHi - tLo) * (0.12 + g * 0.25), gy = Y(gk).toFixed(1);
+      h.push('<line x1="' + PL + '" x2="' + PR + '" y1="' + gy + '" y2="' + gy + '" stroke="var(--rule)" stroke-width="1"/><text x="' + (PL - 4) + '" y="' + (+gy + 4) + '" text-anchor="end" fill="var(--ink-2)" class="lbl">' + usd(px(gk)) + "</text>");
+    }
+    function seg(a, b) {
+      var ts = [];
+      for (var t = a; t < b; t += step) ts.push(t);
+      ts.push(b);
+      return ts;
+    }
+    function layer(a, b, op) {
+      if (b <= a) return "";
+      var ts = seg(a, b), s = "", r = "", fu = [], fd = [], ru = [], rd = [], hasR = false;
+      ts.forEach(function (t, n) {
+        var x = X(t).toFixed(1), c = n ? "L" : "M", rf = o.ref(t);
+        s += c + x + " " + cy(Y(o.spot(t))).toFixed(1);
+        r += c + x + " " + cy(Y(rf)).toFixed(1);
+        fu.push(x + " " + Y(rf - FENCE).toFixed(1)); fd.unshift(x + " " + Y(rf + FENCE).toFixed(1));
+        var rg = o.range && o.range(t);
+        if (rg) { hasR = true; ru.push(x + " " + cy(Y(rg[0])).toFixed(1)); rd.unshift(x + " " + cy(Y(rg[1])).toFixed(1)); }
+      });
+      var out = '<g opacity="' + op + '" clip-path="url(#' + svg.id + '-c)">';
+      if (hasR) {
+        out += '<path d="M' + ru.join("L") + "L" + rd.join("L") + 'Z" fill="var(--green-dim)"/>';
+        out += '<path d="M' + ru.join("L") + '" fill="none" stroke="var(--green)" stroke-width="1" stroke-dasharray="6 4"/>';
+        out += '<path d="M' + rd.slice().reverse().join("L") + '" fill="none" stroke="var(--green)" stroke-width="1" stroke-dasharray="6 4"/>';
+      }
+      if (o.fence !== false) {
+        out += '<path d="M' + fu.join("L") + "L" + fd.join("L") + 'Z" fill="var(--gold-dim)"/>';
+        out += '<path d="M' + fu.join("L") + '" fill="none" stroke="var(--gold)" stroke-width=".8" stroke-dasharray="2 3"/>';
+        out += '<path d="M' + fd.slice().reverse().join("L") + '" fill="none" stroke="var(--gold)" stroke-width=".8" stroke-dasharray="2 3"/>';
+      }
+      out += '<path d="' + r + '" fill="none" stroke="var(--gold)" stroke-width="1.6" stroke-dasharray="5 3"/>';
+      out += '<path d="' + s + '" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linejoin="round"/>';
+      return out + "</g>";
+    }
+    var tn = Math.max(o.x0, Math.min(o.x1, o.tNow));
+    h.push(layer(tn, o.x1, 0.22));
+    h.push(layer(Math.max(o.x0, o.tStart == null ? o.x0 : o.tStart), tn, 1));
+    // in-line band labels, set into the band edges near the left of the visible past
+    var lx = Math.max(PL + 64, Math.min(X(tn) - 150, PL + 150)), lt = o.x0 + (lx - PL) / (PR - PL) * (o.x1 - o.x0);
+    var rfl = o.ref(lt);
+    h.push('<text x="' + lx.toFixed(1) + '" y="' + (Y(rfl - FENCE) - 4).toFixed(1) + '" fill="var(--gold)" class="lbl">' + (W < 560 ? "fence ±60 ticks" : "fence ±60 ticks: the manager may act inside") + '</text>');
+    var rgl = o.range && o.range(lt);
+    if (rgl) {
+      var yt = Y(rgl[0]), yb = Y(rgl[1]);
+      if (yt > PT + 12 && yt < PB) h.push('<text x="' + (lx + 30).toFixed(1) + '" y="' + (yt + 13).toFixed(1) + '" fill="var(--green)" class="lbl">range top: money earns inside</text>');
+      if (yb < PB - 4 && yb > PT) h.push('<text x="' + (lx + 30).toFixed(1) + '" y="' + (yb - 5).toFixed(1) + '" fill="var(--green)" class="lbl">range bottom edge</text>');
+      if (yt <= PT + 12 && yb >= PB - 4) h.push('<text x="' + (PR - 4) + '" y="' + (PT + 12) + '" text-anchor="end" fill="var(--green)" class="lbl">' + (W < 560 ? "in range" : "inside the range (shaded green)") + '</text>');
+    }
+    // marks: manager actions
+    var lastLX = -1e9, lvl = 0;
+    (o.marks || []).forEach(function (m) {
+      if (m.t < o.x0 || m.t > tn) return;
+      var x = X(m.t), y = cy(Y(o.spot(m.t))), col = m.kind === "refused" ? "var(--red)" : m.kind === "settled" ? "var(--green)" : "var(--gold)";
+      if (m.kind === "refused") h.push('<path d="M' + (x - 5) + " " + (y - 5) + "L" + (x + 5) + " " + (y + 5) + "M" + (x + 5) + " " + (y - 5) + "L" + (x - 5) + " " + (y + 5) + '" stroke="' + col + '" stroke-width="2.4" stroke-linecap="round"/>');
+      else if (m.kind === "settled") h.push('<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="3" fill="none" stroke="' + col + '" stroke-width="1.5"/>');
+      else h.push('<path d="M' + (x - 7).toFixed(1) + " " + (y + 4).toFixed(1) + "L" + (x + 7).toFixed(1) + " " + (y - 4).toFixed(1) + '" stroke="' + col + '" stroke-width="3.2" stroke-linecap="round"/>');
+      if (m.label) { lvl = x - lastLX < 70 ? (lvl + 1) % 3 : 0; lastLX = x; }
+      if (m.label) h.push('<line x1="' + x.toFixed(1) + '" x2="' + x.toFixed(1) + '" y1="' + (PB - 14 - lvl * 12) + '" y2="' + PB + '" stroke="' + col + '" stroke-width="1.5"/><text x="' + x.toFixed(1) + '" y="' + (PB - 18 - lvl * 12) + '" text-anchor="middle" fill="' + col + '" class="lbl">' + esc(m.label) + "</text>");
     });
+    // now line, head, line labels
+    var xn = X(tn), sN = o.spot(tn), rN = o.ref(tn);
+    h.push('<line x1="' + xn.toFixed(1) + '" x2="' + xn.toFixed(1) + '" y1="' + PT + '" y2="' + PB + '" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="1 3"/>');
+    h.push('<circle cx="' + xn.toFixed(1) + '" cy="' + cy(Y(sN)).toFixed(1) + '" r="4.5" fill="var(--ink)"/>');
+    var ys = cy(Y(sN)), yr = cy(Y(rN)), anchor = xn > PR - 120 ? "end" : "start", dx = anchor === "end" ? -9 : 9;
+    var off = Math.abs(ys - yr) < 14 ? (ys < yr ? -7 : 7) : 0;
+    h.push('<text x="' + (xn + dx).toFixed(1) + '" y="' + (ys - 6 + (off < 0 ? off : 0)).toFixed(1) + '" text-anchor="' + anchor + '" fill="var(--ink)" class="lbl">spot</text>');
+    h.push('<text x="' + (xn + dx).toFixed(1) + '" y="' + (yr + 14 + (off > 0 ? 0 : 7)).toFixed(1) + '" text-anchor="' + anchor + '" fill="var(--gold)" class="lbl">reference (10-min avg)</text>');
+    // range gauge: the whole range, with spot, reference and fence
+    var rgN = o.range && o.range(tn);
+    var gx = W - GW + 4, gw = 14;
+    if (rgN) {
+      var gLo = Math.min(rgN[0], sN, rN) - 200, gHi = Math.max(rgN[1], sN, rN) + 200;
+      var G = function (k) { return PT + (k - gLo) / (gHi - gLo) * (PB - PT); };
+      h.push('<text x="' + (gx + gw / 2) + '" y="' + (PT - 3) + '" text-anchor="middle" fill="var(--ink-2)" font-size="9">range</text>');
+      h.push('<rect x="' + gx + '" y="' + G(rgN[0]).toFixed(1) + '" width="' + gw + '" height="' + (G(rgN[1]) - G(rgN[0])).toFixed(1) + '" fill="var(--green-dim)" stroke="var(--green)" stroke-dasharray="3 2"/>');
+      h.push('<rect x="' + (gx - 3) + '" y="' + G(rN - FENCE).toFixed(1) + '" width="' + (gw + 6) + '" height="' + Math.max(2, G(rN + FENCE) - G(rN - FENCE)).toFixed(1) + '" fill="var(--gold-dim)" stroke="var(--gold)" stroke-width=".8"/>');
+      h.push('<line x1="' + (gx - 5) + '" x2="' + (gx + gw + 5) + '" y1="' + G(rN).toFixed(1) + '" y2="' + G(rN).toFixed(1) + '" stroke="var(--gold)" stroke-width="1.6" stroke-dasharray="3 2"/>');
+      h.push('<circle cx="' + (gx + gw / 2) + '" cy="' + G(sN).toFixed(1) + '" r="3.2" fill="var(--ink)"/>');
+    }
+    svg.innerHTML = h.join("");
   }
-  tabs.forEach(function (t, i) {
-    t.addEventListener("click", function () { select(t); });
-    t.addEventListener("keydown", function (e) {
-      var d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
-      if (!d) return;
-      var n = tabs[(i + d + tabs.length) % tabs.length]; n.focus(); select(n);
+
+  function rowsHTML(rows) {
+    return rows.map(function (r) {
+      return "<div><dt>" + esc(r[0]) + '</dt><dd class="' + (r[2] || "") + '">' + esc(r[1]) + "</dd>" +
+        (r[3] != null ? '<span class="bar"><i style="width:' + Math.max(0, Math.min(100, r[3] * 100)).toFixed(1) + '%"></i></span>' : "") + "</div>";
+    }).join("");
+  }
+  function logHTML(evs, newFrom) {
+    return evs.map(function (e, n) {
+      return '<li class="t-' + e.tag.toLowerCase() + (n < newFrom ? " new" : "") + '"><time>' + esc(e.when) + "</time><b>" + e.tag + "</b><span>" + esc(e.msg) + "</span></li>";
+    }).join("");
+  }
+  function ledgerRows(s, opts) {
+    return [
+      ["Deferred pay", eth(s.pay), s.vesting === false ? "dim" : "", s.pay / 2.6],
+      ["Bond", eth(s.bond), s.bond < BOND0 - 1e-9 ? "bad" : "", s.bond / BOND0],
+      ["Reserve held", s.res > 0 ? eth(s.res) + " · check pending" : "0 · none pending", s.res > 0 ? "hot" : "dim"],
+      ["Charges to date", eth(s.charged, 4), s.charged > 0 ? "hot" : "dim"],
+      ["Out-of-range clock", s.clock < 24 ? s.clock.toFixed(0) + " h of 24 h" : s.clock.toFixed(0) + " h · a breach per 24 h", s.clock > 0 ? "bad" : "dim", s.clock / 24],
+      ["Breaches", s.breaches + " of 3", s.breaches ? "bad" : "dim"],
+      ["Share price", s.share.toFixed(6), s.share > 1 ? "ok" : ""]
+    ].concat(opts || []);
+  }
+  function freshState() { return { pay: PAY0, bond: BOND0, res: 0, charged: 0, clock: 0, breaches: 0, share: 1, burned: 0, vesting: true }; }
+
+  /* ================= hero: the live stage ================= */
+  var H = (function () {
+    var svg = $("h-svg"), W = 144, START = 150, SPS = 3;
+    var st, pos, last, ranges, marks, log, pend, yC, playing = !REDUCE, visible = true, lastAct;
+    function rangeAt(t) { var r = ranges[0]; for (var k = 0; k < ranges.length && ranges[k].t <= t; k++) r = ranges[k]; return [r.lo, r.hi]; }
+    function reset(at) {
+      st = freshState(); ranges = [{ t: 0, lo: RT[at] - HALF, hi: RT[at] + HALF }]; marks = []; log = []; pend = null; lastAct = -99;
+      pos = at; last = at; yC = RT[at];
+    }
+    function add(i, tag, msg) { log.unshift({ when: fmtS(tsAt(i)), tag: tag, msg: msg }); if (log.length > 4) log.pop(); }
+    function step(i) {
+      var rg = rangeAt(i), sIn = ST[i] >= rg[0] && ST[i] <= rg[1], rIn = RT[i] >= rg[0] && RT[i] <= rg[1];
+      if (rIn) { var v = st.pay * VEST_H / 6; st.pay -= v; }
+      if (i % 6 === 0) {
+        if (sIn && rIn) st.pay += BASE_H;
+        st.clock = rIn ? 0 : st.clock + 1;
+      }
+      var gap = ST[i] - RT[i];
+      var want = (i % 24 === 12) || (Math.abs(gap) > FENCE && i - lastAct > 3);
+      if (!want) return;
+      lastAct = i;
+      if (Math.abs(gap) > FENCE) { marks.push({ t: i, kind: "refused" }); add(i, "REFUSED", "Fence: spot " + tk(gap) + " from the reference. Nothing charged."); return; }
+      var place = Math.abs(RT[i] - (rg[0] + rg[1]) / 2) > 450, c = cost(gap, place ? "place" : "swap");
+      if (st.pay + st.bond < c + RES) { marks.push({ t: i, kind: "refused" }); add(i, "REFUSED", "Insolvent: pay and bond cannot cover it."); return; }
+      var fp = Math.min(st.pay, c); st.pay -= fp; st.bond -= (c - fp);
+      st.charged += c; st.burned += c; st.share = 1 + st.burned / NAV; st.res = RES;
+      if (place) ranges.push({ t: i, lo: RT[i] - HALF, hi: RT[i] + HALF });
+      marks.push({ t: i, kind: "charged" });
+      add(i, "CHARGED", (place ? "Re-placed the range" : "Rebalance swap") + ", gap " + tk(gap) + ": " + eth(c, 4) + " from " + (c - fp > 0 ? "pay and bond" : "held-back pay") + ".");
+      pend = { due: i + 0.2, i: i };
+    }
+    function settle() {
+      var i = pend.i, x = Math.min(RES, 0.0005 + 0.00025 * Math.abs(RT[Math.min(N - 1, i + 1)] - RT[i]));
+      var fp = Math.min(st.pay, x); st.pay -= fp; st.bond -= (x - fp);
+      st.charged += x; st.burned += x; st.share = 1 + st.burned / NAV; st.res = 0;
+      marks.push({ t: pend.due, kind: "settled" });
+      add(i, "SETTLED", "Two-minute check: " + eth(x, 4) + " more. Reserve released.");
+      pend = null;
+    }
+    function advanceTo(p) {
+      while (last < Math.floor(p)) { last++; step(last); }
+      if (pend && p >= pend.due) settle();
+      pos = p;
+    }
+    var prevLog = null;
+    function render() {
+      var i = Math.min(N - 1, pos);
+      yC += (RT[Math.floor(i)] - yC) * (REDUCE ? 1 : 0.08);
+      drawChart(svg, { x0: pos - W, x1: pos + 8, tNow: pos, yLo: yC - 230, yHi: yC + 230, dt: 1,
+        spot: function (t) { return lerp(ST, t); }, ref: function (t) { return lerp(RT, t); }, range: rangeAt, marks: marks });
+      var sp = lerp(ST, i), rf = lerp(RT, i), gap = sp - rf;
+      $("h-time").textContent = fmtT(tsAt(i));
+      $("h-blk").textContent = (B0 + Math.round(i) * 50).toLocaleString("en-US");
+      $("h-spot").textContent = usd(px(sp)); $("h-ref").textContent = usd(px(rf));
+      var ge = $("h-gap"); ge.textContent = tk(gap) + " · " + (Math.abs(gap) <= FENCE ? "in fence" : "OUT of fence"); ge.className = Math.abs(gap) <= FENCE ? "in" : "out";
+      $("h-rows").innerHTML = rowsHTML(ledgerRows(st));
+      var key = log.length ? log[0].when + log[0].msg : "";
+      if (key !== prevLog) { var fresh = prevLog === null ? 0 : (REDUCE ? 0 : 1); $("h-log").innerHTML = logHTML(log, fresh); prevLog = key; }
+    }
+    function nextAction() {
+      var target = null;
+      for (var i = last + 1; i < N; i++) if (i % 24 === 12 || Math.abs(ST[i] - RT[i]) > FENCE) { target = i; break; }
+      if (target === null) { reset(START); target = START + 1; }
+      advanceTo(target + 0.25); render();
+    }
+    reset(START - W);
+    advanceTo(START);
+    render();
+    var t0 = null;
+    function frame(ts) {
+      if (!playing || !visible) { t0 = null; return; }
+      if (t0 === null) t0 = ts;
+      var dt = Math.min(0.1, (ts - t0) / 1000); t0 = ts;
+      var p = pos + dt * SPS;
+      if (p >= N - 1) { reset(START - W); advanceTo(START); p = START; }
+      advanceTo(p); render();
+      requestAnimationFrame(frame);
+    }
+    function setPlay(on) { playing = on; $("h-play").textContent = on ? "Pause" : "Play"; if (on) requestAnimationFrame(frame); }
+    $("h-play").addEventListener("click", function () { setPlay(!playing); });
+    $("h-next").addEventListener("click", function () { setPlay(false); nextAction(); });
+    if (REDUCE) $("h-play").textContent = "Play";
+    if ("IntersectionObserver" in window) new IntersectionObserver(function (en) {
+      visible = en[0].isIntersecting; if (visible && playing) requestAnimationFrame(frame);
+    }).observe($("hero-stage"));
+    if (playing) requestAnimationFrame(frame);
+    return { render: render };
+  })();
+
+  /* ================= scenes ================= */
+  var MOVED = "Spot left the fence. Traders keep trading. A manager action now is refused, with nothing charged and nothing moved.";
+  var BACK = "Spot is back inside the fence. The manager may act again.";
+  var SPOT_OUT = "Only the vault's own pool left the range. The fee pauses. The vault's pool can be pushed cheaply, so pay and penalties follow the deep market's price instead.";
+  var REF_OUT = "The deep market's price left the range. Vesting stops at once; the fee and the 24-hour clock follow at the next hourly check.";
+  var REF_IN = "The deep market's price is back inside the range.";
+
+  function detect(B) {
+    var notes = [], prev = null;
+    for (var k = 0; k <= B.F; k++) {
+      var t = k * B.dt, s = B.spot(t), r = B.ref(t), rg = B.range(t);
+      var cur = { f: Math.abs(s - r) <= FENCE, sr: !rg || (s >= rg[0] && s <= rg[1]), rr: !rg || (r >= rg[0] && r <= rg[1]) };
+      var fr = B.frames[Math.min(k, B.frames.length - 1)];
+      if (fr && fr.mode === "removed") { prev = cur; continue; }
+      if (prev && B.fence !== false) {
+        if (prev.f && !cur.f) notes.push({ t: t, msg: MOVED, k: "Fence" });
+        if (!prev.f && cur.f) notes.push({ t: t, msg: BACK, k: "Fence" });
+        if (prev.sr && !cur.sr && cur.rr) notes.push({ t: t, msg: SPOT_OUT, k: "Range" });
+        if (prev.rr && !cur.rr) notes.push({ t: t, msg: REF_OUT, k: "Range" });
+        if (!prev.rr && cur.rr) notes.push({ t: t, msg: REF_IN, k: "Range" });
+      }
+      prev = cur;
+    }
+    return notes;
+  }
+  function rangeFn(list) { return function (t) { var r = list[0]; for (var k = 0; k < list.length && list[k].t <= t; k++) r = list[k]; return [r.lo, r.hi]; }; }
+  function clone(o) { var c = {}; for (var k in o) c[k] = o[k]; return c; }
+
+  var A = "https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/";
+  var DEFS = [
+    { id: "fair", tab: "1 · Fair rebalance", title: "A fair rebalance, charged a small fee",
+      cap: "The manager moved the range at a fair price. The pool measured a small cost, and the manager paid it.",
+      src: 'Measured: on testnet, action A1 was charged 335,126,463 wei and its settlement burned 867,995,129,170 wei more (mock WETH on testnet, demo tier; <a href="https://sepolia.uniscan.xyz/tx/0xbad37998d600c9186d9f74e4cd06045ae28ea81a46fe00d68a9546fdb8ee819a">action</a>, <a href="https://sepolia.uniscan.xyz/tx/0x8f37d44973a0fde772ecb9f0ead79f50443e768e0c02bb4242e70b3ddbbc6582">settle</a>). On simulated 180-day paths the reference manager was charged 1.6 / 4.0 / 15.7 bps of NAV a year at 40 / 60 / 120% volatility (<a href="' + A + 'eval/results/E8.json">E8</a>). A gain never offsets a charge: <code>test_U_net__aGainNeverOffsetsAChargeOrALaterCharge</code>. Prices: mainnet USDC/WETH 0.05%, 12 hours from block 26,391,120.',
+      params: { tA: 48 },
+      controls: function (sc) {
+        return '<div class="row"><button class="btn pri" type="button" data-act="now">Rebalance now</button><button class="btn" type="button" data-act="reset">Back to the script</button></div><p class="rule">Scrub to any moment and press Rebalance. Try it while spot is outside the fence.</p>';
+      },
+      build: function (p) {
+        var a = 682, T = 72, dt = 0.1, F = Math.round(T / dt);
+        var spot = function (t) { return lerp(ST, a + t); }, ref = function (t) { return lerp(RT, a + t); };
+        var c0 = RT[a] + 350, ranges = [{ t: 0, lo: c0 - HALF, hi: c0 + HALF }], range = rangeFn(ranges);
+        var tA = Math.round(p.tA / dt) * dt, gapA = spot(tA) - ref(tA), ok = Math.abs(gapA) <= FENCE, c = cost(gapA, "place");
+        var x = 0.0006 + 0.0002 * Math.abs(gapA), ev = [], marks = [], frames = [], s = freshState();
+        if (ok) ranges.push({ t: tA, lo: ref(tA) - HALF, hi: ref(tA) + HALF });
+        for (var k = 0; k <= F; k++) {
+          var t = k * dt;
+          if (k > 0 && Math.floor((t - dt) / 6 + 1e-9) !== Math.floor(t / 6 + 1e-9)) s.pay += BASE_H;
+          s.pay -= s.pay * VEST_H / 60;
+          if (Math.abs(t - tA) < dt / 2) {
+            if (ok) { s.pay -= c; s.charged += c; s.share = 1 + s.charged / NAV; s.res = RES; }
+          }
+          if (ok && Math.abs(t - (tA + 0.2)) < dt / 2) { s.pay -= x; s.charged += x; s.share = 1 + s.charged / NAV; s.res = 0; }
+          frames.push(clone(s));
+        }
+        if (ok) {
+          ev.push({ t: tA, tag: "CHARGED", msg: "Re-placed the range, gap " + tk(gapA) + ": " + eth(c, 4) + " from held-back pay. 0.6 ETH reserve held." });
+          ev.push({ t: tA + 0.2, tag: "SETTLED", msg: "Two-minute check: " + eth(x, 4) + " more. Reserve released." });
+          marks.push({ t: tA, kind: "charged", label: "rebalance" }, { t: tA + 0.2, kind: "settled" });
+        } else {
+          ev.push({ t: tA, tag: "REFUSED", msg: "Fence: spot " + tk(gapA) + " from the reference. Nothing charged, nothing moved." });
+          marks.push({ t: tA, kind: "refused", label: "refused" });
+        }
+        var chapters = [{ t: 0, label: "A calm market. The range holds spot and the reference." }];
+        var notes = [{ t: tA, k: ok ? "Charge" : "Fence", msg: ok ? "The vault valued itself before and after, at spot and at the reference, and took the worse. That cost came from held-back pay. A reserve is held for the two-minute check." : "The action was refused at the fence. Nothing was charged and nothing moved." }];
+        if (ok) notes.push({ t: tA + 0.2, k: "Markout", msg: "Two minutes later the vault checked the action again against the deep market's price, took a little more, and released the reserve." });
+        return { T: T, dt: dt, F: F, spot: spot, ref: ref, range: range, frames: frames, ev: ev, marks: marks, notes: notes, chapters: chapters,
+          tA: tA, ok: ok, when: function (t) { return fmtS(tsAt(a + t)); },
+          rows: function (s) { return ledgerRows(s); },
+          extraChapters: function (crossings) {
+            var out = chapters.slice();
+            crossings.filter(function (n) { return n.msg === MOVED; }).slice(0, 1).forEach(function (n) { out.push({ t: n.t, label: "Spot jumps outside the fence for a moment." }); });
+            out.push({ t: tA, label: ok ? "The manager rebalances inside the fence and is charged." : "The manager tries outside the fence and is refused." });
+            if (ok) out.push({ t: tA + 0.2, label: "The two-minute check settles." });
+            return out;
+          } };
+      } },
+
+    { id: "fence", tab: "2 · Refused at the fence", title: "An action outside the fence, refused",
+      cap: "Spot was pushed further from the reference than the fence allows. The action failed, and nothing was charged.",
+      src: 'Measured: on testnet, action A2 failed with <code>Fence()</code> when spot was pushed 90 ticks off the reference (<a href="https://sepolia.uniscan.xyz/tx/0x00577c5cdbb55813a72409a021055dc46cf7ff06a439e949674dcc6079b6956c">tx</a>). Tests: <code>test_U_guard__fenceOnBothSides</code>; the worst legal swap is charged at least 1.37e-4 of NAV and charge plus reserve fits the bond twice over; one share less of bond and it reverts <code>Insolvent</code> while withdrawals still work: <code>test_U_solv__worstSwapPlusReserveFitsTheBond</code>.',
+      params: { push: 90, tA: 28 },
+      controls: function (sc) {
+        return '<label>Push spot this far from the reference: <b id="c-push">' + sc.params.push + ' ticks</b><input type="range" id="c-pushr" min="0" max="120" step="5" value="' + sc.params.push + '"></label>' +
+          '<div class="row"><button class="btn pri" type="button" data-act="now">Manager re-places now</button><button class="btn" type="button" data-act="reset">Back to the script</button></div><p class="rule">The fence is 60 ticks. The second half of the scene shows the other refusal: a cost pay and bond cannot cover.</p>';
+      },
+      build: function (p) {
+        var R = 200000, T = 60, dt = 0.25, F = Math.round(T / dt);
+        function push(t) { return t < 10 ? 0 : t < 22 ? p.push * (t - 10) / 12 : t < 34 ? p.push : t < 44 ? p.push * (44 - t) / 10 : 0; }
+        var spot = function (t) { return R - push(t) + 4 * Math.sin(t * 1.3); }, ref = function (t) { return R + 2 * Math.sin(t / 7); };
+        var range = rangeFn([{ t: 0, lo: R - HALF, hi: R + HALF }]);
+        var tA = Math.min(44, Math.round(p.tA / dt) * dt), gapA = spot(tA) - ref(tA), ok = Math.abs(gapA) <= FENCE, c = cost(gapA, "place");
+        var frames = [], s = freshState(), ev = [], marks = [], notes = [];
+        for (var k = 0; k <= F; k++) {
+          var t = k * dt;
+          if (ok && Math.abs(t - tA) < dt / 2) { s.pay -= c; s.charged += c; s.share = 1 + s.charged / NAV; s.res = RES; }
+          if (ok && Math.abs(t - tA - 2) < dt / 2) { s.res = 0; }
+          if (Math.abs(t - 46) < dt / 2) { s.pay = 0; s.bond = 0.3; }
+          frames.push(clone(s));
+        }
+        if (ok) { ev.push({ t: tA, tag: "CHARGED", msg: "Inside the fence: allowed. Charged " + eth(c, 4) + " for the gap." }); marks.push({ t: tA, kind: "charged", label: "charged" });
+          notes.push({ t: tA, k: "Fence", msg: "Inside the fence the action is allowed, and the manager is charged for the gap between spot and the reference." }); }
+        else { ev.push({ t: tA, tag: "REFUSED", msg: "Fence: spot " + tk(gapA) + " off; the fence is 60. Nothing charged, nothing moved." }); marks.push({ t: tA, kind: "refused", label: "Fence" });
+          notes.push({ t: tA, k: "Refused", msg: "The action was refused: spot is " + tk(gapA) + " from the reference and the fence is 60. Nothing was charged and nothing moved." }); }
+        notes.push({ t: 40, k: "Fence", msg: "An honest manager can also bring spot back inside the fence in the same transaction. It is charged for that move." });
+        notes.push({ t: 46, k: "Later", msg: "Later. Earlier charges have used up the held-back pay and most of the bond (example amounts)." });
+        ev.push({ t: 46, tag: "INFO", msg: "Later: held-back pay 0, bond 0.300 ETH after earlier charges." });
+        ev.push({ t: 50, tag: "REFUSED", msg: "Insolvent: this swap's charge plus the 0.6 ETH reserve is more than the 0.300 ETH left." });
+        marks.push({ t: 50, kind: "refused", label: "Insolvent" });
+        notes.push({ t: 50, k: "Refused", msg: "Pay and bond cannot cover the charge plus the reserve, so the action is refused. Nothing moves." });
+        ev.push({ t: 55, tag: "OK", msg: "A depositor withdraws in kind. Allowed: withdrawals stay open." });
+        notes.push({ t: 55, k: "Withdraw", msg: "Withdrawals stay open in every mode, whatever the manager can or cannot pay." });
+        return { T: T, dt: dt, F: F, spot: spot, ref: ref, range: range, frames: frames, ev: ev, marks: marks, notes: notes, tA: tA, ok: ok,
+          when: function (t) { return "minute " + t.toFixed(0); }, rows: function (s) { return ledgerRows(s); },
+          extraChapters: function () {
+            return [{ t: 0, label: "Spot sits near the reference." }, { t: 10, label: "A trader pushes spot away." },
+              { t: tA, label: ok ? "The manager acts inside the fence and is charged." : "The manager tries to re-place: refused at the fence." },
+              { t: 46, label: "Later: earlier charges used up the pay and most of the bond." },
+              { t: 50, label: "A big swap pay and bond cannot cover: refused." }, { t: 55, label: "A depositor withdraws. Allowed." }];
+          } };
+      } },
+
+    { id: "away", tab: "3 · Walks away", title: "The manager walks away",
+      cap: "The market left and the manager did not follow. Its held-back pay is burned for the benefit of every share; after three strikes it is removed.",
+      src: 'Rules: cure window 24 h (7,200 blocks), epoch 7 days, 3 breaches (<a href="' + A + 'script/Tiers.sol">script/Tiers.sol</a>). Tests: <code>test_U_vest_gate__liveReferenceOutBlocksTheVest</code>, <code>test_U_clock__oneLatchPerCureBlocksCrossedAtTheCrossingBlock</code>, <code>test_U_forfeit__dripBurnsHalfAtHalfTheDripLength</code>, <code>test_U_breach_dodge__dustAndOffSpotPlacementsCannotResetTheClock</code>, <code>test_U_breach__anEmptyVaultReachesExitedAndWithdrawalsStayOpen</code>. Prices: mainnet USDC/WETH 0.05%, all 12 days of the series; every hour is observed here.',
+      params: { mode: "away" },
+      controls: function (sc) {
+        var m = sc.params.mode;
+        function r(v, l) { return '<label style="display:flex;gap:8px;align-items:center"><input type="radio" name="c-mode" value="' + v + '"' + (m === v ? " checked" : "") + "> " + l + "</label>"; }
+        return '<fieldset style="border:0;margin:0;padding:0;display:grid;gap:6px"><legend style="font:500 .8rem/1.3 var(--f-mono);color:var(--ink-2);margin-bottom:4px">Manager returns?</legend>' +
+          r("away", "No. It walks away.") + r("real", "Yes, with a real placement (holds spot and the reference, at least half the vault)") + r("dust", "Only with a dust placement") + "</fieldset>" +
+          '<p class="rule">A return starts a new run. It undoes no breach already counted and returns no forfeited pay.</p>';
+      },
+      build: function (p) {
+        var T = N - 1, dt = 1, F = T, c0 = RT[0], ranges = [{ t: 0, lo: c0 - HALF, hi: c0 + HALF }], range = rangeFn(ranges);
+        var RET = 1100, frames = [], ev = [], marks = [], notes = [], s = freshState(), drips = [], prevIn = true, runB = 0, exited = false, chapters = [{ t: 0, label: "The range holds the price. Pay accrues and vests." }];
+        var firstOut = null;
+        for (var i = 0; i <= F; i++) {
+          if (i === RET && p.mode !== "away" && !exited) {
+            var g = ST[i] - RT[i];
+            if (p.mode === "real") {
+              ranges.push({ t: i, lo: RT[i] - HALF, hi: RT[i] + HALF });
+              var c = cost(g, "place"); s.pay -= Math.min(s.pay, c); s.charged += c; s.burned += c;
+              s.clock = 0; runB = 0;
+              ev.push({ t: i, tag: "CHARGED", msg: "Real placement, charged " + eth(c, 4) + ". A new run starts. Breaches already counted stay; forfeited pay does not come back." });
+              marks.push({ t: i, kind: "charged", label: "returns" });
+              notes.push({ t: i, k: "Return", msg: "A real placement holds spot and the reference with at least half the vault placed. The clock restarts. Breaches already counted stay, and forfeited pay does not come back." });
+              chapters.push({ t: i, label: "The manager returns with a real placement." });
+            } else {
+              ev.push({ t: i, tag: "REFUSED", msg: "DeltaMin: a dust placement is refused (under half the vault would be placed). The clock keeps running." });
+              marks.push({ t: i, kind: "refused", label: "dust refused" });
+              notes.push({ t: i, k: "Refused", msg: "A dust placement is refused (under half the vault would be placed). It cannot reset or pause the clock." });
+              chapters.push({ t: i, label: "A dust placement is refused: the clock keeps running." });
+            }
+          }
+          var rg = range(i), rIn = RT[i] >= rg[0] && RT[i] <= rg[1], sIn = ST[i] >= rg[0] && ST[i] <= rg[1];
+          s.vesting = rIn && !exited;
+          if (s.vesting) s.pay -= s.pay * VEST_H / 6;
+          if (i % 6 === 0 && !exited) {
+            if (rIn && sIn) s.pay += BASE_H;
+            if (!rIn) {
+              if (firstOut === null) { firstOut = i; chapters.push({ t: i, label: "The deep market's price leaves the range. Pay stops." }); }
+              s.clock += 1;
+              if (s.clock >= 24 * (runB + 1)) {
+                runB++; s.breaches++;
+                if (s.pay > 1e-9) drips.push({ t: i, amt: s.pay });
+                ev.push({ t: i, tag: "BREACH", msg: "Breach " + s.breaches + " of 3: " + (s.pay > 1e-9 ? eth(s.pay) + " of held-back pay forfeited, released over 7 days." : "nothing new was held back to forfeit.") });
+                marks.push({ t: i, kind: "refused", label: "breach " + s.breaches });
+                notes.push({ t: i, k: "Breach", msg: "24 hours of observed time out of range: a breach. All held-back pay is forfeited and burned for the benefit of every share, a little at a time over 7 days." });
+                chapters.push({ t: i, label: "Breach " + s.breaches + "." });
+                s.pay = 0;
+                if (s.breaches === 3) {
+                  exited = true;
+                  ev.push({ t: i, tag: "REMOVED", msg: "Manager removed. Deposits closed. Withdrawals open." });
+                  notes.push({ t: i, k: "Removed", msg: "Three breaches: the manager is removed. Deposits close. Every depositor can still withdraw in kind." });
+                }
+              }
+              prevIn = false;
+            } else {
+              if (!prevIn) { prevIn = "half"; }
+              else if (prevIn === "half") {
+                prevIn = true;
+                if (s.clock > 0) { s.clock = 0; runB = 0; ev.push({ t: i, tag: "INFO", msg: "Reference in range for two hourly checks: a new run. Breaches already counted stay." }); }
+              }
+            }
+          }
+          var dr = 0; drips.forEach(function (d) { dr += d.amt * Math.min(1, (i - d.t) / 1008); });
+          s.share = 1 + (s.burned + dr) / NAV;
+          s.mode = exited ? "removed" : "active";
+          frames.push(clone(s));
+        }
+        chapters.sort(function (x, y) { return x.t - y.t; });
+        return { T: T, dt: dt, F: F, spot: function (t) { return lerp(ST, t); }, ref: function (t) { return lerp(RT, t); }, range: range,
+          frames: frames, ev: ev, marks: marks, notes: notes, speed: 40,
+          when: function (t) { return fmtS(tsAt(t)); },
+          rows: function (s) { return ledgerRows(s, [["Mode", s.mode === "removed" ? "manager removed · withdrawals open" : "active", s.mode === "removed" ? "bad" : ""]]); },
+          extraChapters: function () { return chapters; } };
+      } },
+
+    { id: "sandwich", tab: "4 · Self-sandwich", title: "A self-sandwich that loses money",
+      cap: "The deep market did not move with the push, so the manager was charged the trader's whole gain. Together they lost.",
+      src: 'Measured in tests: worst three rows −0.0024 / −0.0027 / −0.0030, control +0.0155; token units in a test vault of about 1,150. The grid (pushes of 20, 30, 60 and 100 ticks, both sides, three depths) nets ≤ 0 on every row, and past 60 ticks the placement reverts: <code>test_M_N4__gridLoses</code>; control with the reference following the push: <code>test_M_N4__ctlReferenceFollowingThePushProfits</code> (<a href="' + A + 'eval/results/E5.json">E5</a>).',
+      params: { push: 30, off: false },
+      controls: function (sc) {
+        return '<label>Push size: <b id="c-push">' + sc.params.push + ' ticks</b><input type="range" id="c-pushr" min="10" max="100" step="10" value="' + sc.params.push + '"></label>' +
+          '<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="c-off"' + (sc.params.off ? " checked" : "") + '> Remove the defence (the reference follows the push)</label>' +
+          '<p class="rule">The rule in the tests: net ≤ 0 on every grid row; past 60 ticks, refused. With the defence removed, the same attack profits: that is the control.</p>';
+      },
+      build: function (p) {
+        var R = 200000, T = 60, dt = 0.25, F = Math.round(T / dt), D = 500;
+        function push(t) { return t < 8 ? 0 : t < 20 ? p.push * (t - 8) / 12 : t < 34 ? p.push : t < 44 ? p.push * (44 - t) / 10 : 0; }
+        var spot = function (t) { return R - push(t) + 2 * Math.sin(t * 1.1); };
+        var ref = p.off ? spot : function (t) { return R + 1.5 * Math.sin(t / 6); };
+        var range = rangeFn([{ t: 0, lo: R - HALF, hi: R + HALF }]);
+        var tP = 26, refused = !p.off && p.push > FENCE;
+        var gain = refused ? 0 : D * p.push * 1e-4 * 0.5, pc = 0.02 + 0.002 * p.push, chg = refused ? 0 : (p.off ? 0.004 : gain + 0.004);
+        var frames = [], ev = [], marks = [], notes = [];
+        for (var k = 0; k <= F; k++) {
+          var t = k * dt, s = { gain: t >= 44 ? gain : 0, pc: t >= 20 ? (t >= 44 ? pc : pc / 2) : 0, chg: t >= tP ? chg : 0 };
+          s.net = s.gain - s.pc - s.chg; s.fence = Math.abs(spot(t) - ref(t)) <= FENCE;
+          frames.push(s);
+        }
+        ev.push({ t: 8, tag: "INFO", msg: "A friendly trader pushes spot " + p.push + " ticks." });
+        if (refused) { ev.push({ t: tP, tag: "REFUSED", msg: "Fence: the placement is refused. Nothing charged." }); marks.push({ t: tP, kind: "refused", label: "refused" }); }
+        else { ev.push({ t: tP, tag: "CHARGED", msg: "The manager places at the pushed price. Charged " + eth(chg) + "." }); marks.push({ t: tP, kind: "charged", label: "placed" }); }
+        ev.push({ t: 34, tag: "INFO", msg: "The trader unwinds the push." });
+        var net = gain - pc - chg;
+        ev.push({ t: 50, tag: net > 0 ? "PROFIT" : "OK", msg: "Trader and manager together: " + (net >= 0 ? "+" : "") + eth(net) + (net > 0 ? " (the defence was removed)" : " (they lost)") + "." });
+        notes.push({ t: tP, k: refused ? "Refused" : "Charge", msg: refused ? "Past 60 ticks the placement is refused. The trader paid to push for nothing." :
+          p.off ? "With the defence removed, the reference moved with the push, so the pushed price looks fair. Only a small charge." :
+          "The deep market did not move with the push. Valued at the worse price, the placement's whole gap is charged to the manager." });
+        notes.push({ t: 50, k: "Result", msg: net > 0 ? "The control: with the reference following the push, the same attack profits. This is why the test can fail." : "The charge is at least the trader's gain, and the push cost money. Together they lost." });
+        return { T: T, dt: dt, F: F, spot: spot, ref: ref, range: range, frames: frames, ev: ev, marks: marks, notes: notes,
+          when: function (t) { return "minute " + t.toFixed(0); },
+          rows: function (s) {
+            var m = Math.max(gain, chg, pc, 0.1);
+            return [["Trader's gain", eth(s.gain), s.gain > 0 ? "ok" : "dim", s.gain / m], ["Trader's cost to push", eth(s.pc), "dim", s.pc / m],
+              ["Manager's charge", eth(s.chg), s.chg > 0 ? "hot" : "dim", s.chg / m], ["Together (net)", (s.net >= 0 ? "+" : "") + eth(s.net), s.net > 0 ? "bad" : "ok"],
+              ["Defence", p.off ? "removed (control)" : "on", p.off ? "bad" : "ok"], ["Spot in fence", s.fence ? "yes" : "no", s.fence ? "" : "bad"]];
+          },
+          extraChapters: function () {
+            return [{ t: 0, label: "A calm pool." }, { t: 8, label: "A friendly trader pushes spot." }, { t: tP, label: refused ? "The manager tries to place: refused." : "The manager places at the pushed price." },
+              { t: 34, label: "The trader unwinds." }, { t: 50, label: "Count the result." }];
+          } };
+      } },
+
+    { id: "dep", tab: "5 · Your round trip", title: "A depositor's round trip",
+      cap: "Your shares are never burned for the manager's trades. You can leave at any time, in every mode. Market moves still change what you get back.",
+      src: 'Tests: <code>test_U_5__roundTripNeverProfits</code>, <code>test_U_settle__depositsBlockedWhilePendingThenSettleFirst</code>, <code>test_U_breach__anEmptyVaultReachesExitedAndWithdrawalsStayOpen</code> (<a href="' + A + 'README.md">README</a> worked example 3). Prices: mainnet USDC/WETH 0.05%, two hours from block 26,387,020.',
+      params: { tD: 10, tW: 100 },
+      controls: function (sc) {
+        return '<div class="row"><button class="btn pri" type="button" data-act="dep" id="c-dep">Deposit 10 ETH now</button><button class="btn" type="button" data-act="wd" id="c-wd">Withdraw now</button><button class="btn" type="button" data-act="reset">Back to the script</button></div><p class="rule">Scrub to a moment, then deposit or withdraw. Deposits are refused while a two-minute check is pending.</p>';
+      },
+      build: function (p) {
+        var a = 600, T = 120, dt = 0.5, F = Math.round(T / dt);
+        var spot = function (t) { return lerp(ST, a + t / 10); }, ref = function (t) { return lerp(RT, a + t / 10); };
+        var range = rangeFn([{ t: 0, lo: RT[a] - HALF, hi: RT[a] + HALF }]);
+        var acts = [{ t: 30, c: 0.05, x: 0.01 }, { t: 70, c: 0.03, x: 0.004 }];
+        function pending(t) { return acts.some(function (q) { return t >= q.t && t < q.t + 2; }); }
+        var tD = p.tD, tW = Math.max(p.tW, tD + 1), refusedD = pending(tD), frames = [], ev = [], marks = [], notes = [];
+        var share = 1, burned = 0, shares = 0, P0 = null, out = null, got = 0;
+        for (var k = 0; k <= F; k++) {
+          var t = k * dt;
+          acts.forEach(function (q) {
+            if (Math.abs(t - q.t) < dt / 2) burned += q.c;
+            if (Math.abs(t - q.t - 2) < dt / 2) burned += q.x;
+          });
+          share = 1 + burned / NAV;
+          if (!refusedD && Math.abs(t - tD) < dt / 2) { shares = Math.floor(10 / share * 1e6) / 1e6 - 1e-6; got = shares; P0 = px(spot(t)); }
+          var P = px(spot(t)), val = shares * share * (P0 ? Math.sqrt(P0 / P) : 1);
+          if (!refusedD && shares > 0 && Math.abs(t - tW) < dt / 2 && !out) out = { e: val / 2, u: val / 2 * P };
+          frames.push({ shares: out ? 0 : shares, share: share, val: out ? 0 : val, burned: burned, pend: pending(t), out: out, after: t >= tD });
+        }
+        acts.forEach(function (q, n) {
+          ev.push({ t: q.t, tag: "CHARGED", msg: "The manager acts: " + eth(q.c) + " of its own shares burned. Your share count is unchanged." });
+          ev.push({ t: q.t + 2, tag: "SETTLED", msg: "Two-minute check: " + eth(q.x) + " more from the manager." });
+          marks.push({ t: q.t, kind: "charged", label: "manager acts" }, { t: q.t + 2, kind: "settled" });
+        });
+        if (refusedD) { ev.push({ t: tD, tag: "REFUSED", msg: "Deposit refused: a check is pending. Try again in about two minutes." }); notes.push({ t: tD, k: "Wait", msg: "Deposits are refused for about two minutes until the check settles, so no one can time a deposit around a charge." }); }
+        else {
+          ev.push({ t: tD, tag: "OK", msg: "You deposit 10 ETH of value: " + got.toFixed(6) + " shares, rounded against you." });
+          notes.push({ t: tD, k: "Deposit", msg: "Shares are priced against the depositor, rounded down by a hair, so a deposit followed by a withdrawal never profits." });
+          notes.push({ t: 30, k: "Charge", msg: "Only the manager's shares burn. Your share count stays the same, and each share is worth a little more." });
+          var fo = frames[Math.min(F, Math.round(tW / dt))].out;
+          if (fo) { ev.push({ t: tW, tag: "OK", msg: "You withdraw in kind: about " + Math.round(fo.u).toLocaleString("en-US") + " USDC and " + fo.e.toFixed(3) + " ETH." });
+            notes.push({ t: tW, k: "Withdraw", msg: "You leave in kind, in every mode. Market moves still change what you get back." }); }
+        }
+        return { T: T, dt: dt, F: F, spot: spot, ref: ref, range: range, frames: frames, ev: ev, marks: marks, notes: notes, pending: pending,
+          when: function (t) { return "minute " + t.toFixed(0); },
+          rows: function (s) {
+            return [["Your shares", s.out ? "0 (withdrawn)" : s.shares.toFixed(6), s.shares > 0 ? "" : "dim"], ["Share price", s.share.toFixed(6), s.share > 1 ? "ok" : ""],
+              ["Your value", s.out ? "—" : eth(s.val), s.val > 0 ? "" : "dim"], ["Manager's shares burned", eth(s.burned, 3), s.burned > 0 ? "hot" : "dim"],
+              ["Two-minute check", s.pend ? "pending" : "none pending", s.pend ? "hot" : "dim"], ["Deposits", s.pend ? "refused until it settles" : "open", s.pend ? "bad" : "ok"],
+              ["You received", s.out ? Math.round(s.out.u).toLocaleString("en-US") + " USDC + " + s.out.e.toFixed(3) + " ETH" : "—", s.out ? "ok" : "dim"]];
+          },
+          extraChapters: function () {
+            return [{ t: 0, label: "The vault is running." }, { t: tD, label: refusedD ? "You try to deposit while a check is pending." : "You deposit." }, { t: 30, label: "The manager acts and is charged." },
+              { t: 32, label: "The check settles." }, { t: 70, label: "The manager acts again." }, { t: tW, label: "You withdraw in kind." }].sort(function (x, y) { return x.t - y.t; });
+          } };
+      } }
+  ];
+
+  var S = (function () {
+    var svg = $("scn-svg"), cur = 0, B = null, chapters = [], notes = [], k = 0, playing = false, visible = false, started = false, prevKey = null;
+    DEFS.forEach(function (d) { d.params0 = clone(d.params); });
+    var pick = $("scn-pick");
+    pick.innerHTML = DEFS.map(function (d, n) { return '<button class="tab" role="tab" type="button" id="st-' + d.id + '" aria-controls="scn-panel" aria-selected="' + (n ? "false" : "true") + '"' + (n ? ' tabindex="-1"' : "") + ">" + esc(d.tab) + "</button>"; }).join("");
+    var tabs = Array.prototype.slice.call(pick.querySelectorAll(".tab"));
+    function rebuild(keepT) {
+      var d = DEFS[cur], tKeep = B ? k * B.dt : 0;
+      B = d.build(d.params);
+      var cross = detect(B);
+      notes = cross.concat(B.notes).sort(function (x, y) { return x.t - y.t; });
+      chapters = B.extraChapters(cross);
+      $("scn-scrub").max = B.F;
+      k = keepT ? Math.min(B.F, Math.round(tKeep / B.dt)) : 0;
+      $("scn-chap").innerHTML = chapters.map(function (c, n) { return '<li><button type="button" data-n="' + n + '">' + esc(c.label) + "</button></li>"; }).join("");
+      $("scn-ticks").innerHTML = chapters.map(function (c, n) { return '<button type="button" data-n="' + n + '" style="left:' + (c.t / B.T * 100).toFixed(2) + '%" aria-label="Chapter ' + (n + 1) + ": " + esc(c.label) + '" title="' + esc(c.label) + '">' + (n + 1) + "</button>"; }).join("");
+      prevKey = null;
+      render();
+    }
+    function show(n) {
+      cur = n; var d = DEFS[n];
+      tabs.forEach(function (b, i) { b.setAttribute("aria-selected", i === n ? "true" : "false"); b.tabIndex = i === n ? 0 : -1; });
+      $("scn-title").textContent = d.title; $("scn-cap").textContent = d.cap; $("scn-src").innerHTML = d.src;
+      $("scn-lh").textContent = d.id === "sandwich" ? "The coalition" : d.id === "dep" ? "Your account" : "The manager's books";
+      $("scn-ctl").innerHTML = d.controls(d);
+      wire(d);
+      B = null; rebuild(false);
+      if (started && !REDUCE) setPlay(true);
+    }
+    function wire(d) {
+      var ctl = $("scn-ctl");
+      Array.prototype.forEach.call(ctl.querySelectorAll("[data-act]"), function (b) {
+        b.addEventListener("click", function () {
+          var a = b.getAttribute("data-act"), t = k * B.dt;
+          if (a === "now") { d.params.tA = t; setPlay(false); rebuild(true); }
+          if (a === "reset") { d.params = clone(d.params0); show(cur); }
+          if (a === "dep") { d.params.tD = t; if (d.params.tW <= t) d.params.tW = Math.min(B.T, t + 40); setPlay(false); rebuild(true); }
+          if (a === "wd") { d.params.tW = t; setPlay(false); rebuild(true); }
+        });
+      });
+      var pr = $("c-pushr");
+      if (pr) pr.addEventListener("input", function () { d.params.push = +pr.value; $("c-push").textContent = pr.value + " ticks"; rebuild(true); });
+      var off = $("c-off");
+      if (off) off.addEventListener("change", function () { d.params.off = off.checked; rebuild(true); });
+      Array.prototype.forEach.call(ctl.querySelectorAll('input[name="c-mode"]'), function (r) { r.addEventListener("change", function () { d.params.mode = r.value; rebuild(true); }); });
+    }
+    function render() {
+      var t = k * B.dt, s = B.frames[Math.min(k, B.frames.length - 1)];
+      var ylo = Infinity, yhi = -Infinity;
+      for (var u = 0; u <= B.T; u += B.T / 200) { var a = B.spot(u), b = B.ref(u); ylo = Math.min(ylo, a, b - FENCE); yhi = Math.max(yhi, a, b + FENCE); }
+      var pad = Math.max(40, (yhi - ylo) * 0.25);
+      drawChart(svg, { x0: 0, x1: B.T, tNow: t, yLo: ylo - pad, yHi: yhi + pad, dt: B.dt, spot: B.spot, ref: B.ref, range: B.range, marks: B.marks });
+      $("scn-scrub").value = k;
+      var sp = B.spot(t), rf = B.ref(t), gap = sp - rf;
+      $("scn-time").textContent = B.when(t);
+      $("scn-spot").textContent = usd(px(sp)); $("scn-ref").textContent = usd(px(rf));
+      var ge = $("scn-gap"); ge.textContent = tk(gap) + " · " + (Math.abs(gap) <= FENCE ? "in fence" : "OUT of fence"); ge.className = Math.abs(gap) <= FENCE ? "in" : "out";
+      $("scn-rows").innerHTML = rowsHTML(B.rows(s));
+      var evs = B.ev.filter(function (e) { return e.t <= t + 1e-9; }).sort(function (x, y) { return y.t - x.t; }).slice(0, 4).map(function (e) { return { when: B.when(e.t), tag: e.tag, msg: e.msg }; });
+      var key = evs.length + "|" + (evs[0] ? evs[0].msg : "");
+      if (key !== prevKey) { var grew = prevKey !== null && playing && !REDUCE ? 1 : 0; $("scn-log").innerHTML = logHTML(evs, grew); prevKey = key; }
+      var nt = null; notes.forEach(function (n) { if (n.t <= t + 1e-9) nt = n; });
+      $("scn-note").innerHTML = nt ? "<b>" + esc(nt.k) + "</b>" + esc(nt.msg) : '<b>Now</b>Press Play, or drag the timeline.';
+      var ci = 0; chapters.forEach(function (c, n) { if (c.t <= t + 1e-9) ci = n; });
+      Array.prototype.forEach.call($("scn-chap").querySelectorAll("button"), function (b, n) { b.className = n === ci ? "cur" : n < ci ? "past" : ""; b.setAttribute("aria-current", n === ci ? "step" : "false"); });
+      Array.prototype.forEach.call($("scn-ticks").querySelectorAll("button"), function (b, n) { b.className = chapters[n].t <= t + 1e-9 ? "past" : ""; });
+      var dep = $("c-dep");
+      if (dep && B.pending) { var pd = B.pending(t); dep.disabled = pd; dep.textContent = pd ? "Refused until the check settles" : "Deposit 10 ETH now"; }
+    }
+    function goChapter(n) { n = Math.max(0, Math.min(chapters.length - 1, n)); k = Math.min(B.F, Math.round(chapters[n].t / B.dt) + 1); setPlay(false); render(); }
+    var t0 = null;
+    function frame(ts) {
+      if (!playing || !visible) { t0 = null; return; }
+      if (t0 === null) t0 = ts;
+      var dt = Math.min(0.1, (ts - t0) / 1000); t0 = ts;
+      var sec = B.speed ? B.F / B.speed : 22;
+      k = Math.min(B.F, k + dt * B.F / sec);
+      if (k >= B.F) { k = B.F; render(); setPlay(false); return; }
+      var kk = k; k = Math.floor(k); render(); k = kk;
+      requestAnimationFrame(frame);
+    }
+    function setPlay(on) {
+      if (on && k >= B.F) k = 0;
+      playing = on; $("scn-play").textContent = on ? "Pause" : "Play";
+      if (!on) k = Math.floor(k);
+      if (on) requestAnimationFrame(frame);
+    }
+    $("scn-play").addEventListener("click", function () { started = true; setPlay(!playing); });
+    $("scn-prev").addEventListener("click", function () { var t = k * B.dt, ci = 0; chapters.forEach(function (c, n) { if (c.t < t - B.dt * 1.5) ci = n; }); goChapter(ci); });
+    $("scn-next").addEventListener("click", function () { var t = k * B.dt, ci = chapters.length - 1; for (var n = chapters.length - 1; n >= 0; n--) if (chapters[n].t > t + B.dt) ci = n; goChapter(ci); });
+    $("scn-scrub").addEventListener("input", function () { setPlay(false); k = +$("scn-scrub").value; render(); });
+    $("scn-chap").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) goChapter(+b.getAttribute("data-n")); });
+    $("scn-ticks").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) goChapter(+b.getAttribute("data-n")); });
+    tabs.forEach(function (b, i) {
+      b.addEventListener("click", function () { show(i); });
+      b.addEventListener("keydown", function (e) {
+        var d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+        if (!d) return; var n = (i + d + tabs.length) % tabs.length; tabs[n].focus(); show(n);
+      });
     });
-  });
-  var btn = document.getElementById("copy-btn"), txt = document.getElementById("agent-txt");
-  btn.addEventListener("click", function () {
-    function sel() { var r = document.createRange(); r.selectNodeContents(txt); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = "Selected"; }
-    try {
-      navigator.clipboard.writeText(txt.textContent).then(function () { btn.textContent = "Copied"; }, sel);
-    } catch (e) { sel(); }
-  });
+    show(0);
+    if ("IntersectionObserver" in window) new IntersectionObserver(function (en) {
+      visible = en[0].isIntersecting;
+      if (visible && !started && !REDUCE) { started = true; setPlay(true); }
+      else if (visible && playing) requestAnimationFrame(frame);
+    }, { threshold: 0.35 }).observe($("scn-panel"));
+    else visible = true;
+    return { render: render };
+  })();
+
+  var rz; window.addEventListener("resize", function () { clearTimeout(rz); rz = setTimeout(function () { H.render(); S.render(); }, 120); });
 })();
 </script>

@@ -1093,9 +1093,9 @@ python3 model/reference.py --selfcheck       # the independent model</pre>
       });
       dyn = dynLayer(svg, g);
       // chapter markers along the top of the plot, at the chapter's time (aligned with the price path)
-      var cg = mk("g", {}, svg), lastCX = -1e9; chs = [];
+      var cg = mk("g", {}, svg); chs = [];
       (o.chapters || []).forEach(function (c, n) {
-        var x = X(c.t); if (x - lastCX < 18) return; lastCX = x;
+        if (c.show === false) return; var x = X(c.t);
         var e = mk("g", { class: "chm" }, cg);
         mk("line", { x1: f1(x), x2: f1(x), y1: g.PT + 16, y2: g.PB, stroke: "var(--ink-3)", "stroke-width": 1, "stroke-dasharray": "2 4" }, e);
         mk("circle", { cx: f1(x), cy: g.PT + 8, r: 7.5, fill: "var(--stone-2)", stroke: "var(--ink-2)", "stroke-width": 1 }, e);
@@ -1452,7 +1452,7 @@ python3 model/reference.py --selfcheck       # the independent model</pre>
       build: function (p) {
         var T = N - 1, dt = 1, F = T, c0 = RT[0], ranges = [{ t: 0, lo: c0 - HALF, hi: c0 + HALF }], range = rangeFn(ranges);
         var RET = 1100, frames = [], ev = [], marks = [], notes = [], s = freshState(), drips = [], prevIn = true, runB = 0, exited = false, chapters = [{ t: 0, label: "Day 1. The manager's range holds the price. It earns, and its pay vests." }];
-        var firstOut = null;
+        var firstOut = null, liveOut = null;
         for (var i = 0; i <= F; i++) {
           if (i === RET && p.mode !== "away" && !exited) {
             var g = ST[i] - RT[i];
@@ -1472,13 +1472,14 @@ python3 model/reference.py --selfcheck       # the independent model</pre>
             }
           }
           var rg = range(i), rIn = RT[i] >= rg[0] && RT[i] <= rg[1], sIn = ST[i] >= rg[0] && ST[i] <= rg[1];
+          if (!rIn && liveOut === null && !exited) { liveOut = i; chapters.push({ t: i, label: "The deep market's price leaves the range. The manager does nothing. Its pay stops." }); notes.push({ t: i, k: "Pay stops", msg: "The deep market's price is out of the range. Vesting stops now; the fee and the 24-hour clock follow at the next hourly check. The manager does nothing." }); }
           s.vesting = rIn && !exited;
-          if (i % 6 === 0 || i === 0) { s.rinH = rIn; s.vestH = s.vesting; }
+          if (i % 6 === 0 || i === 0) { s.rinH = rIn; s.vestH = s.vesting; s.sinH = sIn; }
           if (s.vesting) s.pay -= s.pay * VEST_H / 6;
           if (i % 6 === 0 && !exited) {
             if (rIn && sIn) s.pay += BASE_H;
             if (!rIn) {
-              if (firstOut === null) { firstOut = i; chapters.push({ t: i, label: "The deep market's price leaves the range. The manager does nothing. Its pay stops." }); notes.push({ t: i, k: "Pay stops", msg: "The deep market's price is out of the range. The manager earns nothing new, and its held-back pay stops vesting. A 24-hour clock starts." }); }
+              if (firstOut === null) firstOut = i;
               s.clock += 1;
               if (s.clock >= 24 * (runB + 1)) {
                 runB++; s.breaches++;
@@ -1511,10 +1512,10 @@ python3 model/reference.py --selfcheck       # the independent model</pre>
         chapters.sort(function (x, y) { return x.t - y.t; });
         return { T: T, dt: dt, F: F, spot: function (t) { return lerp(ST, t); }, ref: function (t) { return lerp(RT, t); }, range: range,
           frames: frames, ev: ev, marks: marks, notes: notes, speed: 40, quiet: true,
-          hdr: function (t, s) { return s.rinH ? ["deep market in range", "in"] : ["deep market OUT of range", "out"]; },
+          hdr: function (t, s) { return s.rinH ? ["hourly check: deep market in range", "in"] : ["hourly check: deep market OUT of range", "out"]; },
           when: function (t) { return fmtS(tsAt(t)); },
           rows: function (s) {
-            return [["Manager's held-back pay", eth(s.pay), s.vestH ? "" : "dim", s.pay / 2.6], ["Pay at the hourly check", s.vestH ? "earning and vesting" : s.mode === "removed" ? "stopped (fired)" : "stopped: out of range", s.vestH ? "ok" : "bad"],
+            return [["Manager's held-back pay", eth(s.pay), s.vestH ? "" : "dim", s.pay / 2.6], ["Pay at the hourly check", s.vestH ? (s.sinH ? "earning and vesting" : "vesting · fee paused") : s.mode === "removed" ? "stopped (fired)" : "stopped: out of range", s.vestH ? "ok" : "bad"],
               ["Hours out of range", s.clock < 24 ? s.clock.toFixed(0) + " h of 24 h" : s.clock.toFixed(0) + " h · a strike per 24 h", s.clock > 0 ? "bad" : "dim", Math.min(1, (s.clock % 24) / 24)],
               ["Strikes (breaches)", s.breaches + " of 3", s.breaches ? "bad" : "dim"],
               ["Burned for every share", eth(s.forf || 0) + (s.forf ? " · " + Math.round(100 * s.drip / s.forf) + "% paid in" : ""), s.forf ? "hot" : "dim"],
@@ -1641,8 +1642,10 @@ python3 model/reference.py --selfcheck       # the independent model</pre>
       $("scn-scrub").max = B.F;
       k = keepT ? Math.min(B.F, Math.round(tKeep / B.dt)) : 0;
       $("scn-chap").innerHTML = chapters.map(function (c, n) { return '<li><button type="button" data-n="' + n + '">' + esc(c.label) + "</button></li>"; }).join("");
-      var lastP = -1e9;
-      $("scn-ticks").innerHTML = chapters.map(function (c, n) { var pc = c.t / B.T * 100; if (pc - lastP < 4.5) return ""; lastP = pc; return '<button type="button" data-n="' + n + '" style="left:' + (c.t / B.T * 100).toFixed(2) + '%" aria-label="Chapter ' + (n + 1) + ": " + esc(c.label) + '" title="' + esc(c.label) + '">' + (n + 1) + "</button>"; }).join("");
+      // S32SF-02: one keep-set for both rails; when two chapters sit closer than 5% of the timeline, the later one is kept
+      var nextKept = 1e9;
+      for (var cn = chapters.length - 1; cn >= 0; cn--) { var pc0 = chapters[cn].t / B.T * 100; chapters[cn].show = nextKept - pc0 >= 5; if (chapters[cn].show) nextKept = pc0; }
+      $("scn-ticks").innerHTML = chapters.map(function (c, n) { if (!c.show) return ""; return '<button type="button" data-n="' + n + '" style="left:' + (c.t / B.T * 100).toFixed(2) + '%" aria-label="Chapter ' + (n + 1) + ": " + esc(c.label) + '" title="' + esc(c.label) + '">' + (n + 1) + "</button>"; }).join("");
       prevKey = null;
       var ylo = Infinity, yhi = -Infinity;
       for (var u = 0; u <= B.T; u += B.T / 400) { var a1 = B.spot(u), b1 = B.ref(u); ylo = Math.min(ylo, a1, b1 - FENCE); yhi = Math.max(yhi, a1, b1 + FENCE); }
@@ -1694,9 +1697,9 @@ python3 model/reference.py --selfcheck       # the independent model</pre>
     }
     var lastText = -1e9;
     function render(tf) {
-      var kf = tf == null ? k : tf, t = k * B.dt, s = B.frames[Math.min(k, B.frames.length - 1)];
+      var ki = Math.floor(k), kf = tf == null ? k : tf, t = ki * B.dt, s = B.frames[Math.min(ki, B.frames.length - 1)];
       chart.now(kf * B.dt);
-      $("scn-scrub").value = k;
+      $("scn-scrub").value = ki;
       // while playing, text panels refresh at most ~7 times a second; the chart moves every frame
       if (tf != null) { var nowMs = performance.now(); if (nowMs - lastText < 140) return; lastText = nowMs; }
       var sp = B.spot(t), rf = B.ref(t), gap = sp - rf;
@@ -1718,8 +1721,9 @@ python3 model/reference.py --selfcheck       # the independent model</pre>
       if (dep && B.pending) { var pd = B.pending(t); dep.disabled = pd; dep.textContent = pd ? "Refused until the check settles" : "Deposit 10 ETH now"; }
     }
     function goChapter(n) { n = Math.max(0, Math.min(chapters.length - 1, n)); k = Math.min(B.F, Math.round(chapters[n].t / B.dt) + 1); setPlay(false); render(); }
-    var t0 = null;
+    var t0 = null, raf = 0;
     function frame(ts) {
+      raf = 0;
       if (!playing || !visible) { t0 = null; return; }
       if (t0 === null) t0 = ts;
       var dt = Math.min(0.1, (ts - t0) / 1000); t0 = ts;
@@ -1727,13 +1731,14 @@ python3 model/reference.py --selfcheck       # the independent model</pre>
       k = Math.min(B.F, k + dt * B.F / sec);
       if (k >= B.F) { k = B.F; render(); setPlay(false); return; }
       var kk = k; k = Math.floor(k); render(kk); k = kk;
-      requestAnimationFrame(frame);
+      raf = requestAnimationFrame(frame);
     }
     function setPlay(on) {
       if (on && k >= B.F) k = 0;
       playing = on; $("scn-play").textContent = on ? "Pause" : "Play";
       if (!on) { k = Math.floor(k); if (B) render(); }
-      if (on) requestAnimationFrame(frame);
+      if (raf) cancelAnimationFrame(raf); raf = 0; t0 = null;
+      if (on) raf = requestAnimationFrame(frame);
     }
     $("scn-play").addEventListener("click", function () { started = true; setPlay(!playing); });
     $("scn-prev").addEventListener("click", function () { var t = k * B.dt, ci = 0; chapters.forEach(function (c, n) { if (c.t < t - B.dt * 1.5) ci = n; }); goChapter(ci); });
@@ -1752,7 +1757,7 @@ python3 model/reference.py --selfcheck       # the independent model</pre>
     if ("IntersectionObserver" in window) new IntersectionObserver(function (en) {
       visible = en[0].isIntersecting;
       if (visible && !started && !REDUCE) { started = true; setPlay(true); }
-      else if (visible && playing) requestAnimationFrame(frame);
+      else if (visible && playing && !raf) raf = requestAnimationFrame(frame);
     }, { threshold: 0.35 }).observe($("scn-panel"));
     else visible = true;
     return { render: function () { chart.build(); lockHeights(); render(); } };

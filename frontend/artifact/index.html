@@ -1,0 +1,716 @@
+<title>Touchstone</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Touchstone is a Uniswap v4 hook vault in which the pool keeps the curator's books.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: basalt ground, one gold streak (the touchstone's mark). Hero = three real testnet transactions; then mechanism, depositors (benefits beside limits), results, evidence, builders. Every number carries its source. */
+:root {
+  --stone: #141618; --stone-2: #1b1e21; --rule: #2b3034;
+  --ink: #ebe7dd; --ink-2: #9c9a93;
+  --gold: #d6aa4a; --gold-dim: rgba(214,170,74,.14);
+  --red: #d4583f; --red-dim: rgba(212,88,63,.12);
+  --green: #8fb07a;
+  --f-cond: "Archivo", "Arial Narrow", "Helvetica Neue", Impact, sans-serif;
+  --f-display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: .8125rem; --step-0: 1rem; --step-1: 1.25rem;
+  --step-2: clamp(1.75rem, 1.3rem + 2vw, 2.4rem);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --stone: #e9ebea; --stone-2: #f5f6f5; --rule: #cdd2d2; --ink: #1a1d1f; --ink-2: #5a5f61;
+    --gold: #8f6714; --gold-dim: rgba(143,103,20,.12); --red: #b13a26; --red-dim: rgba(177,58,38,.1);
+    --green: #3f6b2a; color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --stone: #e9ebea; --stone-2: #f5f6f5; --rule: #cdd2d2; --ink: #1a1d1f; --ink-2: #5a5f61;
+  --gold: #8f6714; --gold-dim: rgba(143,103,20,.12); --red: #b13a26; --red-dim: rgba(177,58,38,.1);
+  --green: #3f6b2a; color-scheme: light;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--stone); color: var(--ink); font: 400 var(--step-0)/1.6 var(--f-body); overflow-x: hidden; }
+a { color: inherit; text-decoration-color: var(--rule); text-underline-offset: 3px; }
+a:hover { text-decoration-color: var(--gold); }
+a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; border-radius: 2px; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.mono, code { font-family: var(--f-mono); }
+code { font-size: .875em; overflow-wrap: anywhere; }
+.src { font: 400 .6875rem/1.3 var(--f-mono); color: var(--ink-2); letter-spacing: .02em; }
+.src a { color: var(--ink-2); }
+.num { font-variant-numeric: tabular-nums; }
+
+.banner { border-bottom: 1px solid var(--rule); font: 500 .75rem/1.3 var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.banner .wrap { display: flex; justify-content: space-between; gap: 6px 16px; padding-block: 9px; flex-wrap: wrap; }
+.banner b { color: var(--gold); font-weight: 500; }
+
+.top .wrap { display: flex; align-items: center; justify-content: space-between; padding-block: 18px; gap: 16px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+.brand span { font: 400 1.6rem/1 var(--f-display); }
+.top nav { display: flex; gap: 6px 20px; flex-wrap: wrap; font-size: var(--step--1); color: var(--ink-2); }
+.top nav a { text-decoration: none; }
+.top nav a:hover { color: var(--ink); }
+
+.hero .wrap { padding-block: 16px 56px; display: grid; gap: 24px; }
+.hero h1 { margin: 0; font: 900 clamp(2.7rem, 8vw, 6.2rem)/.88 var(--f-cond); font-stretch: 62%; text-transform: uppercase; max-width: 15ch; text-wrap: balance; }
+.hero h1 em { font-style: normal; color: var(--gold); }
+.lede { margin: 0; max-width: 52ch; color: var(--ink-2); font-size: var(--step-1); line-height: 1.45; }
+.lede b { color: var(--ink); font-weight: 500; }
+
+.onchain { border: 1px solid var(--rule); background: var(--stone-2); border-radius: 4px; }
+.onchain-h { display: flex; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; padding: 12px 16px; border-bottom: 1px solid var(--rule); font: 500 .75rem/1.3 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.onchain-h b { color: var(--gold); font-weight: 500; }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 860px) { .cards { grid-template-columns: minmax(0, 1fr); } }
+.card { padding: 18px 16px; border-right: 1px solid var(--rule); display: grid; gap: 10px; align-content: start; min-width: 0; }
+.card:last-child { border-right: 0; }
+@media (max-width: 860px) { .card { border-right: 0; border-bottom: 1px solid var(--rule); } .card:last-child { border-bottom: 0; } }
+.card .k { font: 500 .75rem/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.card .v { font: 900 2.2rem/.95 var(--f-cond); font-stretch: 62%; text-transform: uppercase; color: var(--gold); }
+.card.rev .v { color: var(--red); }
+.card p { margin: 0; font-size: .9375rem; line-height: 1.45; }
+.card .amt { font: 500 .875rem/1.4 var(--f-mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.card .tx { font: 400 .75rem/1.3 var(--f-mono); overflow-wrap: anywhere; }
+.onchain-f { padding: 12px 16px; border-top: 1px solid var(--rule); font-size: var(--step--1); color: var(--ink-2); display: grid; gap: 4px; }
+
+section.block { border-top: 1px solid var(--rule); }
+section.block > .wrap { padding-block: 56px; }
+.eyebrow { margin: 0 0 10px; font: 500 .75rem/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--gold); }
+h2.sec { margin: 0 0 20px; font: 400 var(--step-2)/1.1 var(--f-display); text-wrap: balance; }
+h3.sub { margin: 32px 0 12px; font: 600 1.0625rem/1.3 var(--f-body); }
+.sec-lede { margin: -6px 0 24px; color: var(--ink-2); max-width: 62ch; }
+
+.flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--rule); border-radius: 4px; background: var(--stone-2); counter-reset: f; }
+@media (max-width: 980px) { .flow { grid-template-columns: minmax(0, 1fr); } }
+.flow li { counter-increment: f; padding: 16px 14px; border-right: 1px solid var(--rule); display: grid; gap: 8px; align-content: start; min-width: 0; }
+.flow li:last-child { border-right: 0; }
+@media (max-width: 980px) { .flow li { border-right: 0; border-bottom: 1px solid var(--rule); } .flow li:last-child { border-bottom: 0; } }
+.flow li::before { content: counter(f); font: 900 1.9rem/.9 var(--f-cond); font-stretch: 62%; color: var(--gold); }
+.flow h4 { margin: 0; font: 600 1rem/1.3 var(--f-body); }
+.flow p { margin: 0; font-size: .9375rem; line-height: 1.45; color: var(--ink-2); }
+
+.bands { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; margin-top: 28px; }
+@media (max-width: 860px) { .bands { grid-template-columns: minmax(0, 1fr); } }
+.bands figure { margin: 0; border: 1px solid var(--rule); background: var(--stone-2); border-radius: 4px; padding: 12px; min-width: 0; }
+.bands svg { display: block; width: 100%; height: auto; }
+.bands svg text { font: 400 12px var(--f-mono); }
+.bands figcaption { font-size: var(--step--1); color: var(--ink-2); padding-top: 8px; }
+
+.tscroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 4px; background: var(--stone-2); }
+table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--rule); vertical-align: top; }
+tr:last-child > * { border-bottom: 0; }
+thead th { font: 500 .6875rem/1.2 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+td.n, th.n { font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.params { min-width: 640px; }
+.results { min-width: 720px; }
+.contracts { min-width: 640px; }
+.contracts td:last-child, .contracts td.addr { font-family: var(--f-mono); font-size: .8125rem; overflow-wrap: anywhere; }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.tab { font: 500 .8125rem/1 var(--f-mono); padding: 9px 12px; border-radius: 3px; cursor: pointer; border: 1px solid var(--rule); background: transparent; color: var(--ink-2); }
+.tab:hover { color: var(--ink); }
+.tab[aria-selected="true"] { border-color: var(--gold); color: var(--gold); background: var(--gold-dim); }
+.panel { border: 1px solid var(--rule); background: var(--stone-2); border-radius: 4px; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
+@media (max-width: 900px) { .panel { grid-template-columns: minmax(0, 1fr); } }
+.panel pre { margin: 0; padding: 16px; overflow-x: auto; font: 400 .78rem/1.45 var(--f-mono); color: var(--ink); border-right: 1px solid var(--rule); min-width: 0; }
+@media (max-width: 900px) { .panel pre { border-right: 0; border-bottom: 1px solid var(--rule); } }
+.panel .side { padding: 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.panel .side h4 { margin: 0; font: 900 1.6rem/.95 var(--f-cond); font-stretch: 62%; text-transform: uppercase; }
+.panel ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: .9375rem; line-height: 1.45; }
+.tier-note { font-size: var(--step--1); color: var(--ink-2); margin: 0; }
+
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
+@media (max-width: 860px) { .two { grid-template-columns: minmax(0, 1fr); } }
+.col h3 { margin: 0 0 12px; font: 500 .75rem/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; }
+.col.good h3 { color: var(--gold); } .col.lim h3 { color: var(--red); }
+.items { list-style: none; margin: 0; padding: 0; display: grid; }
+.items li { padding: 12px 0; border-bottom: 1px solid var(--rule); display: grid; gap: 4px; font-size: .9375rem; line-height: 1.45; }
+.items li strong { font-weight: 600; }
+.col.good .items li { border-left: 2px solid var(--gold); padding-left: 12px; }
+.col.lim .items li { border-left: 2px solid var(--red); padding-left: 12px; }
+
+.badge { display: inline-block; font: 500 .6875rem/1 var(--f-mono); letter-spacing: .06em; text-transform: uppercase; padding: 5px 7px; border-radius: 2px; border: 1px solid currentColor; white-space: nowrap; }
+.b-pass { color: var(--green); } .b-fail { color: var(--red); } .b-rep { color: var(--gold); } .b-nr, .b-none { color: var(--ink-2); }
+details.hist { margin-top: 16px; }
+details.hist summary { cursor: pointer; font: 500 .8125rem/1.4 var(--f-mono); color: var(--ink-2); }
+.countline { margin: 16px 0 0; font: 400 .8125rem/1.5 var(--f-mono); color: var(--ink-2); max-width: 90ch; }
+
+.ev { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 860px) { .ev { grid-template-columns: minmax(0, 1fr); } }
+.evc { border: 1px solid var(--rule); background: var(--stone-2); border-radius: 4px; padding: 18px 16px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.evc h3 { margin: 0; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font: 500 .75rem/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--gold); }
+.evc .big { font: 900 clamp(2.4rem, 5vw, 3.4rem)/.9 var(--f-cond); font-stretch: 62%; font-variant-numeric: tabular-nums; }
+.evc p { margin: 0; font-size: .9375rem; line-height: 1.45; }
+.evc dl { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; font: 400 .8125rem/1.4 var(--f-mono); }
+.evc dt { color: var(--ink-2); min-width: 0; }
+.evc dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.evc pre, .agent pre, .cmd { margin: 0; padding: 10px 12px; border: 1px dashed var(--rule); border-radius: 2px; overflow-x: auto; font: 400 .78rem/1.5 var(--f-mono); }
+
+.agent { margin-top: 24px; border: 1px solid var(--rule); background: var(--stone-2); border-radius: 4px; }
+.agent-h { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
+.agent-h span { font: 500 .75rem/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--gold); }
+.agent pre { border: 0; padding: 16px; white-space: pre; }
+.copy { font: 500 .75rem/1 var(--f-mono); padding: 7px 10px; border-radius: 3px; cursor: pointer; border: 1px solid var(--rule); background: transparent; color: var(--ink); }
+.copy:hover { border-color: var(--gold); color: var(--gold); }
+.calls { display: grid; gap: 12px; }
+
+footer { border-top: 1px solid var(--rule); }
+footer .wrap { padding-block: 36px 56px; display: grid; gap: 16px; }
+.flinks { display: flex; flex-wrap: wrap; gap: 10px 24px; font: 400 .875rem/1.3 var(--f-mono); }
+.flinks a { text-decoration: none; color: var(--ink-2); border-bottom: 1px solid var(--rule); padding-bottom: 2px; }
+.flinks a:hover { color: var(--gold); border-color: var(--gold); }
+.fine { margin: 0; color: var(--ink-2); font-size: var(--step--1); max-width: 76ch; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="banner" role="note">
+  <div class="wrap"><span><b>Testnet only</b> · Unichain Sepolia · no mainnet deployment</span><span>deployed from a829357 · numbers as of 815c186</span></div>
+</div>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Touchstone">
+      <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
+        <path d="M5 9.5 L13 4 L27 6.5 L31 17 L26 29 L11 30.5 L3.5 21 Z" fill="var(--stone-2)" stroke="var(--ink-2)" stroke-width="1.2" stroke-linejoin="round"/>
+        <path d="M10 21.5 L24 13" stroke="var(--gold)" stroke-width="3.2" stroke-linecap="round"/>
+      </svg>
+      <span>Touchstone</span>
+    </a>
+    <nav aria-label="Sections">
+      <a href="#how">How it works</a>
+      <a href="#depositors">Depositors</a>
+      <a href="#results">Results</a>
+      <a href="#evidence">Evidence</a>
+      <a href="#builders">Builders &amp; agents</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+<section class="hero" aria-labelledby="hero-h">
+  <div class="wrap">
+    <h1 id="hero-h">The pool keeps the curator's <em>books.</em></h1>
+    <p class="lede">A liquidity vault on Uniswap v4. <b>Every curator action is priced against a reference price.</b> The cost the pool measures is charged to the curator's deferred pay, then its bond. An action it cannot cover reverts.</p>
+
+    <div class="onchain" aria-labelledby="oc-h">
+      <div class="onchain-h"><span id="oc-h"><b>On chain</b> · Unichain Sepolia · 2026-11-20</span><span>DEMO tier · mock tokens</span></div>
+      <div class="cards">
+        <article class="card">
+          <span class="k">A1 · setPositions</span>
+          <span class="v">Charged</span>
+          <p>The curator re-placed the range while the reference lagged spot.</p>
+          <span class="amt">335,126,463 wei = 3.35e-10 mWETH<br>≈ 8e-11 of a ≈ 4 mWETH vault</span>
+          <span class="amt">settlement burned 867,995,129,170 wei more (8.7e-7 mWETH)</span>
+          <a class="tx" href="https://sepolia.uniscan.xyz/tx/0xbad37998d600c9186d9f74e4cd06045ae28ea81a46fe00d68a9546fdb8ee819a">action 0xbad3…819a</a>
+          <a class="tx" href="https://sepolia.uniscan.xyz/tx/0x8f37d44973a0fde772ecb9f0ead79f50443e768e0c02bb4242e70b3ddbbc6582">settle 0x8f37…6582</a>
+        </article>
+        <article class="card rev">
+          <span class="k">A2 · setPositions</span>
+          <span class="v">Reverted · Fence</span>
+          <p>The demo script pushed spot 90 ticks off the reference. The fence is 60. The action failed. Nothing was charged.</p>
+          <span class="amt">status 0 · Fence() 0xe78b0e36</span>
+          <a class="tx" href="https://sepolia.uniscan.xyz/tx/0x00577c5cdbb55813a72409a021055dc46cf7ff06a439e949674dcc6079b6956c">tx 0x0057…956c</a>
+        </article>
+        <article class="card">
+          <span class="k">A3 · rebalanceSwap</span>
+          <span class="v">Charged</span>
+          <p>A small swap by the curator. Its measured cost came out of the curator's balance.</p>
+          <span class="amt">11,534,237,164,438 wei = 1.15e-5 mWETH<br>≈ 3e-6 of a ≈ 4 mWETH vault</span>
+          <a class="tx" href="https://sepolia.uniscan.xyz/tx/0x8e84f336112a64b657ffbc0e16db219c7b1fb7c8ddbd779c52de623715724e7e">action 0x8e84…4e7e</a>
+          <a class="tx" href="https://sepolia.uniscan.xyz/tx/0x5d40cb170b9564cd7cb4d16e674d47693a07975390d6165dcd15cd5220eba889">settle 0x5d40…a889</a>
+        </article>
+      </div>
+      <div class="onchain-f">
+        <span>Mock tokens. The reference is our own mock v3 pool, not a deep one. The amounts are small because the demo vault is small.</span>
+        <span>Price path: the tick moves of mainnet USDC/WETH 0.05% at nine hourly samples (blocks 26,387,320 to 26,389,720), applied to the demo pools, 30 s per hour. A first attempt stopped after 13 transactions on an RPC nonce error; this run is the second.</span>
+        <span class="src">source: <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/script/demo/deployments-1301.json">script/demo/deployments-1301.json</a> · driver <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/script/demo/demoflow.sh">script/demo/demoflow.sh</a> · vault size: <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/script/demo/DeployDemo.s.sol">DeployDemo.s.sol</a> seed</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="how" aria-labelledby="how-h">
+  <div class="wrap">
+    <p class="eyebrow">How it works</p>
+    <h2 class="sec" id="how-h">Five rules. One price to check against.</h2>
+    <p class="sec-lede">The numbers below are the mainnet tier's. The demo deployment runs the same rules faster (table below).</p>
+    <ol class="flow">
+      <li><h4>A reference price</h4><p>The 10-minute TWAP of a deep Uniswap v3 pool. Fixed at deployment.</p></li>
+      <li><h4>A fence</h4><p>An action more than 60 ticks from the reference reverts.</p><span class="src">test_U_guard__fenceOnBothSides</span></li>
+      <li><h4>A charge</h4><p>The vault is valued before and after, at three prices. The worst shortfall is charged, 100%. Pay first, then bond. Not enough? Revert.</p><span class="src">test_U_solv__worstSwapPlusReserveFitsTheBond</span></li>
+      <li><h4>A settlement</h4><p>A reserve is held. 120 s later the action is settled against the reference. The lag gap is burned, up to the reserve.</p></li>
+      <li><h4>A mandate</h4><p>A 2,000-tick range holding spot and the reference. Reference outside it: no base fee, no vesting. 24 h out: a breach. Three: the curator is removed.</p></li>
+    </ol>
+
+    <div class="bands">
+      <figure>
+        <svg viewBox="0 0 560 210" role="img" aria-label="Two bands on one price axis. The fence of 60 ticks around the reference. The 2,000-tick mandate range must hold spot and the reference.">
+          <rect x="70" y="18" width="250" height="174" fill="none" stroke="var(--ink-2)" stroke-width="2"/>
+          <text x="78" y="36" fill="var(--ink-2)">mandate range</text>
+          <text x="78" y="184" fill="var(--ink-2)">2,000 ticks</text>
+          <rect x="70" y="112" width="250" height="18" fill="var(--gold-dim)" stroke="var(--gold)" stroke-dasharray="3 3"/>
+          <line x1="70" y1="121" x2="320" y2="121" stroke="var(--ink)" stroke-width="2"/>
+          <circle cx="250" cy="117" r="4" fill="var(--ink-2)"/>
+          <text x="236" y="106" fill="var(--ink-2)" text-anchor="end">spot</text>
+          <text x="80" y="148" fill="var(--gold)">fence: 60 ticks</text>
+          <text x="80" y="164" fill="var(--ink)">reference TWAP</text>
+          <line x1="330" y1="121" x2="356" y2="121" stroke="var(--gold)" stroke-width="1.2"/>
+          <text x="362" y="117" fill="var(--gold)">spot past the fence:</text>
+          <text x="362" y="132" fill="var(--gold)">action reverts</text>
+          <line x1="343" y1="18" x2="343" y2="192" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="2 3"/>
+          <text x="362" y="40" fill="var(--ink-2)">reference out of range:</text>
+          <text x="362" y="55" fill="var(--ink-2)">no base fee, no vesting</text>
+          <text x="362" y="70" fill="var(--red)">24 h out = 1 breach</text>
+        </svg>
+        <figcaption>Not to scale. The fence is far narrower than the range.</figcaption>
+      </figure>
+      <div>
+        <p class="tier-note" style="margin-bottom:10px">Parameters by tier.</p>
+        <div class="tscroll">
+          <table class="params">
+            <thead><tr><th scope="col">Parameter</th><th scope="col" class="n">Mainnet tier</th><th scope="col" class="n">This deployment (DEMO)</th></tr></thead>
+            <tbody>
+              <tr><td>Block time</td><td class="n">12 s</td><td class="n">1 s</td></tr>
+              <tr><td>Reference window</td><td class="n">600 s</td><td class="n">300 s</td></tr>
+              <tr><td>Reference pool</td><td>deep USDC/WETH 0.05%</td><td>our mock v3 pool</td></tr>
+              <tr><td>Fence</td><td class="n">60 ticks</td><td class="n">60 ticks</td></tr>
+              <tr><td>Range width</td><td class="n">2,000 ticks</td><td class="n">2,000 ticks</td></tr>
+              <tr><td>Markout window</td><td class="n">120 s</td><td class="n">20 s</td></tr>
+              <tr><td>Cooldown</td><td class="n">30 blocks</td><td class="n">30 blocks</td></tr>
+              <tr><td>Cure window (breach)</td><td class="n">7,200 blocks · 24 h</td><td class="n">1,800 blocks · 30 min</td></tr>
+              <tr><td>Epoch</td><td class="n">50,400 blocks · 7 d</td><td class="n">3,600 blocks · 1 h</td></tr>
+              <tr><td>Base rate</td><td class="n">2.2% a year</td><td class="n">2.2% a year</td></tr>
+              <tr><td>Bond ratio · minimum</td><td class="n">1.74e-3 · 1.74 WETH</td><td class="n">1.74e-3 · 1.74 mWETH</td></tr>
+              <tr><td>NAV cap</td><td class="n">1,850 WETH</td><td class="n">1,850 mWETH</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="src" style="margin-top:6px">source: <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/script/Tiers.sol">script/Tiers.sol</a> mainnet() and demo()</p>
+      </div>
+    </div>
+
+    <h3 class="sub">Four worked examples</h3>
+    <div class="tabs" role="tablist" aria-label="Worked examples" id="ex-tabs">
+      <button class="tab" role="tab" id="t-ex1" aria-controls="ex1" aria-selected="true">Charged or reverted</button>
+      <button class="tab" role="tab" id="t-ex2" aria-controls="ex2" aria-selected="false" tabindex="-1">A curator walks away</button>
+      <button class="tab" role="tab" id="t-ex3" aria-controls="ex3" aria-selected="false" tabindex="-1">A depositor's round trip</button>
+      <button class="tab" role="tab" id="t-ex4" aria-controls="ex4" aria-selected="false" tabindex="-1">The self-sandwich</button>
+    </div>
+    <div class="panel" role="tabpanel" id="ex1" aria-labelledby="t-ex1">
+<pre> curator ──setPositions / rebalanceSwap──▶ vault
+                                   │ value holdings before and after
+                                   │ at three prices: s0, spot, reference
+                                   ▼
+            charge = worst of the three shortfalls (never netted)
+                                   │
+     pay + bond cover charge + reserve? ── no ──▶ revert Insolvent
+                                   │ yes          (withdrawals stay open)
+                                   ▼
+     burn unvested pay, then bond  +  hold a reserve (6e-4 of NAV)
+                                   │
+                                   ▼  after the 120 s markout window
+     settle against the reference; burn up to the reserve more</pre>
+      <div class="side">
+        <h4>Charged or reverted</h4>
+        <ul>
+          <li>More than 60 ticks from the reference: revert <code>Fence</code>. <span class="src">test_U_guard__fenceOnBothSides</span></li>
+          <li>A gain at one price never offsets a loss at another. <span class="src">test_U_net__aGainNeverOffsetsAChargeOrALaterCharge</span></li>
+          <li>The worst legal swap is charged at least 1.37e-4 of NAV. Charge plus reserve fits the bond twice over. One share less of bond: revert <code>Insolvent</code>. <span class="src">test_U_solv__worstSwapPlusReserveFitsTheBond</span></li>
+        </ul>
+        <p class="tier-note">Test tier: 12 s blocks, mainnet fence, caps, reserve and markout. Vault NAV about 1,150 token units.</p>
+      </div>
+    </div>
+    <div class="panel" role="tabpanel" id="ex2" aria-labelledby="t-ex2" hidden>
+<pre> reference leaves the vault's range
+        │  no base fee; nothing vests
+        ▼
+ observed time out of range reaches 24 h
+        │
+        ▼
+ breach 1 ──▶ all unvested pay forfeited,
+        │      burned to depositors over one epoch (7 d)
+        │
+        │  a real placement (spot and reference inside,
+        │  half the vault deployed) starts a new run;
+        │  a dust placement or a 1-wei swap does not
+        ▼
+ breach 2 ──▶ breach 3 ──▶ EXITED: curator removed
+                          deposits close; withdraw in kind</pre>
+      <div class="side">
+        <h4>A curator walks away</h4>
+        <ul>
+          <li>Pay stops the moment the reference leaves the range.</li>
+          <li>Unvested pay is forfeited to depositors at the first breach.</li>
+          <li>Three breaches remove the curator. There is no replacement curator.</li>
+          <li>Withdrawals stay open in every mode.</li>
+        </ul>
+        <p class="src">source: <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/README.md">README.md</a> worked example 2</p>
+      </div>
+    </div>
+    <div class="panel" role="tabpanel" id="ex3" aria-labelledby="t-ex3" hidden>
+<pre> deposit ──▶ shares priced against the depositor (rounded up)
+    │        refused while a settlement is pending
+    ▼
+ curator acts ──▶ each charge burns curator-owned shares;
+    │             the depositors' shares are untouched
+    ▼
+ base fee: 2.2% a year × the share of the vault deployed in
+           range, minted to the curator as shares, vesting
+           4 to 5 epochs later, forfeited on a breach
+    │
+    ▼
+ withdraw in kind, in every mode</pre>
+      <div class="side">
+        <h4>A depositor's round trip</h4>
+        <ul>
+          <li>A deposit followed by a withdrawal never profits. <span class="src">test_U_5__roundTripNeverProfits</span></li>
+          <li>Deposits wait for a pending settlement. <span class="src">test_U_settle__depositsBlockedWhilePendingThenSettleFirst</span></li>
+          <li>No base fee without a placement, after removal, or at zero deployment. <span class="src">test_U_base__noBaseWithoutAPlacementInExitedOrAtZeroDelta</span></li>
+          <li>Withdrawals stay open after removal. <span class="src">test_U_breach__anEmptyVaultReachesExitedAndWithdrawalsStayOpen</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="panel" role="tabpanel" id="ex4" aria-labelledby="t-ex4" hidden>
+<pre> colluding trader pushes spot up to 60 ticks
+        │
+        ▼
+ curator places at the pushed price
+        │  the reference TWAP did not move with the push,
+        │  so the placement is valued at the worse of the
+        │  pushed spot and the reference; the trader's gain
+        │  is charged to the curator in full
+        ▼
+ trader unwinds ──▶ coalition net ≤ 0 on every row</pre>
+      <div class="side">
+        <h4>The self-sandwich</h4>
+        <ul>
+          <li>Pushes of 20, 30, 60 and 100 ticks, both sides, three depths: every row nets ≤ 0. Past 60 ticks the placement reverts. <span class="src">test_M_N4__gridLoses</span></li>
+          <li>Positive control: with a reference that follows the push, the same attack nets +0.0155 token units. <span class="src">test_M_N4__ctlReferenceFollowingThePushProfits</span></li>
+          <li>JIT liquidity on the curator's own swap also loses (control +0.0273). <span class="src">test_M_ADV3__jitOnTheCuratorsSwapLoses</span></li>
+        </ul>
+        <p class="tier-note">Test tier. E5's overall verdict is FAIL (control form); see Results.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="depositors" aria-labelledby="dep-h">
+  <div class="wrap">
+    <p class="eyebrow">For depositors</p>
+    <h2 class="sec" id="dep-h">What you get. What you do not.</h2>
+    <div class="two">
+      <div class="col good">
+        <h3>Benefits</h3>
+        <ul class="items">
+          <li><strong>The curator pays for its own trades, as the pool measures them.</strong> The measured cost comes out of the curator's pay and bond. <span class="src">U-3 · E2</span></li>
+          <li><strong>Other traders are never charged to you.</strong> 0 wei charged over 10,000 segments and 20,034 third-party swaps, in the independent model. <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E3.json">E3</a></span></li>
+          <li><strong>A curator who walks away pays you.</strong> Its unvested pay is forfeited to depositors at the first breach.</li>
+          <li><strong>The base fee is paid for work in range.</strong> It accrues only while the mandate liquidity is in range.</li>
+          <li><strong>You can always leave.</strong> Withdrawals are in kind, in every mode.</li>
+        </ul>
+      </div>
+      <div class="col lim">
+        <h3>Limits</h3>
+        <ul class="items">
+          <li><strong>Market moves are yours.</strong> Positioning and token mix are not covered. Skill is not rewarded. The reference TWAP is assumed not to be moved; moving it costs money (E8).</li>
+          <li><strong>Lag leak.</strong> Prices lag the market by a block. The settlement closes the gap in expectation, not on every draw. The reserve caps one settlement. <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E8.json">E8</a></span></li>
+          <li><strong>Reported, not asserted.</strong> Some attack rows net a positive amount: +0.93 (a markout past the cap, about 8e-4 of NAV), +0.004 (protocol fee on), +0.0006 (off-leg stops), +0.00023 per exit (parking, test tier; about 5e-6 of NAV on mainnet). Token units of a 1,150-NAV test vault. <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E5.json">E5</a></span></li>
+          <li><strong>One block builder.</strong> A single builder that censors arbitrage is outside the model. Against it the safe NAV is about 150 WETH, not 1,850.</li>
+          <li><strong>The NAV cap is checked at the last action.</strong> A vault left unplaced through a large move can hold more than the cap.</li>
+          <li><strong>Incentives are simulated.</strong> U-IC2 passed on synthetic paths without an outside observer. With one, two lax strategies out-earn the reference curator at 120% volatility. The vault ends with more value under those lax strategies (about 558 and 569 against 314, from 1,000). <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/U-IC2.json">U-IC2</a></span></li>
+          <li><strong>E-IC was not run.</strong> No historical price path was fetched. <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E-IC.json">E-IC</a></span></li>
+          <li><strong>Allocation ledger claim withdrawn.</strong> E0b failed: 59 of 112 epoch rows exceeded 0.3 bp. The ledger is disclosure only. <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E0b.json">E0b</a></span></li>
+          <li><strong>Synthetic paths only.</strong> Every simulated result uses simulated 180-day paths.</li>
+          <li><strong>Testnet only. No third-party review.</strong> The tests, evaluations and SECURITY.md are the evidence. The testnet reference is our own mock pool.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="results" aria-labelledby="res-h">
+  <div class="wrap">
+    <p class="eyebrow">Results</p>
+    <h2 class="sec" id="res-h">Pre-registered. Published whichever way.</h2>
+    <p class="sec-lede">Each row has its result file. Badges come from each file's verdict field.</p>
+    <div class="tscroll">
+      <table class="results">
+        <thead><tr><th scope="col">ID</th><th scope="col">Question</th><th scope="col">Verdict</th><th scope="col">Result</th></tr></thead>
+        <tbody>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E1.json">E1</a></td><td>Is the witness a real position?</td><td><span class="badge b-pass">PASS</span></td><td>0 wei difference, exact equality on 256 fuzz runs.</td></tr>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E2.json">E2</a></td><td>Does the charge cover an honest placement's realised loss?</td><td><span class="badge b-pass">PASS</span></td><td>Covered on 2,016 and 2,100 sampled exit states (σ 60 and 120%). Mean overcharge 0.012 and 0.023 bp of NAV. Synthetic.</td></tr>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E3.json">E3</a></td><td>Is the charge zero without a curator action?</td><td><span class="badge b-pass">PASS</span></td><td>0 wei over 10,000 segments and 20,034 third-party swaps. Control: one swap is charged.</td></tr>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E4.json">E4</a></td><td>Does the reference curator out-earn idle, dust, stale and wide curators?</td><td><span class="badge b-pass">PASS</span></td><td>In every bucket. Idle nets exactly 0 before gas. Synthetic.</td></tr>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E5.json">E5</a></td><td>Do the asserted attacks lose money?</td><td><span class="badge b-fail">FAIL (control form)</span></td><td>FAIL (control form) under the registered rule. Every asserted attack row in all 17 cells nets ≤ 0; 14 cells have a control test that profits with the defence removed; N1 and N2 have inline sensitivity checks; N3 is a forgery cell. Under the rule as amended after the data: PASS.</td></tr>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E6.json">E6</a></td><td>Does churning pay?</td><td><span class="badge b-pass">PASS</span></td><td>Churner minus reference curator: t = −129 to −691 per bucket. Synthetic.</td></tr>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E7.json">E7</a></td><td>Gas and size within budget?</td><td><span class="badge b-pass">PASS</span></td><td>Largest runtime 19,877 B (limit 22,000). First swap per block 26.7k gas. Worst action 871k (budget 1.2M).</td></tr>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E8.json">E8</a></td><td>Operating numbers</td><td><span class="badge b-rep">REPORTED</span></td><td>11 items reported, 6 not run. Reference curator charged 1.6, 4.0 and 15.7 bps of NAV a year at 40, 60 and 120% volatility.</td></tr>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E9.json">E9</a></td><td>Why is positioning not paid?</td><td><span class="badge b-rep">REPORTED</span></td><td>A carry benchmark pays a random curator +40%, +6% and −13% above base across three regimes.</td></tr>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/U-IC2.json">U-IC2</a></td><td>Does the reference curator out-earn lazy and lax ones?</td><td><span class="badge b-pass">PASS</span></td><td>On 400 synthetic paths per bucket, no outside observer. Caveats under Limits.</td></tr>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E-IC.json">E-IC</a></td><td>Incentives on a historical price path</td><td><span class="badge b-nr">NOT RUN</span></td><td>No historical price path was fetched.</td></tr>
+          <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E0b.json">E0b</a></td><td>Does the allocation ledger close within 0.3 bp per epoch?</td><td><span class="badge b-fail">FAIL · claim withdrawn</span></td><td>59 of 112 epoch rows above the bound, worst 4.09 bp. The closure claim is withdrawn.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <details class="hist">
+      <summary>Earlier configurations (published as failed, final) and records</summary>
+      <div class="tscroll" style="margin-top:10px">
+        <table class="results">
+          <thead><tr><th scope="col">ID</th><th scope="col">What</th><th scope="col">Verdict</th><th scope="col">Result</th></tr></thead>
+          <tbody>
+            <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/U-IC.json">U-IC</a></td><td>Incentives, earlier six-hour form</td><td><span class="badge b-fail">FAIL</span></td><td>Two comparisons failed at 120% volatility. Never re-run.</td></tr>
+            <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E0.json">E0</a></td><td>Ledger closure, registered form</td><td><span class="badge b-fail">FAIL</span></td><td>Worst residual 58.6 bp in an epoch.</td></tr>
+            <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E0a.json">E0a</a></td><td>Ledger closure, amended form</td><td><span class="badge b-fail">FAIL</span></td><td>0.556 bp in one epoch of one run.</td></tr>
+            <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E0b-fit.json">E0b-fit</a></td><td>Ledger fit data used to set up E0b</td><td><span class="badge b-none">no verdict</span></td><td>Fit data.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+    <p class="countline">Claim coverage at P6 (<code>CLAIMS_PHASE=P6 python3 script/claims.py</code>): 104 of 106 current claim IDs covered, with E5 (FAIL, control form) and E-IC (not run) missing; + 3 historical failed (E0, E0a, U-IC); + 1 withdrawn (E0b: registered test failed, claim dropped).</p>
+  </div>
+</section>
+
+<section class="block" id="evidence" aria-labelledby="evi-h">
+  <div class="wrap">
+    <p class="eyebrow">Evidence</p>
+    <h2 class="sec" id="evi-h">How the code was tested.</h2>
+    <p class="sec-lede">Each card names the file or command that holds its numbers.</p>
+    <div class="ev">
+      <article class="evc">
+        <h3>Mutation testing <span class="src">curated</span></h3>
+        <span class="big">328 killed</span>
+        <p>We changed one rule at a time in our own code. Each change names the test that must catch it. 328 of 328 wired mutants were caught, in one full run at one commit.</p>
+        <dl>
+          <dt>listed</dt><dd>332</dd>
+          <dt>wired (in the denominator)</dt><dd>328</dd>
+          <dt>killed by the named test</dt><dd>328</dd>
+          <dt>equivalent (no input can tell them apart), listed apart</dt><dd>4</dd>
+        </dl>
+        <dl>
+          <dt>by area: guards</dt><dd>87</dd>
+          <dt>ledger (the charge)</dt><dd>78</dd>
+          <dt>ladder (breaches, vesting)</dt><dd>33</dd>
+          <dt>bank (pay, bond, forfeits)</dt><dd>19</dd>
+          <dt>records</dt><dd>15</dd>
+          <dt>witness</dt><dd>8</dd>
+          <dt>other areas</dt><dd>92</dd>
+        </dl>
+        <pre>python3 script/mutate.py --audit
+python3 script/mutate.py -j 1 MU-001 …</pre>
+        <span class="src">source: <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/audits/mutants.json">audits/mutants.json</a> (status per mutant) · <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/script/mutate.py">script/mutate.py</a></span>
+      </article>
+      <article class="evc">
+        <h3>Invariants <span class="src">stateful fuzzing</span></h3>
+        <span class="big">13 invariants</span>
+        <p>Each runs in two pool states, a 1:1 pool at tick 0 and a USDC/WETH-like pool near tick 196,000: 26 invariant runs in the suite.</p>
+        <p>A handler makes random calls: deposits, withdrawals, swaps, placements, settlements, pokes. After each call the invariants are checked.</p>
+        <dl>
+          <dt>in forge test</dt><dd>64 runs × 64 calls</dd>
+          <dt>in the CI script</dt><dd>256 runs × 128 calls</dd>
+          <dt>non-vacuity floor: real mint-and-vest events</dt><dd>≥ 1,000</dd>
+          <dt>non-vacuity floor: mint-and-vest calls</dt><dd>≥ 600</dd>
+        </dl>
+        <p>The non-vacuity check fails the campaign if it executed too few swaps, placements, moves, settlements or vests.</p>
+        <pre>CLAIMS_PHASE=P6 script/ci-local.sh</pre>
+        <span class="src">source: <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/test/invariant/VaultP2.t.sol">test/invariant/VaultP2.t.sol</a> · <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/script/nonvacuity.py">script/nonvacuity.py</a></span>
+      </article>
+      <article class="evc">
+        <h3>Static analysis <span class="src">Slither 0.11.5</span></h3>
+        <span class="big">215 triaged</span>
+        <p>Every Slither result on <code>src/</code> has a verdict: false positive, by design, or accepted. None needs a code change.</p>
+        <dl>
+          <dt>High</dt><dd>10</dd>
+          <dt>Medium</dt><dd>81</dd>
+          <dt>Low</dt><dd>27</dd>
+          <dt>Informational and optimisation</dt><dd>97</dd>
+          <dt>contracts analysed · detectors</dt><dd>64 · 101</dd>
+          <dt>static tests (record pinned to src)</dt><dd>13 passed</dd>
+        </dl>
+        <span class="src">source: <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/audits/SLITHER.md">audits/SLITHER.md</a> · <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/audits/slither-results.json">audits/slither-results.json</a> · <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/test/static/test_static.py">test/static/test_static.py</a> (S-1)</span>
+      </article>
+      <article class="evc">
+        <h3>Foundry suite <span class="src">FORK_BLOCK_1=26443420</span></h3>
+        <span class="big">467 passed</span>
+        <p>0 failed. 0 skipped. Fork tests run against mainnet at a pinned block.</p>
+        <dl>
+          <dt>unit</dt><dd>301</dd>
+          <dt>manipulation</dt><dd>73</dd>
+          <dt>invariant</dt><dd>44</dd>
+          <dt>fuzz</dt><dd>12</dd>
+          <dt>fork</dt><dd>11</dd>
+          <dt>deploy</dt><dd>17</dd>
+          <dt>eval</dt><dd>9</dd>
+        </dl>
+        <dl>
+          <dt>by kind: fuzz</dt><dd>33</dd>
+          <dt>invariant</dt><dd>26</dd>
+          <dt>plain</dt><dd>408</dd>
+        </dl>
+        <p>Every manipulation test asserts the attack loses money. 14 of the 17 attack cells have a separate positive control (see E5).</p>
+        <span class="src">source: <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/audits/test-summary.json">audits/test-summary.json</a> (<a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/script/test_summary.py">script/test_summary.py</a>)</span>
+      </article>
+      <article class="evc">
+        <h3>Independent reference model <span class="src">Python</span></h3>
+        <span class="big">116,088 checks</span>
+        <p>A model written from the specification, not from the Solidity. Its golden vectors are matched bit for bit by the contracts.</p>
+        <pre>python3 model/reference.py --selfcheck</pre>
+        <span class="src">source: <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/model/reference.py">model/reference.py</a> · <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/test/vectors/">test/vectors/</a></span>
+      </article>
+      <article class="evc">
+        <h3>Size and gas</h3>
+        <span class="big">19,877 B</span>
+        <p>The largest runtime, against a 22,000 B gate (EIP-170 is 24,576).</p>
+        <dl>
+          <dt>TouchstoneVault</dt><dd>19,877 B</dd>
+          <dt>TouchstoneVaultExtension</dt><dd>15,046 B</dd>
+          <dt>TouchstoneHook</dt><dd>14,329 B</dd>
+          <dt>TouchstoneFactory</dt><dd>6,416 B</dd>
+        </dl>
+        <pre>forge build --sizes src</pre>
+        <span class="src">source: <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E7.json">eval/results/E7.json</a> · <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/audits/size-budget.json">audits/size-budget.json</a></span>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="builders" aria-labelledby="bld-h">
+  <div class="wrap">
+    <p class="eyebrow">For builders and AI agents</p>
+    <h2 class="sec" id="bld-h">The live deployment. Real addresses.</h2>
+    <p class="sec-lede">Unichain Sepolia, chain 1301. DEMO tier. Deployed 2026-11-20 from commit a829357.</p>
+    <div class="tscroll">
+      <table class="contracts">
+        <thead><tr><th scope="col">Contract</th><th scope="col">Role</th><th scope="col">Address</th></tr></thead>
+        <tbody>
+          <tr><td>TouchstoneVault</td><td>Shares, pay, bond, modes</td><td><a href="https://sepolia.uniscan.xyz/address/0xA8FD240dEFEBE61200C67e8FBfbF8BFC4597b962">0xA8FD240dEFEBE61200C67e8FBfbF8BFC4597b962</a></td></tr>
+          <tr><td>TouchstoneVaultExtension</td><td>Vault entries behind its fallback</td><td><a href="https://sepolia.uniscan.xyz/address/0x498E3364Bda8b2dEd92cC6fF06DA8b173df8a9B1">0x498E3364Bda8b2dEd92cC6fF06DA8b173df8a9B1</a></td></tr>
+          <tr><td>TouchstoneHook</td><td>Reference, fence, breach clock</td><td><a href="https://sepolia.uniscan.xyz/address/0x93700F94801eB5542313c87c22cd6c59e875e0A0">0x93700F94801eB5542313c87c22cd6c59e875e0A0</a></td></tr>
+          <tr><td>TouchstoneFactory</td><td>Deploys vault, extension and hook</td><td><a href="https://sepolia.uniscan.xyz/address/0x68b4C7D0a58f66d4f8c49B493370824a191e1fE1">0x68b4C7D0a58f66d4f8c49B493370824a191e1fE1</a></td></tr>
+          <tr><td>CuratorBundler</td><td>The curator (owner-only calls)</td><td><a href="https://sepolia.uniscan.xyz/address/0xeccbecA62ffCC13f78890BA9481f7D8649f6Ae31">0xeccbecA62ffCC13f78890BA9481f7D8649f6Ae31</a></td></tr>
+          <tr><td>PoolManager</td><td>Uniswap v4</td><td><a href="https://sepolia.uniscan.xyz/address/0x00B036B58a818B1BC34d502D3fE730Db729e62AC">0x00B036B58a818B1BC34d502D3fE730Db729e62AC</a></td></tr>
+          <tr><td>Reference pool</td><td>Mock-token v3 pool, 0.05%</td><td><a href="https://sepolia.uniscan.xyz/address/0x84517dBDaa924A8d9bc2abb97BAAB40A648EC972">0x84517dBDaa924A8d9bc2abb97BAAB40A648EC972</a></td></tr>
+          <tr><td>Reference driver</td><td>Moves the mock reference pool along the price path</td><td><a href="https://sepolia.uniscan.xyz/address/0x9D6c8584760a35FEa1537E76667A7fB237eE5acF">0x9D6c8584760a35FEa1537E76667A7fB237eE5acF</a></td></tr>
+          <tr><td>mUSDC (token0)</td><td>Mock token</td><td><a href="https://sepolia.uniscan.xyz/address/0x2295cd39Ad6FC4355B7fBf400567D32E9d070EF2">0x2295cd39Ad6FC4355B7fBf400567D32E9d070EF2</a></td></tr>
+          <tr><td>mWETH (token1)</td><td>Mock token</td><td><a href="https://sepolia.uniscan.xyz/address/0xC39161F7D7b8890c14b070758D23a1c849C2D36c">0xC39161F7D7b8890c14b070758D23a1c849C2D36c</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="src" style="margin-top:6px">Deploy tx <a href="https://sepolia.uniscan.xyz/tx/0xd85e0ff2dd9aa333e47d9ddbb00ec9ec0a48a9861f44888abddd74f556ed73dd">0xd85e…73dd</a> · m_perBlock 697,615,423 from its Deployed event · first range [195,380, 197,380] · source: <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/script/demo/deployments-1301.json">deployments-1301.json</a></p>
+
+    <h3 class="sub">Calls</h3>
+    <div class="calls">
+<pre class="cmd"># depositor (anyone): shares first, then the most you will pay of each token
+cast send $VAULT "deposit(uint256,uint256,uint256,address)" $SHARES $MAX0 $MAX1 $TO
+
+# withdraw in kind, any mode: shares, then the least you accept of each token
+cast send $VAULT "withdraw(uint256,uint256,uint256,address)" $SHARES $MIN0 $MIN1 $TO
+
+# curator actions go through the CuratorBundler (its owner only); the vault rejects other callers
+cast send $BUNDLER "setPositions(int24,int24,(bool,bool,uint128),uint160,uint256)" $LO $HI "(false,false,0)" 0 $MAX_CHARGE
+cast send $BUNDLER "rebalanceSwap(bool,uint128,uint256)" $ZERO_FOR_ONE $AMOUNT_IN $MAX_CHARGE
+
+# anyone: settle a closed markout window; poke the clock
+cast send $VAULT "settle()"
+cast send $VAULT "poke()"</pre>
+    </div>
+
+    <div class="agent">
+      <div class="agent-h"><span>Summary for agents</span><button class="copy" type="button" id="copy-btn">Copy</button></div>
+<pre id="agent-txt">Touchstone, DEMO deployment. Unichain Sepolia, chain id 1301. Testnet only.
+Explorer: https://sepolia.uniscan.xyz/
+
+vault             0xA8FD240dEFEBE61200C67e8FBfbF8BFC4597b962
+vault extension   0x498E3364Bda8b2dEd92cC6fF06DA8b173df8a9B1
+hook              0x93700F94801eB5542313c87c22cd6c59e875e0A0
+factory           0x68b4C7D0a58f66d4f8c49B493370824a191e1fE1
+curator bundler   0xeccbecA62ffCC13f78890BA9481f7D8649f6Ae31  (the curator; owner-only)
+pool manager      0x00B036B58a818B1BC34d502D3fE730Db729e62AC
+reference pool    0x84517dBDaa924A8d9bc2abb97BAAB40A648EC972  (mock-token Uniswap v3, 0.05%)
+reference driver  0x9D6c8584760a35FEa1537E76667A7fB237eE5acF  (moves the mock reference pool)
+token0 mUSDC      0x2295cd39Ad6FC4355B7fBf400567D32E9d070EF2
+token1 mWETH      0xC39161F7D7b8890c14b070758D23a1c849C2D36c
+
+DEMO tier (script/Tiers.sol demo()), 1 s blocks:
+  reference      300 s TWAP of the reference pool
+  fence          60 ticks: an action farther from the reference reverts Fence() 0xe78b0e36
+  range width    2,000 ticks; must contain spot and the reference
+  charge         worst shortfall at s0, spot and reference; unvested pay, then bond;
+                 uncoverable reverts Insolvent() 0xfc220038
+  markout        20 s window, opens one block after the action; settle() after it
+  cooldown       30 blocks between curator actions
+  cure window    1,800 blocks (30 min) out of range = one breach; 3 breaches remove the curator
+  epoch          3,600 blocks (1 h)
+  base rate      697,615,423 WAD per block (2.2% a year)
+  bond           1.74e-3 of NAV, minimum 1.74 mWETH; NAV cap 1,850 mWETH
+
+Depositor: deposit(uint256 shares, uint256 max0, uint256 max1, address to)
+           withdraw(uint256 shares, uint256 min0, uint256 min1, address to)  any mode
+Curator (via the bundler, owner only):
+           setPositions(int24 lo, int24 hi, (bool active, bool zeroForOne, uint128 amountIn) preSwap,
+                        uint160 moveTo, uint256 maxCharge)
+           rebalanceSwap(bool zeroForOne, uint128 amountIn, uint256 maxCharge)
+Anyone:    settle(), poke()
+
+Mainnet tier differs: 12 s blocks, 600 s reference window on USDC/WETH 0.05%
+(0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640), 120 s markout, cure 7,200 blocks (24 h), epoch 50,400 blocks (7 d).
+Not deployed on mainnet. No third-party review. Source: https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/</pre>
+    </div>
+
+    <h3 class="sub">Reproduce</h3>
+<pre class="cmd">forge build --sizes src                      # every runtime ≤ 22,000 B
+FORK_BLOCK_1=26443420 forge test             # needs MAINNET_RPC_URL for the fork tests
+CLAIMS_PHASE=P6 python3 script/claims.py     # claim IDs → tests and result files
+python3 script/mutate.py --audit             # the curated mutant list
+python3 model/reference.py --selfcheck       # the independent model</pre>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <nav class="flinks" aria-label="Project files">
+      <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/README.md">README</a>
+      <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/REVIEWERS.md">REVIEWERS</a>
+      <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/SECURITY.md">SECURITY</a>
+      <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/">results JSON</a>
+      <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/audits/">audits/</a>
+    </nav>
+    <p class="fine">Testnet only. Not deployed on mainnet. No third-party review. Source links point to commit 815c186 and resolve once the repository is public. Built on Uniswap v4.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  var tabs = Array.prototype.slice.call(document.querySelectorAll("#ex-tabs .tab"));
+  function select(t) {
+    tabs.forEach(function (o) {
+      var on = o === t;
+      o.setAttribute("aria-selected", on ? "true" : "false");
+      o.tabIndex = on ? 0 : -1;
+      document.getElementById(o.getAttribute("aria-controls")).hidden = !on;
+    });
+  }
+  tabs.forEach(function (t, i) {
+    t.addEventListener("click", function () { select(t); });
+    t.addEventListener("keydown", function (e) {
+      var d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+      if (!d) return;
+      var n = tabs[(i + d + tabs.length) % tabs.length]; n.focus(); select(n);
+    });
+  });
+  var btn = document.getElementById("copy-btn"), txt = document.getElementById("agent-txt");
+  btn.addEventListener("click", function () {
+    function sel() { var r = document.createRange(); r.selectNodeContents(txt); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = "Selected"; }
+    try {
+      navigator.clipboard.writeText(txt.textContent).then(function () { btn.textContent = "Copied"; }, sel);
+    } catch (e) { sel(); }
+  });
+})();
+</script>

@@ -734,30 +734,30 @@ def test_F_057__every_src_guard_has_a_mutant_or_an_allow_list_reason():
                       'src/Y.sol:8: function g(uint a) external view { if (a == 3) revert Q(); }'], ys
 
 
-if __name__ == '__main__':
-    tests = [v for k, v in sorted(globals().items()) if k.startswith('test_') and callable(v)]
-    for t in tests:
-        t()
-        print('PASS', t.__name__)
-    print(f'{len(tests)} static tests passed')
-
 
 def readme_binding_errors(readme):
     """s32 (S32RS-08): the lines the s28 decisions bind to the README itself (D1 E5 cell and worked example (d), D2 tails,
     D3 supplement line, D5 count line and E0b row), and the deal's figures, formatted from their files."""
     errs = []
-    for frag in ("FAIL (control form) under the registered rule: every asserted attack row in all 17 cells nets ≤ 0",
-                 "Under the rule as amended after the data: PASS",
-                 "+0.93 (capped markout), +0.004 (protocol fee), +0.0006 (off-leg stops), up to +0.00023 per exit",
-                 "+ 1 withdrawn (E0b", "| E0b |", "### Play 4, worked: the self-sandwich, and why it loses"):
-        if frag not in readme:
+    flat = ' '.join(readme.split())
+    for frag in ("FAIL (control form) under the registered rule: every asserted attack row in all 17 cells nets ≤ 0; 14 cells have "
+                 "a control test that profits with the defence removed; N1 and N2 have only inline sensitivity checks (the rule "
+                 "exempted N3, a forgery cell, alone). Under the rule as amended after the data: PASS.",
+                 "+0.93 (capped markout), +0.004 (protocol fee), +0.0006 (off-leg stops), up to +0.00023 per exit on the test "
+                 "tier (M-N1 parking; ≤ 5e-6 of NAV per exit on the mainnet tier)",
+                 "+ 1 withdrawn (E0b; failed, claim withdrawn, never met)\", with E5 (FAIL, control form) and E-IC (not run) missing.",
+                 "| E0b |", "### Play 4, worked: the self-sandwich, and why it loses",
+                 "the same attack nets +0.0155 (`test_M_N4__ctlReferenceFollowingThePushProfits`)"):
+        if frag not in flat:
             errs.append(frag)
     line = json.load(open(os.path.join(ROOT, 'eval', 'supplements', 'E-IC-historical.json')))['public_line']
     if line not in readme:
         errs.append('supplement public_line')
     u = json.load(open(os.path.join(ROOT, 'eval', 'results', 'U-IC2.json')))
     g = u['buckets']['gbm-60']
-    for v in (f"{g['mimic_mean']:.2f} ETH over 180 days", f"{g['cmp']['lazy']['bot_mean']:.2f} (U-IC2"):
+    lazy = [g['cmp'][b]['bot_mean'] for b in ('lazy', 'lazy-quiet', 'lazy-silent', 'lazy-park', 'lazy-timed', 'lazy-keepalive')]
+    for v in (f"{g['mimic_mean']:.2f} ETH over 180 days", f"cheapest clock reset) {g['cmp']['breach-reset']['bot_mean']:.2f}",
+              f"never re-places, {min(lazy):.2f} to {max(lazy):.2f}"):
         if v not in ' '.join(readme.split()):
             errs.append(v)
     nv = u['reported']['nav_end']['gbm-120']['no-observer']
@@ -772,3 +772,11 @@ def test_readme_itself_carries_the_bound_lines():
     # control: the E5 cell removed fails
     cut = readme.replace("FAIL (control form) under the registered rule", "removed")
     assert readme_binding_errors(cut)
+
+
+if __name__ == '__main__':
+    tests = [v for k, v in sorted(globals().items()) if k.startswith('test_') and callable(v)]
+    for t in tests:
+        t()
+        print('PASS', t.__name__)
+    print(f'{len(tests)} static tests passed')

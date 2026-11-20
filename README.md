@@ -80,9 +80,10 @@ and tests: [docs/DETAILS.md](docs/DETAILS.md#four-worked-examples).
 
 ## The deal
 
-The curator earns 2.2% a year only on money placed in range, held back four to five weeks, and risks a bond of 0.174%
+The curator earns 2.2% a year only on money placed in range, held back at least four to five weeks, and risks a bond of 0.174%
 of the vault. In simulation, without a third-party refresher of the reference, the reference curator takes home
-5.65 ETH over 180 days on a 1,000 ETH vault at 60% volatility; one that never re-places, 0.94 (U-IC2, synthetic; the 12-hour re-placement wait was chosen after an earlier test
+5.65 ETH over 180 days on a 1,000 ETH vault at 60% volatility; the closest gated alternative (the
+cheapest clock reset) 4.17; a curator that never re-places, 0.94 to 2.23 (U-IC2, synthetic; the 12-hour re-placement wait was chosen after an earlier test
 failed, see [DETAILS, Limitations](docs/DETAILS.md#limitations)).
 Whether trading fees beat 2.2% for depositors depends on trading volume, which no simulation here includes.
 
@@ -156,7 +157,7 @@ window (arithmetic); the reference curator's rebalancing charge and the full tab
 The hook is separate because a hook's own calls skip its own callbacks; the vault is split to stay under the
 contract size limit. More: [docs/DETAILS.md](docs/DETAILS.md#how-it-works).
 
-Testnet deployment Testnet (Unichain Sepolia, chain 1301, demo tier; the reference pool there is our own mock-token v3 pool, see
+Testnet deployment (Unichain Sepolia, chain 1301, demo tier; the reference pool there is our own mock-token v3 pool, see
 [Limits](#limits)): vault `0xA8FD240dEFEBE61200C67e8FBfbF8BFC4597b962`, hook `0x93700F94801eB5542313c87c22cd6c59e875e0A0`,
 factory `0x68b4C7D0a58f66d4f8c49B493370824a191e1fE1`, curator bundler `0xeccbecA62ffCC13f78890BA9481f7D8649f6Ae31`,
 reference pool `0x84517dBDaa924A8d9bc2abb97BAAB40A648EC972` (all in `script/demo/deployments-1301.json`, with the

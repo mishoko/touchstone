@@ -78,8 +78,8 @@ and print PASS without running. Numbers quoted from them use `FORK_BLOCK_1=26443
 - The NAV cap is checked on the NAV priced at the last action, so a vault left unplaced through a large move can exceed
   it (about +25% after a 50% move with half the NAV in token0).
 - Withdrawals while a settlement is pending exit at the pre-settlement price.
-- The testnet demo uses our own mock-token v3 reference pool and a provisional 1% base rate (2.2% is set at the
-  parameter freeze).
+- The testnet demo uses our own mock-token v3 reference pool; it runs the frozen 2.2% base rate (the forge test tier
+  runs 1% a year).
 - The contracts are not audited.
 - Two small disclosed effects of supply changes: a supply change inside a markout window moves the settlement's burn
   (`test_U_settle__inWindowDripBurnOverBurnsTheCuratorsReserve`); a holder who leaves during a reference outage skips

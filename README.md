@@ -16,10 +16,10 @@ expectation; a curator who walks away forfeits its unvested pay.
 
 - Video: to come. App: to come.
 - Testnet (Unichain Sepolia, chain 1301, demo tier; the reference pool there is our own mock-token v3 pool, see
-  Limitations): vault `0x299c05ED130F340593499772b1F14Fb790bD985D`, hook `0x9131d3ceb82af6D29075F6D3a2bb6A4f252b60A0`,
-  factory `0x6E12d9D0648a2323cF57FdEa98c09f331dc48384`, curator bundler `0xF35580c164136F38E7a8Fed8E01a611E9419AA15`,
-  reference pool `0x84517dBDaa924A8d9bc2abb97BAAB40A648EC972` (all in `script/demo/deployments-1301.json`; deployed from
-  commit 6061d68 with the provisional 1% base rate; the final deployment follows the parameter freeze).
+  Limitations): vault `0xA8FD240dEFEBE61200C67e8FBfbF8BFC4597b962`, hook `0x93700F94801eB5542313c87c22cd6c59e875e0A0`,
+  factory `0x68b4C7D0a58f66d4f8c49B493370824a191e1fE1`, curator bundler `0xeccbecA62ffCC13f78890BA9481f7D8649f6Ae31`,
+  reference pool `0x84517dBDaa924A8d9bc2abb97BAAB40A648EC972` (all in `script/demo/deployments-1301.json`, with the
+  transactions of `script/demo/demoflow.sh`; deployed 2026-11-20 with the frozen 2.2% base rate).
 
 ## Four worked examples
 

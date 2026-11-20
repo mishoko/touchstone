@@ -37,7 +37,9 @@ for field in ("fail_reason", "disclosed_unasserted_tails", "single_builder_bound
 for word in ("§", "M_N1", "tau_v", "GRID_SEC", "cells.*"):
     check(word not in app and word not in html, f"internal identifier on the page: {word}")
 check("cells have a control test that profits with the defence removed" in app, "E5: the D1 control sentence is missing")
-check("provisional base rate of 1% a year" in html, "testnet: the base rate note is missing")
+check("frozen base rate: 2.2% a year" in html and "provisional" not in html, "testnet: the frozen base rate note is missing")
+dep = json.loads((ROOT / "script" / "demo" / "deployments-1301.json").read_text(encoding="utf-8"))
+check(dep.get("deploy", {}).get("m_perBlock") == 697615423, "testnet: deployments file does not record the 2.2%/yr DEMO m_perBlock")
 
 for path in sorted((ROOT / "eval" / "results").glob("*.json")):
     rid = path.stem

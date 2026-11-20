@@ -1573,7 +1573,7 @@ python3 model/reference.py --selfcheck       # the independent model</pre>
 
     { id: "dep", tab: "5 · Your round trip", title: "A depositor's round trip",
       cap: "Your shares are never burned for the manager's trades. You can leave at any time, in every mode. Market moves still change what you get back.",
-      src: 'Tests: <code>test_U_5__roundTripNeverProfits</code>, <code>test_U_settle__depositsBlockedWhilePendingThenSettleFirst</code>, <code>test_U_breach__anEmptyVaultReachesExitedAndWithdrawalsStayOpen</code> (<a href="' + A + 'README.md">README</a> worked example 3). Prices: mainnet USDC/WETH 0.05%, two hours from block 26,387,020.',
+      src: 'Tests: <code>test_U_5__roundTripNeverProfits</code>, <code>test_U_settle__depositsBlockedWhilePendingThenSettleFirst</code>, <code>test_U_breach__anEmptyVaultReachesExitedAndWithdrawalsStayOpen</code> (<a href="' + A + 'README.md">README</a>; worked example 3 in docs/DETAILS.md). Prices: mainnet USDC/WETH 0.05%, two hours from block 26,387,020.',
       params: { tD: 10, tW: 100 },
       controls: function (sc) {
         return '<div class="row"><button class="btn pri" type="button" data-act="dep" id="c-dep">Deposit 10 ETH now</button><button class="btn" type="button" data-act="wd" id="c-wd">Withdraw now</button><button class="btn" type="button" data-act="reset">Back to the script</button></div><p class="rule">Scrub to a moment, then deposit or withdraw. Deposits are refused while a two-minute check is pending.</p>';

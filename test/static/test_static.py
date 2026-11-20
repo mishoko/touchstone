@@ -11,6 +11,11 @@ def run(*args, env=None):
                           env={**os.environ, **(env or {})})
 
 
+
+def public_docs():
+    """The README and the full technical record it links (s32: the README was shortened; its body moved to docs/DETAILS.md)."""
+    return '\n'.join(open(os.path.join(ROOT, p)).read() for p in ('README.md', os.path.join('docs', 'DETAILS.md')))
+
 def test_S_3__claims_due_by_the_current_phase_are_covered():
     phase = os.environ.get('CLAIMS_PHASE', 'P0')
     r = run('script/claims.py', env={'CLAIMS_PHASE': phase})
@@ -314,7 +319,7 @@ def test_eval_results_parse_strictly_and_the_uic_supplement_is_complete():
         assert uic_observer.check(t.name) == [f'gbm-120 dodge {m:g}' for m in uic_observer.MS]
     finally:
         os.remove(t.name)
-    readme = open(os.path.join(ROOT, 'README.md')).read()
+    readme = public_docs()
     assert 'U-IC-observer.json' in readme and 'outside observer' in readme
     assert 'exactly the minimum deployment' not in readme   # dodge places the smallest legal deployment >= DELTA_MIN
     # the README's figures are the files' (S23U2-03): observer gbm-120 margins at 2.2% and the observer gate minimum
@@ -412,7 +417,7 @@ def test_U_IC2__observer_supplement_is_complete():
     finally:
         os.remove(t.name)
     # the README's U-IC2 figures are the files' (s24; the s23 rule: result text from the data); line wraps ignored
-    readme = ' '.join(open(os.path.join(ROOT, 'README.md')).read().split())
+    readme = ' '.join(public_docs().split())
     r = json.load(open(os.path.join(ROOT, 'eval', 'results', 'U-IC2.json')))
     assert r['verdict'] == 'PASS' and 'U-IC2' in readme
     g = r['buckets']['gbm-120']['cmp']
@@ -735,3 +740,35 @@ if __name__ == '__main__':
         t()
         print('PASS', t.__name__)
     print(f'{len(tests)} static tests passed')
+
+
+def readme_binding_errors(readme):
+    """s32 (S32RS-08): the lines the s28 decisions bind to the README itself (D1 E5 cell and worked example (d), D2 tails,
+    D3 supplement line, D5 count line and E0b row), and the deal's figures, formatted from their files."""
+    errs = []
+    for frag in ("FAIL (control form) under the registered rule: every asserted attack row in all 17 cells nets ≤ 0",
+                 "Under the rule as amended after the data: PASS",
+                 "+0.93 (capped markout), +0.004 (protocol fee), +0.0006 (off-leg stops), up to +0.00023 per exit",
+                 "+ 1 withdrawn (E0b", "| E0b |", "### Play 4, worked: the self-sandwich, and why it loses"):
+        if frag not in readme:
+            errs.append(frag)
+    line = json.load(open(os.path.join(ROOT, 'eval', 'supplements', 'E-IC-historical.json')))['public_line']
+    if line not in readme:
+        errs.append('supplement public_line')
+    u = json.load(open(os.path.join(ROOT, 'eval', 'results', 'U-IC2.json')))
+    g = u['buckets']['gbm-60']
+    for v in (f"{g['mimic_mean']:.2f} ETH over 180 days", f"{g['cmp']['lazy']['bot_mean']:.2f} (U-IC2"):
+        if v not in ' '.join(readme.split()):
+            errs.append(v)
+    nv = u['reported']['nav_end']['gbm-120']['no-observer']
+    if f"about {nv['breach-reset']['mean']:.0f} and {nv['dodge']['mean']:.0f} against {nv['edge-12h']['mean']:.0f}" not in ' '.join(readme.split()):
+        errs.append('no-observer vault values')
+    return errs
+
+
+def test_readme_itself_carries_the_bound_lines():
+    readme = open(os.path.join(ROOT, 'README.md')).read()
+    assert readme_binding_errors(readme) == [], readme_binding_errors(readme)
+    # control: the E5 cell removed fails
+    cut = readme.replace("FAIL (control form) under the registered rule", "removed")
+    assert readme_binding_errors(cut)

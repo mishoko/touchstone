@@ -134,10 +134,10 @@ def main(argv):
 
     # s31 (S31ED-01/04): the E-IC supplement's line on the page and in README is its result file's public_line;
     # no depositor-ceiling number is published (F-025 open)
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = (ROOT / "README.md").read_text(encoding="utf-8") + "\n" + (ROOT / "docs" / "DETAILS.md").read_text(encoding="utf-8")   # s32: README + its full record
     if SUPPLEMENT.exists():
         line = json.loads(SUPPLEMENT.read_text())["public_line"]
-        check(line in readme, "README: the E-IC supplement line differs from its result file's public_line")
+        check(line in readme, "README/DETAILS: the E-IC supplement line differs from its result file's public_line")
         if json.loads(SUPPLEMENT.read_text())["reviews"].get("fix"):   # S31EF-05: the link shows the reviewed file
             check("b46accc" not in html, "page: the supplement link still points at the unreviewed result commit")
         check(line.replace("&", "&amp;").replace("'", "&#39;") in html or line in html,
@@ -145,19 +145,19 @@ def main(argv):
     else:
         check("E-IC historical supplement" not in html and "E-IC historical supplement" not in readme,
               "the E-IC supplement is mentioned without its result file")
-    for text, name in ((low, "page"), (readme.lower(), "README")):
+    for text, name in ((low, "page"), (readme.lower(), "README/DETAILS")):
         check(not ceiling_number(text), f"{name}: a depositor-ceiling number (none is measured)")
     if SUPPLEMENT.exists():   # S31EF-04: a supplement net never appears outside its labelled line
         sd = json.loads(SUPPLEMENT.read_text())
         line = sd["public_line"]
         for nav in ("1850", "185"):
             v = f'{sd["by_nav"][nav]["rows"]["no-observer"]["edge-12h"]["net"]:+.3f}'
-            for text, name in ((html, "page"), (readme, "README")):
+            for text, name in ((html, "page"), (readme, "README/DETAILS")):
                 check(text.count(v) <= text.count(line), f"{name}: the supplement net {v} appears outside its labelled line")
         cited = round(sd["by_nav"]["1850"]["rows"]["no-observer"]["edge-12h"]["nav_end"]), \
             round(sd["by_nav"]["1850"]["rows"]["no-observer"]["lazy"]["nav_end"])
         check(f"about {cited[0]:,} against {cited[1]:,} ETH from 1,850" in " ".join(readme.split()),
-              f"README: the supplement's end-NAV clause is not {cited} (S31EF-03)")
+              f"README/DETAILS: the supplement's end-NAV clause is not {cited} (S31EF-03)")
         check(f"{cited[0]:,} against {cited[1]:,} ETH from 1,850" in " ".join(html.split()),
               f"page: the supplement's end-NAV clause is not {cited} (S31VD-02)")
 

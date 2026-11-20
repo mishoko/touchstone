@@ -70,7 +70,7 @@ and print PASS without running. Numbers quoted from them use `FORK_BLOCK_1=26443
 - E5 is FAIL (control form) under its registered rule: N1 and N2 have inline sensitivity checks, not separate control
   tests. Every asserted attack row nets ≤ 0.
 - Reported, not asserted, positive rows: the capped markout tail after the vault's own move, protocol-fee and off-leg
-  stops, and boundary parking while the cached reference lags (README, Limitations).
+  stops, and boundary parking while the cached reference lags (docs/DETAILS.md, Limitations).
 - A single block builder holding the reference over the markout window is outside the model (safe NAV about 150 WETH).
 - Incentives are measured on synthetic paths only; with an outside observer refreshing the reference, two lax
   strategies out-earn the reference curator at 120% volatility. The historical replay (E-IC) was not run; one

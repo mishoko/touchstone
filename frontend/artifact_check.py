@@ -87,6 +87,25 @@ def main(argv):
     check("14 cells have a control test that profits with the defence removed" in html, "E5: the binding sentence is missing")
     check("FAIL · claim withdrawn" in html and "+ 1 withdrawn (E0b" in html, "E0b: withdrawn wording missing")
 
+    # s30 fix review (S30AF-01/02/04/06): the U-IC2 vault values are the no-observer row; no "never charged" claim;
+    # hidden tab panels stay hidden; the area counts are the listed counts of mutants.json
+    nav = json.loads((ROOT / "eval" / "results" / "U-IC2.json").read_text())["reported"]["nav_end"]["gbm-120"]["no-observer"]
+    vals = [round(nav[k]["mean"]) for k in ("breach-reset", "dodge", "edge-12h")]
+    check(f"Without one, the vault ends with more value under those lax strategies in every volatility bucket "
+          f"(at 120%: about {vals[0]} and {vals[1]} against {vals[2]}" in html, f"U-IC2: no-observer vault values {vals} not stated as such")
+    check("never charged to you" not in low, "a depositor benefit claims third parties are never charged to them")
+    if 'role="tabpanel"' in html and " hidden>" in html:
+        check(".panel[hidden] { display: none; }" in html, "tab panels: the [hidden] rule is missing (all panels render)")
+    areas = {}
+    for m in muts:
+        areas[m["area"]] = areas.get(m["area"], 0) + 1
+    shown = {"guards": "listed, by area: guards", "ledger": "ledger (the charge)", "ladder": "ladder (breaches, vesting)",
+             "bank": "bank (pay, bond, forfeits)", "records": "records", "witness": "witness"}
+    for a, label in shown.items():
+        check(f"<dt>{label}</dt><dd>{areas.get(a, 0)}</dd>" in html, f"mutation area {a} is not {areas.get(a, 0)}")
+    other = len(muts) - sum(areas.get(a, 0) for a in shown)
+    check(f"<dt>other areas</dt><dd>{other}</dd>" in html, f"mutation: other areas is not {other}")
+
     if errors:
         print("artifact_check: FAIL\n  " + "\n  ".join(errors), file=sys.stderr)
         sys.exit(1)

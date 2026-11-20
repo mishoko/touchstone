@@ -183,7 +183,7 @@
     },
     "U-IC": function (d) {
       return [p("Earlier 6-hour reference policy."), p("Two comparisons failed at 120% volatility."),
-              p("Published as failed. Never re-run.")];
+              p("Failed again on U-IC2's paths (reported).")];
     },
     "E0": function (d) { return [p("Registered form failed."), p("Superseded by " + d.superseded_by + ".")]; },
     "E0a": function (d) { return [p("Amended form failed."), p("Published as a negative result.")]; },

@@ -96,6 +96,7 @@ h3.sub { margin: 32px 0 12px; font: 600 1.0625rem/1.3 var(--f-body); }
 
 .bands { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; margin-top: 28px; }
 @media (max-width: 860px) { .bands { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 600px) { .bands figure { display: none; } }
 .bands figure { margin: 0; border: 1px solid var(--rule); background: var(--stone-2); border-radius: 4px; padding: 12px; min-width: 0; }
 .bands svg { display: block; width: 100%; height: auto; }
 .bands svg text { font: 400 12px var(--f-mono); }
@@ -116,6 +117,7 @@ td.n, th.n { font-family: var(--f-mono); font-variant-numeric: tabular-nums; whi
 .tab { font: 500 .8125rem/1 var(--f-mono); padding: 9px 12px; border-radius: 3px; cursor: pointer; border: 1px solid var(--rule); background: transparent; color: var(--ink-2); }
 .tab:hover { color: var(--ink); }
 .tab[aria-selected="true"] { border-color: var(--gold); color: var(--gold); background: var(--gold-dim); }
+.panel[hidden] { display: none; }
 .panel { border: 1px solid var(--rule); background: var(--stone-2); border-radius: 4px; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
 @media (max-width: 900px) { .panel { grid-template-columns: minmax(0, 1fr); } }
 .panel pre { margin: 0; padding: 16px; overflow-x: auto; font: 400 .78rem/1.45 var(--f-mono); color: var(--ink); border-right: 1px solid var(--rule); min-width: 0; }
@@ -409,7 +411,7 @@ footer .wrap { padding-block: 36px 56px; display: grid; gap: 16px; }
         <h3>Benefits</h3>
         <ul class="items">
           <li><strong>The curator pays for its own trades, as the pool measures them.</strong> The measured cost comes out of the curator's pay and bond. <span class="src">U-3 · E2</span></li>
-          <li><strong>Other traders are never charged to you.</strong> 0 wei charged over 10,000 segments and 20,034 third-party swaps, in the independent model. <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E3.json">E3</a></span></li>
+          <li><strong>Other traders' swaps are not charged as the curator's.</strong> The charge counts curator actions only: 0 wei over 10,000 segments and 20,034 third-party swaps, in the independent model. Arbitrage against the vault's liquidity is a market cost, not a charge. <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E3.json">E3</a></span></li>
           <li><strong>A curator who walks away pays you.</strong> Its unvested pay is forfeited to depositors at the first breach.</li>
           <li><strong>The base fee is paid for work in range.</strong> It accrues only while the mandate liquidity is in range.</li>
           <li><strong>You can always leave.</strong> Withdrawals are in kind, in every mode.</li>
@@ -423,7 +425,7 @@ footer .wrap { padding-block: 36px 56px; display: grid; gap: 16px; }
           <li><strong>Reported, not asserted.</strong> Some attack rows net a positive amount: +0.93 (a markout past the cap, about 8e-4 of NAV), +0.004 (protocol fee on), +0.0006 (off-leg stops), +0.00023 per exit (parking, test tier; about 5e-6 of NAV on mainnet). Token units of a 1,150-NAV test vault. <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E5.json">E5</a></span></li>
           <li><strong>One block builder.</strong> A single builder that censors arbitrage is outside the model. Against it the safe NAV is about 150 WETH, not 1,850.</li>
           <li><strong>The NAV cap is checked at the last action.</strong> A vault left unplaced through a large move can hold more than the cap.</li>
-          <li><strong>Incentives are simulated.</strong> U-IC2 passed on synthetic paths without an outside observer. With one, two lax strategies out-earn the reference curator at 120% volatility. The vault ends with more value under those lax strategies (about 558 and 569 against 314, from 1,000). <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/U-IC2.json">U-IC2</a></span></li>
+          <li><strong>Incentives are simulated.</strong> U-IC2 passed on synthetic paths without an outside observer. With an outside observer, two lax strategies out-earn the reference curator at 120% volatility (by 0.151 and 0.102 ETH). Without one, the vault ends with more value under those lax strategies in every volatility bucket (at 120%: about 558 and 569 against 314, from 1,000). <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/U-IC2.json">U-IC2</a></span></li>
           <li><strong>E-IC was not run.</strong> No historical price path was fetched. <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E-IC.json">E-IC</a></span></li>
           <li><strong>Allocation ledger claim withdrawn.</strong> E0b failed: 59 of 112 epoch rows exceeded 0.3 bp. The ledger is disclosure only. <span class="src"><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E0b.json">E0b</a></span></li>
           <li><strong>Synthetic paths only.</strong> Every simulated result uses simulated 180-day paths.</li>
@@ -464,7 +466,7 @@ footer .wrap { padding-block: 36px 56px; display: grid; gap: 16px; }
         <table class="results">
           <thead><tr><th scope="col">ID</th><th scope="col">What</th><th scope="col">Verdict</th><th scope="col">Result</th></tr></thead>
           <tbody>
-            <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/U-IC.json">U-IC</a></td><td>Incentives, earlier six-hour form</td><td><span class="badge b-fail">FAIL</span></td><td>Two comparisons failed at 120% volatility. Never re-run.</td></tr>
+            <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/U-IC.json">U-IC</a></td><td>Incentives, earlier six-hour form</td><td><span class="badge b-fail">FAIL</span></td><td>Two comparisons failed at 120% volatility. The same six-hour form failed again on U-IC2's paths (reported).</td></tr>
             <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E0.json">E0</a></td><td>Ledger closure, registered form</td><td><span class="badge b-fail">FAIL</span></td><td>Worst residual 58.6 bp in an epoch.</td></tr>
             <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E0a.json">E0a</a></td><td>Ledger closure, amended form</td><td><span class="badge b-fail">FAIL</span></td><td>0.556 bp in one epoch of one run.</td></tr>
             <tr><td><a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/eval/results/E0b-fit.json">E0b-fit</a></td><td>Ledger fit data used to set up E0b</td><td><span class="badge b-none">no verdict</span></td><td>Fit data.</td></tr>
@@ -485,7 +487,7 @@ footer .wrap { padding-block: 36px 56px; display: grid; gap: 16px; }
       <article class="evc">
         <h3>Mutation testing <span class="src">curated</span></h3>
         <span class="big">328 killed</span>
-        <p>We changed one rule at a time in our own code. Each change names the test that must catch it. 328 of 328 wired mutants were caught, in one full run at one commit.</p>
+        <p>We changed one rule at a time in our own code. Each change names the test that must catch it. 328 of 328 wired mutants were caught, in one campaign (four slices) at one commit.</p>
         <dl>
           <dt>listed</dt><dd>332</dd>
           <dt>wired (in the denominator)</dt><dd>328</dd>
@@ -493,7 +495,7 @@ footer .wrap { padding-block: 36px 56px; display: grid; gap: 16px; }
           <dt>equivalent (no input can tell them apart), listed apart</dt><dd>4</dd>
         </dl>
         <dl>
-          <dt>by area: guards</dt><dd>87</dd>
+          <dt>listed, by area: guards</dt><dd>87</dd>
           <dt>ledger (the charge)</dt><dd>78</dd>
           <dt>ladder (breaches, vesting)</dt><dd>33</dd>
           <dt>bank (pay, bond, forfeits)</dt><dd>19</dd>
@@ -552,13 +554,13 @@ python3 script/mutate.py -j 1 MU-001 …</pre>
           <dt>invariant</dt><dd>26</dd>
           <dt>plain</dt><dd>408</dd>
         </dl>
-        <p>Every manipulation test asserts the attack loses money. 14 of the 17 attack cells have a separate positive control (see E5).</p>
+        <p>Every asserted attack row loses money. Each control test asserts that the attack profits with the defence removed. 14 of the 17 attack cells have one (see E5).</p>
         <span class="src">source: <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/audits/test-summary.json">audits/test-summary.json</a> (<a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/script/test_summary.py">script/test_summary.py</a>)</span>
       </article>
       <article class="evc">
         <h3>Independent reference model <span class="src">Python</span></h3>
-        <span class="big">116,088 checks</span>
-        <p>A model written from the specification, not from the Solidity. Its golden vectors are matched bit for bit by the contracts.</p>
+        <span class="big">Bit for bit</span>
+        <p>A model written from the specification, not from the Solidity. Its golden vectors are matched bit for bit by the contracts. Its self-check must pass.</p>
         <pre>python3 model/reference.py --selfcheck</pre>
         <span class="src">source: <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/model/reference.py">model/reference.py</a> · <a href="https://github.com/mishoko/touchstone/blob/815c186f8a63f31c65b3d9584fc2fbbe207f4951/test/vectors/">test/vectors/</a></span>
       </article>
@@ -605,13 +607,17 @@ python3 script/mutate.py -j 1 MU-001 …</pre>
 
     <h3 class="sub">Calls</h3>
     <div class="calls">
-<pre class="cmd"># depositor (anyone): shares first, then the most you will pay of each token
+<pre class="cmd"># the demo tokens are mock tokens; only the deployer can mint them
+# depositor: approve the vault for both tokens first; shares, then the most you will pay of each token
+cast send $TOKEN0 "approve(address,uint256)" $VAULT $MAX0
+cast send $TOKEN1 "approve(address,uint256)" $VAULT $MAX1
 cast send $VAULT "deposit(uint256,uint256,uint256,address)" $SHARES $MAX0 $MAX1 $TO
 
 # withdraw in kind, any mode: shares, then the least you accept of each token
 cast send $VAULT "withdraw(uint256,uint256,uint256,address)" $SHARES $MIN0 $MIN1 $TO
 
 # curator actions go through the CuratorBundler (its owner only); the vault rejects other callers
+# LO, HI aligned to tick spacing 10; moveTo 0 = no move; MAX_CHARGE caps charge + reserve, in token1
 cast send $BUNDLER "setPositions(int24,int24,(bool,bool,uint128),uint160,uint256)" $LO $HI "(false,false,0)" 0 $MAX_CHARGE
 cast send $BUNDLER "rebalanceSwap(bool,uint128,uint256)" $ZERO_FOR_ONE $AMOUNT_IN $MAX_CHARGE
 
@@ -646,14 +652,18 @@ DEMO tier (script/Tiers.sol demo()), 1 s blocks:
   cooldown       30 blocks between curator actions
   cure window    1,800 blocks (30 min) out of range = one breach; 3 breaches remove the curator
   epoch          3,600 blocks (1 h)
-  base rate      697,615,423 WAD per block (2.2% a year)
+  base rate      m_perBlock 697,615,423 (WAD-scaled: 6.98e-10 of NAV per block; 2.2% a year)
   bond           1.74e-3 of NAV, minimum 1.74 mWETH; NAV cap 1,850 mWETH
 
-Depositor: deposit(uint256 shares, uint256 max0, uint256 max1, address to)
+Pool: tick spacing 10. Tokens are mock tokens; only the deployer can mint them.
+Depositor: approve the vault for token0 and token1, then
+           deposit(uint256 shares, uint256 max0, uint256 max1, address to)
            withdraw(uint256 shares, uint256 min0, uint256 min1, address to)  any mode
 Curator (via the bundler, owner only):
            setPositions(int24 lo, int24 hi, (bool active, bool zeroForOne, uint128 amountIn) preSwap,
                         uint160 moveTo, uint256 maxCharge)
+           lo, hi aligned to the tick spacing; moveTo is a sqrtPriceX96, 0 = no move;
+           maxCharge caps charge + reserve, in token1 units (else MaxCharge())
            rebalanceSwap(bool zeroForOne, uint128 amountIn, uint256 maxCharge)
 Anyone:    settle(), poke()
 

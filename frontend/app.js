@@ -61,6 +61,7 @@
     return el("details", { cls: "tests" }, [el("summary", { text: summary || "Tests" })].concat(list));
   }
   function p(text) { return el("p", { text: text }); }
+  var SUPP = null;   // eval/supplements/E-IC-historical.json, when present
 
   // ---------- per-result copy and key numbers ----------
   // Questions are short plain-language versions of each file's question.
@@ -171,9 +172,10 @@
               p("Synthetic paths. No outside observer.")];
     },
     "E-IC": function (d) {
-      return [p("Not run."),
-              p("No historical price path was fetched."),
+      var out = [p("Not run."),
               p((d.synthetic_evidence ? d.synthetic_evidence.id : "U-IC2") + " covers its comparison on synthetic paths only.")];
+      if (SUPP) out.push(p("Supplement, no verdict: " + SUPP.public_line));
+      return out;
     },
     "E0b": function (d) {
       var s = e0bStats(d);
@@ -262,15 +264,17 @@
       "Parking while the cached reference lags: " + u("parkingWhileTheCacheLagsIsBoundedByItsInRangeTime") +
         " per exit on the test tier; at most about 5e-6 of NAV per exit on mainnet.",
       "Units: tokens in a test vault of about 1,150 NAV."], "E5");
-    item("E-IC was not run.", ["No historical price path was fetched.",
+    item("E-IC was not run.", [SUPP ? "One historical price path was run as a supplement. It gives no verdict." : "No historical price path was fetched.",
       "The incentives result " + docs["E-IC"].synthetic_evidence.id + " is synthetic.",
       "It has no outside observer."], "E-IC");
     var s = e0bStats(docs.E0b);
     item("Allocation ledger claim withdrawn.", ["E0b failed.",
       s.above + " of " + s.total + " epoch rows exceeded " + s.bound + " bp.",
       "The ledger is disclosure only."], "E0b");
-    item("Synthetic paths only.", ["Every simulated result uses simulated 180-day paths.",
-      "No historical price data is used."]);
+    item(SUPP ? "Synthetic paths, plus one historical path." : "Synthetic paths only.",
+      SUPP ? ["Every registered simulated result uses simulated 180-day paths.",
+              "One supplement uses one historical price series.", "It has no third-party flow."]
+           : ["Every simulated result uses simulated 180-day paths.", "No historical price data is used."]);
   }
 
   // ---------- testnet ----------
@@ -327,9 +331,10 @@
   getJSON("data/manifest.json").then(function (man) {
     if (man.repo) REPO = man.repo;
     return Promise.all(man.results.map(function (r) { return getJSON("data/" + r.file); }).concat(
-      [getJSON("data/" + man.deployments)])).then(function (all) {
+      [getJSON("data/" + man.deployments), man.supplement ? getJSON("data/" + man.supplement) : null])).then(function (all) {
       var docs = {};
       man.results.forEach(function (r, j) { docs[r.id] = all[j]; });
+      SUPP = all[all.length - 1];
       var glance = document.getElementById("glance"), body = document.getElementById("results-body"),
           hist = document.getElementById("history-body");
       glance.textContent = "";
@@ -345,7 +350,7 @@
       e8Charges(docs.E8);
       kref(docs.E8);
       limits(docs);
-      testnet(all[all.length - 1], man.deployments);
+      testnet(all[all.length - 2], man.deployments);
     });
   }).catch(fatal);
 })();

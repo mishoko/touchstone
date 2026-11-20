@@ -17,7 +17,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
-from build import BANNED, BANNED_WORDS  # noqa: E402
+from build import BANNED, BANNED_WORDS, SUPPLEMENT, scan_text  # noqa: E402
 
 errors = []
 
@@ -30,7 +30,7 @@ def check(ok, msg):
 def main(argv):
     page = Path(argv[0]) if argv else HERE / "artifact" / "index.html"
     html = page.read_text(encoding="utf-8")
-    low = html.lower()
+    low = scan_text(html)   # the exact E-IC supplement label is the only allowed "replay"
 
     check("%%" not in html, "an unfilled %%slot%% remains")
     for w in BANNED:
@@ -105,6 +105,20 @@ def main(argv):
         check(f"<dt>{label}</dt><dd>{areas.get(a, 0)}</dd>" in html, f"mutation area {a} is not {areas.get(a, 0)}")
     other = len(muts) - sum(areas.get(a, 0) for a in shown)
     check(f"<dt>other areas</dt><dd>{other}</dd>" in html, f"mutation: other areas is not {other}")
+
+    # s31 (S31ED-01/04): the E-IC supplement's line on the page and in README is its result file's public_line;
+    # no depositor-ceiling number is published (F-025 open)
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    if SUPPLEMENT.exists():
+        line = json.loads(SUPPLEMENT.read_text())["public_line"]
+        check(line in readme, "README: the E-IC supplement line differs from its result file's public_line")
+        check(line.replace("&", "&amp;").replace("'", "&#39;") in html or line in html,
+              "page: the E-IC supplement line differs from its result file's public_line")
+    else:
+        check("E-IC historical supplement" not in html and "E-IC historical supplement" not in readme,
+              "the E-IC supplement is mentioned without its result file")
+    for text, name in ((low, "page"), (readme.lower(), "README")):
+        check(not re.search(r"depositor ceiling[^.\n|]{0,40}\d", text), f"{name}: a depositor-ceiling number (none is measured)")
 
     if errors:
         print("artifact_check: FAIL\n  " + "\n  ".join(errors), file=sys.stderr)

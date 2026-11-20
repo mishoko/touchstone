@@ -25,6 +25,17 @@ BANNED = ["illustrative", "lorem", "todo", "placeholder", "replay"]
 BANNED_WORDS = [r"\baudited\b", r"\bsecure\b", r"\bguaranteed\b", r"all claims pass",
                 r"\b\d+/\d+\b"]
 
+# The E-IC supplement's label (panel D3) contains "not a replay"; only that exact phrase is exempt from the scan.
+sys.path.insert(0, str(ROOT / "eval"))
+from eic_hist import LABEL as SUPPLEMENT_LABEL  # noqa: E402
+SUPPLEMENT = ROOT / "eval" / "supplements" / "E-IC-historical.json"
+
+
+def scan_text(text):
+    """Lower-cased text with the exact supplement label removed (the only allowed use of 'replay')."""
+    return text.lower().replace(SUPPLEMENT_LABEL.lower(), "")
+
+
 # Rows of the main results table, in display order. Every other result file is
 # rendered in the collapsed history section, so no file is ever dropped.
 MAIN = ["E1", "E2", "E3", "E4", "E5", "E6", "E7", "E8", "E9", "U-IC2", "E-IC", "E0b"]
@@ -49,7 +60,7 @@ def badge(doc):
 
 def banned_check():
     for name in ("index.html", "app.js"):
-        text = (HERE / name).read_text(encoding="utf-8").lower()
+        text = scan_text((HERE / name).read_text(encoding="utf-8"))
         for word in BANNED:
             if word in text:
                 line = text[: text.index(word)].count("\n") + 1
@@ -88,7 +99,11 @@ def main():
                              MAIN.index(r["id"]) if r["id"] in MAIN else 0, r["id"]))
 
     shutil.copyfile(DEPLOY, DATA / DEPLOY.name)
-    manifest = {"results": rows, "deployments": DEPLOY.name,
+    supp = None
+    if SUPPLEMENT.exists():
+        supp = SUPPLEMENT.name
+        shutil.copyfile(SUPPLEMENT, DATA / supp)
+    manifest = {"results": rows, "deployments": DEPLOY.name, "supplement": supp,
                 "repo": "https://github.com/mishoko/touchstone/blob/main/"}
     (DATA / "manifest.json").write_text(json.dumps(manifest, indent=1) + "\n", encoding="utf-8")
 

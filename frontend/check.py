@@ -46,6 +46,15 @@ check(flow.get("A2_setPositions_reverts_Fence", {}).get("status") == 0 and all(
 check("dep.demoflow" in app, "app.js does not render the demo run")
 check(dep.get("deploy", {}).get("m_perBlock") == 697615423, "testnet: deployments file does not record the 2.2%/yr DEMO m_perBlock")
 
+# s31: the E-IC supplement is copied with its label and shown as its public_line only; E-IC stays NOT RUN
+supp = ROOT / "eval" / "supplements" / "E-IC-historical.json"
+if supp.exists():
+    sd = json.loads(supp.read_text(encoding="utf-8"))
+    check(man.get("supplement") == supp.name and (DIST / "data" / supp.name).exists(), "E-IC supplement: not copied")
+    check(sd.get("verdict") is None and sd.get("e_ic_verdict") == "NOT_RUN", "E-IC supplement: carries a verdict")
+    check(sd["label"] in sd["public_line"], "E-IC supplement: public_line lacks the label")
+    check("SUPP.public_line" in app, "app.js does not render the supplement's public_line")
+
 for path in sorted((ROOT / "eval" / "results").glob("*.json")):
     rid = path.stem
     check(rid in rows, f"{rid}: missing from the manifest")

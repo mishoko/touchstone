@@ -1,0 +1,58 @@
+{
+ "command": "FORK_BLOCK_1=26443420 forge test --json",
+ "commit": "479e50b",
+ "total": {
+  "passed": 467,
+  "failed": 0,
+  "skipped": 0
+ },
+ "by_directory": {
+  "deploy": {
+   "passed": 17,
+   "failed": 0,
+   "skipped": 0,
+   "suites": 3
+  },
+  "eval": {
+   "passed": 9,
+   "failed": 0,
+   "skipped": 0,
+   "suites": 3
+  },
+  "fork": {
+   "passed": 11,
+   "failed": 0,
+   "skipped": 0,
+   "suites": 4
+  },
+  "fuzz": {
+   "passed": 12,
+   "failed": 0,
+   "skipped": 0,
+   "suites": 7
+  },
+  "invariant": {
+   "passed": 44,
+   "failed": 0,
+   "skipped": 0,
+   "suites": 2
+  },
+  "manipulation": {
+   "passed": 73,
+   "failed": 0,
+   "skipped": 0,
+   "suites": 27
+  },
+  "unit": {
+   "passed": 301,
+   "failed": 0,
+   "skipped": 0,
+   "suites": 45
+  }
+ },
+ "by_kind": {
+  "invariant": 26,
+  "fuzz": 33,
+  "plain": 408
+ }
+}

@@ -73,7 +73,8 @@ and print PASS without running. Numbers quoted from them use `FORK_BLOCK_1=26443
   stops, and boundary parking while the cached reference lags (README, Limitations).
 - A single block builder holding the reference over the markout window is outside the model (safe NAV about 150 WETH).
 - Incentives are measured on synthetic paths only; with an outside observer refreshing the reference, two lax
-  strategies out-earn the reference curator at 120% volatility. The historical replay (E-IC) was not run.
+  strategies out-earn the reference curator at 120% volatility. The historical replay (E-IC) was not run; one
+  historical-price supplement (point estimates on one path, no verdict) is in README Results.
 - The allocation ledger carries no closure claim (E0b failed).
 - The NAV cap is checked on the NAV priced at the last action, so a vault left unplaced through a large move can exceed
   it (about +25% after a 50% move with half the NAV in token0).

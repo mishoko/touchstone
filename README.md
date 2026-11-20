@@ -171,7 +171,9 @@ to be moved; the measured cost of moving it is listed under Results (E8).
 - **E-IC (incentives on the historical replay) was not run.** No historical replay exists. U-IC2 covers E-IC's
   comparison clause on synthetic paths without an outside observer or third-party liquidity; it does not cover the
   per-tier term sheet, the curator's 5th-percentile condition or the depositor ceiling. A supplement (Results) runs one
-  historical price series through the same simulator; it gives point estimates on one path and no verdict.
+  historical price series through the same simulator; it gives point estimates on one path and no verdict. As on the
+  synthetic paths, the vault ends with less value under the reference curator than under a lazy one on this path
+  (about 1,346 against 1,911 ETH from 1,850; no third-party flow).
 - **The allocation ledger carries no closure claim** (E0b failed; below).
 - **Not audited.** The contracts have not been audited; the tests, evaluations and SECURITY.md are the evidence.
 - **Testnet.** Unichain Sepolia has no usable v3 reference pool, so the demo deploys its own mock-token pool; the
@@ -352,7 +354,7 @@ are not in the repository; their hashes and aggregates are (`eval/supplements/U-
 | E-IC | Incentive compatibility on the historical replay | NOT RUN: the replay was never fetched; U-IC2 covers its comparison clause on synthetic paths (no outside observer, no third-party liquidity), not the term sheet, the curator's 5th-percentile condition or the depositor ceiling | — |
 | E0b | Does the allocation ledger close within 0.3 bp per epoch? | FAIL (59 of 112 epoch rows above the bound, worst 4.09 bp); the closure claim is withdrawn (Limitations) | Foundry, 8 pre-registered scripts |
 
-E-IC historical supplement (one historical price series through the synthetic simulator, no third-party depth, point estimates, not a replay and not E-IC's rule): blocks 25,147,070 to 26,443,420; edge-12h net +11.282 / +1.123 ETH at NAV 1,850 / 185; gated bots edge-12h does not beat: none; E-IC stays NOT RUN. Unreviewed. Form, data and attempts: `eval/E-IC-supplement-form.md`, `eval/supplements/E-IC-historical.json`, `eval/supplements/E-IC-hist/`.
+E-IC historical supplement (one historical price series through the synthetic simulator, no third-party depth, point estimates, not a replay and not E-IC's rule): blocks 25,147,070 to 26,443,420; edge-12h net +11.282 / +1.123 ETH at NAV 1,850 / 185; gated bots edge-12h does not beat: none; E-IC stays NOT RUN. Form, data and attempts: `eval/E-IC-supplement-form.md`, `eval/supplements/E-IC-historical.json`, `eval/supplements/E-IC-hist/`.
 
 **Rebalancing cost charged to the reference curator** (E8; synthetic): 1.6 / 4.0 / 15.7 bps of NAV a year at 40 / 60 /
 120% volatility, 0.8 bps on the hovering path.

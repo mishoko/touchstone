@@ -378,6 +378,35 @@ def run(procs=4, guard=True):
     print(out["public_line"])
 
 
+def addendum(procs=4):
+    """Fix review S31EF-01: the per-row fields the form lists but the first run's row projection dropped (revert kinds,
+    seed placement, hour-0 reverts, minted / NAV). Recomputes every sim deterministically, asserts every published
+    value is bit-identical, then adds the four fields to each row. Changes no published number."""
+    out = json.load(open(OUT_JSON))
+    if out.get("addendum"):
+        sys.exit("addendum already applied")
+    doc = json.load(open(os.path.join(SUPP, "path.json")))
+    path, sigma, gwei = doc["ticks"], doc["sigma_realised"], doc["basefee_p50_gwei"]
+    jobs = []
+    for nav in NAVS:
+        for name in bot_set():
+            variants = (True,) if name == "lazy-under-ladder" else (False,) if name == "lazy" else (False, True)
+            jobs += [(name, obs, nav, path, sigma, gwei) for obs in variants]
+    with mp.Pool(procs) as pool:
+        rows = pool.map(_job, jobs, chunksize=1)
+    for r in rows:
+        env = "observer" if r["observer"] else "no-observer"
+        pub = out["by_nav"][str(r["nav"])]["rows"][env][r["bot"]]
+        assert all(pub[k] == r[k] for k in KEYS), (r["bot"], r["nav"], env)
+        pub.update(revert_kinds=r["revert_kinds"], seed_placed=r["seed_placed"], reverts_h0=r["reverts_h0"],
+                   minted_frac_nav=r["minted_frac_nav"])
+    out["addendum"] = ("fix review S31EF-01: revert_kinds, seed_placed, reverts_h0 and minted_frac_nav added per row from "
+                       "a deterministic recompute; every published value asserted bit-identical (%d sims)" % len(rows))
+    with open(OUT_JSON, "w") as f:
+        json.dump(out, f, indent=1, allow_nan=False)
+    print(out["addendum"])
+
+
 def mark_reviewed(record):
     """After the one fix review (P-11a) closes: records it and drops " Unreviewed." from the public line."""
     out = json.load(open(OUT_JSON))
@@ -413,5 +442,7 @@ def selftest():
 if __name__ == "__main__":
     if sys.argv[1] == "mark-reviewed":
         mark_reviewed(sys.argv[2])
+    elif sys.argv[1] == "addendum":
+        addendum()
     else:
         {"fetch": fetch, "derive": derive, "run": run, "selftest": selftest}[sys.argv[1]]()

@@ -27,7 +27,30 @@ def check(ok, msg):
         errors.append(msg)
 
 
+def ceiling_number(text):
+    """S31EF-04: a number within 40 characters after "depositor ceiling" (whitespace and hyphens collapsed, a digit
+    after a section sign ignored), or a decimal or percentage within 40 characters before it."""
+    t = re.sub(r"[\s-]+", " ", text.lower())
+    for m in re.finditer(r"depositor ceiling", t):
+        after, before = t[m.end(): m.end() + 40], t[max(0, m.start() - 40): m.start()]
+        after = re.split(r"\. |\|", after)[0]
+        before = re.split(r"\. |\|", before)[-1]
+        if re.search(r"(?<![§\d.])\d", after) or re.search(r"\d\.\d|\d ?%", before):
+            return True
+    return False
+
+
+def selftest():
+    assert ceiling_number("the depositor\nceiling is 0.84")
+    assert ceiling_number("0.84 of time, the depositor-ceiling input")
+    assert not ceiling_number("The depositor ceiling (spec §3.5) is not measured.")
+    assert not ceiling_number("the curator p5 condition or the depositor ceiling | — |")
+    print("artifact_check selftest OK")
+
+
 def main(argv):
+    if argv[:1] == ["--selftest"]:
+        return selftest()
     page = Path(argv[0]) if argv else HERE / "artifact" / "index.html"
     html = page.read_text(encoding="utf-8")
     low = scan_text(html)   # the exact E-IC supplement label is the only allowed "replay"
@@ -112,13 +135,26 @@ def main(argv):
     if SUPPLEMENT.exists():
         line = json.loads(SUPPLEMENT.read_text())["public_line"]
         check(line in readme, "README: the E-IC supplement line differs from its result file's public_line")
+        if json.loads(SUPPLEMENT.read_text())["reviews"].get("fix"):   # S31EF-05: the link shows the reviewed file
+            check("b46accc" not in html, "page: the supplement link still points at the unreviewed result commit")
         check(line.replace("&", "&amp;").replace("'", "&#39;") in html or line in html,
               "page: the E-IC supplement line differs from its result file's public_line")
     else:
         check("E-IC historical supplement" not in html and "E-IC historical supplement" not in readme,
               "the E-IC supplement is mentioned without its result file")
     for text, name in ((low, "page"), (readme.lower(), "README")):
-        check(not re.search(r"depositor ceiling[^.\n|]{0,40}\d", text), f"{name}: a depositor-ceiling number (none is measured)")
+        check(not ceiling_number(text), f"{name}: a depositor-ceiling number (none is measured)")
+    if SUPPLEMENT.exists():   # S31EF-04: a supplement net never appears outside its labelled line
+        sd = json.loads(SUPPLEMENT.read_text())
+        line = sd["public_line"]
+        for nav in ("1850", "185"):
+            v = f'{sd["by_nav"][nav]["rows"]["no-observer"]["edge-12h"]["net"]:+.3f}'
+            for text, name in ((html, "page"), (readme, "README")):
+                check(text.count(v) <= text.count(line), f"{name}: the supplement net {v} appears outside its labelled line")
+        cited = round(sd["by_nav"]["1850"]["rows"]["no-observer"]["edge-12h"]["nav_end"]), \
+            round(sd["by_nav"]["1850"]["rows"]["no-observer"]["lazy"]["nav_end"])
+        check(f"about {cited[0]:,} against {cited[1]:,} ETH from 1,850" in " ".join(readme.split()),
+              f"README: the supplement's end-NAV clause is not {cited} (S31EF-03)")
 
     if errors:
         print("artifact_check: FAIL\n  " + "\n  ".join(errors), file=sys.stderr)

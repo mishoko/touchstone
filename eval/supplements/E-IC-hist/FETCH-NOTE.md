@@ -6,7 +6,7 @@ that endpoint answered "pruned history unavailable" six times in a row. The fetc
 writing any data file. The console showed only cumulative swap counts and timings. No price, path or result was
 produced.
 
-**Fix.** The cross-check now queries a third endpoint (`eth.drpc.org`, which returns at most 100 blocks per call) in
+**Fix** (commit `42ea9fb`). The cross-check now queries a third endpoint (`eth.drpc.org`, which returns at most 100 blocks per call) in
 100-block pieces and sums them. The count equality stays strict, and the main log fetch is unchanged. The fetch also
 asserts that all 14 cross-checks ran (652 chunks, every 50th). Before the restart the check was tested on blocks
 25,100,000–25,101,999, outside the window. There, the 20 pieces summed to the main endpoint's count (1,128 logs), and

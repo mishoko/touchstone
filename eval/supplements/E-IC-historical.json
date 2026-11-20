@@ -120,7 +120,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 1346.0648033600926,
-      "unvested_end": 2.6264694065758625
+      "unvested_end": 2.6264694065758625,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.008176581755140211
      },
      "edge60": {
       "net": 10.290666140243301,
@@ -146,7 +150,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 1337.1435757273282,
-      "unvested_end": 2.0464135646931085
+      "unvested_end": 2.0464135646931085,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.008163158913713858
      },
      "lazy": {
       "net": -0.0028671949487999956,
@@ -172,7 +180,11 @@
       "breaches": 10,
       "mode": "2",
       "nav_end": 1910.6496156584421,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.000668036565560196
      },
      "lazy-quiet": {
       "net": -0.0004253530967999997,
@@ -198,7 +210,11 @@
       "breaches": 1,
       "mode": "1",
       "nav_end": 1910.6496156705027,
-      "unvested_end": 2.0527260349955374
+      "unvested_end": 2.0527260349955374,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.001970938348889884
      },
      "lazy-silent": {
       "net": 1.6241557116654477,
@@ -224,7 +240,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 1910.6496156713067,
-      "unvested_end": 2.046942113710225
+      "unvested_end": 2.046942113710225,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.001971195085882612
      },
      "lazy-park": {
       "net": -0.002548133822677459,
@@ -250,7 +270,11 @@
       "breaches": 1,
       "mode": "1",
       "nav_end": 1910.6569874410682,
-      "unvested_end": 2.066650603270827
+      "unvested_end": 2.066650603270827,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0019809833161084202
      },
      "lazy-timed": {
       "net": 1.618496939687708,
@@ -276,7 +300,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 1910.6496156632663,
-      "unvested_end": 2.0878300178053233
+      "unvested_end": 2.0878300178053233,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0019722558905088967
      },
      "lazy-keepalive": {
       "net": 1.2681804969873196,
@@ -302,7 +330,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 1910.649615672915,
-      "unvested_end": 2.593143572649177
+      "unvested_end": 2.593143572649177,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0020458626996168756
      },
      "dodge": {
       "net": 5.9186984662484985,
@@ -328,7 +360,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 1942.9715541556368,
-      "unvested_end": 1.484866987951405
+      "unvested_end": 1.484866987951405,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.004068680804981029
      },
      "breach-reset": {
       "net": 7.044235824705112,
@@ -354,7 +390,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 1483.8383289519043,
-      "unvested_end": 2.470446236360778
+      "unvested_end": 2.470446236360778,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.005556806880807403
      },
      "idle": {
       "net": -0.0028514411303999956,
@@ -380,7 +420,11 @@
       "breaches": 15,
       "mode": "2",
       "nav_end": 2041.3105090297877,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {},
+      "seed_placed": false,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0
      },
      "dust": {
       "net": -0.0028987025855999955,
@@ -406,7 +450,13 @@
       "breaches": 15,
       "mode": "2",
       "nav_end": 2041.3105090297877,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {
+       "NotContained": 1
+      },
+      "seed_placed": false,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0
      },
      "stale": {
       "net": -3.15076368e-05,
@@ -432,7 +482,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 1910.649615675327,
-      "unvested_end": 3.6473216980304017
+      "unvested_end": 3.6473216980304017,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.001961619422715426
      },
      "wide": {
       "net": -0.0028987025855999955,
@@ -458,7 +512,13 @@
       "breaches": 15,
       "mode": "2",
       "nav_end": 2041.3105090297877,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {
+       "Width": 1
+      },
+      "seed_placed": false,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0
      },
      "delayed-24h": {
       "net": 5.829124377489907,
@@ -484,7 +544,11 @@
       "breaches": 2,
       "mode": "0",
       "nav_end": 1339.507181611764,
-      "unvested_end": 2.0172380500493965
+      "unvested_end": 2.0172380500493965,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.007668646151252849
      },
      "centre": {
       "net": 10.290666140243301,
@@ -510,7 +574,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 1337.1435757273282,
-      "unvested_end": 2.0464135646931085
+      "unvested_end": 2.0464135646931085,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.008163158913713858
      },
      "edge-3h": {
       "net": 11.167786605374786,
@@ -536,7 +604,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 1309.973987394427,
-      "unvested_end": 2.776392320475649
+      "unvested_end": 2.776392320475649,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.00857472561312008
      },
      "edge-6h": {
       "net": 11.531574412328453,
@@ -562,7 +634,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 1341.328477574165,
-      "unvested_end": 2.6181105123462634
+      "unvested_end": 2.6181105123462634,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.008425874305573235
      }
     },
     "observer": {
@@ -590,7 +666,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 1346.9186522814234,
-      "unvested_end": 2.5968386210304173
+      "unvested_end": 2.5968386210304173,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.008150125088899545
      },
      "edge60": {
       "net": 10.59165791140835,
@@ -616,7 +696,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 1341.3561091424397,
-      "unvested_end": 2.1411518461776127
+      "unvested_end": 2.1411518461776127,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.008483619101081464
      },
      "lazy-under-ladder": {
       "net": -0.0028671949487999956,
@@ -642,7 +726,11 @@
       "breaches": 141,
       "mode": "2",
       "nav_end": 1910.6496156584421,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0007006861238329985
      },
      "lazy-quiet": {
       "net": -0.0004253530967999997,
@@ -668,7 +756,11 @@
       "breaches": 141,
       "mode": "2",
       "nav_end": 1910.6496156705027,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0004216302873045539
      },
      "lazy-silent": {
       "net": -0.000236307276,
@@ -694,7 +786,11 @@
       "breaches": 141,
       "mode": "2",
       "nav_end": 1910.6496156705027,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.00042163244273425807
      },
      "lazy-park": {
       "net": -0.002548133822677459,
@@ -720,7 +816,11 @@
       "breaches": 141,
       "mode": "2",
       "nav_end": 1910.6569874410682,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0004216302873045539
      },
      "lazy-timed": {
       "net": -0.0005671374623999995,
@@ -746,7 +846,11 @@
       "breaches": 141,
       "mode": "2",
       "nav_end": 1910.6496156632663,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0004216302873045539
      },
      "lazy-keepalive": {
       "net": -0.00030457382240000003,
@@ -772,7 +876,11 @@
       "breaches": 141,
       "mode": "2",
       "nav_end": 1910.649615672915,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0004216302873045539
      },
      "dodge": {
       "net": 10.472943065854803,
@@ -798,7 +906,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 1338.2996210456718,
-      "unvested_end": 1.878209683393044
+      "unvested_end": 1.878209683393044,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.00764796602276514
      },
      "breach-reset": {
       "net": 10.562484570519766,
@@ -824,7 +936,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 1341.193079572073,
-      "unvested_end": 1.900288288798849
+      "unvested_end": 1.900288288798849,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.007685211282121355
      },
      "idle": {
       "net": -0.0028514411303999956,
@@ -850,7 +966,11 @@
       "breaches": 180,
       "mode": "2",
       "nav_end": 2041.3105090297877,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {},
+      "seed_placed": false,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0
      },
      "dust": {
       "net": -0.0028987025855999955,
@@ -876,7 +996,13 @@
       "breaches": 180,
       "mode": "2",
       "nav_end": 2041.3105090297877,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {
+       "NotContained": 1
+      },
+      "seed_placed": false,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0
      },
      "stale": {
       "net": -3.15076368e-05,
@@ -902,7 +1028,11 @@
       "breaches": 141,
       "mode": "2",
       "nav_end": 1910.649615675327,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 1.0047167781380504e-07
      },
      "wide": {
       "net": -0.0028987025855999955,
@@ -928,7 +1058,13 @@
       "breaches": 180,
       "mode": "2",
       "nav_end": 2041.3105090297877,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {
+       "Width": 1
+      },
+      "seed_placed": false,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0
      },
      "delayed-24h": {
       "net": 9.649018723610975,
@@ -954,7 +1090,11 @@
       "breaches": 1,
       "mode": "0",
       "nav_end": 1339.507181611764,
-      "unvested_end": 2.0105504022599434
+      "unvested_end": 2.0105504022599434,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.007902162863938536
      },
      "centre": {
       "net": 10.59165791140835,
@@ -980,7 +1120,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 1341.3561091424397,
-      "unvested_end": 2.1411518461776127
+      "unvested_end": 2.1411518461776127,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.008483619101081464
      },
      "edge-3h": {
       "net": 11.148596322636878,
@@ -1006,7 +1150,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 1310.1964020933253,
-      "unvested_end": 2.740836909565299
+      "unvested_end": 2.740836909565299,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.00856037274491042
      },
      "edge-6h": {
       "net": 11.475766944173836,
@@ -1032,7 +1180,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 1337.7342422952681,
-      "unvested_end": 2.6318401776232805
+      "unvested_end": 2.6318401776232805,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.008418290056932221
      }
     }
    },
@@ -1142,7 +1294,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 134.6039476389545,
-      "unvested_end": 0.2626423979362846
+      "unvested_end": 0.2626423979362846,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.008176549510902974
      },
      "edge60": {
       "net": 1.0064275963959914,
@@ -1168,7 +1324,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 133.896431532267,
-      "unvested_end": 0.1861803926728024
+      "unvested_end": 0.1861803926728024,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.008116996208599373
      },
      "lazy": {
       "net": -0.0028671949487999956,
@@ -1194,7 +1354,11 @@
       "breaches": 10,
       "mode": "2",
       "nav_end": 191.06443840861056,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0006630130219226164
      },
      "lazy-quiet": {
       "net": -0.0004253530967999997,
@@ -1220,7 +1384,11 @@
       "breaches": 1,
       "mode": "1",
       "nav_end": 191.0644384206711,
-      "unvested_end": 0.20385452479784044
+      "unvested_end": 0.20385452479784044,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0019583802436173308
      },
      "lazy-silent": {
       "net": 0.1613856932575996,
@@ -1246,7 +1414,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 191.06443842147516,
-      "unvested_end": 0.2032761339126995
+      "unvested_end": 0.2032761339126995,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0019586369753306397
      },
      "lazy-park": {
       "net": -0.0009779232145340432,
@@ -1272,7 +1444,11 @@
       "breaches": 1,
       "mode": "1",
       "nav_end": 191.0651756027931,
-      "unvested_end": 0.20524699166968632
+      "unvested_end": 0.20524699166968632,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.001968425210855497
      },
      "lazy-timed": {
       "net": 0.16049674517954393,
@@ -1298,7 +1474,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 191.06443841343477,
-      "unvested_end": 0.20735335296433435
+      "unvested_end": 0.20735335296433435,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0019596909478951886
      },
      "lazy-keepalive": {
       "net": 0.1262288551455326,
@@ -1324,7 +1504,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 191.06443842308323,
-      "unvested_end": 0.2593142626863844
+      "unvested_end": 0.2593142626863844,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.002045863684616318
      },
      "dodge": {
       "net": 0.5759000653550101,
@@ -1350,7 +1534,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 194.29316846023664,
-      "unvested_end": 0.14772562109576073
+      "unvested_end": 0.14772562109576073,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.003993102560250154
      },
      "breach-reset": {
       "net": 0.693739076936113,
@@ -1376,7 +1564,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 148.38142161143875,
-      "unvested_end": 0.24397693384369296
+      "unvested_end": 0.24397693384369296,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.00549152064764809
      },
      "idle": {
       "net": -0.0028514411303999956,
@@ -1402,7 +1594,11 @@
       "breaches": 15,
       "mode": "2",
       "nav_end": 204.13105090269735,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {},
+      "seed_placed": false,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0
      },
      "dust": {
       "net": -0.0028987025855999955,
@@ -1428,7 +1624,13 @@
       "breaches": 15,
       "mode": "2",
       "nav_end": 204.13105090269735,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {
+       "NotContained": 1
+      },
+      "seed_placed": false,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0
      },
      "stale": {
       "net": -3.15076368e-05,
@@ -1454,7 +1656,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 191.06443842549535,
-      "unvested_end": 0.3624090415759763
+      "unvested_end": 0.3624090415759763,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0019491066534383999
      },
      "wide": {
       "net": -0.0028987025855999955,
@@ -1480,7 +1686,13 @@
       "breaches": 15,
       "mode": "2",
       "nav_end": 204.13105090269735,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {
+       "Width": 1
+      },
+      "seed_placed": false,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0
      },
      "delayed-24h": {
       "net": 0.5777525896681812,
@@ -1506,7 +1718,11 @@
       "breaches": 2,
       "mode": "0",
       "nav_end": 133.9482536053749,
-      "unvested_end": 0.20172083307851515
+      "unvested_end": 0.20172083307851515,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.007668617505352607
      },
      "centre": {
       "net": 1.0064275963959914,
@@ -1532,7 +1748,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 133.896431532267,
-      "unvested_end": 0.1861803926728024
+      "unvested_end": 0.1861803926728024,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.008116996208599373
      },
      "edge-3h": {
       "net": 1.1090779414255738,
@@ -1558,7 +1778,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 130.95813113534524,
-      "unvested_end": 0.2746527259078542
+      "unvested_end": 0.2746527259078542,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.008555760876477502
      },
      "edge-6h": {
       "net": 1.147320074597818,
@@ -1584,7 +1808,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 133.73131752232217,
-      "unvested_end": 0.26063326151325067
+      "unvested_end": 0.26063326151325067,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.008421947457876038
      }
     },
     "observer": {
@@ -1612,7 +1840,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 134.68933187116772,
-      "unvested_end": 0.25967936691952076
+      "unvested_end": 0.25967936691952076,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.008148385863811183
      },
      "edge60": {
       "net": 1.052098600807277,
@@ -1638,7 +1870,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 134.1321470241771,
-      "unvested_end": 0.21410973685337442
+      "unvested_end": 0.21410973685337442,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.008483568662032056
      },
      "lazy-under-ladder": {
       "net": -0.0028671949487999956,
@@ -1664,7 +1900,11 @@
       "breaches": 141,
       "mode": "2",
       "nav_end": 191.06443840861056,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0007006862478816308
      },
      "lazy-quiet": {
       "net": -0.0004253530967999997,
@@ -1690,7 +1930,11 @@
       "breaches": 141,
       "mode": "2",
       "nav_end": 191.0644384206711,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0004216309405956216
      },
      "lazy-silent": {
       "net": -0.000236307276,
@@ -1716,7 +1960,11 @@
       "breaches": 141,
       "mode": "2",
       "nav_end": 191.0644384206711,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0004216330922902263
      },
      "lazy-park": {
       "net": -0.0009779232145340432,
@@ -1742,7 +1990,11 @@
       "breaches": 141,
       "mode": "2",
       "nav_end": 191.0651756027931,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0004216309405956216
      },
      "lazy-timed": {
       "net": -0.0005671374623999995,
@@ -1768,7 +2020,11 @@
       "breaches": 141,
       "mode": "2",
       "nav_end": 191.06443841343477,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0004216309405956216
      },
      "lazy-keepalive": {
       "net": -0.00034658400479999996,
@@ -1794,7 +2050,11 @@
       "breaches": 141,
       "mode": "2",
       "nav_end": 191.06443842308323,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0004216309405956216
      },
      "dodge": {
       "net": 1.041354130501128,
@@ -1820,7 +2080,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 133.82944997785575,
-      "unvested_end": 0.18782156594719895
+      "unvested_end": 0.18782156594719895,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.007635602017599501
      },
      "breach-reset": {
       "net": 1.0586686830420096,
@@ -1846,7 +2110,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 134.11611406955885,
-      "unvested_end": 0.18781617537118306
+      "unvested_end": 0.18781617537118306,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.007704820753008937
      },
      "idle": {
       "net": -0.0028514411303999956,
@@ -1872,7 +2140,11 @@
       "breaches": 180,
       "mode": "2",
       "nav_end": 204.13105090269735,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {},
+      "seed_placed": false,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0
      },
      "dust": {
       "net": -0.0028987025855999955,
@@ -1898,7 +2170,13 @@
       "breaches": 180,
       "mode": "2",
       "nav_end": 204.13105090269735,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {
+       "NotContained": 1
+      },
+      "seed_placed": false,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0
      },
      "stale": {
       "net": -3.15076368e-05,
@@ -1924,7 +2202,11 @@
       "breaches": 141,
       "mode": "2",
       "nav_end": 191.06443842549535,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 1.0047167781340086e-07
      },
      "wide": {
       "net": -0.0028987025855999955,
@@ -1950,7 +2232,13 @@
       "breaches": 180,
       "mode": "2",
       "nav_end": 204.13105090269735,
-      "unvested_end": 0.0
+      "unvested_end": 0.0,
+      "revert_kinds": {
+       "Width": 1
+      },
+      "seed_placed": false,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.0
      },
      "delayed-24h": {
       "net": 0.9604044950390255,
@@ -1976,7 +2264,11 @@
       "breaches": 1,
       "mode": "0",
       "nav_end": 133.9482536053749,
-      "unvested_end": 0.20105207885649698
+      "unvested_end": 0.20105207885649698,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.007902134146525672
      },
      "centre": {
       "net": 1.052098600807277,
@@ -2002,7 +2294,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 134.1321470241771,
-      "unvested_end": 0.21410973685337442
+      "unvested_end": 0.21410973685337442,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.008483568662032056
      },
      "edge-3h": {
       "net": 1.110014161413842,
@@ -2028,7 +2324,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 130.99398362981123,
-      "unvested_end": 0.2766502254282796
+      "unvested_end": 0.2766502254282796,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.00855798275351633
      },
      "edge-6h": {
       "net": 1.1401136705196782,
@@ -2054,7 +2354,11 @@
       "breaches": 0,
       "mode": "0",
       "nav_end": 133.7688787207932,
-      "unvested_end": 0.2626822347929439
+      "unvested_end": 0.2626822347929439,
+      "revert_kinds": {},
+      "seed_placed": true,
+      "reverts_h0": {},
+      "minted_frac_nav": 0.008409651528633566
      }
     }
    },
@@ -2146,7 +2450,7 @@
  "seed_placed_all": true,
  "reviews": {
   "design": "internal record r1",
-  "fix": null
+  "fix": "internal record fix-r1: 0 BLOCKING, 0 MAJOR, 5 MINOR, all fixed (s31)"
  },
  "meta": {
   "commit": "42ea9fbceae31f94c76c30644b086013409e0e05",
@@ -2155,5 +2459,6 @@
   "wall_s": 1.3,
   "sims": 72
  },
- "public_line": "E-IC historical supplement (one historical price series through the synthetic simulator, no third-party depth, point estimates, not a replay and not E-IC's rule): blocks 25,147,070 to 26,443,420; edge-12h net +11.282 / +1.123 ETH at NAV 1,850 / 185; gated bots edge-12h does not beat: none; E-IC stays NOT RUN. Unreviewed."
+ "public_line": "E-IC historical supplement (one historical price series through the synthetic simulator, no third-party depth, point estimates, not a replay and not E-IC's rule): blocks 25,147,070 to 26,443,420; edge-12h net +11.282 / +1.123 ETH at NAV 1,850 / 185; gated bots edge-12h does not beat: none; E-IC stays NOT RUN.",
+ "addendum": "fix review S31EF-01: revert_kinds, seed_placed, reverts_h0 and minted_frac_nav added per row from a deterministic recompute; every published value asserted bit-identical (72 sims)"
 }

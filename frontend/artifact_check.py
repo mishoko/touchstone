@@ -161,6 +161,25 @@ def main(argv):
         check(f"{cited[0]:,} against {cited[1]:,} ETH from 1,850" in " ".join(html.split()),
               f"page: the supplement's end-NAV clause is not {cited} (S31VD-02)")
 
+    # s32 (S32PD-11): the deal section's numbers are U-IC2's buckets, U-IC2-agg's bond burn and E8's charges
+    m = re.search(r"var D = (\{.*?\});", html, re.S)
+    check(m is not None or 'id="deal"' not in html, "deal: the data table var D is missing")
+    if m:
+        deal = json.loads(m.group(1))
+        u = json.loads((ROOT / "eval" / "results" / "U-IC2.json").read_text())["buckets"]
+        e8 = json.loads((ROOT / "eval" / "results" / "E8.json").read_text())["items"]["reference_charge_distribution"]["value"]
+        agg = {r["bucket"]: r for r in json.loads((ROOT / "eval" / "supplements" / "U-IC2-agg.json").read_text())["rows"]
+               if r["bot"] == "edge-12h" and abs(r["m"] - 0.022) < 1e-9 and not r["observer"]}
+        for b, row in deal.items():
+            want = [round(u[b]["mimic_mean"], 2), round(u[b]["mimic_p5"], 2), round(u[b]["cmp"]["breach-reset"]["bot_mean"], 2),
+                    round(u[b]["cmp"]["lazy"]["bot_mean"], 2), round(u[b]["cmp"]["idle"]["bot_mean"], 2)]
+            check(row[:5] == want, f"deal {b}: {row[:5]} is not U-IC2 {want}")
+            check(max(c["bot_mean"] for c in u[b]["cmp"].values()) == u[b]["cmp"]["breach-reset"]["bot_mean"],
+                  f"deal {b}: breach-reset is not the best shortcut")
+            check(row[5] == f"{e8[b]['charges_bps_of_nav_per_year']:.1f} bps", f"deal {b}: charge {row[5]} is not E8")
+            check(row[6] == f"{agg[b]['bond_burn_mean']:.3f} ETH", f"deal {b}: bond burn {row[6]} is not U-IC2-agg")
+        check("hover-60" not in deal, "deal: the hover path is reported only, not gated (S32PD-03)")
+
     if errors:
         print("artifact_check: FAIL\n  " + "\n  ".join(errors), file=sys.stderr)
         sys.exit(1)

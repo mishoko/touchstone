@@ -201,6 +201,7 @@ a.term { text-decoration-style: dotted; text-decoration-color: var(--gold); }
 .chart svg { display: block; width: 100%; height: 300px; }
 @media (max-width: 600px) { .chart svg { height: 250px; } }
 .chart svg text { font-family: var(--f-mono); font-size: 11px; }
+.chart svg .chm.past circle { stroke: var(--gold); } .chart svg .chm.past text { fill: var(--gold); }
 .chart svg .lbl { paint-order: stroke; stroke: var(--stone-2); stroke-width: 4px; stroke-linejoin: round; }
 .ledger { padding: 12px 14px; display: grid; gap: 10px; align-content: start; min-width: 0; }
 .ledger h3 { margin: 0; font: 500 .6875rem/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--gold); display: flex; justify-content: space-between; gap: 8px; }
@@ -533,7 +534,7 @@ details.lim .items li.fixed { border-left-color: var(--gold); }
       </div>
       <div class="scn-stage">
         <div class="stage" role="tabpanel" id="scn-panel" aria-labelledby="scn-title">
-          <div class="stage-h"><span id="scn-time">—</span><span>spot <b id="scn-spot">—</b> · reference <b id="scn-ref">—</b> · gap <b id="scn-gap">—</b></span></div>
+          <div class="stage-h"><span id="scn-time">—</span><span>spot <b id="scn-spot">—</b> · reference <b id="scn-ref">—</b> · <span id="scn-gapk">gap </span><b id="scn-gap">—</b></span></div>
           <div class="stage-body">
             <div class="chart"><svg id="scn-svg" role="img" aria-label="Scene chart"></svg><div class="legend" aria-hidden="true"><span><i></i>spot: this pool's price now</span><span><i class="r"></i>reference: deep market, 10-minute average</span><span><i class="f"></i>fence ±60 ticks: the manager may act inside</span><span><i class="g"></i>range: money earns inside</span><span><i class="c"></i>charged</span><span><i class="x"></i>refused</span></div></div>
             <div class="ledger">
@@ -1091,9 +1092,21 @@ python3 model/reference.py --selfcheck       # the independent model</pre>
         return { t: m.t, e: e, on: true };
       });
       dyn = dynLayer(svg, g);
+      // chapter markers along the top of the plot, at the chapter's time (aligned with the price path)
+      var cg = mk("g", {}, svg), lastCX = -1e9; chs = [];
+      (o.chapters || []).forEach(function (c, n) {
+        var x = X(c.t); if (x - lastCX < 18) return; lastCX = x;
+        var e = mk("g", { class: "chm" }, cg);
+        mk("line", { x1: f1(x), x2: f1(x), y1: g.PT + 16, y2: g.PB, stroke: "var(--ink-3)", "stroke-width": 1, "stroke-dasharray": "2 4" }, e);
+        mk("circle", { cx: f1(x), cy: g.PT + 8, r: 7.5, fill: "var(--stone-2)", stroke: "var(--ink-2)", "stroke-width": 1 }, e);
+        mk("text", { x: f1(x), y: g.PT + 11.5, "text-anchor": "middle", fill: "var(--ink-2)", "font-size": 9.5 }, e).textContent = n + 1;
+        chs.push({ t: c.t, e: e, past: null });
+      });
     }
+    var chs = [];
     function now(t) {
       if (!o) return;
+      chs.forEach(function (c) { var p = c.t <= t + 1e-9; if (p !== c.past) { c.past = p; c.e.setAttribute("class", p ? "chm past" : "chm"); } });
       var tn = Math.max(o.x0, Math.min(o.x1, t)), xn = X(tn), sN = o.spot(tn), rN = o.ref(tn);
       marks.forEach(function (m) { var on = m.t <= tn + 1e-9; if (on !== m.on) { m.on = on; if (on) m.e.removeAttribute("display"); else m.e.setAttribute("display", "none"); } });
       dyn.set(g, xn, cy(Y(sN)), cy(Y(rN)), o.range && o.range(tn), sN, rN, 0);
@@ -1318,7 +1331,7 @@ python3 model/reference.py --selfcheck       # the independent model</pre>
       var cur = { f: Math.abs(s - r) <= FENCE, sr: !rg || (s >= rg[0] && s <= rg[1]), rr: !rg || (r >= rg[0] && r <= rg[1]) };
       var fr = B.frames[Math.min(k, B.frames.length - 1)];
       if (fr && fr.mode === "removed") { prev = cur; continue; }
-      if (prev && B.fence !== false) {
+      if (prev && B.fence !== false && !B.quiet) {
         if (prev.f && !cur.f) notes.push({ t: t, msg: MOVED, k: "Fence" });
         if (!prev.f && cur.f) notes.push({ t: t, msg: BACK, k: "Fence" });
         if (prev.sr && !cur.sr && cur.rr) notes.push({ t: t, msg: SPOT_OUT, k: "Range" });
@@ -1460,6 +1473,7 @@ python3 model/reference.py --selfcheck       # the independent model</pre>
           }
           var rg = range(i), rIn = RT[i] >= rg[0] && RT[i] <= rg[1], sIn = ST[i] >= rg[0] && ST[i] <= rg[1];
           s.vesting = rIn && !exited;
+          if (i % 6 === 0 || i === 0) { s.rinH = rIn; s.vestH = s.vesting; }
           if (s.vesting) s.pay -= s.pay * VEST_H / 6;
           if (i % 6 === 0 && !exited) {
             if (rIn && sIn) s.pay += BASE_H;
@@ -1496,10 +1510,11 @@ python3 model/reference.py --selfcheck       # the independent model</pre>
         }
         chapters.sort(function (x, y) { return x.t - y.t; });
         return { T: T, dt: dt, F: F, spot: function (t) { return lerp(ST, t); }, ref: function (t) { return lerp(RT, t); }, range: range,
-          frames: frames, ev: ev, marks: marks, notes: notes, speed: 40,
+          frames: frames, ev: ev, marks: marks, notes: notes, speed: 40, quiet: true,
+          hdr: function (t, s) { return s.rinH ? ["deep market in range", "in"] : ["deep market OUT of range", "out"]; },
           when: function (t) { return fmtS(tsAt(t)); },
           rows: function (s) {
-            return [["Manager's held-back pay", eth(s.pay), s.vesting ? "" : "dim", s.pay / 2.6], ["Pay status", s.vesting ? "earning and vesting" : s.mode === "removed" ? "stopped (fired)" : "stopped: out of range", s.vesting ? "ok" : "bad"],
+            return [["Manager's held-back pay", eth(s.pay), s.vestH ? "" : "dim", s.pay / 2.6], ["Pay at the hourly check", s.vestH ? "earning and vesting" : s.mode === "removed" ? "stopped (fired)" : "stopped: out of range", s.vestH ? "ok" : "bad"],
               ["Hours out of range", s.clock < 24 ? s.clock.toFixed(0) + " h of 24 h" : s.clock.toFixed(0) + " h · a strike per 24 h", s.clock > 0 ? "bad" : "dim", Math.min(1, (s.clock % 24) / 24)],
               ["Strikes (breaches)", s.breaches + " of 3", s.breaches ? "bad" : "dim"],
               ["Burned for every share", eth(s.forf || 0) + (s.forf ? " · " + Math.round(100 * s.drip / s.forf) + "% paid in" : ""), s.forf ? "hot" : "dim"],
@@ -1626,12 +1641,13 @@ python3 model/reference.py --selfcheck       # the independent model</pre>
       $("scn-scrub").max = B.F;
       k = keepT ? Math.min(B.F, Math.round(tKeep / B.dt)) : 0;
       $("scn-chap").innerHTML = chapters.map(function (c, n) { return '<li><button type="button" data-n="' + n + '">' + esc(c.label) + "</button></li>"; }).join("");
-      $("scn-ticks").innerHTML = chapters.map(function (c, n) { return '<button type="button" data-n="' + n + '" style="left:' + (c.t / B.T * 100).toFixed(2) + '%" aria-label="Chapter ' + (n + 1) + ": " + esc(c.label) + '" title="' + esc(c.label) + '">' + (n + 1) + "</button>"; }).join("");
+      var lastP = -1e9;
+      $("scn-ticks").innerHTML = chapters.map(function (c, n) { var pc = c.t / B.T * 100; if (pc - lastP < 4.5) return ""; lastP = pc; return '<button type="button" data-n="' + n + '" style="left:' + (c.t / B.T * 100).toFixed(2) + '%" aria-label="Chapter ' + (n + 1) + ": " + esc(c.label) + '" title="' + esc(c.label) + '">' + (n + 1) + "</button>"; }).join("");
       prevKey = null;
       var ylo = Infinity, yhi = -Infinity;
       for (var u = 0; u <= B.T; u += B.T / 400) { var a1 = B.spot(u), b1 = B.ref(u); ylo = Math.min(ylo, a1, b1 - FENCE); yhi = Math.max(yhi, a1, b1 + FENCE); }
       var pad = Math.max(40, (yhi - ylo) * 0.25);
-      chart.build({ x0: 0, x1: B.T, yLo: ylo - pad, yHi: yhi + pad, dt: B.dt, spot: B.spot, ref: B.ref, range: B.range, marks: B.marks });
+      chart.build({ x0: 0, x1: B.T, yLo: ylo - pad, yHi: yhi + pad, dt: B.dt, spot: B.spot, ref: B.ref, range: B.range, marks: B.marks, chapters: chapters });
       lockHeights();
       render();
     }
@@ -1676,14 +1692,19 @@ python3 model/reference.py --selfcheck       # the independent model</pre>
       if (off) off.addEventListener("change", function () { d.params.off = off.checked; rebuild(true); });
       Array.prototype.forEach.call(ctl.querySelectorAll('input[name="c-mode"]'), function (r) { r.addEventListener("change", function () { d.params.mode = r.value; rebuild(true); }); });
     }
-    function render() {
-      var t = k * B.dt, s = B.frames[Math.min(k, B.frames.length - 1)];
-      chart.now(t);
+    var lastText = -1e9;
+    function render(tf) {
+      var kf = tf == null ? k : tf, t = k * B.dt, s = B.frames[Math.min(k, B.frames.length - 1)];
+      chart.now(kf * B.dt);
       $("scn-scrub").value = k;
+      // while playing, text panels refresh at most ~7 times a second; the chart moves every frame
+      if (tf != null) { var nowMs = performance.now(); if (nowMs - lastText < 140) return; lastText = nowMs; }
       var sp = B.spot(t), rf = B.ref(t), gap = sp - rf;
       $("scn-time").textContent = B.when(t);
       $("scn-spot").textContent = usd(px(sp)); $("scn-ref").textContent = usd(px(rf));
-      var ge = $("scn-gap"); ge.textContent = tk(gap) + " · " + (Math.abs(gap) <= FENCE ? "in fence" : "OUT of fence"); ge.className = Math.abs(gap) <= FENCE ? "in" : "out";
+      var hd = B.hdr ? B.hdr(t, s) : [tk(gap) + " · " + (Math.abs(gap) <= FENCE ? "in fence" : "OUT of fence"), Math.abs(gap) <= FENCE ? "in" : "out"];
+      var ge = $("scn-gap"); if (ge.textContent !== hd[0]) ge.textContent = hd[0]; if (ge.className !== hd[1]) ge.className = hd[1];
+      $("scn-gapk").textContent = B.hdr ? "" : "gap ";
       rows(B.rows(s));
       var evs = evsAt(t);
       var key = evs.length + "|" + (evs[0] ? evs[0].msg : "");
@@ -1691,8 +1712,8 @@ python3 model/reference.py --selfcheck       # the independent model</pre>
       var nt = null; notes.forEach(function (n) { if (n.t <= t + 1e-9) nt = n; });
       var nh = noteHTML(nt); if (nh !== prevNote) { $("scn-note").innerHTML = nh; prevNote = nh; }
       var ci = 0; chapters.forEach(function (c, n) { if (c.t <= t + 1e-9) ci = n; });
-      Array.prototype.forEach.call($("scn-chap").querySelectorAll("button"), function (b, n) { b.className = n === ci ? "cur" : n < ci ? "past" : ""; b.setAttribute("aria-current", n === ci ? "step" : "false"); });
-      Array.prototype.forEach.call($("scn-ticks").querySelectorAll("button"), function (b, n) { b.className = chapters[n].t <= t + 1e-9 ? "past" : ""; });
+      Array.prototype.forEach.call($("scn-chap").querySelectorAll("button"), function (b, n) { var c = n === ci ? "cur" : n < ci ? "past" : ""; if (b.className !== c) { b.className = c; b.setAttribute("aria-current", n === ci ? "step" : "false"); } });
+      Array.prototype.forEach.call($("scn-ticks").querySelectorAll("button"), function (b) { var c = chapters[+b.getAttribute("data-n")].t <= t + 1e-9 ? "past" : ""; if (b.className !== c) b.className = c; });
       var dep = $("c-dep");
       if (dep && B.pending) { var pd = B.pending(t); dep.disabled = pd; dep.textContent = pd ? "Refused until the check settles" : "Deposit 10 ETH now"; }
     }
@@ -1705,19 +1726,19 @@ python3 model/reference.py --selfcheck       # the independent model</pre>
       var sec = B.speed ? B.F / B.speed : 22;
       k = Math.min(B.F, k + dt * B.F / sec);
       if (k >= B.F) { k = B.F; render(); setPlay(false); return; }
-      var kk = k; k = Math.floor(k); render(); k = kk;
+      var kk = k; k = Math.floor(k); render(kk); k = kk;
       requestAnimationFrame(frame);
     }
     function setPlay(on) {
       if (on && k >= B.F) k = 0;
       playing = on; $("scn-play").textContent = on ? "Pause" : "Play";
-      if (!on) k = Math.floor(k);
+      if (!on) { k = Math.floor(k); if (B) render(); }
       if (on) requestAnimationFrame(frame);
     }
     $("scn-play").addEventListener("click", function () { started = true; setPlay(!playing); });
     $("scn-prev").addEventListener("click", function () { var t = k * B.dt, ci = 0; chapters.forEach(function (c, n) { if (c.t < t - B.dt * 1.5) ci = n; }); goChapter(ci); });
     $("scn-next").addEventListener("click", function () { var t = k * B.dt, ci = chapters.length - 1; for (var n = chapters.length - 1; n >= 0; n--) if (chapters[n].t > t + B.dt) ci = n; goChapter(ci); });
-    $("scn-scrub").addEventListener("input", function () { setPlay(false); k = +$("scn-scrub").value; render(); });
+    $("scn-scrub").addEventListener("input", function () { var v = +$("scn-scrub").value; playing = false; $("scn-play").textContent = "Play"; k = v; render(); });
     $("scn-chap").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) goChapter(+b.getAttribute("data-n")); });
     $("scn-ticks").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) goChapter(+b.getAttribute("data-n")); });
     tabs.forEach(function (b, i) {

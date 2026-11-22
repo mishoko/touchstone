@@ -67,9 +67,10 @@ code { font-size: .875em; overflow-wrap: anywhere; }
 .lede b { color: var(--ink); font-weight: 500; }
 .watch { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 18px 22px; max-width: 760px; padding: 18px 22px; border: 1px solid var(--gold); border-radius: 6px; background: linear-gradient(135deg, var(--gold-dim), transparent 70%), var(--stone-2); text-decoration: none; color: var(--ink); transition: transform .15s ease, box-shadow .15s ease; }
 .watch:hover { transform: translateY(-2px); box-shadow: 0 10px 28px -14px var(--gold); }
-.watch .play { width: 64px; height: 64px; border-radius: 50%; background: var(--gold); display: grid; place-items: center; box-shadow: 0 0 0 0 var(--gold-dim); animation: watch-pulse 2.4s ease-out infinite; }
+.watch .play { width: 64px; height: 64px; border-radius: 50%; background: var(--gold); display: grid; place-items: center; box-shadow: 0 0 0 0 var(--gold-dim); animation: watch-pulse 2.4s ease-out 3; }
 .watch .play::before { content: ""; margin-left: 5px; border-style: solid; border-width: 12px 0 12px 20px; border-color: transparent transparent transparent var(--stone); }
-.watch .eyebrow { margin-bottom: 6px; }
+.watch .eyebrow { display: block; margin: 0 0 6px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .watch strong { display: block; font: 800 clamp(1.25rem, 1rem + 1.2vw, 1.7rem)/1.1 var(--f-cond); font-stretch: 75%; text-transform: uppercase; letter-spacing: .01em; }
 .watch .sub { display: block; margin-top: 6px; color: var(--ink-2); font-size: .95rem; line-height: 1.45; }
 .watch .go { color: var(--gold); font: 500 .8rem/1 var(--f-mono); white-space: nowrap; }
@@ -377,12 +378,12 @@ details.lim .items li.fixed { border-left-color: var(--gold); }
   <div class="wrap">
     <h1 id="hero-h">Your manager pays for their own <em>bad trades.</em></h1>
     <p class="lede">A Uniswap v4 vault that checks every manager action against a deep market's price, and charges any shortfall to the manager's held-back pay.</p>
-    <a class="watch" id="video" href="https://youtu.be/mxlrBo-dVpo" target="_blank" rel="noopener" aria-label="Watch the video walkthrough on YouTube (opens in a new tab)">
+    <a class="watch" id="video" href="https://youtu.be/mxlrBo-dVpo" target="_blank" rel="noopener">
       <span class="play" aria-hidden="true"></span>
       <span>
         <span class="eyebrow">Video walkthrough</span>
         <strong>See it working, start to finish</strong>
-        <span class="sub">The quickest way to see what Touchstone does: the idea, the five scenes on real prices, and the live testnet transactions. <span class="go">Watch on YouTube ↗</span></span>
+        <span class="sub">The quickest way to see what Touchstone does and how it works. <span class="go">Watch on YouTube ↗<span class="sr-only"> (opens in a new tab)</span></span></span>
       </span>
     </a>
     <div class="story">

@@ -9,7 +9,7 @@ audits/mutants.json; test counts that differ from audits/test-summary.json; DEMO
 script/Tiers.sol demo(); an address or demo transaction of script/demo/deployments-1301.json missing from the page;
 a limit title of LIMIT_TITLES missing; the page not a standalone document (doctype, UTF-8 charset in
 the first 1024 bytes, one head and body), an external script or an internal identifier; E5 without 'FAIL (control form)'
-or E-IC without NOT RUN; the video walkthrough card or its nav link missing; the E5 sentence of the binding wording missing.
+or E-IC without NOT RUN; the video walkthrough (VIDEO_URL) not linked by the card, the Sections nav and README.md, or its pulse endless; the E5 sentence of the binding wording missing.
 The old results page's manifest, renderer and dist/ checks were retired with that page (s32).
 """
 import json
@@ -82,6 +82,25 @@ def document_errors(html):
     return errs
 
 
+VIDEO_URL = "https://youtu.be/mxlrBo-dVpo"
+
+
+def video_errors(html, readme):
+    """The video walkthrough: the card links VIDEO_URL in a new tab, the Sections nav links the card, the README
+    links the same video, and the card's pulse is finite (WCAG 2.2.2)."""
+    errs = []
+    if f'<a class="watch" id="video" href="{VIDEO_URL}" target="_blank" rel="noopener">' not in html:
+        errs.append("video: the walkthrough card is missing or does not open VIDEO_URL in a new tab")
+    nav = re.search(r'<nav aria-label="Sections">(.*?)</nav>', html, re.S)
+    if not (nav and '<a href="#video">' in nav.group(1)):
+        errs.append("video: the Sections nav does not link #video")
+    if VIDEO_URL not in readme:
+        errs.append("video: README.md does not link VIDEO_URL")
+    if re.search(r"\.watch[^{]*\{[^}]*\binfinite\b", html):
+        errs.append("video: the card animates without end")
+    return errs
+
+
 def selftest():
     assert ceiling_number("the depositor\nceiling is 0.84")
     assert ceiling_number("0.84 of time, the depositor-ceiling input")
@@ -94,6 +113,14 @@ def selftest():
     assert any("doctype" in e for e in document_errors(bare)) and any("charset" in e for e in document_errors(bare))
     assert document_errors(good.replace("<title>t", '<script src="https://x.example/a.js"></script><title>t'))
     assert document_errors(good.replace("</body>", "<p>tau_v</p></body>"))
+    vgood = (f'<nav aria-label="Sections"><a href="#video">Video</a></nav>'
+             f'<style>.watch .play {{ animation: p 2s 3; }}</style>'
+             f'<a class="watch" id="video" href="{VIDEO_URL}" target="_blank" rel="noopener">x</a>')
+    assert video_errors(vgood, VIDEO_URL) == [], video_errors(vgood, VIDEO_URL)
+    assert video_errors(vgood.replace("mxlrBo-dVpo", "aaaaaaaaaaa"), VIDEO_URL)          # wrong video
+    assert video_errors(vgood.replace('<a href="#video">Video</a>', ""), VIDEO_URL)      # nav link gone
+    assert video_errors(vgood, "https://youtu.be/aaaaaaaaaaa")                            # README mismatch
+    assert video_errors(vgood.replace("2s 3", "2s infinite"), VIDEO_URL)                  # endless pulse
     print("artifact_check selftest OK")
 
 
@@ -108,8 +135,8 @@ def main(argv):
     for e in document_errors(html):
         check(False, e)
     check("FAIL (control form)" in html, "E5: 'FAIL (control form)' missing")
-    check(re.search(r'<a class="watch" id="video" href="https://youtu\.be/[\w-]{11}"', html) is not None
-          and 'href="#video"' in html, "video: the walkthrough card or its nav link is missing")
+    for e in video_errors(html, (ROOT / "README.md").read_text(encoding="utf-8")):
+        check(False, e)
     check(re.search(r'E-IC\.json">E-IC</a>[^\n]*?NOT RUN', html) is not None, "E-IC: the row does not show NOT RUN")
     for w in BANNED:
         check(w not in low, f"banned word '{w}'")

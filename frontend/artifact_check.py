@@ -9,7 +9,7 @@ audits/mutants.json; test counts that differ from audits/test-summary.json; DEMO
 script/Tiers.sol demo(); an address or demo transaction of script/demo/deployments-1301.json missing from the page;
 a limit title of LIMIT_TITLES missing; the page not a standalone document (doctype, UTF-8 charset in
 the first 1024 bytes, one head and body), an external script or an internal identifier; E5 without 'FAIL (control form)'
-or E-IC without NOT RUN; the E5 sentence of the binding wording missing.
+or E-IC without NOT RUN; the video walkthrough card or its nav link missing; the E5 sentence of the binding wording missing.
 The old results page's manifest, renderer and dist/ checks were retired with that page (s32).
 """
 import json
@@ -108,6 +108,8 @@ def main(argv):
     for e in document_errors(html):
         check(False, e)
     check("FAIL (control form)" in html, "E5: 'FAIL (control form)' missing")
+    check(re.search(r'<a class="watch" id="video" href="https://youtu\.be/[\w-]{11}"', html) is not None
+          and 'href="#video"' in html, "video: the walkthrough card or its nav link is missing")
     check(re.search(r'E-IC\.json">E-IC</a>[^\n]*?NOT RUN', html) is not None, "E-IC: the row does not show NOT RUN")
     for w in BANNED:
         check(w not in low, f"banned word '{w}'")

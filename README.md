@@ -12,7 +12,7 @@ measures to the curator, not to you. Market moves stay with depositors. The full
 **Why a curator signs up:** it gets a verifiable on-chain record of its execution conduct, a published term sheet
 ([Terms](docs/DETAILS.md#terms)), and it keeps every bp it executes below cost.
 
-- Video: to come. App: to come.
+- Video walkthrough: https://youtu.be/mxlrBo-dVpo. App: to come.
 - Live on the Unichain Sepolia testnet: addresses under [Contracts](#contracts).
 
 ## Twenty seconds

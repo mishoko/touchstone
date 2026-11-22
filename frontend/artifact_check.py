@@ -3,11 +3,11 @@
 
   python3 frontend/artifact_check.py [page.html]     # default: frontend/artifact/index.html
 
-Fails on: an unfilled %%slot%%; a banned word or wording (the lists of frontend/build.py, incl. a bare n/m ratio);
+Fails on: an unfilled %%slot%%; a banned word or wording (BANNED, BANNED_WORDS, incl. a bare n/m ratio);
 a link to /blob/main/; a result file in eval/results/ without its link on the page; mutation counts that differ from
 audits/mutants.json; test counts that differ from audits/test-summary.json; DEMO-tier values that differ from
 script/Tiers.sol demo(); an address or demo transaction of script/demo/deployments-1301.json missing from the page;
-a limit title of frontend/app.js limits() missing; the E5 sentence of the binding wording missing.
+a limit title of LIMIT_TITLES missing; the E5 sentence of the binding wording missing.
 """
 import json
 import re
@@ -16,8 +16,22 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
-sys.path.insert(0, str(HERE))
-from build import BANNED, BANNED_WORDS, SUPPLEMENT, scan_text  # noqa: E402
+BANNED = ["illustrative", "lorem", "todo", "placeholder", "replay"]
+# Wording the page must never use (whole words; a bare passed/total ratio such as 104/106).
+BANNED_WORDS = [r"\baudited\b", r"\bsecure\b", r"\bguaranteed\b", r"all claims pass",
+                r"\b\d+/\d+\b"]
+# Titles of the limits the page must show (formerly the old results page's limits() list).
+LIMIT_TITLES = ["Lag leak", "Reported, not asserted", "E-IC was not run", "Allocation ledger claim withdrawn"]
+
+# The E-IC supplement's label (panel D3) contains "not a replay"; only that exact phrase is exempt from the scan.
+sys.path.insert(0, str(ROOT / "eval"))
+from eic_hist import LABEL as SUPPLEMENT_LABEL  # noqa: E402
+SUPPLEMENT = ROOT / "eval" / "supplements" / "E-IC-historical.json"
+
+
+def scan_text(text):
+    """Lower-cased text with the exact supplement label removed (the only allowed use of 'replay')."""
+    return text.lower().replace(SUPPLEMENT_LABEL.lower(), "")
 
 errors = []
 
@@ -107,9 +121,8 @@ def main(argv):
     if a3.get("burned_bond_shares") and int(a3["burned_bond_shares"]) > int(a3.get("burned_bank_shares", 0)):
         check("most of it from the bond" in html, "A3: the page does not say most of the burn came from the bond")
 
-    app = (HERE / "app.js").read_text()
-    for title in re.findall(r'item\("([^"]+)"', app):
-        check(title.rstrip(".") in html, f"limit '{title}' of frontend/app.js missing")
+    for title in LIMIT_TITLES:
+        check(title in html, f"limit '{title}' missing")
     check("14 cells have a control test that profits with the defence removed" in html, "E5: the binding sentence is missing")
     check("FAIL · claim withdrawn" in html and "+ 1 withdrawn (E0b" in html, "E0b: withdrawn wording missing")
 

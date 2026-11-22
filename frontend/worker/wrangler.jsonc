@@ -1,0 +1,6 @@
+{
+  // Serves frontend/artifact/index.html as-is (one page, no build step).
+  "name": "empty-hat-c515",
+  "compatibility_date": "2026-11-01",
+  "assets": { "directory": "../artifact", "html_handling": "auto-trailing-slash" }
+}

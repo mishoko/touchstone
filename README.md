@@ -2,6 +2,9 @@
 
 **Your manager pays for their own bad trades.**
 
+- Live demo: https://touchstone.nexus/ · Video walkthrough: https://youtu.be/mxlrBo-dVpo 
+- Live on the Unichain Sepolia testnet: addresses under [Contracts](#contracts).
+
 A Uniswap v4 hook vault that checks every manager action against a deep market's price, and charges any shortfall to
 the manager's held-back pay.
 
@@ -12,8 +15,6 @@ measures to the curator, not to you. Market moves stay with depositors. The full
 **Why a curator signs up:** it gets a verifiable on-chain record of its execution conduct, a published term sheet
 ([Terms](docs/DETAILS.md#terms)), and it keeps every bp it executes below cost.
 
-- Live demo: https://touchstone.nexus/ · Video walkthrough: https://youtu.be/mxlrBo-dVpo
-- Live on the Unichain Sepolia testnet: addresses under [Contracts](#contracts).
 
 ## Twenty seconds
 

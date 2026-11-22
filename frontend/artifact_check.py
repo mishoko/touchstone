@@ -7,7 +7,10 @@ Fails on: an unfilled %%slot%%; a banned word or wording (BANNED, BANNED_WORDS, 
 a link to /blob/main/; a result file in eval/results/ without its link on the page; mutation counts that differ from
 audits/mutants.json; test counts that differ from audits/test-summary.json; DEMO-tier values that differ from
 script/Tiers.sol demo(); an address or demo transaction of script/demo/deployments-1301.json missing from the page;
-a limit title of LIMIT_TITLES missing; the E5 sentence of the binding wording missing.
+a limit title of LIMIT_TITLES missing; the page not a standalone document (doctype, UTF-8 charset in
+the first 1024 bytes, one head and body), an external script or an internal identifier; E5 without 'FAIL (control form)'
+or E-IC without NOT RUN; the E5 sentence of the binding wording missing.
+The old results page's manifest, renderer and dist/ checks were retired with that page (s32).
 """
 import json
 import re
@@ -54,11 +57,43 @@ def ceiling_number(text):
     return False
 
 
+# Internal identifiers that must never reach the public page (s28 fix review F-01..F-03).
+INTERNAL_IDS = ("§", "M_N1", "tau_v", "GRID_SEC", "cells.*")
+SERIES_BLOCK = re.compile(r'<script type="text/plain" id="series">.*?</script>', re.S)
+
+
+def document_errors(html):
+    """Errors in the page as a standalone document: it is served raw by the Worker, so it must declare its own
+    doctype and UTF-8 charset (else windows-1252 mojibake and quirks mode), load no external script, and carry
+    no internal identifier outside the encoded price series."""
+    errs = []
+    if not html.lstrip().lower().startswith("<!doctype html>"):
+        errs.append("document: does not start with <!doctype html>")
+    if not re.search(r'<meta charset="?utf-8"?', html[:1024], re.I):
+        errs.append("document: no <meta charset=\"utf-8\"> in the first 1024 bytes")
+    if not (html.count("<head>") == html.count("<body>") == 1 and html.find("</head>") < html.find("<body>")):
+        errs.append("document: not exactly one <head> followed by one <body>")
+    if re.search(r'<script[^>]+src="https?:', html):
+        errs.append("document: loads an external script")
+    text = SERIES_BLOCK.sub("", html)
+    for w in INTERNAL_IDS:
+        if w in text:
+            errs.append(f"internal identifier on the page: {w}")
+    return errs
+
+
 def selftest():
     assert ceiling_number("the depositor\nceiling is 0.84")
     assert ceiling_number("0.84 of time, the depositor-ceiling input")
     assert not ceiling_number("The depositor ceiling (spec §3.5) is not measured.")
     assert not ceiling_number("the curator p5 condition or the depositor ceiling | — |")
+    good = ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>t</title>\n</head>\n<body>\n'
+            '<script type="text/plain" id="series">§tau_v</script>\n</body>\n</html>\n')
+    assert document_errors(good) == [], document_errors(good)
+    bare = good.split("<title>", 1)[1].replace("</head>\n<body>\n", "")   # the pre-fix fragment shape
+    assert any("doctype" in e for e in document_errors(bare)) and any("charset" in e for e in document_errors(bare))
+    assert document_errors(good.replace("<title>t", '<script src="https://x.example/a.js"></script><title>t'))
+    assert document_errors(good.replace("</body>", "<p>tau_v</p></body>"))
     print("artifact_check selftest OK")
 
 
@@ -70,6 +105,10 @@ def main(argv):
     low = scan_text(html)   # the exact E-IC supplement label is the only allowed "replay"
 
     check("%%" not in html, "an unfilled %%slot%% remains")
+    for e in document_errors(html):
+        check(False, e)
+    check("FAIL (control form)" in html, "E5: 'FAIL (control form)' missing")
+    check(re.search(r'E-IC\.json">E-IC</a>[^\n]*?NOT RUN', html) is not None, "E-IC: the row does not show NOT RUN")
     for w in BANNED:
         check(w not in low, f"banned word '{w}'")
     for pat in BANNED_WORDS:

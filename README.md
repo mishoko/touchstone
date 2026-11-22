@@ -12,7 +12,7 @@ measures to the curator, not to you. Market moves stay with depositors. The full
 **Why a curator signs up:** it gets a verifiable on-chain record of its execution conduct, a published term sheet
 ([Terms](docs/DETAILS.md#terms)), and it keeps every bp it executes below cost.
 
-- Video walkthrough: https://youtu.be/mxlrBo-dVpo. App: to come.
+- Live demo: https://touchstone.nexus/ · Video walkthrough: https://youtu.be/mxlrBo-dVpo
 - Live on the Unichain Sepolia testnet: addresses under [Contracts](#contracts).
 
 ## Twenty seconds
@@ -36,7 +36,7 @@ deployment, and every check (settle, poke, breach processing) can be run by anyo
 
 ## Five plays
 
-The same five scenes run interactively on the project page (link at launch); each names the test that proves it.
+The same five scenes run interactively on the [live demo](https://touchstone.nexus/#scenes); each names the test that proves it.
 
 1. **A fair rebalance: billed.** The measured cost comes out of the curator's held-back pay, then its bond; a gain
    never offsets it (`test_U_net__aGainNeverOffsetsAChargeOrALaterCharge`). On testnet, a `rebalanceSwap` was billed

@@ -28,3 +28,20 @@ frontend/.next/
 
 out-oversized/
 cache-oversized/
+
+# Video, slides and presentation material stay in internal/ (never published)
+*.mp4
+*.mov
+*.webm
+*.mkv
+*.wav
+*.mp3
+*.m4a
+*.srt
+*.vtt
+*.pptx
+*.ppt
+*.key
+/video/
+/slides/
+/presentation/
